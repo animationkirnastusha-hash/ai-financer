@@ -1,0 +1,26 @@
+import { Router } from 'express';
+import authRoutes from '../modules/auth/routes';
+import accountRoutes from '../modules/accounts/routes';
+import categoryRoutes from '../modules/categories/routes';
+import transactionRoutes from '../modules/transactions/routes';
+import referralRoutes from '../modules/referral/routes';
+import notificationRoutes from '../modules/notifications/routes';
+import recurringRoutes from '../modules/recurring/routes';
+import userRoutes from '../modules/users/routes';
+import budgetRoutes from '../modules/budgets/routes';
+import aiRoutes from '../modules/ai/routes';
+import voiceRoutes from './voice.routes';
+const router = Router();
+
+router.use('/auth', authRoutes);
+router.use('/accounts', accountRoutes);
+router.use('/categories', categoryRoutes);
+router.use('/transactions', transactionRoutes);
+router.use('/referral', referralRoutes);
+router.use('/notifications', notificationRoutes);
+router.use('/recurring', recurringRoutes);
+router.use('/users', userRoutes);
+router.use('/budgets', budgetRoutes);
+router.use('/ai', aiRoutes);
+router.use('/voice', voiceRoutes);
+export default router;

@@ -1,0 +1,93 @@
+import { usePremiumStore } from '../model/premium.store';
+
+export function PremiumUpgradeSheet() {
+  const open = usePremiumStore((state) => state.isPremiumOpen);
+  const trigger = usePremiumStore((state) => state.activeTrigger);
+  const close = usePremiumStore((state) => state.closePremium);
+
+  if (!open || !trigger) return null;
+
+  return (
+    <div className="fixed inset-0 z-[120] flex items-end bg-black/65 backdrop-blur-sm">
+      <div className="max-h-[92dvh] w-full overflow-y-auto rounded-t-[32px] border border-white/10 bg-[#0b1016] px-4 pb-[calc(env(safe-area-inset-bottom)+24px)] pt-4 text-white shadow-2xl">
+        <div className="mx-auto mb-4 h-1.5 w-14 rounded-full bg-white/15" />
+
+        <div className="mx-auto max-w-[560px]">
+          <div className="rounded-[30px] border border-amber-300/15 bg-[radial-gradient(circle_at_top,rgba(251,191,36,0.16),transparent_45%),rgba(255,255,255,0.04)] p-5">
+            <div className="text-[11px] uppercase tracking-[0.2em] text-amber-200/70">
+              AI-financer Premium
+            </div>
+
+            <h2 className="mt-3 text-3xl font-semibold leading-tight">
+              Твой личный AI CFO
+            </h2>
+
+            <p className="mt-3 text-sm leading-6 text-white/62">
+              Контроль денег — бесплатно. Premium помогает видеть риски,
+              находить лишние траты и строить план спокойнее.
+            </p>
+
+            <div className="mt-5 rounded-2xl border border-white/10 bg-black/22 p-4">
+              <div className="text-sm font-medium text-white">
+                {trigger.title}
+              </div>
+
+              <div className="mt-2 text-sm leading-6 text-white/55">
+                {trigger.description}
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-4 grid gap-3">
+            {[
+              ['Прогноз до зарплаты', 'AI покажет безопасный темп расходов.'],
+              ['Где теряются деньги', 'Найдёт мелкие утечки и повторяющиеся траты.'],
+              ['План накоплений', 'Разложит цель на понятные шаги.'],
+              ['Premium Voice+', 'Более живой голосовой финансовый ассистент.'],
+            ].map(([title, description]) => (
+              <div
+                key={title}
+                className="rounded-2xl border border-white/8 bg-white/[0.04] p-4"
+              >
+                <div className="text-sm font-medium text-white">{title}</div>
+                <div className="mt-1 text-xs leading-5 text-white/45">
+                  {description}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-5 rounded-[24px] border border-emerald-300/15 bg-emerald-300/10 p-4">
+            <div className="text-sm font-medium text-emerald-100">
+              299 ₽ / месяц
+            </div>
+            <div className="mt-1 text-xs leading-5 text-white/55">
+              Если AI поможет сохранить хотя бы 500 ₽ — подписка уже окупилась.
+            </div>
+          </div>
+
+          <div className="sticky bottom-0 mt-5 grid gap-3 bg-[#0b1016]/95 pb-2 pt-3 backdrop-blur-xl">
+            <button
+              type="button"
+              className="rounded-2xl border border-emerald-300/20 bg-emerald-400/16 px-4 py-4 text-sm font-medium text-white"
+            >
+              Попробовать Premium 7 дней
+            </button>
+
+            <button
+              type="button"
+              onClick={close}
+              className="rounded-2xl border border-white/10 bg-white/6 px-4 py-3 text-sm text-white/55"
+            >
+              Пока продолжить бесплатно
+            </button>
+
+            <div className="text-center text-[11px] text-white/35">
+              Можно отменить в любой момент
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
