@@ -14,10 +14,22 @@ export function createApp() {
 
   app.use(
     cors({
-      origin: env.frontendUrl,
-      credentials: true,
-      methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-      allowedHeaders: ['Content-Type', 'Authorization'],
+     origin: (origin, callback) => {
+  if (!origin) return callback(null, true);
+
+  // Разрешаем основной домен
+  if (origin === 'https://ai-financer.pages.dev') {
+    return callback(null, true);
+  }
+
+  // Разрешаем preview домены Cloudflare
+  if (/^https:\/\/[a-z0-9-]+\.ai-financer\.pages\.dev$/.test(origin)) {
+    return callback(null, true);
+  }
+
+  return callback(new Error(`CORS blocked: ${origin}`));
+},
+credentials: true,
     }),
   );
 
