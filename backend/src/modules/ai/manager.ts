@@ -41,10 +41,12 @@ export class AIManager {
         content: command,
       });
 
-      // Быстрый backend-layer: очевидные просьбы повторить не отправляем в LLM.
-      // Это не заменяет нейронку, а защищает продукт от задержек/таймаутов Ollama.
-      if (this.isLikelyRepeatCommand(command)) {
-        const repeatResult = await this.repeatLastTransaction(userId);
+      // Быстрый backend-layer: просьбы повторить не отправляем в LLM.
+      // Работает и для «еще», и для «повтори 200»: категория/счёт берутся из последней операции.
+      const repeatCommand = this.parseRepeatCommand(command);
+
+      if (repeatCommand) {
+        const repeatResult = await this.repeatLastTransaction(userId, repeatCommand.amount);
         await this.logSuccess(userId, command, repeatResult, startedAt);
         return repeatResult;
       }
@@ -182,7 +184,7 @@ export class AIManager {
     }
   }
 
-  private async repeatLastTransaction(userId: string): Promise<AIResult> {
+  private async repeatLastTransaction(userId: string, amountOverride?: number): Promise<AIResult> {
     const lastTransaction = await prisma.transaction.findFirst({
       where: {
         userId,
@@ -216,10 +218,14 @@ export class AIManager {
     const categoryName = lastTransaction.category?.name ?? lastTransaction.description ?? 'операция';
     const categoryIcon = lastTransaction.category?.icon ?? (type === 'income' ? '💰' : '📝');
 
+    const amount = typeof amountOverride === 'number' && amountOverride > 0
+      ? amountOverride
+      : lastTransaction.amount;
+
     const transaction = await transactionService.createTransaction(userId, {
       accountId: lastTransaction.accountId,
       categoryId: lastTransaction.categoryId ?? undefined,
-      amount: lastTransaction.amount,
+      amount,
       type,
       description: lastTransaction.description ?? categoryName,
       isAIGenerated: true,
@@ -233,11 +239,11 @@ export class AIManager {
       riskLevel: 'low',
       message:
         type === 'expense'
-          ? `✅ Повторил расход: ${categoryIcon} ${categoryName} — ${lastTransaction.amount} ₽.`
-          : `✅ Повторил доход: ${categoryIcon} ${categoryName} — ${lastTransaction.amount} ₽.`,
+          ? `✅ Повторил расход: ${categoryIcon} ${categoryName} — ${amount} ₽.`
+          : `✅ Повторил доход: ${categoryIcon} ${categoryName} — ${amount} ₽.`,
       parsed: {
         type,
-        amount: lastTransaction.amount,
+        amount,
         accountId: lastTransaction.accountId,
         accountName: lastTransaction.account.name,
         categoryId: lastTransaction.categoryId,
@@ -260,20 +266,50 @@ export class AIManager {
     }
   }
 
-  private isLikelyRepeatCommand(command: string) {
+  private parseRepeatCommand(command: string): { amount?: number } | null {
     const normalized = this.normalizeRepeatText(command);
 
     if (!normalized) {
-      return false;
+      return null;
     }
 
-    // Если есть сумма, это может быть «ещё 200» — такую команду лучше отдать parser,
-    // чтобы он взял новую сумму и подтянул категорию из памяти.
-    if (/\d/.test(normalized)) {
-      return false;
+    const amount = this.extractAmountFromText(normalized);
+    const textWithoutAmount = amount
+      ? this.normalizeRepeatText(normalized.replace(amount.raw, ' '))
+      : normalized;
+
+    if (!this.isRepeatLikeText(textWithoutAmount)) {
+      return null;
     }
 
-    return this.isRepeatLikeText(normalized);
+    return amount ? { amount: amount.value } : {};
+  }
+
+  private extractAmountFromText(value: string): { value: number; raw: string } | null {
+    const match = value.match(/(?:^|\s)(\d+(?:[.,]\d+)?)(?:\s*(к|тыс|тысяч|млн|миллион|миллиона|миллионов|руб|рубль|рублей|р|₽))?(?=\s|$)/i);
+
+    if (!match) {
+      return null;
+    }
+
+    const numeric = Number(match[1].replace(',', '.'));
+
+    if (!Number.isFinite(numeric) || numeric <= 0) {
+      return null;
+    }
+
+    const suffix = (match[2] ?? '').toLowerCase();
+    const multiplier =
+      suffix === 'к' || suffix === 'тыс' || suffix === 'тысяч'
+        ? 1000
+        : suffix.startsWith('млн') || suffix.startsWith('миллион')
+          ? 1000000
+          : 1;
+
+    return {
+      value: Math.round(numeric * multiplier),
+      raw: match[0],
+    };
   }
 
   private isRepeatLikeText(value: string) {
