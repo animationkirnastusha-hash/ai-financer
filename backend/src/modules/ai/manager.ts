@@ -1,26 +1,15 @@
-import { prisma } from "../../lib/prisma";
-import { AIActionPolicy } from "./policy";
-import { LLMCommandInterpreter } from "./llm-command-interpreter";
-import { AIHandleOptions, AIResult } from "./types";
-import { AIMemoryService } from "./ai-memory.service";
-import { AITrainingService } from "./ai-training.service";
-import { ProductEventsService } from "../analytics/product-events.service";
-import { AIPreviewBuilder } from "./ai-preview.builder";
-import { AIExecutorService } from "./ai-executor.service";
-import { TransactionService } from "../transactions/service";
+import { prisma } from '../../lib/prisma';
+import { TransactionService } from '../transactions/service';
+import { AIActionPolicy } from './policy';
+import { LLMCommandInterpreter } from './llm-command-interpreter';
+import { AIHandleOptions, AIParsedCommand, AIResult } from './types';
+import { AIMemoryService } from './ai-memory.service';
+import { AITrainingService } from './ai-training.service';
+import { ProductEventsService } from '../analytics/product-events.service';
+import { AIPreviewBuilder } from './ai-preview.builder';
+import { AIExecutorService } from './ai-executor.service';
 
 const transactionService = new TransactionService();
-
-const REPEAT_WORDS = [
-  "еще",
-  "ещё",
-  "еще раз",
-  "ещё раз",
-  "то же",
-  "тоже",
-  "повтор",
-  "снова",
-];
 
 export class AIManager {
   private readonly parser = new LLMCommandInterpreter();
@@ -31,11 +20,7 @@ export class AIManager {
   private readonly preview = new AIPreviewBuilder();
   private readonly executor = new AIExecutorService();
 
-  async handle(
-    userId: string,
-    command: string,
-    options?: AIHandleOptions,
-  ): Promise<AIResult> {
+  async handle(userId: string, command: string, options?: AIHandleOptions): Promise<AIResult> {
     const startedAt = Date.now();
 
     try {
@@ -44,7 +29,7 @@ export class AIManager {
 
       await this.events.track({
         userId,
-        event: "ai_command_received",
+        event: 'ai_command_received',
         data: {
           commandLength: command.length,
         },
@@ -52,21 +37,26 @@ export class AIManager {
 
       await this.memory.saveMessage({
         userId,
-        role: "user",
+        role: 'user',
         content: command,
       });
 
-      const repeatResult = execute
-        ? await this.tryRepeatLastTransaction(userId, command)
-        : null;
-
-      if (repeatResult) {
+      // Быстрый backend-layer: очевидные просьбы повторить не отправляем в LLM.
+      // Это не заменяет нейронку, а защищает продукт от задержек/таймаутов Ollama.
+      if (this.isLikelyRepeatCommand(command)) {
+        const repeatResult = await this.repeatLastTransaction(userId);
         await this.logSuccess(userId, command, repeatResult, startedAt);
         return repeatResult;
       }
 
       const history = await this.memory.getRecentMessages(userId, 6);
       const parsedCommand = await this.parser.parse(command, history);
+
+      if (parsedCommand.intent === 'repeat_last') {
+        const repeatResult = await this.repeatLastTransaction(userId);
+        await this.logSuccess(userId, command, repeatResult, startedAt);
+        return repeatResult;
+      }
 
       await this.applyContextFallback(parsedCommand, history);
 
@@ -86,11 +76,7 @@ export class AIManager {
         return previewResult;
       }
 
-      const result = await this.executor.execute(
-        userId,
-        parsedCommand,
-        policy.riskLevel,
-      );
+      const result = await this.executor.execute(userId, parsedCommand, policy.riskLevel);
 
       await this.logSuccess(userId, command, result, startedAt);
 
@@ -100,16 +86,16 @@ export class AIManager {
         userId,
         input: command,
         success: false,
-        error: error instanceof Error ? error.message : "Unknown AI error",
+        error: error instanceof Error ? error.message : 'Unknown AI error',
         model: process.env.OLLAMA_MODEL,
         latencyMs: Date.now() - startedAt,
       });
 
       await this.events.track({
         userId,
-        event: "ai_command_error",
+        event: 'ai_command_error',
         data: {
-          error: error instanceof Error ? error.message : "Unknown AI error",
+          error: error instanceof Error ? error.message : 'Unknown AI error',
           latencyMs: Date.now() - startedAt,
         },
       });
@@ -118,15 +104,10 @@ export class AIManager {
     }
   }
 
-  private async logSuccess(
-    userId: string,
-    command: string,
-    result: AIResult,
-    startedAt: number,
-  ) {
+  private async logSuccess(userId: string, command: string, result: AIResult, startedAt: number) {
     await this.memory.saveMessage({
       userId,
-      role: "assistant",
+      role: 'assistant',
       content: result.message,
       meta: {
         intent: result.intent,
@@ -147,7 +128,7 @@ export class AIManager {
 
     await this.events.track({
       userId,
-      event: result.success ? "ai_command_success" : "ai_command_failed",
+      event: result.success ? 'ai_command_success' : 'ai_command_failed',
       data: {
         intent: result.intent,
         executed: result.executed,
@@ -157,184 +138,178 @@ export class AIManager {
     });
   }
 
-  private async tryRepeatLastTransaction(
-    userId: string,
-    command: string,
-  ): Promise<AIResult | null> {
-    const repeat = this.parseRepeatCommand(command);
-
-    if (!repeat.isRepeat) {
-      return null;
+  private async applyContextFallback(parsedCommand: AIParsedCommand, history: Array<any>) {
+    if (parsedCommand.intent !== 'expense' && parsedCommand.intent !== 'income') {
+      return;
     }
 
+    const currentCategory = String(parsedCommand.rawCategory ?? '').trim().toLowerCase();
+
+    const shouldUsePreviousCategory =
+      !currentCategory ||
+      this.isRepeatLikeText(currentCategory) ||
+      currentCategory === 'расход' ||
+      currentCategory === 'доход';
+
+    if (!shouldUsePreviousCategory) {
+      return;
+    }
+
+    const previousAssistantMessages = [...history]
+      .reverse()
+      .filter((message) => message.role === 'assistant');
+
+    for (const message of previousAssistantMessages) {
+      const parsed = this.readParsedFromMemory(message);
+
+      if (
+        parsed &&
+        parsed.type === parsedCommand.intent &&
+        typeof parsed.categoryName === 'string' &&
+        parsed.categoryName.trim()
+      ) {
+        parsedCommand.rawCategory = parsed.categoryName;
+
+        if (
+          !parsedCommand.description ||
+          this.isRepeatLikeText(String(parsedCommand.description))
+        ) {
+          parsedCommand.description = parsed.categoryName;
+        }
+
+        return;
+      }
+    }
+  }
+
+  private async repeatLastTransaction(userId: string): Promise<AIResult> {
     const lastTransaction = await prisma.transaction.findFirst({
       where: {
         userId,
         type: {
-          in: ["expense", "income"],
-        },
-        categoryId: {
-          not: null,
+          in: ['expense', 'income'],
         },
       },
       include: {
         account: true,
         category: true,
       },
-      orderBy: [{ date: "desc" }, { createdAt: "desc" }],
+      orderBy: [
+        { date: 'desc' },
+        { createdAt: 'desc' },
+      ],
     });
 
-    if (!lastTransaction || !lastTransaction.category) {
+    if (!lastTransaction) {
       return {
         success: false,
-        intent: "unknown",
+        intent: 'unknown',
         executed: false,
         requiresConfirmation: false,
-        riskLevel: "low",
-        message: "🤔 Не нашёл прошлую операцию, которую можно повторить.",
+        riskLevel: 'low',
+        message: '🤔 Не нашёл прошлую операцию, которую можно повторить.',
         parsed: null,
       };
     }
 
-    const amount = repeat.amount ?? lastTransaction.amount;
-    const transactionType = lastTransaction.type as "expense" | "income";
+    const type = lastTransaction.type === 'income' ? 'income' : 'expense';
+    const categoryName = lastTransaction.category?.name ?? lastTransaction.description ?? 'операция';
+    const categoryIcon = lastTransaction.category?.icon ?? (type === 'income' ? '💰' : '📝');
 
     const transaction = await transactionService.createTransaction(userId, {
       accountId: lastTransaction.accountId,
-      categoryId: lastTransaction.categoryId,
-      amount,
-      type: transactionType,
-      description: lastTransaction.description ?? lastTransaction.category.name,
+      categoryId: lastTransaction.categoryId ?? undefined,
+      amount: lastTransaction.amount,
+      type,
+      description: lastTransaction.description ?? categoryName,
       isAIGenerated: true,
     });
 
-    const isExpense = transactionType === "expense";
-
     return {
       success: true,
-      intent: transactionType,
+      intent: type,
       executed: true,
       requiresConfirmation: false,
-      riskLevel: "low",
-      message: isExpense
-        ? `✅ Повторил расход: ${lastTransaction.category.icon ?? "📝"} ${lastTransaction.category.name} — ${amount} ₽.`
-        : `✅ Повторил доход: ${lastTransaction.category.icon ?? "💰"} ${lastTransaction.category.name} — ${amount} ₽.`,
+      riskLevel: 'low',
+      message:
+        type === 'expense'
+          ? `✅ Повторил расход: ${categoryIcon} ${categoryName} — ${lastTransaction.amount} ₽.`
+          : `✅ Повторил доход: ${categoryIcon} ${categoryName} — ${lastTransaction.amount} ₽.`,
       parsed: {
-        type: transactionType,
-        amount,
+        type,
+        amount: lastTransaction.amount,
         accountId: lastTransaction.accountId,
         accountName: lastTransaction.account.name,
         categoryId: lastTransaction.categoryId,
-        categoryName: lastTransaction.category.name,
-        description:
-          lastTransaction.description ?? lastTransaction.category.name,
+        categoryName,
+        description: lastTransaction.description ?? categoryName,
         repeatedFromTransactionId: lastTransaction.id,
       },
       data: transaction,
     };
   }
 
-  private parseRepeatCommand(command: string): {
-    isRepeat: boolean;
-    amount?: number;
-  } {
-    const normalized = command.trim().toLowerCase().replace(/\s+/g, " ");
+  private readParsedFromMemory(message: any): Record<string, any> | null {
+    try {
+      const meta = typeof message.meta === 'string' ? JSON.parse(message.meta) : message.meta;
+      const parsed = meta?.parsed;
 
-    for (const word of REPEAT_WORDS) {
-      if (normalized === word) {
-        return { isRepeat: true };
-      }
-
-      if (normalized.startsWith(`${word} `)) {
-        const rest = normalized.slice(word.length).trim();
-        const amountMatch = rest.match(/^(\d+[\d\s.,]*)/);
-
-        if (!amountMatch) {
-          return { isRepeat: true };
-        }
-
-        const amount = Number(
-          amountMatch[1].replace(/\s/g, "").replace(",", "."),
-        );
-
-        return Number.isFinite(amount) && amount > 0
-          ? { isRepeat: true, amount: Math.round(amount) }
-          : { isRepeat: true };
-      }
+      return parsed && typeof parsed === 'object' ? parsed : null;
+    } catch {
+      return null;
     }
-
-    return { isRepeat: false };
   }
 
-  private async applyContextFallback(parsedCommand: any, history: Array<any>) {
-    if (
-      parsedCommand.intent !== "expense" &&
-      parsedCommand.intent !== "income"
-    ) {
-      return;
+  private isLikelyRepeatCommand(command: string) {
+    const normalized = this.normalizeRepeatText(command);
+
+    if (!normalized) {
+      return false;
     }
 
-    const weakCategories = [
-      "еще",
-      "ещё",
-      "еще раз",
-      "ещё раз",
-      "то же",
-      "тоже",
-      "повтор",
-      "снова",
-    ];
-    const currentCategory = String(parsedCommand.rawCategory ?? "")
+    // Если есть сумма, это может быть «ещё 200» — такую команду лучше отдать parser,
+    // чтобы он взял новую сумму и подтянул категорию из памяти.
+    if (/\d/.test(normalized)) {
+      return false;
+    }
+
+    return this.isRepeatLikeText(normalized);
+  }
+
+  private isRepeatLikeText(value: string) {
+    const normalized = this.normalizeRepeatText(value);
+
+    if (!normalized) {
+      return false;
+    }
+
+    const words = normalized.split(' ').filter(Boolean);
+
+    // Повтор обычно короткий. Длинные фразы отправляем в LLM, чтобы не перехватывать лишнее.
+    if (words.length > 6) {
+      return false;
+    }
+
+    return (
+      /(^|\s)(еще|ещё)(\s|$)/.test(normalized) ||
+      /(^|\s)(повтор|повтори|повторить|повторяй)(\s|$)/.test(normalized) ||
+      /(^|\s)(снова|опять)(\s|$)/.test(normalized) ||
+      /(^|\s)(тоже|также)(\s|$)/.test(normalized) ||
+      /(^|\s)то\s+же(\s|$)/.test(normalized) ||
+      /(^|\s)так\s+же(\s|$)/.test(normalized) ||
+      /(^|\s)такую\s+же(\s|$)/.test(normalized) ||
+      /(^|\s)такой\s+же(\s|$)/.test(normalized) ||
+      /(^|\s)(дублируй|продублируй)(\s|$)/.test(normalized)
+    );
+  }
+
+  private normalizeRepeatText(value: string) {
+    return value
       .trim()
-      .toLowerCase();
-
-    if (currentCategory && !weakCategories.includes(currentCategory)) {
-      return;
-    }
-
-    const previousAssistantMessages = [...history]
-      .reverse()
-      .filter((message) => message.role === "assistant");
-
-    for (const message of previousAssistantMessages) {
-      try {
-        const meta =
-          typeof message.meta === "string"
-            ? JSON.parse(message.meta)
-            : message.meta;
-        const parsed = meta?.parsed;
-
-        if (
-          !parsed ||
-          parsed.type !== parsedCommand.intent ||
-          !parsed.categoryName
-        ) {
-          continue;
-        }
-
-        parsedCommand.rawCategory = parsed.categoryName;
-
-        if (
-          (!parsedCommand.amount || parsedCommand.amount <= 0) &&
-          typeof parsed.amount === "number" &&
-          parsed.amount > 0
-        ) {
-          parsedCommand.amount = parsed.amount;
-        }
-
-        if (
-          !parsedCommand.description ||
-          weakCategories.includes(
-            String(parsedCommand.description).trim().toLowerCase(),
-          )
-        ) {
-          parsedCommand.description = parsed.categoryName;
-        }
-
-        return;
-      } catch {
-        // ignore broken memory meta
-      }
-    }
+      .toLowerCase()
+      .replace(/ё/g, 'е')
+      .replace(/[.,!?;:()\[\]{}"'«»]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
   }
 }

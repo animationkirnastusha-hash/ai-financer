@@ -34,6 +34,7 @@ create_category
 create_account
 stats
 financial_planning
+repeat_last
 help
 unknown
 
@@ -235,6 +236,30 @@ FINANCIAL_PLANNING
 }
 
 ========================
+REPEAT_LAST
+========================
+
+Используй repeat_last, когда пользователь просит повторить последнюю операцию без новых деталей.
+
+Примеры:
+еще
+ещё
+повтори
+повтори еще раз
+сделай так же
+то же самое
+добавь такую же
+запиши так же
+можно еще одну
+
+Формат:
+{
+  "intent":"repeat_last"
+}
+
+Важно: если пользователь явно указал новую сумму и категорию, это НЕ repeat_last, а expense/income.
+
+========================
 HELP
 ========================
 
@@ -331,6 +356,8 @@ function normalizeParsed(input: unknown): AIParsedCommand {
 
   if (intent === 'show_accounts') return { intent: 'show_accounts' };
 
+  if (intent === 'repeat_last') return { intent: 'repeat_last' };
+
   if (intent === 'stats') {
     return {
       intent: 'stats',
@@ -371,6 +398,8 @@ function normalizeParsed(input: unknown): AIParsedCommand {
       question: asString(data.question || data.description, ''),
     };
   }
+  if (intent === 'repeat_last') return { intent: 'repeat_last' };
+
   if (intent === 'help') return { intent: 'help' };
 
   return { intent: 'unknown' };
@@ -398,10 +427,9 @@ private pickModel(command: string) {
     return env.ollamaFastModel;
   }
   async parse(
-  command: string,
-  history: Array<{ role: string; content: string }> = []
-): Promise<AIParsedCommand> {
-  
+    command: string,
+    history: Array<{ role: string; content: string }> = [],
+  ): Promise<AIParsedCommand> {
     const trimmed = command.trim();
 
     if (!trimmed) {
@@ -417,14 +445,14 @@ private pickModel(command: string) {
 
     try {
       const response = await this.ollama.complete({
-  model: this.pickModel(trimmed),
-  temperature: 0.03,
-  messages: [
-  {
-    role: 'system',
-    content:
-      SYSTEM_PROMPT +
-      `
+        model: this.pickModel(trimmed),
+        temperature: 0.03,
+        messages: [
+          {
+            role: 'system',
+            content:
+              SYSTEM_PROMPT +
+              `
 
 ========================
 DIALOG MEMORY
@@ -436,14 +464,15 @@ ${history
   .join('\n')}
 
 Правила памяти:
-- если пользователь пишет "ещё", "ещё раз", "то же самое", используй предыдущую похожую операцию
-- если пользователь пишет сумму без категории, используй последнюю категорию расхода/дохода
+- если пользователь просит повторить действие: верни {"intent":"repeat_last"}
+- если пользователь пишет «ещё 200» после «кофе 350», это расход на ту же категорию с новой суммой
+- если пользователь пишет только «ещё», «повтори», «так же», «то же самое», это repeat_last
 - не выдумывай счёт, если его не было в истории
-- всё равно верни только JSON
+- верни только JSON
 `,
-  },
-  { role: 'user', content: trimmed },
-],
+          },
+          { role: 'user', content: trimmed },
+        ],
       });
 
       return normalizeParsed(extractJsonObject(response.content));

@@ -44,6 +44,13 @@ export class AIActionPolicy {
       };
     }
 
+    if (command.intent === 'repeat_last') {
+      return {
+        requiresConfirmation: false,
+        riskLevel: 'low',
+      };
+    }
+
     if (command.intent === 'create_category') {
       return {
         requiresConfirmation: false,

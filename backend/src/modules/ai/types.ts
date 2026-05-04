@@ -7,6 +7,7 @@ export type AIIntent =
   | 'create_account'
   | 'stats'
   | 'financial_planning'
+  | 'repeat_last'
   | 'help'
   | 'unknown';
 
@@ -73,6 +74,11 @@ export interface AIParsedFinancialPlanning {
   question: string;
 }
 
+
+export interface AIParsedRepeatLast {
+  intent: 'repeat_last';
+}
+
 export interface AIParsedHelp {
   intent: 'help';
 }
@@ -90,6 +96,7 @@ export type AIParsedCommand =
   | AIParsedCreateAccount
   | AIParsedStats
   | AIParsedFinancialPlanning
+  | AIParsedRepeatLast
   | AIParsedHelp
   | AIParsedUnknown;
 
