@@ -106,10 +106,11 @@ if (
       role: 'assistant',
       content: result.message,
       meta: {
-        intent: result.intent,
-        executed: result.executed,
-        requiresConfirmation: result.requiresConfirmation,
-      },
+  intent: result.intent,
+  executed: result.executed,
+  requiresConfirmation: result.requiresConfirmation,
+  parsed: result.parsed,
+},
     });
 
     await this.training.save({
