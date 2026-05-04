@@ -39,7 +39,9 @@ export class AIManager {
 
      const history = await this.memory.getRecentMessages(userId, 6);
       const parsedCommand = await this.parser.parse(command, history);
+      await this.applyContextFallback(parsedCommand, history);
       const policy = this.policy.evaluate(parsedCommand);
+      
 // 🧠 Fallback: если нет категории — берём из последнего сообщения
 if (
   parsedCommand.intent === 'expense' &&
@@ -105,7 +107,7 @@ if (
       userId,
       role: 'assistant',
       content: result.message,
-      meta: {
+     meta: {
   intent: result.intent,
   executed: result.executed,
   requiresConfirmation: result.requiresConfirmation,
@@ -133,4 +135,67 @@ if (
       },
     });
   }
+  private async applyContextFallback(parsedCommand: any, history: Array<any>) {
+    const rawText = String(parsedCommand.rawText ?? parsedCommand.text ?? '').trim().toLowerCase();
+const rawCategoryText = String(parsedCommand.rawCategory ?? '').trim().toLowerCase();
+
+const repeatWords = ['еще', 'ещё', 'еще раз', 'ещё раз', 'то же', 'тоже', 'повтор', 'снова'];
+
+const looksLikeRepeat =
+  repeatWords.includes(rawText) ||
+  repeatWords.includes(rawCategoryText);
+  if (
+  parsedCommand.intent !== 'expense' &&
+  parsedCommand.intent !== 'income' &&
+  !looksLikeRepeat
+) {
+  return;
+}
+  const weakCategories = ['еще', 'ещё', 'еще раз', 'ещё раз', 'то же', 'тоже', 'повтор', 'снова'];
+
+  const currentCategory = String(parsedCommand.rawCategory ?? '').trim().toLowerCase();
+
+  const shouldUsePreviousCategory =
+    !currentCategory || weakCategories.includes(currentCategory);
+
+  if (!shouldUsePreviousCategory) {
+    return;
+  }
+
+  const previousAssistantMessages = [...history]
+    .reverse()
+    .filter((message) => message.role === 'assistant');
+
+  for (const message of previousAssistantMessages) {
+    try {
+      const meta = message.meta ? JSON.parse(message.meta) : null;
+      const parsed = meta?.parsed;
+
+     if (looksLikeRepeat && parsedCommand.intent !== 'expense' && parsedCommand.intent !== 'income') {
+  parsedCommand.intent = parsed.type;
+} {
+  parsedCommand.rawCategory = parsed.categoryName;
+
+  if (
+    (!parsedCommand.amount || parsedCommand.amount <= 0) &&
+    typeof parsed.amount === 'number' &&
+    parsed.amount > 0
+  ) {
+    parsedCommand.amount = parsed.amount;
+  }
+
+  if (
+    !parsedCommand.description ||
+    weakCategories.includes(String(parsedCommand.description).toLowerCase())
+  ) {
+    parsedCommand.description = parsed.categoryName;
+  }
+
+  return;
+}
+    } catch {
+      // ignore broken memory meta
+    }
+  }
+}
 }
