@@ -40,7 +40,24 @@ export class AIManager {
      const history = await this.memory.getRecentMessages(userId, 6);
       const parsedCommand = await this.parser.parse(command, history);
       const policy = this.policy.evaluate(parsedCommand);
+// 🧠 Fallback: если нет категории — берём из последнего сообщения
+if (
+  parsedCommand.intent === 'expense' &&
+  !parsedCommand.rawCategory &&
+  history.length > 0
+) {
+  const last = history.reverse().find((m) => m.role === 'assistant');
 
+  if (last) {
+    try {
+      const meta = last.meta ? JSON.parse(last.meta as any) : null;
+
+      if (meta?.intent === 'expense' && meta?.categoryName) {
+        parsedCommand.rawCategory = meta.categoryName;
+      }
+    } catch {}
+  }
+}
       if (!execute || (policy.requiresConfirmation && !confirmed)) {
         const previewResult = await this.preview.buildPreview(
           userId,
