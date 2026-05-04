@@ -41,11 +41,11 @@ export class AIManager {
         content: command,
       });
 
-      // Быстрый backend-layer: просьбы повторить не отправляем в LLM.
-      // Работает и для «еще», и для «повтори 200»: категория/счёт берутся из последней операции.
+      // Быстрый backend-layer: команды повтора обрабатываем до LLM.
+      // Поддерживает: «ещё», «повтори», «повтор», «повтори 200», «ещё 200».
       const repeatCommand = this.parseRepeatCommand(command);
 
-      if (repeatCommand) {
+      if (repeatCommand.isRepeat) {
         const repeatResult = await this.repeatLastTransaction(userId, repeatCommand.amount);
         await this.logSuccess(userId, command, repeatResult, startedAt);
         return repeatResult;
@@ -218,14 +218,10 @@ export class AIManager {
     const categoryName = lastTransaction.category?.name ?? lastTransaction.description ?? 'операция';
     const categoryIcon = lastTransaction.category?.icon ?? (type === 'income' ? '💰' : '📝');
 
-    const amount = typeof amountOverride === 'number' && amountOverride > 0
-      ? amountOverride
-      : lastTransaction.amount;
-
     const transaction = await transactionService.createTransaction(userId, {
       accountId: lastTransaction.accountId,
       categoryId: lastTransaction.categoryId ?? undefined,
-      amount,
+      amount: amountOverride ?? lastTransaction.amount,
       type,
       description: lastTransaction.description ?? categoryName,
       isAIGenerated: true,
@@ -239,11 +235,11 @@ export class AIManager {
       riskLevel: 'low',
       message:
         type === 'expense'
-          ? `✅ Повторил расход: ${categoryIcon} ${categoryName} — ${amount} ₽.`
-          : `✅ Повторил доход: ${categoryIcon} ${categoryName} — ${amount} ₽.`,
+          ? `✅ Повторил расход: ${categoryIcon} ${categoryName} — ${amountOverride ?? lastTransaction.amount} ₽.`
+          : `✅ Повторил доход: ${categoryIcon} ${categoryName} — ${amountOverride ?? lastTransaction.amount} ₽.`,
       parsed: {
         type,
-        amount,
+        amount: amountOverride ?? lastTransaction.amount,
         accountId: lastTransaction.accountId,
         accountName: lastTransaction.account.name,
         categoryId: lastTransaction.categoryId,
@@ -266,50 +262,24 @@ export class AIManager {
     }
   }
 
-  private parseRepeatCommand(command: string): { amount?: number } | null {
+  private parseRepeatCommand(command: string): { isRepeat: boolean; amount?: number } {
     const normalized = this.normalizeRepeatText(command);
 
-    if (!normalized) {
-      return null;
+    if (!normalized || !this.isRepeatLikeText(normalized)) {
+      return { isRepeat: false };
     }
 
-    const amount = this.extractAmountFromText(normalized);
-    const textWithoutAmount = amount
-      ? this.normalizeRepeatText(normalized.replace(amount.raw, ' '))
-      : normalized;
+    const amountMatch = normalized.match(/(?:^|\s)(\d+(?:[.,]\d+)?)(?:\s|$)/);
 
-    if (!this.isRepeatLikeText(textWithoutAmount)) {
-      return null;
+    if (!amountMatch) {
+      return { isRepeat: true };
     }
 
-    return amount ? { amount: amount.value } : {};
-  }
+    const amount = Number(amountMatch[1].replace(',', '.'));
 
-  private extractAmountFromText(value: string): { value: number; raw: string } | null {
-    const match = value.match(/(?:^|\s)(\d+(?:[.,]\d+)?)(?:\s*(к|тыс|тысяч|млн|миллион|миллиона|миллионов|руб|рубль|рублей|р|₽))?(?=\s|$)/i);
-
-    if (!match) {
-      return null;
-    }
-
-    const numeric = Number(match[1].replace(',', '.'));
-
-    if (!Number.isFinite(numeric) || numeric <= 0) {
-      return null;
-    }
-
-    const suffix = (match[2] ?? '').toLowerCase();
-    const multiplier =
-      suffix === 'к' || suffix === 'тыс' || suffix === 'тысяч'
-        ? 1000
-        : suffix.startsWith('млн') || suffix.startsWith('миллион')
-          ? 1000000
-          : 1;
-
-    return {
-      value: Math.round(numeric * multiplier),
-      raw: match[0],
-    };
+    return Number.isFinite(amount) && amount > 0
+      ? { isRepeat: true, amount }
+      : { isRepeat: true };
   }
 
   private isRepeatLikeText(value: string) {
@@ -328,14 +298,14 @@ export class AIManager {
 
     return (
       /(^|\s)(еще|ещё)(\s|$)/.test(normalized) ||
-      /(^|\s)(повтор|повтори|повторить|повторяй)(\s|$)/.test(normalized) ||
+      /(^|\s)(повтор\w*|повтори|повторить|повторяй)(\s|$)/.test(normalized) ||
       /(^|\s)(снова|опять)(\s|$)/.test(normalized) ||
       /(^|\s)(тоже|также)(\s|$)/.test(normalized) ||
       /(^|\s)то\s+же(\s|$)/.test(normalized) ||
       /(^|\s)так\s+же(\s|$)/.test(normalized) ||
       /(^|\s)такую\s+же(\s|$)/.test(normalized) ||
       /(^|\s)такой\s+же(\s|$)/.test(normalized) ||
-      /(^|\s)(дублируй|продублируй)(\s|$)/.test(normalized)
+      /(^|\s)(дублируй|продублируй|дубль|продублировать)(\s|$)/.test(normalized)
     );
   }
 
