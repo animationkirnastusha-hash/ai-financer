@@ -37,7 +37,8 @@ export class AIManager {
         content: command,
       });
 
-      const parsedCommand = await this.parser.parse(command);
+     const history = await this.memory.getRecentMessages(userId, 6);
+      const parsedCommand = await this.parser.parse(command, history);
       const policy = this.policy.evaluate(parsedCommand);
 
       if (!execute || (policy.requiresConfirmation && !confirmed)) {

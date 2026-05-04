@@ -397,7 +397,11 @@ private pickModel(command: string) {
 
     return env.ollamaFastModel;
   }
-  async parse(command: string): Promise<AIParsedCommand> {
+  async parse(
+  command: string,
+  history: Array<{ role: string; content: string }> = []
+): Promise<AIParsedCommand> {
+  
     const trimmed = command.trim();
 
     if (!trimmed) {
@@ -416,9 +420,30 @@ private pickModel(command: string) {
   model: this.pickModel(trimmed),
   temperature: 0.03,
   messages: [
-          { role: 'system', content: SYSTEM_PROMPT },
-          { role: 'user', content: trimmed },
-        ],
+  {
+    role: 'system',
+    content:
+      SYSTEM_PROMPT +
+      `
+
+========================
+DIALOG MEMORY
+========================
+
+Последние сообщения пользователя и AI:
+${history
+  .map((message) => `${message.role === 'user' ? 'Пользователь' : 'AI'}: ${message.content}`)
+  .join('\n')}
+
+Правила памяти:
+- если пользователь пишет "ещё", "ещё раз", "то же самое", используй предыдущую похожую операцию
+- если пользователь пишет сумму без категории, используй последнюю категорию расхода/дохода
+- не выдумывай счёт, если его не было в истории
+- всё равно верни только JSON
+`,
+  },
+  { role: 'user', content: trimmed },
+],
       });
 
       return normalizeParsed(extractJsonObject(response.content));
