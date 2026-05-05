@@ -46,7 +46,11 @@ export class AIManager {
       const repeatCommand = this.parseRepeatCommand(command);
 
       if (repeatCommand.isRepeat) {
-        const repeatResult = await this.repeatLastTransaction(userId, repeatCommand.amount);
+        const repeatResult = await this.repeatLastTransaction(
+          userId,
+          repeatCommand.amount,
+          repeatCommand.categoryQuery,
+        );
         await this.logSuccess(userId, command, repeatResult, startedAt);
         return repeatResult;
       }
@@ -184,8 +188,15 @@ export class AIManager {
     }
   }
 
-  private async repeatLastTransaction(userId: string, amountOverride?: number): Promise<AIResult> {
-    const lastTransaction = await prisma.transaction.findFirst({
+  private async repeatLastTransaction(
+    userId: string,
+    amountOverride?: number,
+    categoryQuery?: string,
+  ): Promise<AIResult> {
+    const amount = amountOverride !== undefined ? this.normalizeAmountOverride(amountOverride) : undefined;
+    const normalizedCategoryQuery = categoryQuery ? this.normalizeSearchText(categoryQuery) : '';
+
+    const recentTransactions = await prisma.transaction.findMany({
       where: {
         userId,
         type: {
@@ -200,7 +211,22 @@ export class AIManager {
         { date: 'desc' },
         { createdAt: 'desc' },
       ],
+      take: normalizedCategoryQuery ? 80 : 1,
     });
+
+    const lastTransaction = normalizedCategoryQuery
+      ? recentTransactions.find((transaction) => {
+          const categoryName = this.normalizeSearchText(transaction.category?.name ?? '');
+          const description = this.normalizeSearchText(transaction.description ?? '');
+
+          return (
+            categoryName.includes(normalizedCategoryQuery) ||
+            normalizedCategoryQuery.includes(categoryName) ||
+            description.includes(normalizedCategoryQuery) ||
+            normalizedCategoryQuery.includes(description)
+          );
+        })
+      : recentTransactions[0];
 
     if (!lastTransaction) {
       return {
@@ -209,7 +235,9 @@ export class AIManager {
         executed: false,
         requiresConfirmation: false,
         riskLevel: 'low',
-        message: '🤔 Не нашёл прошлую операцию, которую можно повторить.',
+        message: normalizedCategoryQuery
+          ? `🤔 Не нашёл прошлую операцию по запросу «${categoryQuery}». Попробуй: «кофе 300» или «повтори».`
+          : '🤔 Не нашёл прошлую операцию, которую можно повторить. Попробуй сначала записать расход: «кофе 300».',
         parsed: null,
       };
     }
@@ -217,14 +245,26 @@ export class AIManager {
     const type = lastTransaction.type === 'income' ? 'income' : 'expense';
     const categoryName = lastTransaction.category?.name ?? lastTransaction.description ?? 'операция';
     const categoryIcon = lastTransaction.category?.icon ?? (type === 'income' ? '💰' : '📝');
+    const repeatAmount = amount ?? lastTransaction.amount;
 
     const transaction = await transactionService.createTransaction(userId, {
       accountId: lastTransaction.accountId,
       categoryId: lastTransaction.categoryId ?? undefined,
-      amount: amountOverride ?? lastTransaction.amount,
+      amount: repeatAmount,
       type,
-      description: lastTransaction.description ?? categoryName,
+      description: categoryName,
       isAIGenerated: true,
+    });
+
+    await this.events.track({
+      userId,
+      event: 'repeat_used',
+      data: {
+        amount: repeatAmount,
+        amountOverridden: amount !== undefined,
+        categoryQuery: categoryQuery ?? null,
+        repeatedFromTransactionId: lastTransaction.id,
+      },
     });
 
     return {
@@ -235,17 +275,18 @@ export class AIManager {
       riskLevel: 'low',
       message:
         type === 'expense'
-          ? `✅ Повторил расход: ${categoryIcon} ${categoryName} — ${amountOverride ?? lastTransaction.amount} ₽.`
-          : `✅ Повторил доход: ${categoryIcon} ${categoryName} — ${amountOverride ?? lastTransaction.amount} ₽.`,
+          ? `✅ Повторил расход: ${categoryIcon} ${categoryName} — ${repeatAmount} ₽.`
+          : `✅ Повторил доход: ${categoryIcon} ${categoryName} — ${repeatAmount} ₽.`,
       parsed: {
         type,
-        amount: amountOverride ?? lastTransaction.amount,
+        amount: repeatAmount,
         accountId: lastTransaction.accountId,
         accountName: lastTransaction.account.name,
         categoryId: lastTransaction.categoryId,
         categoryName,
-        description: lastTransaction.description ?? categoryName,
+        description: categoryName,
         repeatedFromTransactionId: lastTransaction.id,
+        categoryQuery: categoryQuery ?? null,
       },
       data: transaction,
     };
@@ -262,7 +303,11 @@ export class AIManager {
     }
   }
 
-  private parseRepeatCommand(command: string): { isRepeat: boolean; amount?: number } {
+  private parseRepeatCommand(command: string): {
+    isRepeat: boolean;
+    amount?: number;
+    categoryQuery?: string;
+  } {
     const normalized = this.normalizeRepeatText(command);
 
     if (!normalized || !this.isRepeatLikeText(normalized)) {
@@ -270,16 +315,60 @@ export class AIManager {
     }
 
     const amountMatch = normalized.match(/(?:^|\s)(\d+(?:[.,]\d+)?)(?:\s|$)/);
+    const amount = amountMatch ? Number(amountMatch[1].replace(',', '.')) : undefined;
 
-    if (!amountMatch) {
-      return { isRepeat: true };
+    const categoryQuery = this.extractRepeatCategoryQuery(normalized, amountMatch?.[1]);
+
+    return {
+      isRepeat: true,
+      ...(amount !== undefined && Number.isFinite(amount) && amount > 0 ? { amount } : {}),
+      ...(categoryQuery ? { categoryQuery } : {}),
+    };
+  }
+
+  private extractRepeatCategoryQuery(normalizedCommand: string, rawAmount?: string) {
+    let query = normalizedCommand
+      .replace(/\b(еще|ещё|повтор\w*|повтори|повторить|повторяй|снова|опять|тоже|также|дублируй|продублируй|дубль|продублировать)\b/g, ' ')
+      .replace(/\bто\s+же\b/g, ' ')
+      .replace(/\bтак\s+же\b/g, ' ')
+      .replace(/\bтакую\s+же\b/g, ' ')
+      .replace(/\bтакой\s+же\b/g, ' ')
+      .replace(/\bоперац\w*\b/g, ' ')
+      .replace(/\bтранзакц\w*\b/g, ' ')
+      .replace(/\bрасход\w*\b/g, ' ')
+      .replace(/\bдоход\w*\b/g, ' ');
+
+    if (rawAmount) {
+      query = query.replace(new RegExp(`(^|\\s)${rawAmount.replace('.', '\\.').replace(',', '[,.]')}(\\s|$)`), ' ');
     }
 
-    const amount = Number(amountMatch[1].replace(',', '.'));
+    query = query.replace(/\s+/g, ' ').trim();
 
-    return Number.isFinite(amount) && amount > 0
-      ? { isRepeat: true, amount }
-      : { isRepeat: true };
+    return query || undefined;
+  }
+
+  private normalizeAmountOverride(value: number) {
+    const amount = Number(value);
+
+    if (!Number.isFinite(amount) || amount <= 0 || !Number.isInteger(amount)) {
+      throw new Error('❌ Неверная сумма. Напиши целое число больше нуля, например: «повтори 200».');
+    }
+
+    if (amount > 1_000_000) {
+      throw new Error('❌ Сумма слишком большая. Для крупных операций нужно отдельное подтверждение.');
+    }
+
+    return amount;
+  }
+
+  private normalizeSearchText(value: string) {
+    return value
+      .trim()
+      .toLowerCase()
+      .replace(/ё/g, 'е')
+      .replace(/[.,!?;:()\[\]{}"'«»]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
   }
 
   private isRepeatLikeText(value: string) {

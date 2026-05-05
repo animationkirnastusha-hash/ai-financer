@@ -131,6 +131,15 @@ export class TransactionService {
 
     const amount = this.normalizeAmount(input.amount);
 
+    await this.ensureNotRecentDuplicate(userId, {
+      accountId: input.accountId,
+      toAccountId: input.type === 'transfer' ? input.toAccountId ?? null : null,
+      categoryId: input.type === 'transfer' ? null : input.categoryId ?? null,
+      amount,
+      type: input.type,
+      description: input.description?.trim() || null,
+    });
+
     const transaction = await prisma.$transaction(async (tx) => {
       await this.applyBalanceEffect(tx, {
         type: input.type,
@@ -265,6 +274,40 @@ export class TransactionService {
     });
 
     return existing;
+  }
+
+  private async ensureNotRecentDuplicate(
+    userId: string,
+    input: {
+      accountId: string;
+      toAccountId?: string | null;
+      categoryId?: string | null;
+      amount: number;
+      type: TransactionType;
+      description?: string | null;
+    },
+  ) {
+    const recent = await prisma.transaction.findFirst({
+      where: {
+        userId,
+        accountId: input.accountId,
+        toAccountId: input.toAccountId ?? null,
+        categoryId: input.categoryId ?? null,
+        amount: input.amount,
+        type: input.type,
+        description: input.description ?? null,
+        createdAt: {
+          gte: new Date(Date.now() - 8000),
+        },
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    if (recent) {
+      throw new BadRequestError('Похоже, такая операция уже была записана только что');
+    }
   }
 
   private validateCreateInput(input: CreateTransactionInput) {

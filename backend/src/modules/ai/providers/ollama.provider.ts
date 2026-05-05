@@ -15,7 +15,8 @@ type OllamaChatResponse = {
 export class OllamaProvider implements AIProvider {
   async complete(request: AIProviderRequest): Promise<AIProviderResponse> {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), env.aiLlmTimeoutMs);
+    const timeoutMs = Math.max(1000, env.aiLlmTimeoutMs || 4500);
+    const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
     try {
       const response = await fetch(`${env.ollamaBaseUrl}/api/chat`, {
@@ -49,6 +50,12 @@ export class OllamaProvider implements AIProvider {
       }
 
       return { content };
+    } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') {
+        throw new Error(`Ollama request timed out after ${timeoutMs}ms`);
+      }
+
+      throw error;
     } finally {
       clearTimeout(timeout);
     }
