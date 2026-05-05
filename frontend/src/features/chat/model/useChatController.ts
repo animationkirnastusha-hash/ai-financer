@@ -16,7 +16,7 @@ export function useChatController() {
   const [isSending, setIsSending] = useState(false);
 
   const loadAccounts = useAccountsStore((state) => state.loadAccounts);
-  const loadTransactions = useTransactionsStore((state) => state.loadTransactions);
+  const refreshTransactions = useTransactionsStore((state) => state.refreshAll);
 
   const hasAuthToken = useMemo(() => {
     return !!localStorage.getItem('auth-token');
@@ -51,9 +51,9 @@ export function useChatController() {
       loadPendingActions(),
       loadAuditLogs(),
       loadAccounts(true),
-      loadTransactions(true),
+      refreshTransactions(),
     ]);
-  }, [loadAccounts, loadAuditLogs, loadPendingActions, loadTransactions]);
+  }, [loadAccounts, loadAuditLogs, loadPendingActions, refreshTransactions]);
 
   useEffect(() => {
     void refreshFinanceState();
@@ -90,6 +90,8 @@ export function useChatController() {
           kind: response.requiresConfirmation ? 'preview' : 'text',
           actionType: response.intent,
           actionId: response.meta?.pendingActionId || response.meta?.auditLogId,
+          auditLogId: response.meta?.auditLogId,
+          canUndo: Boolean(response.meta?.undo?.available && response.meta?.auditLogId),
           data:
             response.parsed && typeof response.parsed === 'object'
               ? (response.parsed as Record<string, unknown>)
@@ -204,6 +206,49 @@ export function useChatController() {
     [refreshFinanceState],
   );
 
+  const undoMessageAction = useCallback(
+    async (auditLogId: string) => {
+      if (!auditLogId) return;
+
+      try {
+        const response = await chatApi.undoByAuditLog(auditLogId);
+        const assistantText = response?.message || '↩️ Операция отменена.';
+
+        setMessages((prev) =>
+          prev.map((message) =>
+            message.auditLogId === auditLogId
+              ? { ...message, canUndo: false }
+              : message,
+          ).concat({
+            id: crypto.randomUUID(),
+            role: 'assistant',
+            text: assistantText,
+            content: assistantText,
+            createdAt: new Date().toISOString(),
+            kind: 'text',
+          }),
+        );
+      } catch (error) {
+        console.error('Undo failed', error);
+
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: crypto.randomUUID(),
+            role: 'assistant',
+            text: 'Не удалось отменить операцию. Возможно, она уже отменена или изменена.',
+            content: 'Не удалось отменить операцию. Возможно, она уже отменена или изменена.',
+            createdAt: new Date().toISOString(),
+            kind: 'error',
+          },
+        ]);
+      } finally {
+        await refreshFinanceState();
+      }
+    },
+    [refreshFinanceState],
+  );
+
   const openPending = useCallback(() => setIsPendingOpen(true), []);
   const closePending = useCallback(() => setIsPendingOpen(false), []);
   const openAudit = useCallback(() => setIsAuditOpen(true), []);
@@ -220,6 +265,7 @@ export function useChatController() {
     sendMessage,
     confirmAction,
     cancelAction,
+    undoMessageAction,
 
     openPending,
     closePending,

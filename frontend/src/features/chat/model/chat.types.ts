@@ -1,4 +1,5 @@
 import type { MessageKind, MessageRole } from '@/entities/message/model/message.types';
+
 export type SendChatMessagePayload = {
   text: string;
 };
@@ -14,8 +15,14 @@ export type AIParseResult = {
   meta?: {
     auditLogId?: string;
     pendingActionId?: string;
+    undo?: {
+      available: boolean;
+      actionType?: 'transaction';
+      targetId?: string;
+    };
   };
 };
+
 export type ChatMessage = {
   id: string;
   role: MessageRole;
@@ -26,6 +33,9 @@ export type ChatMessage = {
 
   actionId?: string;
   actionType?: string;
+  auditLogId?: string;
+  canUndo?: boolean;
   data?: Record<string, unknown>;
 };
+
 export type ChatResponse = AIParseResult;

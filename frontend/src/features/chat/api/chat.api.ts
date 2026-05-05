@@ -10,4 +10,7 @@ export const chatApi = {
       command: payload.text,
       execute: true,
     }),
+
+  undoByAuditLog: (auditLogId: string) =>
+    apiClient.post<any>('/ai/undo', { auditLogId }),
 };

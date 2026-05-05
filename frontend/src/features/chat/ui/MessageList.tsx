@@ -6,12 +6,14 @@ type MessageListProps = {
   messages: MessageEntity[];
   onConfirm?: (id: string) => void;
   onCancel?: (id: string) => void;
+  onUndo?: (auditLogId: string) => void;
 };
 
 export function MessageList({
   messages,
   onConfirm,
   onCancel,
+  onUndo,
 }: MessageListProps) {
   const containerRef = useAutoScroll<HTMLDivElement>([messages]);
 
@@ -24,6 +26,7 @@ export function MessageList({
             message={message}
             onConfirm={onConfirm}
             onCancel={onCancel}
+            onUndo={onUndo}
           />
         ))}
       </div>

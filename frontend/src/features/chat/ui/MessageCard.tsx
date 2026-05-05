@@ -2,17 +2,20 @@ import type { MessageEntity } from '@/entities/message/model/message.types';
 import { cn } from '@/shared/lib/cn';
 import { formatTime } from '@/shared/lib/format';
 import { FinancePreviewCard } from '@/features/chat/ui/FinancePreviewCard';
+import { Button } from '@/shared/ui/Button';
 
 type MessageCardProps = {
-  message: MessageEntity;
+  message: MessageEntity & { auditLogId?: string; canUndo?: boolean };
   onConfirm?: (id: string) => void;
   onCancel?: (id: string) => void;
+  onUndo?: (auditLogId: string) => void;
 };
 
 export function MessageCard({
   message,
   onConfirm,
   onCancel,
+  onUndo,
 }: MessageCardProps) {
   const isUser = message.role === 'user';
 
@@ -48,6 +51,18 @@ export function MessageCard({
         )}
       >
         <div className="whitespace-pre-wrap text-sm leading-6">{message.text}</div>
+
+        {!isUser && message.canUndo && message.auditLogId ? (
+          <div className="mt-3">
+            <Button
+              className="h-9 px-3 text-xs"
+              variant="secondary"
+              onClick={() => onUndo?.(message.auditLogId!)}
+            >
+              ↩️ Отменить
+            </Button>
+          </div>
+        ) : null}
 
         <div
           className={cn(
