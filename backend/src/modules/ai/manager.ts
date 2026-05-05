@@ -8,9 +8,7 @@ import { AITrainingService } from './ai-training.service';
 import { ProductEventsService } from '../analytics/product-events.service';
 import { AIPreviewBuilder } from './ai-preview.builder';
 import { AIExecutorService } from './ai-executor.service';
-
 const transactionService = new TransactionService();
-
 export class AIManager {
   private readonly parser = new LLMCommandInterpreter();
   private readonly policy = new AIActionPolicy();
@@ -21,6 +19,7 @@ export class AIManager {
   private readonly executor = new AIExecutorService();
 
   async handle(userId: string, command: string, options?: AIHandleOptions): Promise<AIResult> {
+    const normalized = command.trim().toLowerCase();
     const startedAt = Date.now();
 
     try {
@@ -40,6 +39,12 @@ export class AIManager {
         role: 'user',
         content: command,
       });
+
+      if (this.isUndoCommand(normalized)) {
+        const undoResult = await this.undoLastTransaction(userId);
+        await this.logSuccess(userId, command, undoResult, startedAt);
+        return undoResult;
+      }
 
       // Быстрый backend-layer: команды повтора обрабатываем до LLM.
       // Поддерживает: «ещё», «повтори», «повтор», «повтори 200», «ещё 200».
@@ -290,6 +295,78 @@ export class AIManager {
       },
       data: transaction,
     };
+  }
+
+  private async undoLastTransaction(userId: string): Promise<AIResult> {
+    const lastTransaction = await prisma.transaction.findFirst({
+      where: { userId },
+      include: {
+        account: true,
+        category: true,
+        toAccount: true,
+      },
+      orderBy: [{ date: 'desc' }, { createdAt: 'desc' }],
+    });
+
+    if (!lastTransaction) {
+      return {
+        success: false,
+        intent: 'unknown',
+        executed: false,
+        requiresConfirmation: false,
+        riskLevel: 'low',
+        message: '↩️ Пока нечего отменять. Запиши операцию, а потом её можно будет быстро отменить.',
+        parsed: null,
+      };
+    }
+
+    const deleted = await transactionService.deleteTransaction(userId, lastTransaction.id);
+    const type = lastTransaction.type === 'income' ? 'income' : lastTransaction.type === 'transfer' ? 'transfer' : 'expense';
+    const categoryName = lastTransaction.category?.name ?? lastTransaction.description ?? 'операция';
+
+    await this.events.track({
+      userId,
+      event: 'undo_used',
+      data: {
+        transactionId: lastTransaction.id,
+        amount: lastTransaction.amount,
+        type,
+      },
+    });
+
+    return {
+      success: true,
+      intent: type,
+      executed: true,
+      requiresConfirmation: false,
+      riskLevel: 'low',
+      message: `↩️ Отменил последнюю операцию: ${categoryName} — ${lastTransaction.amount} ₽.`,
+      parsed: {
+        type,
+        amount: lastTransaction.amount,
+        transactionId: lastTransaction.id,
+        categoryName,
+      },
+      data: deleted,
+      meta: {
+        undo: {
+          available: false,
+        },
+      },
+    };
+  }
+
+  private isUndoCommand(value: string) {
+    const normalized = this.normalizeRepeatText(value);
+
+    return [
+      'отмени',
+      'отменить',
+      'отмени последнюю',
+      'удали последнюю',
+      'назад',
+      'undo',
+    ].includes(normalized);
   }
 
   private readParsedFromMemory(message: any): Record<string, any> | null {

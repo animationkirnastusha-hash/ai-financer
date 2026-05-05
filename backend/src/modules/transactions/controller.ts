@@ -37,16 +37,16 @@ function parseOptionalType(value: unknown): TransactionType | undefined {
   return value;
 }
 
-function getStringParam(value: unknown, fieldName: string): string {
+function getStringParam(value: unknown, label: string) {
   if (typeof value !== 'string' || !value.trim()) {
-    throw new BadRequestError(`${fieldName} must be a non-empty string`);
+    throw new BadRequestError(`${label} is required`);
   }
 
   return value;
 }
 
 export const getTransactions = asyncHandler(async (req: Request, res: Response) => {
-  const result = await transactionService.getUserTransactions(req.userId!, {
+  const transactions = await transactionService.getUserTransactions(req.userId!, {
     accountId: typeof req.query.accountId === 'string' ? req.query.accountId : undefined,
     categoryId: typeof req.query.categoryId === 'string' ? req.query.categoryId : undefined,
     type: parseOptionalType(req.query.type),
@@ -56,15 +56,28 @@ export const getTransactions = asyncHandler(async (req: Request, res: Response) 
     offset: parseOptionalNumber(req.query.offset),
   });
 
-  res.json(result);
+  res.json(transactions);
+});
+
+export const getLatestTransaction = asyncHandler(async (req: Request, res: Response) => {
+  const transaction = await transactionService.getLatestTransaction(req.userId!);
+
+  res.json({ transaction });
+});
+
+export const getTransactionStats = asyncHandler(async (req: Request, res: Response) => {
+  const stats = await transactionService.getMonthlyStats(req.userId!, {
+    category: typeof req.query.category === 'string' ? req.query.category : undefined,
+  });
+
+  res.json(stats);
 });
 
 export const getTransaction = asyncHandler(async (req: Request, res: Response) => {
   const transactionId = getStringParam(req.params.id, 'Transaction id');
-
   const transaction = await transactionService.getTransactionById(req.userId!, transactionId);
 
-  res.json({ transaction });
+  res.json(transaction);
 });
 
 export const createTransaction = asyncHandler(async (req: Request, res: Response) => {

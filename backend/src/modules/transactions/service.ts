@@ -99,6 +99,84 @@ export class TransactionService {
     return { transactions, total };
   }
 
+
+  async getLatestTransaction(userId: string) {
+    return prisma.transaction.findFirst({
+      where: { userId },
+      include: transactionInclude,
+      orderBy: [{ date: 'desc' }, { createdAt: 'desc' }],
+    });
+  }
+
+  async getMonthlyStats(userId: string, options: { category?: string } = {}) {
+    const now = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const categoryQuery = options.category?.trim().toLowerCase();
+
+    const transactions = await prisma.transaction.findMany({
+      where: {
+        userId,
+        date: {
+          gte: monthStart,
+          lte: now,
+        },
+        ...(categoryQuery
+          ? {
+              category: {
+                name: {
+                  contains: categoryQuery,
+                },
+              },
+            }
+          : {}),
+      },
+      include: transactionInclude,
+      orderBy: [{ date: 'desc' }, { createdAt: 'desc' }],
+      take: 500,
+    });
+
+    const income = transactions
+      .filter((item) => item.type === 'income')
+      .reduce((sum, item) => sum + item.amount, 0);
+
+    const expenses = transactions
+      .filter((item) => item.type === 'expense')
+      .reduce((sum, item) => sum + item.amount, 0);
+
+    const byCategory = new Map<string, { name: string; icon?: string | null; amount: number; count: number }>();
+
+    for (const transaction of transactions) {
+      if (transaction.type !== 'expense') continue;
+
+      const key = transaction.category?.id ?? transaction.description ?? 'unknown';
+      const current = byCategory.get(key) ?? {
+        name: transaction.category?.name ?? transaction.description ?? 'Без категории',
+        icon: transaction.category?.icon,
+        amount: 0,
+        count: 0,
+      };
+
+      current.amount += transaction.amount;
+      current.count += 1;
+      byCategory.set(key, current);
+    }
+
+    return {
+      period: {
+        startDate: monthStart.toISOString(),
+        endDate: now.toISOString(),
+      },
+      income,
+      expenses,
+      balance: income - expenses,
+      count: transactions.length,
+      topCategories: [...byCategory.values()]
+        .sort((a, b) => b.amount - a.amount)
+        .slice(0, 8),
+      transactions,
+    };
+  }
+
   async getTransactionById(userId: string, transactionId: string) {
     const transaction = await prisma.transaction.findFirst({
       where: { id: transactionId, userId },
