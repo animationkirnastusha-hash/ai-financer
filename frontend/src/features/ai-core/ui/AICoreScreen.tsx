@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { PendingActionsDrawer } from '@/features/pending-actions/ui/PendingActionsDrawer';
 import { FinancePreviewCard } from '@/features/chat/ui/FinancePreviewCard';
 import { AICoreOrb } from '@/features/ai-core/ui/AICoreOrb';
@@ -8,9 +9,29 @@ import { AICoreRecentActivity } from '@/features/ai-core/ui/AICoreRecentActivity
 import { useAICoreController } from '@/features/ai-core/model/useAICoreController';
 import { CommandListSheet } from '@/features/commands/ui/CommandListSheet';
 import { useNavigationStore } from '@/features/navigation/model/navigation.store';
+import { LastTransactionCard } from '@/features/transactions/ui/LastTransactionCard';
+import { TransactionsHistoryDrawer } from '@/features/transactions/ui/TransactionsHistoryDrawer';
+import { EditTransactionModal } from '@/features/transactions/ui/EditTransactionModal';
+import { MonthlyStatsCard } from '@/features/transactions/ui/MonthlyStatsCard';
+import { useTransactionsStore } from '@/features/transactions/model/transactions.store';
+import type { TransactionDto } from '@/features/transactions/api/transactions.api';
 
 export function AICoreScreen() {
   const navigateTo = useNavigationStore((state) => state.navigateTo);
+  const [historyOpen, setHistoryOpen] = useState(false);
+
+  const {
+    items,
+    latest,
+    monthlyStats,
+    editing,
+    isMutating,
+    refreshDashboard,
+    deleteTx,
+    openEdit,
+    closeEdit,
+    saveEdit,
+  } = useTransactionsStore();
 
   const {
     coreState,
@@ -46,6 +67,10 @@ export function AICoreScreen() {
     runQuickCommand,
   } = useAICoreController();
 
+  useEffect(() => {
+    void refreshDashboard();
+  }, [refreshDashboard]);
+
   const pendingCount = pendingActions.length;
 
   const liveText =
@@ -58,6 +83,19 @@ export function AICoreScreen() {
           : isSending
             ? 'AI думает...'
             : 'AI активен';
+
+  const handleDelete = async (transaction: TransactionDto) => {
+    await deleteTx(transaction);
+  };
+
+  const handleEdit = (transaction: TransactionDto) => {
+    openEdit(transaction);
+  };
+
+  const handleAfterConfirm = async (actionId: string) => {
+    await confirmAction(actionId);
+    await refreshDashboard();
+  };
 
   return (
     <div className="flex h-dvh flex-col overflow-hidden bg-[radial-gradient(circle_at_top,rgba(16,185,129,0.10),transparent_28%),linear-gradient(180deg,#040811_0%,#07111b_100%)] text-white">
@@ -121,6 +159,18 @@ export function AICoreScreen() {
               )}
             </div>
 
+            {/* LAST TRANSACTION */}
+            <LastTransactionCard
+              transaction={latest ?? items[0] ?? null}
+              isMutating={isMutating}
+              onOpenHistory={() => setHistoryOpen(true)}
+              onEdit={handleEdit}
+              onDelete={handleDelete}
+            />
+
+            {/* MONTHLY STATS */}
+            <MonthlyStatsCard stats={monthlyStats} />
+
             {/* CORE */}
             <section className="relative flex flex-col items-center justify-center py-3">
 
@@ -163,7 +213,7 @@ export function AICoreScreen() {
                 intent={latestAssistantMessage.actionType}
                 actionId={latestAssistantMessage.actionId}
                 data={latestAssistantMessage.data}
-                onConfirm={confirmAction}
+                onConfirm={handleAfterConfirm}
                 onCancel={cancelAction}
               />
             ) : null}
@@ -195,7 +245,7 @@ export function AICoreScreen() {
               </section>
             ) : null}
 
-            {/* HISTORY */}
+            {/* HISTORY PREVIEW */}
             <AICoreRecentActivity />
 
           </div>
@@ -207,8 +257,25 @@ export function AICoreScreen() {
         open={isPendingOpen}
         items={pendingActions}
         onClose={closePending}
-        onConfirm={confirmAction}
+        onConfirm={handleAfterConfirm}
         onCancel={cancelAction}
+      />
+
+      <TransactionsHistoryDrawer
+        open={historyOpen}
+        items={items}
+        isMutating={isMutating}
+        onClose={() => setHistoryOpen(false)}
+        onEdit={handleEdit}
+        onDelete={handleDelete}
+      />
+
+      <EditTransactionModal
+        open={Boolean(editing)}
+        transaction={editing}
+        isSaving={isMutating}
+        onClose={closeEdit}
+        onSave={saveEdit}
       />
 
       <CommandListSheet

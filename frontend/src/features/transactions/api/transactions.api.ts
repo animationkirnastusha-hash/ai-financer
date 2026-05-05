@@ -1,5 +1,4 @@
 import { apiClient } from '@/shared/api/client';
-import { env } from '@/shared/config/env';
 
 export type TransactionDto = {
   id: string;
@@ -37,18 +36,8 @@ export type TransactionDto = {
   } | null;
 };
 
-export type UpdateTransactionPayload = {
-  accountId?: string;
-  toAccountId?: string | null;
-  categoryId?: string | null;
-  amount?: number;
-  type?: 'income' | 'expense' | 'transfer';
-  description?: string | null;
-  date?: string;
-};
-
 export type MonthlyStatsDto = {
-  period: {
+  period?: {
     startDate: string;
     endDate: string;
   };
@@ -62,7 +51,7 @@ export type MonthlyStatsDto = {
     amount: number;
     count: number;
   }>;
-  transactions: TransactionDto[];
+  transactions?: TransactionDto[];
 };
 
 type TransactionsResponse =
@@ -72,60 +61,64 @@ type TransactionsResponse =
       total?: number;
     };
 
-function getAuthHeaders(): HeadersInit {
-  const token = localStorage.getItem('auth-token');
+type LatestResponse =
+  | TransactionDto
+  | null
+  | {
+      transaction?: TransactionDto | null;
+    };
 
-  if (!token) return {};
-
-  return {
-    Authorization: `Bearer ${token}`,
-  };
-}
-
-function unwrapTransaction(payload: any): TransactionDto {
-  return payload?.transaction ?? payload;
-}
-
-export async function fetchTransactions(limit = 100): Promise<TransactionDto[]> {
-  const response = await fetch(`${env.apiBaseUrl}/transactions?limit=${limit}`, {
-    method: 'GET',
-    headers: getAuthHeaders(),
-  });
-
-  const payload: TransactionsResponse = await response.json();
-
-  if (!response.ok) {
-    throw new Error(
-      (payload as any)?.error?.message ||
-        (payload as any)?.message ||
-        'Failed to fetch transactions',
-    );
-  }
-
+function extractTransactions(payload: TransactionsResponse): TransactionDto[] {
   if (Array.isArray(payload)) return payload;
-
   return Array.isArray(payload.transactions) ? payload.transactions : [];
 }
 
-export async function fetchLatestTransaction(): Promise<TransactionDto | null> {
-  const response = await apiClient.get<{ transaction?: TransactionDto | null }>('/transactions/latest');
-  return response.transaction ?? null;
+function isTransactionDto(value: unknown): value is TransactionDto {
+  return Boolean(
+    value &&
+      typeof value === 'object' &&
+      'id' in value &&
+      'accountId' in value &&
+      'amount' in value &&
+      'type' in value,
+  );
 }
 
-export async function fetchMonthlyTransactionStats(category?: string): Promise<MonthlyStatsDto> {
-  const query = category ? `?category=${encodeURIComponent(category)}` : '';
-  return apiClient.get<MonthlyStatsDto>(`/transactions/stats/monthly${query}`);
+function extractLatest(payload: LatestResponse): TransactionDto | null {
+  if (!payload) return null;
+  if (isTransactionDto(payload)) return payload;
+  return payload.transaction ?? null;
+}
+
+export async function fetchTransactions(limit = 100): Promise<TransactionDto[]> {
+  const payload = await apiClient.get<TransactionsResponse>(`/transactions?limit=${limit}`);
+  return extractTransactions(payload);
+}
+
+export async function fetchLatestTransaction(): Promise<TransactionDto | null> {
+  const payload = await apiClient.get<LatestResponse>('/transactions/latest');
+  return extractLatest(payload);
+}
+
+export async function fetchMonthlyStats(): Promise<MonthlyStatsDto> {
+  return apiClient.get<MonthlyStatsDto>('/transactions/stats/monthly');
 }
 
 export async function updateTransaction(
-  transactionId: string,
-  payload: UpdateTransactionPayload,
+  id: string,
+  payload: Partial<Pick<TransactionDto, 'amount' | 'description' | 'date' | 'accountId' | 'categoryId' | 'type' | 'toAccountId'>>,
 ): Promise<TransactionDto> {
-  const response = await apiClient.patch<any>(`/transactions/${transactionId}`, payload);
-  return unwrapTransaction(response);
+  const response = await apiClient.patch<{ transaction?: TransactionDto } | TransactionDto>(
+    `/transactions/${id}`,
+    payload,
+  );
+
+  return 'transaction' in response && response.transaction ? response.transaction : (response as TransactionDto);
 }
 
-export async function deleteTransaction(transactionId: string): Promise<TransactionDto> {
-  const response = await apiClient.delete<any>(`/transactions/${transactionId}`);
-  return unwrapTransaction(response);
+export async function deleteTransaction(id: string): Promise<TransactionDto | null> {
+  const response = await apiClient.delete<{ transaction?: TransactionDto } | TransactionDto>(`/transactions/${id}`);
+
+  if ('transaction' in response) return response.transaction ?? null;
+  return response as TransactionDto;
 }
