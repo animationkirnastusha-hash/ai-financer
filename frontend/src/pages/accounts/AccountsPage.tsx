@@ -8,6 +8,7 @@ import { useSettingsStore } from '@/features/settings/model/settings.store';
 import { AccountsSummary } from '@/features/accounts/ui/AccountsSummary';
 import { AccountCard } from '@/features/accounts/ui/AccountCard';
 import { AccountDetailsSheet } from '@/features/accounts/ui/AccountDetailsSheet';
+import { EditAccountModal } from '@/features/accounts/ui/EditAccountModal';
 import { EmptyAccountsState } from '@/features/accounts/ui/EmptyAccountsState';
 import { PageHeader } from '@/shared/ui/PageHeader';
 import { formatMoney } from '@/shared/lib/money';
@@ -39,7 +40,12 @@ export default function AccountsPage({ onBack }: Props) {
   const setMainCurrency = useSettingsStore((state) => state.setMainCurrency);
 
   const deleteAccount = useAccountsStore((state) => state.deleteAccount);
+  const updateAccount = useAccountsStore((state) => state.updateAccount);
+  const openEdit = useAccountsStore((state) => state.openEdit);
+  const closeEdit = useAccountsStore((state) => state.closeEdit);
+  const editing = useAccountsStore((state) => state.editing);
   const isDeleting = useAccountsStore((state) => state.isDeleting);
+  const isUpdating = useAccountsStore((state) => state.isUpdating);
   
   const openCreateAccount = useAccountFlowStore(
     (state) => state.openCreateAccount,
@@ -211,6 +217,9 @@ export default function AccountsPage({ onBack }: Props) {
                         currency={acc.currency}
                         isPrimary={acc.id === primaryAccountId}
                         isIncomeDefault={acc.id === incomeAccountId}
+                        lockRename={acc.lockRename}
+                        lockSpending={acc.lockSpending}
+                        lockTransfers={acc.lockTransfers}
                         onClick={() => setSelectedAccountId(acc.id)}
                       />
                     ))}
@@ -230,6 +239,9 @@ export default function AccountsPage({ onBack }: Props) {
         onClose={() => setSelectedAccountId(null)}
         onSetPrimary={(accountId) => setPrimaryAccountId(accountId)}
         onSetIncomeDefault={(accountId) => setIncomeAccountId(accountId)}
+        onEdit={(account) => {
+          openEdit(account);
+        }}
         onAskAI={() => {
           setSelectedAccountId(null);
           navigateTo('ai-core');
@@ -257,6 +269,16 @@ onDelete={async (accountId) => {
     );
   }
 }}
+      />
+
+      <EditAccountModal
+        open={!!editing}
+        account={editing}
+        isSaving={isUpdating}
+        onClose={closeEdit}
+        onSave={async (accountId, payload) => {
+          await updateAccount(accountId, payload);
+        }}
       />
     </div>
   );

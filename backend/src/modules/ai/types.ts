@@ -7,6 +7,9 @@ export type AIIntent =
   | 'create_account'
   | 'stats'
   | 'financial_planning'
+  | 'update_account'
+  | 'chat_response'
+  | 'multi_action'
   | 'repeat_last'
   | 'help'
   | 'unknown';
@@ -65,6 +68,32 @@ export interface AIParsedStats {
   rawCategory?: string;
 }
 
+
+export interface AIParsedUpdateAccount {
+  intent: 'update_account';
+  accountName?: string;
+  accountBalance?: number;
+  newName?: string;
+  type?: string;
+  currency?: string;
+  showInTotalBalance?: boolean;
+  lockRename?: boolean;
+  lockSpending?: boolean;
+  lockTransfers?: boolean;
+  lockBalance?: boolean;
+  lockVisibility?: boolean;
+}
+
+export interface AIParsedChatResponse {
+  intent: 'chat_response';
+  message: string;
+}
+
+export interface AIParsedMultiAction {
+  intent: 'multi_action';
+  actions: AIParsedCommand[];
+}
+
 export interface AIParsedFinancialPlanning {
   intent: 'financial_planning';
   monthlyIncome?: number;
@@ -96,6 +125,9 @@ export type AIParsedCommand =
   | AIParsedCreateAccount
   | AIParsedStats
   | AIParsedFinancialPlanning
+  | AIParsedUpdateAccount
+  | AIParsedChatResponse
+  | AIParsedMultiAction
   | AIParsedRepeatLast
   | AIParsedHelp
   | AIParsedUnknown;

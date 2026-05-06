@@ -8,6 +8,11 @@ export interface CreateAccountInput {
   currency?: string;
   balance?: number;
   showInTotalBalance?: boolean;
+  lockRename?: boolean;
+  lockSpending?: boolean;
+  lockTransfers?: boolean;
+  lockBalance?: boolean;
+  lockVisibility?: boolean;
   icon?: string | null;
   color?: string | null;
 }
@@ -17,6 +22,12 @@ export interface UpdateAccountInput {
   type?: string;
   currency?: string;
   showInTotalBalance?: boolean;
+  balance?: number;
+  lockRename?: boolean;
+  lockSpending?: boolean;
+  lockTransfers?: boolean;
+  lockBalance?: boolean;
+  lockVisibility?: boolean;
   icon?: string | null;
   color?: string | null;
 }
@@ -29,6 +40,11 @@ const accountSelect = {
   currency: true,
   balance: true,
   showInTotalBalance: true,
+  lockRename: true,
+  lockSpending: true,
+  lockTransfers: true,
+  lockBalance: true,
+  lockVisibility: true,
   icon: true,
   color: true,
   createdAt: true,
@@ -80,6 +96,11 @@ export class AccountService {
         currency: data.currency,
         balance: data.balance,
         showInTotalBalance: data.showInTotalBalance,
+        lockRename: data.lockRename,
+        lockSpending: data.lockSpending,
+        lockTransfers: data.lockTransfers,
+        lockBalance: data.lockBalance,
+        lockVisibility: data.lockVisibility,
         icon: data.icon,
         color: data.color,
       },
@@ -94,6 +115,14 @@ export class AccountService {
       where: { id: accountId, userId },
       select: {
         id: true,
+        name: true,
+        balance: true,
+        showInTotalBalance: true,
+        lockRename: true,
+        lockSpending: true,
+        lockTransfers: true,
+        lockBalance: true,
+        lockVisibility: true,
       },
     });
 
@@ -102,6 +131,18 @@ export class AccountService {
     }
 
     const data = this.validateUpdateInput(input);
+
+    if (existing.lockRename && data.name !== undefined && data.name !== existing.name) {
+      throw new ConflictError('Account name is locked');
+    }
+
+    if (existing.lockBalance && data.balance !== undefined && data.balance !== existing.balance) {
+      throw new ConflictError('Account balance is locked');
+    }
+
+    if (existing.lockVisibility && data.showInTotalBalance !== undefined && data.showInTotalBalance !== existing.showInTotalBalance) {
+      throw new ConflictError('Account visibility is locked');
+    }
 
     const updated = await prisma.account.update({
       where: { id: accountId },
@@ -281,6 +322,11 @@ export class AccountService {
       currency: this.normalizeCurrency(input.currency),
       balance,
       showInTotalBalance: input.showInTotalBalance ?? true,
+      lockRename: Boolean(input.lockRename ?? false),
+      lockSpending: Boolean(input.lockSpending ?? false),
+      lockTransfers: Boolean(input.lockTransfers ?? false),
+      lockBalance: Boolean(input.lockBalance ?? false),
+      lockVisibility: Boolean(input.lockVisibility ?? false),
       icon: this.normalizeOptionalString(input.icon) ?? '💳',
       color: this.normalizeOptionalString(input.color) ?? '#5B8DEF',
     };
@@ -311,6 +357,31 @@ export class AccountService {
 
     if (input.showInTotalBalance !== undefined) {
       data.showInTotalBalance = Boolean(input.showInTotalBalance);
+    }
+
+
+    if (input.balance !== undefined) {
+      data.balance = this.normalizeInteger(input.balance, 'balance');
+    }
+
+    if (input.lockRename !== undefined) {
+      data.lockRename = Boolean(input.lockRename);
+    }
+
+    if (input.lockSpending !== undefined) {
+      data.lockSpending = Boolean(input.lockSpending);
+    }
+
+    if (input.lockTransfers !== undefined) {
+      data.lockTransfers = Boolean(input.lockTransfers);
+    }
+
+    if (input.lockBalance !== undefined) {
+      data.lockBalance = Boolean(input.lockBalance);
+    }
+
+    if (input.lockVisibility !== undefined) {
+      data.lockVisibility = Boolean(input.lockVisibility);
     }
 
     if (input.icon !== undefined) {
@@ -364,6 +435,11 @@ export class AccountService {
       currency: account.currency,
       balance: account.balance,
       showInTotalBalance: account.showInTotalBalance,
+      lockRename: account.lockRename,
+      lockSpending: account.lockSpending,
+      lockTransfers: account.lockTransfers,
+      lockBalance: account.lockBalance,
+      lockVisibility: account.lockVisibility,
       icon: account.icon,
       color: account.color,
       createdAt: account.createdAt,

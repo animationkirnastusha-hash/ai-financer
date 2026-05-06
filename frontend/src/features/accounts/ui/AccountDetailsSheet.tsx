@@ -10,6 +10,7 @@ type Props = {
   onClose: () => void;
   onSetPrimary: (accountId: string) => void;
   onSetIncomeDefault: (accountId: string) => void;
+  onEdit: (account: AccountDto) => void;
   onDelete: (accountId: string) => Promise<void> | void;
   onAskAI: () => void;
 };
@@ -23,6 +24,7 @@ export function AccountDetailsSheet({
   onClose,
   onSetPrimary,
   onSetIncomeDefault,
+  onEdit,
   onDelete,
   onAskAI,
 }: Props) {
@@ -32,9 +34,7 @@ export function AccountDetailsSheet({
     const confirmed = window.confirm(
       `Удалить счёт «${account.name}»? Если у счёта есть операции, backend не даст удалить его для безопасности.`,
     );
-
     if (!confirmed) return;
-
     await onDelete(account.id);
   };
 
@@ -43,101 +43,70 @@ export function AccountDetailsSheet({
       <div className="max-h-[92dvh] w-full overflow-y-auto rounded-t-[30px] border border-white/10 bg-[#0b1016] px-4 pb-6 pt-4 text-white shadow-2xl">
         <div className="mx-auto mb-4 h-1.5 w-14 rounded-full bg-white/15" />
 
-        <div className="mx-auto max-w-[560px]">
+        <div className="mx-auto max-w-[560px] space-y-4">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <div className="text-[11px] uppercase tracking-[0.16em] text-white/35">
-                Account details
-              </div>
-
+              <div className="text-[11px] uppercase tracking-[0.16em] text-white/35">Account details</div>
               <h2 className="mt-1 text-2xl font-semibold">{account.name}</h2>
-
-              <div className="mt-2 text-sm text-white/45">
-                {account.type} · {account.currency}
-              </div>
+              <div className="mt-2 text-sm text-white/45">{account.type} · {account.currency}</div>
             </div>
-
-            <button
-              type="button"
-              onClick={onClose}
-              className="rounded-2xl border border-white/10 bg-white/6 px-3 py-2 text-sm"
-            >
+            <button type="button" onClick={onClose} className="rounded-2xl border border-white/10 bg-white/6 px-3 py-2 text-sm">
               Закрыть
             </button>
           </div>
 
-          <div className="mt-5 rounded-[28px] border border-white/8 bg-white/[0.04] p-5">
+          <div className="rounded-[28px] border border-white/8 bg-white/[0.04] p-5">
             <div className="text-sm text-white/45">Баланс</div>
-
-            <div className="mt-2 text-3xl font-semibold">
-              {formatMoney(Number(account.balance) || 0, account.currency)}
-            </div>
-
+            <div className="mt-2 text-3xl font-semibold">{formatMoney(Number(account.balance) || 0, account.currency)}</div>
             <div className="mt-4 flex flex-wrap gap-2">
-              {isPrimary ? (
-                <span className="rounded-full border border-emerald-300/20 bg-emerald-300/10 px-3 py-1.5 text-xs text-emerald-100">
-                  Главный счёт приложения
-                </span>
-              ) : null}
-
-              {isIncomeDefault ? (
-                <span className="rounded-full border border-sky-300/20 bg-sky-300/10 px-3 py-1.5 text-xs text-sky-100">
-                  Доходы по умолчанию
-                </span>
-              ) : null}
+              {isPrimary ? <Badge tone="green">Главный счёт</Badge> : null}
+              {isIncomeDefault ? <Badge tone="blue">Доходы сюда</Badge> : null}
+              {account.lockRename ? <Badge tone="yellow">Название защищено</Badge> : null}
+              {account.lockSpending ? <Badge tone="red">Траты запрещены</Badge> : null}
+              {account.lockTransfers ? <Badge tone="red">Переводы запрещены</Badge> : null}
+              {account.lockBalance ? <Badge tone="yellow">Баланс защищён</Badge> : null}
+              {account.lockVisibility ? <Badge tone="yellow">Видимость защищена</Badge> : null}
             </div>
           </div>
 
-          <div className="mt-4 grid gap-3">
-            <button
-              type="button"
-              disabled={isPrimary}
-              onClick={() => onSetPrimary(account.id)}
-              className="rounded-2xl border border-emerald-300/15 bg-emerald-300/10 px-4 py-3 text-left text-sm text-white transition disabled:opacity-45"
-            >
-              Сделать главным счётом приложения
-              <div className="mt-1 text-xs text-white/45">
-                Он будет показываться на AI Core и использоваться как основной.
-              </div>
+          <div className="grid gap-3">
+            <button type="button" onClick={() => onEdit(account)} className="rounded-2xl border border-emerald-300/20 bg-emerald-300/12 px-4 py-3 text-left text-sm text-white transition active:scale-[0.99]">
+              ✏️ Редактировать счёт
+              <div className="mt-1 text-xs text-white/45">Название, баланс, валюта и защитные правила.</div>
             </button>
 
-            <button
-              type="button"
-              disabled={isIncomeDefault}
-              onClick={() => onSetIncomeDefault(account.id)}
-              className="rounded-2xl border border-sky-300/15 bg-sky-300/10 px-4 py-3 text-left text-sm text-white transition disabled:opacity-45"
-            >
-              Получать доходы сюда
-              <div className="mt-1 text-xs text-white/45">
-                Для команд типа “+50000 зарплата” этот счёт будет подсказан как целевой.
-              </div>
+            <button type="button" disabled={isPrimary} onClick={() => onSetPrimary(account.id)} className="rounded-2xl border border-white/10 bg-white/6 px-4 py-3 text-left text-sm transition disabled:opacity-45">
+              Сделать главным счётом
             </button>
 
-            <button
-              type="button"
-              onClick={onAskAI}
-              className="rounded-2xl border border-white/10 bg-white/8 px-4 py-3 text-left text-sm text-white transition hover:bg-white/12"
-            >
-              Открыть AI для этого счёта
-              <div className="mt-1 text-xs text-white/45">
-                Например: “переведи 5000 с {account.name} на накопительный”.
-              </div>
+            <button type="button" disabled={isIncomeDefault} onClick={() => onSetIncomeDefault(account.id)} className="rounded-2xl border border-white/10 bg-white/6 px-4 py-3 text-left text-sm transition disabled:opacity-45">
+              Сделать счётом для доходов
             </button>
 
-            <button
-              type="button"
-              disabled={isDeleting}
-              onClick={handleDelete}
-              className="rounded-2xl border border-rose-300/15 bg-rose-400/10 px-4 py-3 text-left text-sm text-rose-100 transition disabled:opacity-45"
-            >
+            <button type="button" onClick={onAskAI} className="rounded-2xl border border-sky-300/15 bg-sky-300/10 px-4 py-3 text-left text-sm text-white">
+              Открыть AI для работы со счётом
+              <div className="mt-1 text-xs text-white/45">Например: “запрети переводы с этого счёта”.</div>
+            </button>
+
+            <button type="button" disabled={isDeleting} onClick={handleDelete} className="rounded-2xl border border-red-300/15 bg-red-300/10 px-4 py-3 text-left text-sm text-red-100 disabled:opacity-50">
               {isDeleting ? 'Удаляю...' : 'Удалить счёт'}
-              <div className="mt-1 text-xs text-white/45">
-                Нельзя удалить счёт, если к нему уже привязаны операции.
-              </div>
             </button>
           </div>
         </div>
       </div>
     </div>
   );
+}
+
+function Badge({ children, tone }: { children: string; tone: 'green' | 'blue' | 'yellow' | 'red' }) {
+  const className =
+    tone === 'green'
+      ? 'border-emerald-300/20 bg-emerald-300/10 text-emerald-100'
+      : tone === 'blue'
+        ? 'border-sky-300/20 bg-sky-300/10 text-sky-100'
+        : tone === 'yellow'
+          ? 'border-yellow-300/20 bg-yellow-300/10 text-yellow-100'
+          : 'border-red-300/20 bg-red-300/10 text-red-100';
+
+  return <span className={`rounded-full border px-3 py-1.5 text-xs ${className}`}>{children}</span>;
 }

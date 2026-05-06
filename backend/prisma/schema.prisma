@@ -50,6 +50,11 @@ model Account {
   currency           String   @default("RUB")
   balance            Int      @default(0)
   showInTotalBalance Boolean  @default(true)
+  lockRename         Boolean  @default(false)
+  lockSpending       Boolean  @default(false)
+  lockTransfers      Boolean  @default(false)
+  lockBalance        Boolean  @default(false)
+  lockVisibility     Boolean  @default(false)
   icon               String?
   color              String?
   createdAt          DateTime @default(now())

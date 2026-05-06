@@ -20,7 +20,7 @@ export class AIExecutorService {
   ): Promise<AIResult> {
     switch (parsedCommand.intent) {
       case 'expense': {
-        const account = await this.resolver.getDefaultAccount(userId);
+        const account = await this.resolver.resolveAccountForMoneyFlow(userId, parsedCommand.accountName);
         const category = await this.resolver.findOrCreateCategory(userId, parsedCommand.rawCategory, 'expense');
 
         const transaction = await transactionService.createTransaction(userId, {

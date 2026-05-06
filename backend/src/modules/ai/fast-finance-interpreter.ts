@@ -1,4 +1,5 @@
 import type { AIParsedCommand } from './types';
+import { extractAmountFromText, stripAmountFromText, normalizeAmount } from './utils/amount-normalizer';
 
 function normalize(input: string) {
   return input
@@ -9,30 +10,19 @@ function normalize(input: string) {
 }
 
 function parseAmount(input: string): number | null {
-  const match = input.match(/([+-]?\d[\d\s.,]*)(?:\s*(к|k|тыс|тысяч|тысячи))?/i);
-  if (!match) return null;
-
-  const raw = match[1].replace(/\s/g, '').replace(',', '.');
-  const amount = Number(raw);
-
-  if (!Number.isFinite(amount) || amount <= 0) return null;
-
-  return Math.round(amount * (match[2] ? 1000 : 1));
+  return extractAmountFromText(input);
 }
 
 function parseAllAmounts(input: string): number[] {
-  return Array.from(
-    input.matchAll(/([+-]?\d[\d\s.,]*)(?:\s*(к|k|тыс|тысяч|тысячи))?/gi),
-  )
-    .map((match) => {
-      const raw = match[1].replace(/\s/g, '').replace(',', '.');
-      const amount = Number(raw);
+  const matches = Array.from(
+    input.toLowerCase().replace(/ё/g, 'е').matchAll(
+      /(\d+(?:[.,]\d+)?\s*(?:кк|к|k|тыс|тысяч|тысячи|млн|миллион(?:а|ов)?)?|чирик|десятка|двадцатка|полтос|сотка|пятихатка|косарь|штука|пятак|пятерка|пятерочка)(?:\s*(?:₽|руб(?:лей|ля|ль)?|р\.?)?)?/gi,
+    ),
+  );
 
-      if (!Number.isFinite(amount) || amount <= 0) return null;
-
-      return Math.round(amount * (match[2] ? 1000 : 1));
-    })
-    .filter((value): value is number => typeof value === 'number');
+  return matches
+    .map((match) => normalizeAmount(match[1]))
+    .filter((value): value is number => typeof value === 'number' && value > 0);
 }
 
 function detectCurrency(input: string): 'RUB' | 'USD' | 'EUR' {
@@ -57,9 +47,9 @@ function extractAccountAfter(input: string, words: string[]) {
 }
 
 function cleanCategory(input: string) {
-  return input
-    .replace(/[+-]?\d[\d\s.,]*(?:\s*(?:к|k|тыс|тысяч|тысячи|рублей|руб|₽|долларов|доллара|евро|usd|eur))?/gi, '')
-    .replace(/\b(доход|расход|потратил|купил|оплатил|пришло|пришла|получил|получила|рублей|руб|₽|на|с|со|из|в)\b/gi, '')
+  return stripAmountFromText(input)
+    .replace(/\b(доход|расход|потратил|потратила|купил|купила|оплатил|оплатила|пришло|пришла|получил|получила|рублей|руб|₽|на|с|со|из|в)\b/gi, '')
+    .replace(/\s+/g, ' ')
     .trim();
 }
 
@@ -94,7 +84,7 @@ function getAccountName(input: string, currency: 'RUB' | 'USD' | 'EUR') {
   const explicit = input.match(/(?:счет|счёт|карту|кошелек|кошелёк)\s+["«]?([^"»]+)["»]?/i)?.[1]?.trim();
 
   if (explicit && !explicit.includes('на сумму')) {
-    return explicit;
+    return explicit.replace(/^названи[ея]\s+/i, '').trim();
   }
 
   if (currency === 'USD') return 'Долларовый счёт';

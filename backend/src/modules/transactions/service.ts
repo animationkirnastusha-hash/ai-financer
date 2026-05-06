@@ -195,6 +195,14 @@ export class TransactionService {
         ? await this.ensureOwnedAccount(userId, input.toAccountId!)
         : null;
 
+    if (input.type === 'expense' && account.lockSpending) {
+      throw new BadRequestError('Spending from this account is locked');
+    }
+
+    if (input.type === 'transfer' && account.lockTransfers) {
+      throw new BadRequestError('Transfers from this account are locked');
+    }
+
     if (input.type === 'transfer' && account.id === toAccount!.id) {
       throw new BadRequestError('Cannot transfer to the same account');
     }
@@ -261,7 +269,15 @@ export class TransactionService {
         : existing.description;
     const nextDate = input.date ?? existing.date;
 
-    await this.ensureOwnedAccount(userId, nextAccountId);
+    const nextAccount = await this.ensureOwnedAccount(userId, nextAccountId);
+
+    if (nextType === 'expense' && nextAccount.lockSpending) {
+      throw new BadRequestError('Spending from this account is locked');
+    }
+
+    if (nextType === 'transfer' && nextAccount.lockTransfers) {
+      throw new BadRequestError('Transfers from this account are locked');
+    }
 
     if (nextType === 'transfer') {
       if (!nextToAccountId) {
