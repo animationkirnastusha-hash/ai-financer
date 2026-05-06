@@ -99,84 +99,6 @@ export class TransactionService {
     return { transactions, total };
   }
 
-
-  async getLatestTransaction(userId: string) {
-    return prisma.transaction.findFirst({
-      where: { userId },
-      include: transactionInclude,
-      orderBy: [{ date: 'desc' }, { createdAt: 'desc' }],
-    });
-  }
-
-  async getMonthlyStats(userId: string, options: { category?: string } = {}) {
-    const now = new Date();
-    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-    const categoryQuery = options.category?.trim().toLowerCase();
-
-    const transactions = await prisma.transaction.findMany({
-      where: {
-        userId,
-        date: {
-          gte: monthStart,
-          lte: now,
-        },
-        ...(categoryQuery
-          ? {
-              category: {
-                name: {
-                  contains: categoryQuery,
-                },
-              },
-            }
-          : {}),
-      },
-      include: transactionInclude,
-      orderBy: [{ date: 'desc' }, { createdAt: 'desc' }],
-      take: 500,
-    });
-
-    const income = transactions
-      .filter((item) => item.type === 'income')
-      .reduce((sum, item) => sum + item.amount, 0);
-
-    const expenses = transactions
-      .filter((item) => item.type === 'expense')
-      .reduce((sum, item) => sum + item.amount, 0);
-
-    const byCategory = new Map<string, { name: string; icon?: string | null; amount: number; count: number }>();
-
-    for (const transaction of transactions) {
-      if (transaction.type !== 'expense') continue;
-
-      const key = transaction.category?.id ?? transaction.description ?? 'unknown';
-      const current = byCategory.get(key) ?? {
-        name: transaction.category?.name ?? transaction.description ?? 'Без категории',
-        icon: transaction.category?.icon,
-        amount: 0,
-        count: 0,
-      };
-
-      current.amount += transaction.amount;
-      current.count += 1;
-      byCategory.set(key, current);
-    }
-
-    return {
-      period: {
-        startDate: monthStart.toISOString(),
-        endDate: now.toISOString(),
-      },
-      income,
-      expenses,
-      balance: income - expenses,
-      count: transactions.length,
-      topCategories: [...byCategory.values()]
-        .sort((a, b) => b.amount - a.amount)
-        .slice(0, 8),
-      transactions,
-    };
-  }
-
   async getTransactionById(userId: string, transactionId: string) {
     const transaction = await prisma.transaction.findFirst({
       where: { id: transactionId, userId },
@@ -188,6 +110,80 @@ export class TransactionService {
     }
 
     return transaction;
+  }
+
+
+
+  async getLatestTransaction(userId: string) {
+    return prisma.transaction.findFirst({
+      where: { userId },
+      include: transactionInclude,
+      orderBy: [{ date: 'desc' }, { createdAt: 'desc' }],
+    });
+  }
+
+  async getMonthlyStats(
+    userId: string,
+    options: { startDate?: Date; endDate?: Date } = {},
+  ) {
+    const now = new Date();
+    const startDate = options.startDate ?? new Date(now.getFullYear(), now.getMonth(), 1);
+    const endDate = options.endDate ?? now;
+
+    const transactions = await prisma.transaction.findMany({
+      where: {
+        userId,
+        date: {
+          gte: startDate,
+          lte: endDate,
+        },
+      },
+      include: transactionInclude,
+      orderBy: [{ date: 'desc' }, { createdAt: 'desc' }],
+    });
+
+    const income = transactions
+      .filter((item) => item.type === 'income')
+      .reduce((sum, item) => sum + item.amount, 0);
+
+    const expenses = transactions
+      .filter((item) => item.type === 'expense')
+      .reduce((sum, item) => sum + item.amount, 0);
+
+    const categoryMap = new Map<string, { name: string; icon?: string | null; amount: number; count: number }>();
+
+    for (const item of transactions) {
+      if (item.type !== 'expense' || !item.category) continue;
+
+      const key = item.category.id;
+      const current = categoryMap.get(key) ?? {
+        name: item.category.name,
+        icon: item.category.icon,
+        amount: 0,
+        count: 0,
+      };
+
+      current.amount += item.amount;
+      current.count += 1;
+      categoryMap.set(key, current);
+    }
+
+    const topCategories = Array.from(categoryMap.values())
+      .sort((a, b) => b.amount - a.amount)
+      .slice(0, 5);
+
+    return {
+      period: {
+        startDate: startDate.toISOString(),
+        endDate: endDate.toISOString(),
+      },
+      income,
+      expenses,
+      balance: income - expenses,
+      count: transactions.length,
+      topCategories,
+      transactions,
+    };
   }
 
   async createTransaction(userId: string, input: CreateTransactionInput) {
@@ -208,15 +204,6 @@ export class TransactionService {
     }
 
     const amount = this.normalizeAmount(input.amount);
-
-    await this.ensureNotRecentDuplicate(userId, {
-      accountId: input.accountId,
-      toAccountId: input.type === 'transfer' ? input.toAccountId ?? null : null,
-      categoryId: input.type === 'transfer' ? null : input.categoryId ?? null,
-      amount,
-      type: input.type,
-      description: input.description?.trim() || null,
-    });
 
     const transaction = await prisma.$transaction(async (tx) => {
       await this.applyBalanceEffect(tx, {
@@ -352,40 +339,6 @@ export class TransactionService {
     });
 
     return existing;
-  }
-
-  private async ensureNotRecentDuplicate(
-    userId: string,
-    input: {
-      accountId: string;
-      toAccountId?: string | null;
-      categoryId?: string | null;
-      amount: number;
-      type: TransactionType;
-      description?: string | null;
-    },
-  ) {
-    const recent = await prisma.transaction.findFirst({
-      where: {
-        userId,
-        accountId: input.accountId,
-        toAccountId: input.toAccountId ?? null,
-        categoryId: input.categoryId ?? null,
-        amount: input.amount,
-        type: input.type,
-        description: input.description ?? null,
-        createdAt: {
-          gte: new Date(Date.now() - 8000),
-        },
-      },
-      select: {
-        id: true,
-      },
-    });
-
-    if (recent) {
-      throw new BadRequestError('Похоже, такая операция уже была записана только что');
-    }
   }
 
   private validateCreateInput(input: CreateTransactionInput) {

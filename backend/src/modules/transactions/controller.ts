@@ -67,7 +67,8 @@ export const getLatestTransaction = asyncHandler(async (req: Request, res: Respo
 
 export const getTransactionStats = asyncHandler(async (req: Request, res: Response) => {
   const stats = await transactionService.getMonthlyStats(req.userId!, {
-    category: typeof req.query.category === 'string' ? req.query.category : undefined,
+    startDate: parseOptionalDate(req.query.startDate),
+    endDate: parseOptionalDate(req.query.endDate),
   });
 
   res.json(stats);
