@@ -18,6 +18,12 @@ export class AIParser {
     const showAccounts = this.tryShowAccounts(normalized);
     if (showAccounts) return showAccounts;
 
+    const assignExpensesToSection = this.tryAssignExpensesToSection(normalized);
+    if (assignExpensesToSection) return assignExpensesToSection;
+
+    const createSection = this.tryCreateSection(normalized);
+    if (createSection) return createSection;
+
     const createCategory = this.tryCreateCategory(normalized);
     if (createCategory) return createCategory;
 
@@ -53,6 +59,36 @@ export class AIParser {
     }
 
     return { intent: 'show_accounts' as const };
+  }
+
+  private tryCreateSection(command: string) {
+    const match = command.match(/^создай\s+(?:раздел|папку)\s+(.+)$/i);
+    if (!match) return null;
+
+    return {
+      intent: 'create_section' as const,
+      name: match[1].trim(),
+    };
+  }
+
+  private tryAssignExpensesToSection(command: string) {
+    const patterns = [
+      /^запиши\s+все\s+(?:расходы|траты)\s+(?:по|на)\s+(.+?)\s+в\s+раздел\s+(.+)$/i,
+      /^перенеси\s+все\s+(?:расходы|траты)\s+(?:по|на)\s+(.+?)\s+в\s+раздел\s+(.+)$/i,
+    ];
+
+    for (const pattern of patterns) {
+      const match = command.match(pattern);
+      if (!match) continue;
+
+      return {
+        intent: 'assign_expenses_to_section' as const,
+        rawQuery: match[1].trim(),
+        sectionName: match[2].trim(),
+      };
+    }
+
+    return null;
   }
 
   private tryCreateCategory(command: string) {
@@ -133,6 +169,13 @@ export class AIParser {
         description = match[3]?.trim();
       }
 
+      const sectionMatch = rawCategory.match(/^(.+?)\s+в\s+раздел\s+(.+)$/i);
+      const sectionName = sectionMatch?.[2]?.trim();
+
+      if (sectionMatch) {
+        rawCategory = sectionMatch[1].trim();
+      }
+
       const accountMatch = rawCategory.match(/^(.+?)\s+(?:с|со|из)\s+(.+)$/i);
       const accountName = accountMatch?.[2]?.trim();
 
@@ -151,6 +194,7 @@ export class AIParser {
         rawCategory,
         description: description ?? rawCategory,
         accountName,
+        sectionName,
       };
     }
 
@@ -170,6 +214,13 @@ export class AIParser {
       const amount = Number(match[1]);
       let rawCategory = match[2].trim();
 
+      const sectionMatch = rawCategory.match(/^(.+?)\s+в\s+раздел\s+(.+)$/i);
+      const sectionName = sectionMatch?.[2]?.trim();
+
+      if (sectionMatch) {
+        rawCategory = sectionMatch[1].trim();
+      }
+
       const accountMatch = rawCategory.match(/^(.+?)\s+(?:на|в)\s+(.+)$/i);
       const accountName = accountMatch?.[2]?.trim();
 
@@ -187,6 +238,7 @@ export class AIParser {
         rawCategory,
         description: rawCategory,
         accountName,
+        sectionName,
       };
     }
 

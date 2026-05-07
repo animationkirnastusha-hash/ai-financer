@@ -1,3 +1,4 @@
+import { PREMIUM_PLAN, PREMIUM_PRICE_NOTE } from '../model/premium.catalog';
 import { usePremiumStore } from '../model/premium.store';
 
 export function PremiumUpgradeSheet() {
@@ -7,6 +8,10 @@ export function PremiumUpgradeSheet() {
 
   if (!open || !trigger) return null;
 
+  const primaryFeatures = PREMIUM_PLAN.featureGroups.flatMap((group) =>
+    group.items.slice(0, 2),
+  );
+
   return (
     <div className="fixed inset-0 z-[120] flex items-end bg-black/65 backdrop-blur-sm">
       <div className="max-h-[92dvh] w-full overflow-y-auto rounded-t-[32px] border border-white/10 bg-[#0b1016] px-4 pb-[calc(env(safe-area-inset-bottom)+24px)] pt-4 text-white shadow-2xl">
@@ -14,8 +19,14 @@ export function PremiumUpgradeSheet() {
 
         <div className="mx-auto max-w-[560px]">
           <div className="rounded-[30px] border border-amber-300/15 bg-[radial-gradient(circle_at_top,rgba(251,191,36,0.16),transparent_45%),rgba(255,255,255,0.04)] p-5">
-            <div className="text-[11px] uppercase tracking-[0.2em] text-amber-200/70">
-              AI-financer Premium
+            <div className="flex items-center justify-between gap-3">
+              <div className="text-[11px] uppercase tracking-[0.2em] text-amber-200/70">
+                AI-financer Premium
+              </div>
+
+              <div className="rounded-full border border-amber-300/20 bg-amber-300/10 px-3 py-1 text-[11px] text-amber-100">
+                {PREMIUM_PLAN.badge}
+              </div>
             </div>
 
             <h2 className="mt-3 text-3xl font-semibold leading-tight">
@@ -23,8 +34,8 @@ export function PremiumUpgradeSheet() {
             </h2>
 
             <p className="mt-3 text-sm leading-6 text-white/62">
-              Контроль денег — бесплатно. Premium помогает видеть риски,
-              находить лишние траты и строить план спокойнее.
+              Base остаётся полноценным финансовым ядром. Premium добавляет
+              прогнозы, глубокий анализ, цели и более сильного AI-помощника.
             </p>
 
             <div className="mt-5 rounded-2xl border border-white/10 bg-black/22 p-4">
@@ -39,19 +50,14 @@ export function PremiumUpgradeSheet() {
           </div>
 
           <div className="mt-4 grid gap-3">
-            {[
-              ['Прогноз до зарплаты', 'AI покажет безопасный темп расходов.'],
-              ['Где теряются деньги', 'Найдёт мелкие утечки и повторяющиеся траты.'],
-              ['План накоплений', 'Разложит цель на понятные шаги.'],
-              ['Premium Voice+', 'Более живой голосовой финансовый ассистент.'],
-            ].map(([title, description]) => (
+            {primaryFeatures.map((feature) => (
               <div
-                key={title}
+                key={feature}
                 className="rounded-2xl border border-white/8 bg-white/[0.04] p-4"
               >
-                <div className="text-sm font-medium text-white">{title}</div>
+                <div className="text-sm font-medium text-white">{feature}</div>
                 <div className="mt-1 text-xs leading-5 text-white/45">
-                  {description}
+                  Premium-функция поверх базового контроля денег.
                 </div>
               </div>
             ))}
@@ -59,10 +65,10 @@ export function PremiumUpgradeSheet() {
 
           <div className="mt-5 rounded-[24px] border border-emerald-300/15 bg-emerald-300/10 p-4">
             <div className="text-sm font-medium text-emerald-100">
-              299 ₽ / месяц
+              {PREMIUM_PLAN.price}
             </div>
             <div className="mt-1 text-xs leading-5 text-white/55">
-              Если AI поможет сохранить хотя бы 500 ₽ — подписка уже окупилась.
+              {PREMIUM_PRICE_NOTE}
             </div>
           </div>
 

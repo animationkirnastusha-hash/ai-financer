@@ -53,6 +53,14 @@ function cleanCategory(input: string) {
     .trim();
 }
 
+function extractSectionName(input: string) {
+  return input.match(/\sв\s+раздел\s+["«]?([^"»]+)["»]?/i)?.[1]?.trim();
+}
+
+function stripSectionPhrase(input: string) {
+  return input.replace(/\sв\s+раздел\s+["«]?[^"»]+["»]?$/i, '').trim();
+}
+
 function isCreateAccount(input: string) {
   return (
     (input.includes('создай') || input.includes('создать') || input.includes('открой')) &&
@@ -128,6 +136,25 @@ function parsePlanning(input: string): AIParsedCommand {
 export function fastFinanceParse(command: string): AIParsedCommand | null {
   const input = normalize(command);
   if (!input) return null;
+
+  const sectionAssignment = input.match(/^(?:запиши|перенеси)\s+все\s+(?:расходы|траты)\s+(?:по|на)\s+(.+?)\s+в\s+раздел\s+(.+)$/i);
+
+  if (sectionAssignment) {
+    return {
+      intent: 'assign_expenses_to_section',
+      rawQuery: sectionAssignment[1].trim(),
+      sectionName: sectionAssignment[2].trim(),
+    };
+  }
+
+  const createSection = input.match(/^создай\s+(?:раздел|папку)\s+(.+)$/i);
+
+  if (createSection) {
+    return {
+      intent: 'create_section',
+      name: createSection[1].trim(),
+    };
+  }
 
   if (isCreateAccount(input)) {
     const currency = detectCurrency(input);
@@ -206,12 +233,14 @@ export function fastFinanceParse(command: string): AIParsedCommand | null {
     const amount = parseAmount(input);
     if (!amount) return null;
 
-    const accountName = extractAccountAfter(input, ['на', 'в']);
+    const sectionName = extractSectionName(input);
+    const cleanInput = stripSectionPhrase(input);
+    const accountName = extractAccountAfter(cleanInput, ['на', 'в']);
     const rawCategory = input.includes('зарплат')
       ? 'зарплата'
       : input.includes('аванс')
         ? 'аванс'
-        : cleanCategory(input) || 'доход';
+        : cleanCategory(cleanInput) || 'доход';
 
     return {
       intent: 'income',
@@ -219,14 +248,17 @@ export function fastFinanceParse(command: string): AIParsedCommand | null {
       rawCategory,
       description: rawCategory,
       accountName,
+      sectionName,
     };
   }
 
   const amount = parseAmount(input);
 
   if (amount) {
-    const accountName = extractAccountAfter(input, ['с', 'со', 'из']);
-    const rawCategory = cleanCategory(input) || 'расход';
+    const sectionName = extractSectionName(input);
+    const cleanInput = stripSectionPhrase(input);
+    const accountName = extractAccountAfter(cleanInput, ['с', 'со', 'из']);
+    const rawCategory = cleanCategory(cleanInput) || 'расход';
 
     return {
       intent: 'expense',
@@ -234,6 +266,7 @@ export function fastFinanceParse(command: string): AIParsedCommand | null {
       rawCategory,
       description: rawCategory,
       accountName,
+      sectionName,
     };
   }
 

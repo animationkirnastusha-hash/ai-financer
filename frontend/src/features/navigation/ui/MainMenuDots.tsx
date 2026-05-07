@@ -5,10 +5,11 @@ type Props = {
   onNavigate: (screen: AppScreen) => void;
 };
 
-const items: Array<{ screen: AppScreen; label: string }> = [
-  { screen: 'dashboard', label: '•' },
-  { screen: 'ai-core', label: '•' },
-  { screen: 'settings', label: '•' },
+const items: Array<{ screen: AppScreen; label: string; aria: string }> = [
+  { screen: 'dashboard', label: '•', aria: 'dashboard' },
+  { screen: 'ai-core', label: '•', aria: 'ai-core' },
+  { screen: 'sections', label: '•', aria: 'sections' },
+  { screen: 'settings', label: '•', aria: 'settings' },
 ];
 
 export function MainMenuDots({ currentScreen, onNavigate }: Props) {
@@ -30,7 +31,8 @@ export function MainMenuDots({ currentScreen, onNavigate }: Props) {
               className={`h-3 w-3 rounded-full transition ${
                 active ? 'bg-emerald-300' : 'bg-white/25'
               }`}
-              aria-label={item.screen}
+              aria-label={item.aria}
+              title={item.aria}
             />
           );
         })}

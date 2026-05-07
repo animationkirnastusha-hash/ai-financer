@@ -5,6 +5,7 @@ export type AppScreen =
   | 'dashboard'
   | 'accounts'
   | 'transactions'
+  | 'sections'
   | 'settings';
 
 type NavigationState = {

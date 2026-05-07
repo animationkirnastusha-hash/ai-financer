@@ -159,14 +159,16 @@ export default function TransactionsPage({ onBack }: Props) {
                         ? 'Расход'
                         : 'Перевод');
 
+                  const sectionName = item.section?.name;
+
                   const category =
                     item.type === 'transfer'
                       ? `${item.account?.name || 'Счёт'} → ${
                           item.toAccount?.name || 'Другой счёт'
                         }`
-                      : `${item.category?.name || 'Без категории'} · ${
-                          item.account?.name || 'Счёт'
-                        }`;
+                      : `${sectionName ? `${sectionName} · ` : ''}${
+                          item.category?.name || 'Без категории'
+                        } · ${item.account?.name || 'Счёт'}`;
 
                   const sign = isIncome ? 'plus' : isExpense ? 'minus' : 'none';
 

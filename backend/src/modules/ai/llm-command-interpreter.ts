@@ -31,6 +31,8 @@ income
 transfer
 show_accounts
 create_category
+create_section
+assign_expenses_to_section
 create_account
 stats
 financial_planning
@@ -98,6 +100,7 @@ EXPENSE
 }
 
 Если счёт не указан, не выдумывай accountName.
+Если пользователь явно пишет "в раздел Дом", добавь "sectionName":"Дом".
 
 ========================
 INCOME
@@ -122,6 +125,7 @@ INCOME
 }
 
 Если счёт не указан, не выдумывай accountName.
+Если пользователь явно пишет "в раздел Дом", добавь "sectionName":"Дом".
 
 ========================
 TRANSFER
@@ -363,6 +367,7 @@ function normalizeParsed(input: unknown): AIParsedCommand {
       rawCategory,
       description: asString(data.description, rawCategory),
       accountName: data.accountName ? asString(data.accountName) : undefined,
+      sectionName: data.sectionName ? asString(data.sectionName) : undefined,
     };
   }
 
@@ -394,6 +399,21 @@ function normalizeParsed(input: unknown): AIParsedCommand {
       intent: 'create_category',
       name: asString(data.name || data.rawCategory, 'Новая категория'),
       type: data.type === 'income' ? 'income' : 'expense',
+    };
+  }
+
+  if (intent === 'create_section') {
+    return {
+      intent: 'create_section',
+      name: asString(data.name || data.sectionName, 'Новый раздел'),
+    };
+  }
+
+  if (intent === 'assign_expenses_to_section') {
+    return {
+      intent: 'assign_expenses_to_section',
+      rawQuery: asString(data.rawQuery || data.category || data.description, ''),
+      sectionName: asString(data.sectionName || data.name, 'Новый раздел'),
     };
   }
 

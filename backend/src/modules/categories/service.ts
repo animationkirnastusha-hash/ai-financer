@@ -8,18 +8,21 @@ export interface CreateCategoryInput {
   type: CategoryType;
   icon?: string | null;
   color?: string | null;
+  sectionId?: string | null;
 }
 
 export interface UpdateCategoryInput {
   name?: string;
   icon?: string | null;
   color?: string | null;
+  sectionId?: string | null;
 }
 
 export class CategoryService {
   async getUserCategories(userId: string) {
     const categories = await prisma.category.findMany({
       where: { userId },
+      include: { section: true },
       orderBy: [{ createdAt: 'asc' }],
     });
 
@@ -44,6 +47,7 @@ export class CategoryService {
         type: input.type,
         icon: input.icon ?? '💰',
         color: input.color ?? '#5B8DEF',
+        sectionId: input.sectionId ?? null,
       },
     });
 
@@ -65,6 +69,7 @@ export class CategoryService {
         name: input.name?.trim(),
         icon: input.icon,
         color: input.color,
+        sectionId: input.sectionId,
       },
     });
 

@@ -6,6 +6,7 @@ export type TransactionDto = {
   accountId: string;
   toAccountId?: string | null;
   categoryId?: string | null;
+  sectionId?: string | null;
   amount: number;
   type: 'income' | 'expense' | 'transfer';
   description?: string | null;
@@ -24,6 +25,12 @@ export type TransactionDto = {
     id: string;
     name: string;
     currency: string;
+    icon?: string | null;
+    color?: string | null;
+  } | null;
+  section?: {
+    id: string;
+    name: string;
     icon?: string | null;
     color?: string | null;
   } | null;
@@ -106,7 +113,7 @@ export async function fetchMonthlyStats(): Promise<MonthlyStatsDto> {
 
 export async function updateTransaction(
   id: string,
-  payload: Partial<Pick<TransactionDto, 'amount' | 'description' | 'date' | 'accountId' | 'categoryId' | 'type' | 'toAccountId'>>,
+  payload: Partial<Pick<TransactionDto, 'amount' | 'description' | 'date' | 'accountId' | 'categoryId' | 'sectionId' | 'type' | 'toAccountId'>>,
 ): Promise<TransactionDto> {
   const response = await apiClient.patch<{ transaction?: TransactionDto } | TransactionDto>(
     `/transactions/${id}`,

@@ -15,6 +15,7 @@ import AccountsPage from '@/pages/accounts/AccountsPage';
 import DashboardPage from '@/pages/dashboard/DashboardPage';
 import SettingsPage from '@/pages/settings/SettingsPage';
 import TransactionsPage from '@/pages/transactions/TransactionsPage';
+import SectionsPage from '@/pages/sections/SectionsPage';
 
 export function AppRouter() {
   const currentScreen = useNavigationStore((state) => state.currentScreen);
@@ -82,6 +83,16 @@ export function AppRouter() {
     }
 
     if (
+      normalized.includes('раздел') ||
+      normalized.includes('категор') ||
+      normalized.includes('папк') ||
+      normalized.includes('групп')
+    ) {
+      navigateTo('sections');
+      return;
+    }
+
+    if (
       normalized.includes('настрой') ||
       normalized.includes('профиль') ||
       normalized.includes('подписк')
@@ -96,6 +107,7 @@ export function AppRouter() {
   const isMainScreen =
     currentScreen === 'dashboard' ||
     currentScreen === 'ai-core' ||
+    currentScreen === 'sections' ||
     currentScreen === 'settings';
 
   return (
@@ -107,6 +119,7 @@ export function AppRouter() {
         {currentScreen === 'transactions' && (
           <TransactionsPage onBack={goBack} />
         )}
+        {currentScreen === 'sections' && <SectionsPage onBack={goBack} />}
         {currentScreen === 'settings' && <SettingsPage onBack={goBack} />}
       </div>
 

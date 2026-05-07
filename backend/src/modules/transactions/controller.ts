@@ -49,6 +49,7 @@ export const getTransactions = asyncHandler(async (req: Request, res: Response) 
   const transactions = await transactionService.getUserTransactions(req.userId!, {
     accountId: typeof req.query.accountId === 'string' ? req.query.accountId : undefined,
     categoryId: typeof req.query.categoryId === 'string' ? req.query.categoryId : undefined,
+    sectionId: typeof req.query.sectionId === 'string' ? req.query.sectionId : undefined,
     type: parseOptionalType(req.query.type),
     startDate: parseOptionalDate(req.query.startDate),
     endDate: parseOptionalDate(req.query.endDate),
@@ -86,6 +87,7 @@ export const createTransaction = asyncHandler(async (req: Request, res: Response
     accountId: req.body.accountId,
     toAccountId: req.body.toAccountId,
     categoryId: req.body.categoryId,
+    sectionId: req.body.sectionId,
     amount: Number(req.body.amount),
     type: req.body.type,
     description: req.body.description,
@@ -106,6 +108,7 @@ export const updateTransaction = asyncHandler(async (req: Request, res: Response
     accountId: req.body.accountId,
     toAccountId: req.body.toAccountId,
     categoryId: req.body.categoryId,
+    sectionId: req.body.sectionId,
     amount: req.body.amount !== undefined ? Number(req.body.amount) : undefined,
     type: req.body.type,
     description: req.body.description,

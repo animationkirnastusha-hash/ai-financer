@@ -218,6 +218,33 @@ export class AIPreviewBuilder {
           },
         };
 
+      case 'create_section':
+        return {
+          success: true,
+          intent: 'create_section',
+          executed: false,
+          requiresConfirmation,
+          riskLevel,
+          message: `Готов создать раздел «${parsedCommand.name}».`,
+          parsed: {
+            name: parsedCommand.name,
+          },
+        };
+
+      case 'assign_expenses_to_section':
+        return {
+          success: true,
+          intent: 'assign_expenses_to_section',
+          executed: false,
+          requiresConfirmation,
+          riskLevel,
+          message: `Готов перенести расходы по запросу «${parsedCommand.rawQuery}» в раздел «${parsedCommand.sectionName}».`,
+          parsed: {
+            rawQuery: parsedCommand.rawQuery,
+            sectionName: parsedCommand.sectionName,
+          },
+        };
+
       case 'create_account':
         return {
           success: true,

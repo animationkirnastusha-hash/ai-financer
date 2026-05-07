@@ -28,6 +28,7 @@ model User {
 
   accounts          Account[]
   categories        Category[]
+  sections          Section[]
   transactions      Transaction[]
   budgets           Budget[]
   recurringPayments RecurringPayment[]
@@ -81,12 +82,33 @@ model Category {
   updatedAt DateTime @updatedAt
 
   user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sectionId    String?
+  section      Section?      @relation(fields: [sectionId], references: [id], onDelete: SetNull)
   transactions Transaction[]
   budgets      Budget[]
+
+  @@index([sectionId])
 
   @@unique([userId, name])
   @@index([userId])
   @@index([type])
+}
+
+model Section {
+  id        String   @id @default(cuid())
+  userId    String
+  name      String
+  icon      String?
+  color     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  categories   Category[]
+  transactions Transaction[]
+
+  @@unique([userId, name])
+  @@index([userId])
 }
 
 model Transaction {
@@ -95,6 +117,7 @@ model Transaction {
   accountId    String
   toAccountId  String?
   categoryId   String?
+  sectionId    String?
   amount       Int
   type         String
   description  String?
@@ -107,11 +130,13 @@ model Transaction {
   account   Account   @relation("FromAccount", fields: [accountId], references: [id], onDelete: Cascade)
   toAccount Account?  @relation("ToAccount", fields: [toAccountId], references: [id])
   category  Category? @relation(fields: [categoryId], references: [id])
+  section   Section?  @relation(fields: [sectionId], references: [id], onDelete: SetNull)
 
   @@index([userId])
   @@index([date])
   @@index([type])
   @@index([accountId])
+  @@index([sectionId])
 }
 
 model Budget {

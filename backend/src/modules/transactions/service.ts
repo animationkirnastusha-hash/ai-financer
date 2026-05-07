@@ -7,6 +7,7 @@ export type TransactionType = 'income' | 'expense' | 'transfer';
 export interface TransactionFilters {
   accountId?: string;
   categoryId?: string;
+  sectionId?: string;
   type?: TransactionType;
   startDate?: Date;
   endDate?: Date;
@@ -18,6 +19,7 @@ export interface CreateTransactionInput {
   accountId: string;
   toAccountId?: string | null;
   categoryId?: string | null;
+  sectionId?: string | null;
   amount: number;
   type: TransactionType;
   description?: string | null;
@@ -29,6 +31,7 @@ export interface UpdateTransactionInput {
   accountId?: string;
   toAccountId?: string | null;
   categoryId?: string | null;
+  sectionId?: string | null;
   amount?: number;
   type?: TransactionType;
   description?: string | null;
@@ -61,6 +64,15 @@ const transactionInclude = {
       icon: true,
       color: true,
       type: true,
+      sectionId: true,
+    },
+  },
+  section: {
+    select: {
+      id: true,
+      name: true,
+      icon: true,
+      color: true,
     },
   },
 } satisfies Prisma.TransactionInclude;
@@ -71,6 +83,7 @@ export class TransactionService {
       userId,
       ...(filters.accountId ? { accountId: filters.accountId } : {}),
       ...(filters.categoryId ? { categoryId: filters.categoryId } : {}),
+      ...(filters.sectionId ? { sectionId: filters.sectionId } : {}),
       ...(filters.type ? { type: filters.type } : {}),
       ...(filters.startDate || filters.endDate
         ? {
@@ -228,6 +241,7 @@ export class TransactionService {
           accountId: input.accountId,
           toAccountId: input.type === 'transfer' ? input.toAccountId! : null,
           categoryId: input.type === 'transfer' ? null : input.categoryId ?? null,
+          sectionId: input.type === 'transfer' ? null : input.sectionId ?? null,
           amount,
           type: input.type,
           description: input.description?.trim() || null,
@@ -261,6 +275,11 @@ export class TransactionService {
       nextType === 'transfer'
         ? null
         : (input.categoryId !== undefined ? input.categoryId : existing.categoryId);
+
+    const nextSectionId =
+      nextType === 'transfer'
+        ? null
+        : (input.sectionId !== undefined ? input.sectionId : existing.sectionId);
 
     const nextAmount = this.normalizeAmount(input.amount ?? existing.amount);
     const nextDescription =
@@ -318,6 +337,7 @@ export class TransactionService {
           accountId: nextAccountId,
           toAccountId: nextToAccountId,
           categoryId: nextCategoryId,
+          sectionId: nextSectionId,
           amount: nextAmount,
           type: nextType,
           description: nextDescription,
@@ -376,6 +396,10 @@ export class TransactionService {
 
     if (input.type === 'transfer' && input.categoryId) {
       throw new BadRequestError('Transfer cannot have categoryId');
+    }
+
+    if (input.type === 'transfer' && input.sectionId) {
+      throw new BadRequestError('Transfer cannot have sectionId');
     }
 
     this.normalizeAmount(input.amount);

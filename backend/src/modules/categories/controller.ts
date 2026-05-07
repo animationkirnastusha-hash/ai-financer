@@ -25,6 +25,7 @@ export const createCategory = asyncHandler(async (req: Request, res: Response) =
     type: req.body.type,
     icon: req.body.icon,
     color: req.body.color,
+    sectionId: req.body.sectionId,
   });
 
   res.status(201).json({

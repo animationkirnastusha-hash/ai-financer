@@ -1,6 +1,7 @@
 import { TransactionService } from '../transactions/service';
 import { AccountService } from '../accounts/service';
 import { CategoryService } from '../categories/service';
+import { SectionService } from '../sections/service';
 import { AIParsedCommand, AIResult } from './types';
 import { AIResolverService } from './ai-resolver.service';
 import { AIPreviewBuilder } from './ai-preview.builder';
@@ -8,6 +9,7 @@ import { AIPreviewBuilder } from './ai-preview.builder';
 const transactionService = new TransactionService();
 const accountService = new AccountService();
 const categoryService = new CategoryService();
+const sectionService = new SectionService();
 
 export class AIExecutorService {
   private readonly resolver = new AIResolverService();
@@ -22,10 +24,14 @@ export class AIExecutorService {
       case 'expense': {
         const account = await this.resolver.resolveAccountForMoneyFlow(userId, parsedCommand.accountName);
         const category = await this.resolver.findOrCreateCategory(userId, parsedCommand.rawCategory, 'expense');
+        const section = parsedCommand.sectionName
+          ? await sectionService.findOrCreateSection(userId, parsedCommand.sectionName)
+          : null;
 
         const transaction = await transactionService.createTransaction(userId, {
           accountId: account.id,
           categoryId: category.id,
+          sectionId: section?.id ?? category.sectionId ?? null,
           amount: parsedCommand.amount,
           type: 'expense',
           description: parsedCommand.description ?? parsedCommand.rawCategory,
@@ -46,6 +52,8 @@ export class AIExecutorService {
             accountName: account.name,
             categoryId: category.id,
             categoryName: category.name,
+            sectionId: section?.id ?? category.sectionId ?? null,
+            sectionName: section?.name ?? null,
             description: parsedCommand.description ?? parsedCommand.rawCategory,
           },
           data: transaction,
@@ -55,10 +63,14 @@ export class AIExecutorService {
       case 'income': {
         const account = await this.resolver.resolveAccountForMoneyFlow(userId, parsedCommand.accountName);
         const category = await this.resolver.findOrCreateCategory(userId, parsedCommand.rawCategory, 'income');
+        const section = parsedCommand.sectionName
+          ? await sectionService.findOrCreateSection(userId, parsedCommand.sectionName)
+          : null;
 
         const transaction = await transactionService.createTransaction(userId, {
           accountId: account.id,
           categoryId: category.id,
+          sectionId: section?.id ?? category.sectionId ?? null,
           amount: parsedCommand.amount,
           type: 'income',
           description: parsedCommand.description ?? parsedCommand.rawCategory,
@@ -79,6 +91,8 @@ export class AIExecutorService {
             accountName: account.name,
             categoryId: category.id,
             categoryName: category.name,
+            sectionId: section?.id ?? category.sectionId ?? null,
+            sectionName: section?.name ?? null,
             description: parsedCommand.description ?? parsedCommand.rawCategory,
           },
           data: transaction,
@@ -137,6 +151,51 @@ export class AIExecutorService {
             type: parsedCommand.type,
           },
           data: category,
+        };
+      }
+
+      case 'create_section': {
+        const section = await sectionService.createSection(userId, {
+          name: parsedCommand.name,
+        });
+
+        return {
+          success: true,
+          intent: 'create_section',
+          executed: true,
+          requiresConfirmation: false,
+          riskLevel,
+          message: `🗂️ Раздел «${section.name}» создан. Теперь в него можно складывать категории и расходы.`,
+          parsed: {
+            name: section.name,
+          },
+          data: section,
+        };
+      }
+
+      case 'assign_expenses_to_section': {
+        const result = await sectionService.assignMatchingExpensesToSection(userId, {
+          rawQuery: parsedCommand.rawQuery,
+          sectionName: parsedCommand.sectionName,
+        });
+
+        return {
+          success: true,
+          intent: 'assign_expenses_to_section',
+          executed: true,
+          requiresConfirmation: false,
+          riskLevel,
+          message:
+            result.updatedCount > 0
+              ? `✅ Перенёс ${result.updatedCount} расходов по запросу «${parsedCommand.rawQuery}» в раздел «${result.section.name}».`
+              : `🗂️ Раздел «${result.section.name}» создан, но подходящих расходов по запросу «${parsedCommand.rawQuery}» пока не нашёл.`,
+          parsed: {
+            rawQuery: parsedCommand.rawQuery,
+            sectionId: result.section.id,
+            sectionName: result.section.name,
+            updatedCount: result.updatedCount,
+          },
+          data: result,
         };
       }
 

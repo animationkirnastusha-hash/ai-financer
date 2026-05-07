@@ -58,7 +58,7 @@ export class AIActionPolicy {
       };
     }
 
-    if (command.intent === 'create_category') {
+    if (command.intent === 'create_category' || command.intent === 'create_section' || command.intent === 'assign_expenses_to_section') {
       return {
         requiresConfirmation: false,
         riskLevel: 'low',

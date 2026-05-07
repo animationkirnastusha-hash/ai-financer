@@ -7,7 +7,7 @@ type Options = {
   navigateTo: (screen: AppScreen) => void;
 };
 
-const MAIN_SCREENS: AppScreen[] = ['dashboard', 'ai-core', 'settings'];
+const MAIN_SCREENS: AppScreen[] = ['dashboard', 'ai-core', 'sections', 'settings'];
 
 function isInteractiveTarget(target: EventTarget | null) {
   if (!(target instanceof HTMLElement)) return false;

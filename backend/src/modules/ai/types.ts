@@ -4,6 +4,8 @@ export type AIIntent =
   | 'transfer'
   | 'show_accounts'
   | 'create_category'
+  | 'create_section'
+  | 'assign_expenses_to_section'
   | 'create_account'
   | 'stats'
   | 'financial_planning'
@@ -25,6 +27,7 @@ export interface AIParsedExpense {
   rawCategory: string;
   description?: string;
   accountName?: string;
+  sectionName?: string;
 }
 
 export interface AIParsedIncome {
@@ -33,6 +36,7 @@ export interface AIParsedIncome {
   rawCategory: string;
   description?: string;
   accountName?: string;
+  sectionName?: string;
 }
 
 export interface AIParsedTransfer {
@@ -50,6 +54,17 @@ export interface AIParsedCreateCategory {
   intent: 'create_category';
   name: string;
   type: 'income' | 'expense';
+}
+
+export interface AIParsedCreateSection {
+  intent: 'create_section';
+  name: string;
+}
+
+export interface AIParsedAssignExpensesToSection {
+  intent: 'assign_expenses_to_section';
+  rawQuery: string;
+  sectionName: string;
 }
 
 export interface AIParsedCreateAccount {
@@ -99,6 +114,8 @@ export type AIParsedCommand =
   | AIParsedTransfer
   | AIParsedShowAccounts
   | AIParsedCreateCategory
+  | AIParsedCreateSection
+  | AIParsedAssignExpensesToSection
   | AIParsedCreateAccount
   | AIParsedStats
   | AIParsedFinancialPlanning
