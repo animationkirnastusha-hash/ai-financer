@@ -11,6 +11,7 @@ type Props = {
   onSetPrimary: (accountId: string) => void;
   onSetIncomeDefault: (accountId: string) => void;
   onEdit: (account: AccountDto) => void;
+  onTransfer: (account: AccountDto) => void;
   onDelete: (accountId: string) => Promise<void> | void;
   onAskAI: () => void;
 };
@@ -25,10 +26,13 @@ export function AccountDetailsSheet({
   onSetPrimary,
   onSetIncomeDefault,
   onEdit,
+  onTransfer,
   onDelete,
   onAskAI,
 }: Props) {
   if (!open || !account) return null;
+
+  const transactionCount = Number(account.transactionCount ?? 0);
 
   const handleDelete = async () => {
     const confirmed = window.confirm(
@@ -55,12 +59,13 @@ export function AccountDetailsSheet({
             </button>
           </div>
 
-          <div className="rounded-[28px] border border-white/8 bg-white/[0.04] p-5">
+          <div className="rounded-[30px] border border-white/8 bg-[radial-gradient(circle_at_top_right,rgba(52,211,153,0.16),transparent_42%),rgba(255,255,255,0.04)] p-5">
             <div className="text-sm text-white/45">Баланс</div>
             <div className="mt-2 text-3xl font-semibold">{formatMoney(Number(account.balance) || 0, account.currency)}</div>
             <div className="mt-4 flex flex-wrap gap-2">
               {isPrimary ? <Badge tone="green">Главный счёт</Badge> : null}
               {isIncomeDefault ? <Badge tone="blue">Доходы сюда</Badge> : null}
+              {account.showInTotalBalance ? <Badge tone="green">В общем балансе</Badge> : <Badge tone="yellow">Скрыт из общего</Badge>}
               {account.lockRename ? <Badge tone="yellow">Название защищено</Badge> : null}
               {account.lockSpending ? <Badge tone="red">Траты запрещены</Badge> : null}
               {account.lockTransfers ? <Badge tone="red">Переводы запрещены</Badge> : null}
@@ -69,8 +74,18 @@ export function AccountDetailsSheet({
             </div>
           </div>
 
+          <section className="grid grid-cols-2 gap-3">
+            <InfoTile label="Операции" value={transactionCount > 0 ? String(transactionCount) : 'Нет'} />
+            <InfoTile label="Валюта" value={account.currency} />
+          </section>
+
           <div className="grid gap-3">
-            <button type="button" onClick={() => onEdit(account)} className="rounded-2xl border border-emerald-300/20 bg-emerald-300/12 px-4 py-3 text-left text-sm text-white transition active:scale-[0.99]">
+            <button type="button" onClick={() => onTransfer(account)} className="rounded-2xl border border-emerald-300/20 bg-emerald-300/12 px-4 py-3 text-left text-sm text-white transition active:scale-[0.99]">
+              ↔️ Перевести на другой счёт
+              <div className="mt-1 text-xs text-white/45">Ручной перевод сейчас, AI-перевод через подтверждение — тем же принципом.</div>
+            </button>
+
+            <button type="button" onClick={() => onEdit(account)} className="rounded-2xl border border-white/10 bg-white/6 px-4 py-3 text-left text-sm text-white transition active:scale-[0.99]">
               ✏️ Редактировать счёт
               <div className="mt-1 text-xs text-white/45">Название, баланс, валюта и защитные правила.</div>
             </button>
@@ -94,6 +109,15 @@ export function AccountDetailsSheet({
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+function InfoTile({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-[22px] border border-white/8 bg-white/[0.035] p-4">
+      <div className="text-xs text-white/42">{label}</div>
+      <div className="mt-1 truncate text-sm font-medium text-white">{value}</div>
     </div>
   );
 }

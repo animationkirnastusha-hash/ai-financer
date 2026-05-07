@@ -1,10 +1,12 @@
 import { create } from 'zustand';
 import {
+  createTransaction,
   deleteTransaction,
   fetchLatestTransaction,
   fetchMonthlyStats,
   fetchTransactions,
   updateTransaction,
+  type CreateTransactionPayload,
   type MonthlyStatsDto,
   type TransactionDto,
 } from '@/features/transactions/api/transactions.api';
@@ -34,6 +36,14 @@ type TransactionsState = {
   loadMonthlyStats: () => Promise<void>;
   refreshDashboard: () => Promise<void>;
   refreshAll: () => Promise<void>;
+
+  createItem: (payload: CreateTransactionPayload) => Promise<TransactionDto | null>;
+  createTransfer: (payload: {
+    fromAccountId: string;
+    toAccountId: string;
+    amount: number;
+    description?: string | null;
+  }) => Promise<TransactionDto | null>;
 
   deleteTx: (transaction: TransactionDto | string) => Promise<void>;
   deleteItem: (transactionOrId: TransactionDto | string) => Promise<void>;
@@ -104,6 +114,33 @@ export const useTransactionsStore = create<TransactionsState>((set, get) => ({
 
   refreshAll: async () => {
     await get().refreshDashboard();
+  },
+
+  createItem: async (payload) => {
+    set({ isMutating: true, error: null });
+
+    try {
+      const transaction = await createTransaction(payload);
+      set({ isMutating: false, latest: transaction });
+      await get().refreshDashboard();
+      return transaction;
+    } catch (error) {
+      console.error(error);
+      set({ isMutating: false, error: getErrorMessage(error) });
+      throw error;
+    }
+  },
+
+  createTransfer: async ({ fromAccountId, toAccountId, amount, description }) => {
+    return get().createItem({
+      accountId: fromAccountId,
+      toAccountId,
+      amount,
+      type: 'transfer',
+      description: description?.trim() || 'Перевод между счетами',
+      date: new Date().toISOString(),
+      isAIGenerated: false,
+    });
   },
 
   deleteTx: async (transactionOrId) => {

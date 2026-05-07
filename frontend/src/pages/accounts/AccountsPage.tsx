@@ -5,9 +5,11 @@ import { useNavigationStore } from '@/features/navigation/model/navigation.store
 import { useAccountFlowStore } from '@/features/accounts/model/accountFlow.store';
 import { useAccountsStore } from '@/features/accounts/model/accounts.store';
 import { useSettingsStore } from '@/features/settings/model/settings.store';
+import { useTransactionsStore } from '@/features/transactions/model/transactions.store';
 import { AccountsSummary } from '@/features/accounts/ui/AccountsSummary';
 import { AccountCard } from '@/features/accounts/ui/AccountCard';
 import { AccountDetailsSheet } from '@/features/accounts/ui/AccountDetailsSheet';
+import { AccountTransferSheet } from '@/features/accounts/ui/AccountTransferSheet';
 import { EditAccountModal } from '@/features/accounts/ui/EditAccountModal';
 import { EmptyAccountsState } from '@/features/accounts/ui/EmptyAccountsState';
 import { PageHeader } from '@/shared/ui/PageHeader';
@@ -25,6 +27,7 @@ type CurrencyGroup = {
 
 export default function AccountsPage({ onBack }: Props) {
   const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
+  const [transferFromAccountId, setTransferFromAccountId] = useState<string | null>(null);
 
   const navigateTo = useNavigationStore((s) => s.navigateTo);
 
@@ -46,10 +49,11 @@ export default function AccountsPage({ onBack }: Props) {
   const editing = useAccountsStore((state) => state.editing);
   const isDeleting = useAccountsStore((state) => state.isDeleting);
   const isUpdating = useAccountsStore((state) => state.isUpdating);
-  
-  const openCreateAccount = useAccountFlowStore(
-    (state) => state.openCreateAccount,
-  );
+
+  const createTransfer = useTransactionsStore((state) => state.createTransfer);
+  const isTransferSaving = useTransactionsStore((state) => state.isMutating);
+
+  const openCreateAccount = useAccountFlowStore((state) => state.openCreateAccount);
 
   useEffect(() => {
     void loadAccounts();
@@ -58,6 +62,10 @@ export default function AccountsPage({ onBack }: Props) {
   const selectedAccount = useMemo(() => {
     return items.find((item) => item.id === selectedAccountId) ?? null;
   }, [items, selectedAccountId]);
+
+  const transferFromAccount = useMemo(() => {
+    return items.find((item) => item.id === transferFromAccountId) ?? null;
+  }, [items, transferFromAccountId]);
 
   const grouped = useMemo<CurrencyGroup[]>(() => {
     const map = new Map<string, CurrencyGroup>();
@@ -73,9 +81,11 @@ export default function AccountsPage({ onBack }: Props) {
           accounts: [],
         } satisfies CurrencyGroup);
 
-      current.total += Number(account.balance) || 0;
-      current.accounts.push(account);
+      if (account.showInTotalBalance !== false) {
+        current.total += Number(account.balance) || 0;
+      }
 
+      current.accounts.push(account);
       map.set(currency, current);
     }
 
@@ -90,15 +100,25 @@ export default function AccountsPage({ onBack }: Props) {
   const primaryAccount = items.find((item) => item.id === primaryAccountId);
   const incomeAccount = items.find((item) => item.id === incomeAccountId);
 
+  const handleCreateTransfer = async (payload: {
+    fromAccountId: string;
+    toAccountId: string;
+    amount: number;
+    description?: string | null;
+  }) => {
+    await createTransfer(payload);
+    await loadAccounts(true);
+    setTransferFromAccountId(null);
+    setSelectedAccountId(payload.fromAccountId);
+  };
+
   return (
     <div className="flex h-dvh flex-col bg-[linear-gradient(180deg,#0b1016_0%,#090d13_100%)] text-white">
       <PageHeader title="Accounts" onBack={onBack} />
 
       <div className="flex-1 overflow-y-auto px-4 pb-28">
         <div className="mx-auto max-w-[560px] space-y-4">
-          <AccountsSummary
-            total={formatMoney(mainGroup?.total ?? 0, mainCurrency)}
-          />
+          <AccountsSummary total={formatMoney(mainGroup?.total ?? 0, mainCurrency)} />
 
           <section className="rounded-[28px] border border-white/8 bg-white/[0.04] p-4">
             <div className="text-[11px] uppercase tracking-[0.16em] text-white/35">
@@ -123,6 +143,9 @@ export default function AccountsPage({ onBack }: Props) {
                       {currency}
                     </button>
                   ))}
+                </div>
+                <div className="mt-2 text-xs leading-5 text-white/40">
+                  Валюта меняет главный блок и сортировку. Балансы разных валют не смешиваются.
                 </div>
               </div>
 
@@ -150,7 +173,7 @@ export default function AccountsPage({ onBack }: Props) {
             </div>
 
             <div className="mt-3 text-sm leading-6 text-white/60">
-              Валюты не смешиваются. Основная сумма показывается отдельно, а USD/EUR идут своими группами.
+              Всё, что можно сделать вручную со счетами, должно быть доступно и через AI: создать счёт, изменить валюту, назначить главный счёт, перевести деньги.
             </div>
 
             <div className="mt-4 flex flex-wrap gap-3">
@@ -186,20 +209,13 @@ export default function AccountsPage({ onBack }: Props) {
           ) : (
             <div className="space-y-4">
               {grouped.map((group) => (
-                <section
-                  key={group.currency}
-                  className="rounded-[28px] border border-white/8 bg-white/[0.035] p-4"
-                >
+                <section key={group.currency} className="rounded-[28px] border border-white/8 bg-white/[0.035] p-4">
                   <div className="mb-3 flex items-center justify-between gap-3">
                     <div>
                       <div className="text-[11px] uppercase tracking-[0.16em] text-white/35">
-                        {group.currency === mainCurrency
-                          ? 'Main currency'
-                          : 'Other currency'}
+                        {group.currency === mainCurrency ? 'Main currency' : 'Other currency'}
                       </div>
-                      <div className="mt-1 text-lg font-semibold text-white">
-                        {group.currency}
-                      </div>
+                      <div className="mt-1 text-lg font-semibold text-white">{group.currency}</div>
                     </div>
 
                     <div className="text-right text-sm font-medium text-white">
@@ -239,36 +255,42 @@ export default function AccountsPage({ onBack }: Props) {
         onClose={() => setSelectedAccountId(null)}
         onSetPrimary={(accountId) => setPrimaryAccountId(accountId)}
         onSetIncomeDefault={(accountId) => setIncomeAccountId(accountId)}
-        onEdit={(account) => {
-          openEdit(account);
+        onEdit={(account) => openEdit(account)}
+        onTransfer={(account) => {
+          setSelectedAccountId(null);
+          setTransferFromAccountId(account.id);
         }}
         onAskAI={() => {
           setSelectedAccountId(null);
           navigateTo('ai-core');
-        
         }}
         isDeleting={isDeleting}
-onDelete={async (accountId) => {
-  try {
-    await deleteAccount(accountId);
+        onDelete={async (accountId) => {
+          try {
+            await deleteAccount(accountId);
 
-    if (primaryAccountId === accountId) {
-      setPrimaryAccountId(null);
-    }
+            if (primaryAccountId === accountId) {
+              setPrimaryAccountId(null);
+            }
 
-    if (incomeAccountId === accountId) {
-      setIncomeAccountId(null);
-    }
+            if (incomeAccountId === accountId) {
+              setIncomeAccountId(null);
+            }
 
-    setSelectedAccountId(null);
-  } catch (error) {
-    alert(
-      error instanceof Error
-        ? error.message
-        : 'Не удалось удалить счёт',
-    );
-  }
-}}
+            setSelectedAccountId(null);
+          } catch (error) {
+            alert(error instanceof Error ? error.message : 'Не удалось удалить счёт');
+          }
+        }}
+      />
+
+      <AccountTransferSheet
+        open={!!transferFromAccount}
+        fromAccount={transferFromAccount}
+        accounts={items}
+        isSaving={isTransferSaving}
+        onClose={() => setTransferFromAccountId(null)}
+        onSubmit={handleCreateTransfer}
       />
 
       <EditAccountModal
@@ -278,6 +300,7 @@ onDelete={async (accountId) => {
         onClose={closeEdit}
         onSave={async (accountId, payload) => {
           await updateAccount(accountId, payload);
+          await loadAccounts(true);
         }}
       />
     </div>

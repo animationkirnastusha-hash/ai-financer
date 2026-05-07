@@ -1,3 +1,7 @@
+import { useState } from 'react';
+
+import { getPreviewFromMessageData } from '@/features/pending-actions/lib/pendingActionView';
+import { cn } from '@/shared/lib/cn';
 import { Button, Surface } from '@/shared/ui';
 
 type FinancePreviewCardProps = {
@@ -9,39 +13,6 @@ type FinancePreviewCardProps = {
   onCancel?: (id: string) => void | Promise<void>;
 };
 
-function formatAmount(value: unknown) {
-  if (typeof value !== 'number') return '—';
-  return `${new Intl.NumberFormat('ru-RU').format(value)} ₽`;
-}
-
-function getIntentLabel(intent?: string) {
-  switch (intent) {
-    case 'expense':
-      return 'Подтвердить расход';
-    case 'income':
-      return 'Доход';
-    case 'transfer':
-      return 'Подтвердить перевод';
-    case 'create_account':
-      return 'Подтвердить создание счёта';
-    default:
-      return 'AI действие';
-  }
-}
-
-function getHumanHint(intent?: string) {
-  switch (intent) {
-    case 'expense':
-      return 'AI понял команду как крупный расход. Проверь сумму и нажми “Подтвердить”, чтобы деньги списались со счёта.';
-    case 'transfer':
-      return 'AI подготовил перевод. После подтверждения баланс счетов изменится.';
-    case 'create_account':
-      return 'AI подготовил новый счёт. Подтверди, если всё верно.';
-    default:
-      return 'Проверь действие перед выполнением.';
-  }
-}
-
 export function FinancePreviewCard({
   title,
   intent,
@@ -50,68 +21,101 @@ export function FinancePreviewCard({
   onConfirm,
   onCancel,
 }: FinancePreviewCardProps) {
-  const amount = data?.amount;
-  const categoryName = data?.categoryName;
-  const description = data?.description;
-  const riskLevel = data?.riskLevel;
+  const [isConfirming, setIsConfirming] = useState(false);
+  const [isCancelling, setIsCancelling] = useState(false);
+  const view = getPreviewFromMessageData({ title, intent, data });
   const requiresConfirmation = Boolean(actionId);
+  const isProcessing = isConfirming || isCancelling;
+
+  const handleConfirm = async () => {
+    if (!actionId || isProcessing) return;
+
+    setIsConfirming(true);
+    try {
+      await onConfirm?.(actionId);
+    } finally {
+      setIsConfirming(false);
+    }
+  };
+
+  const handleCancel = async () => {
+    if (!actionId || isProcessing) return;
+
+    setIsCancelling(true);
+    try {
+      await onCancel?.(actionId);
+    } finally {
+      setIsCancelling(false);
+    }
+  };
 
   return (
-    <Surface className="mx-auto w-full max-w-[420px] border-amber-300/20 bg-amber-300/10 p-4">
-      <div className="text-[11px] uppercase tracking-[0.16em] text-amber-200/80">
-        {getIntentLabel(intent)}
-      </div>
-
-      <div className="mt-2 text-2xl font-semibold text-white">
-        {formatAmount(amount)}
-      </div>
-
-      <div className="mt-2 rounded-2xl border border-amber-300/15 bg-black/20 px-3 py-3 text-sm leading-6 text-amber-50/85">
-        {getHumanHint(intent)}
-      </div>
-
-      <div className="mt-3 text-sm leading-6 text-white/75">
-        {title}
-      </div>
-
-      <div className="mt-4 grid gap-2 text-sm text-white/75">
-        {typeof categoryName === 'string' ? (
-          <div className="flex items-center justify-between gap-3 rounded-2xl border border-white/8 bg-black/20 px-3 py-2">
-            <span className="text-white/45">Категория</span>
-            <span className="text-white">{categoryName}</span>
-          </div>
-        ) : null}
-
-        {typeof description === 'string' && description.trim() ? (
-          <div className="flex items-center justify-between gap-3 rounded-2xl border border-white/8 bg-black/20 px-3 py-2">
-            <span className="text-white/45">Описание</span>
-            <span className="text-white">{description}</span>
-          </div>
-        ) : null}
-
-        <div className="flex items-center justify-between gap-3 rounded-2xl border border-white/8 bg-black/20 px-3 py-2">
-          <span className="text-white/45">Риск</span>
-          <span className="text-amber-100">
-            {typeof riskLevel === 'string' ? riskLevel : 'medium'}
+    <Surface className="mx-auto w-full max-w-[430px] overflow-hidden border-amber-300/18 bg-[radial-gradient(circle_at_top_left,rgba(251,191,36,0.16),transparent_35%),rgba(255,255,255,0.045)]">
+      <div className="p-4">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="rounded-full border border-amber-300/20 bg-amber-300/10 px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.16em] text-amber-100/85">
+            Требуется подтверждение
+          </span>
+          <span
+            className={cn(
+              'rounded-full border px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.14em]',
+              view.riskTone === 'safe' && 'border-emerald-300/20 bg-emerald-300/10 text-emerald-100/80',
+              view.riskTone === 'medium' && 'border-amber-300/20 bg-amber-300/10 text-amber-100/80',
+              view.riskTone === 'high' && 'border-rose-300/20 bg-rose-300/10 text-rose-100/80',
+            )}
+          >
+            {view.riskLabel}
           </span>
         </div>
+
+        <div className="mt-4 text-[11px] uppercase tracking-[0.16em] text-white/35">
+          {view.intentLabel}
+        </div>
+
+        <div className="mt-1 text-2xl font-semibold tracking-tight text-white">
+          {view.amountLabel || view.title}
+        </div>
+
+        {view.amountLabel ? (
+          <div className="mt-1 text-sm leading-5 text-white/65">{view.title}</div>
+        ) : null}
+
+        <div className="mt-4 rounded-[22px] border border-white/8 bg-black/20 px-3.5 py-3 text-sm leading-6 text-white/76">
+          <span className="text-amber-100">ИИ понял так:</span> {view.explanation}
+        </div>
+
+        {view.rows.length > 0 ? (
+          <div className="mt-3 grid gap-2">
+            {view.rows.map((row) => (
+              <div
+                key={`${row.label}-${row.value}`}
+                className="flex items-center justify-between gap-3 rounded-2xl border border-white/8 bg-white/[0.035] px-3 py-2.5 text-sm"
+              >
+                <span className="text-white/45">{row.label}</span>
+                <span className="max-w-[62%] truncate text-right font-medium text-white/88">
+                  {row.value}
+                </span>
+              </div>
+            ))}
+          </div>
+        ) : null}
+
+        {requiresConfirmation ? (
+          <div className="mt-4 grid grid-cols-[1.15fr_0.85fr] gap-2">
+            <Button fullWidth disabled={isProcessing} onClick={handleConfirm}>
+              {isConfirming ? 'Выполняю...' : 'Подтвердить'}
+            </Button>
+
+            <Button fullWidth variant="secondary" disabled={isProcessing} onClick={handleCancel}>
+              {isCancelling ? 'Отменяю...' : 'Отмена'}
+            </Button>
+          </div>
+        ) : (
+          <div className="mt-4 rounded-2xl border border-emerald-400/15 bg-emerald-400/10 px-3 py-2 text-sm text-emerald-200">
+            Операция выполнена.
+          </div>
+        )}
       </div>
-
-      {requiresConfirmation ? (
-        <div className="mt-4 grid grid-cols-2 gap-2">
-          <Button fullWidth onClick={() => onConfirm?.(actionId!)}>
-            Подтвердить
-          </Button>
-
-          <Button fullWidth variant="secondary" onClick={() => onCancel?.(actionId!)}>
-            Отменить
-          </Button>
-        </div>
-      ) : (
-        <div className="mt-4 rounded-2xl border border-emerald-400/15 bg-emerald-400/10 px-3 py-2 text-sm text-emerald-200">
-          Операция выполнена.
-        </div>
-      )}
     </Surface>
   );
 }

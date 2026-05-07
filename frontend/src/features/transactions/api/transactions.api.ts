@@ -6,7 +6,6 @@ export type TransactionDto = {
   accountId: string;
   toAccountId?: string | null;
   categoryId?: string | null;
-  sectionId?: string | null;
   amount: number;
   type: 'income' | 'expense' | 'transfer';
   description?: string | null;
@@ -28,18 +27,19 @@ export type TransactionDto = {
     icon?: string | null;
     color?: string | null;
   } | null;
-  section?: {
-    id: string;
-    name: string;
-    icon?: string | null;
-    color?: string | null;
-  } | null;
   category?: {
     id: string;
     name: string;
     icon?: string | null;
     color?: string | null;
     type?: string;
+  } | null;
+  sectionId?: string | null;
+  section?: {
+    id: string;
+    name: string;
+    icon?: string | null;
+    color?: string | null;
   } | null;
 };
 
@@ -59,6 +59,17 @@ export type MonthlyStatsDto = {
     count: number;
   }>;
   transactions?: TransactionDto[];
+};
+
+export type CreateTransactionPayload = {
+  accountId: string;
+  toAccountId?: string | null;
+  categoryId?: string | null;
+  amount: number;
+  type: 'income' | 'expense' | 'transfer';
+  description?: string | null;
+  date?: string;
+  isAIGenerated?: boolean;
 };
 
 type TransactionsResponse =
@@ -97,6 +108,11 @@ function extractLatest(payload: LatestResponse): TransactionDto | null {
   return payload.transaction ?? null;
 }
 
+function extractTransaction(payload: { transaction?: TransactionDto } | TransactionDto): TransactionDto {
+  if ('transaction' in payload && payload.transaction) return payload.transaction;
+  return payload as TransactionDto;
+}
+
 export async function fetchTransactions(limit = 100): Promise<TransactionDto[]> {
   const payload = await apiClient.get<TransactionsResponse>(`/transactions?limit=${limit}`);
   return extractTransactions(payload);
@@ -111,16 +127,25 @@ export async function fetchMonthlyStats(): Promise<MonthlyStatsDto> {
   return apiClient.get<MonthlyStatsDto>('/transactions/stats/monthly');
 }
 
+export async function createTransaction(payload: CreateTransactionPayload): Promise<TransactionDto> {
+  const response = await apiClient.post<{ transaction?: TransactionDto } | TransactionDto>(
+    '/transactions',
+    payload,
+  );
+
+  return extractTransaction(response);
+}
+
 export async function updateTransaction(
   id: string,
-  payload: Partial<Pick<TransactionDto, 'amount' | 'description' | 'date' | 'accountId' | 'categoryId' | 'sectionId' | 'type' | 'toAccountId'>>,
+  payload: Partial<Pick<TransactionDto, 'amount' | 'description' | 'date' | 'accountId' | 'categoryId' | 'type' | 'toAccountId'>>,
 ): Promise<TransactionDto> {
   const response = await apiClient.patch<{ transaction?: TransactionDto } | TransactionDto>(
     `/transactions/${id}`,
     payload,
   );
 
-  return 'transaction' in response && response.transaction ? response.transaction : (response as TransactionDto);
+  return extractTransaction(response);
 }
 
 export async function deleteTransaction(id: string): Promise<TransactionDto | null> {

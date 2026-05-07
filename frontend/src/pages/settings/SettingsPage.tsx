@@ -4,6 +4,7 @@ import { useSettingsStore } from '@/features/settings/model/settings.store';
 import { SettingsSection } from '@/features/settings/ui/SettingsSection';
 import { ToggleRow } from '@/features/settings/ui/ToggleRow';
 import { PageHeader } from '@/shared/ui/PageHeader';
+import { TaxonomySettingsPanel } from '@/features/sections/ui/TaxonomySettingsPanel';
 
 type Props = {
   onBack: () => void;
@@ -101,6 +102,8 @@ export default function SettingsPage({ onBack }: Props) {
               onChange={setAIInsightsEnabled}
             />
           </SettingsSection>
+
+          <TaxonomySettingsPanel />
 
           <section className="rounded-[28px] border border-white/8 bg-white/[0.04] p-4">
             <div className="text-[11px] uppercase tracking-[0.16em] text-white/35">
