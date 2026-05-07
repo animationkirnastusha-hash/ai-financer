@@ -94,3 +94,15 @@ body.ai-composer-focused .main-nav-dots {
 body.ai-composer-focused .ai-assistant-dock {
   display: none;
 }
+/* Base polish helpers */
+.ai-safe-drawer {
+  touch-action: pan-y;
+}
+
+.ai-pressable {
+  transition: transform 160ms ease, background-color 160ms ease, border-color 160ms ease;
+}
+
+.ai-pressable:active {
+  transform: scale(0.985);
+}

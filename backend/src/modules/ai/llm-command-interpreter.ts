@@ -34,8 +34,7 @@ create_category
 create_account
 stats
 financial_planning
-update_account
-chat_response
+advice
 repeat_last
 help
 unknown
@@ -44,7 +43,7 @@ unknown
 ВАЖНО
 ========================
 
-Не превращай цели, планы и финансовые модели в расход.
+Не превращай цели, планы, советы, напоминания и финансовые модели в расход.
 
 Фразы типа:
 - создай цель накопить 100000
@@ -237,50 +236,27 @@ FINANCIAL_PLANNING
   "question":"создай цель накопить 100000"
 }
 
+
 ========================
-UPDATE_ACCOUNT
+ADVICE
 ========================
 
-Используй update_account, когда пользователь просит изменить настройки или название счёта.
+Если пользователь просит совет, объяснение, рекомендацию, напоминание, идею накоплений или спрашивает "как лучше", это advice, а НЕ expense.
 
 Примеры:
-измени название счёта на котором 43000 на Копилка
-переименуй счёт карта в Основная карта
-запрети траты со счёта накопительный
-запрети переводы со счёта отпуск
-разреши переименование счёта карта
+как сэкономить на еде
+напоминай мне откладывать 5 процентов с покупок
+что делать чтобы меньше тратить
+как лучше вести бюджет
+посоветуй как копить
 
 Формат:
 {
-  "intent":"update_account",
-  "accountName":"карта",
-  "accountBalance":43000,
-  "newName":"Основная карта",
-  "lockSpending":true,
-  "lockTransfers":true,
-  "lockRename":false
+  "intent":"advice",
+  "question":"как сэкономить на еде"
 }
 
-Если пользователь ищет счёт по сумме, укажи accountBalance.
-Если меняет название, укажи newName.
-
-========================
-CHAT_RESPONSE
-========================
-
-Используй chat_response, если пользователь просит совет, объяснение, план или вопрос, который НЕ должен создавать транзакцию.
-
-Примеры:
-как сэкономить деньги
-как меньше тратить на еду
-как копить 5 процентов с покупок
-что делать если зарплата маленькая
-
-Формат:
-{
-  "intent":"chat_response",
-  "message":"Короткий полезный ответ на русском. Если это про накопления, предложи создать накопительный счёт или правило накопления."
-}
+Важно: advice не создаёт транзакции и не меняет счета.
 
 ========================
 REPEAT_LAST
@@ -403,31 +379,6 @@ function normalizeParsed(input: unknown): AIParsedCommand {
 
   if (intent === 'show_accounts') return { intent: 'show_accounts' };
 
-
-  if (intent === 'update_account') {
-    return {
-      intent: 'update_account',
-      accountName: data.accountName ? asString(data.accountName) : undefined,
-      accountBalance: data.accountBalance !== undefined ? Number(data.accountBalance) : undefined,
-      newName: data.newName ? asString(data.newName).replace(/^названи[ея]\s+/i, '').trim() : undefined,
-      type: data.type ? asString(data.type) : undefined,
-      currency: data.currency ? asString(data.currency).toUpperCase() : undefined,
-      showInTotalBalance: typeof data.showInTotalBalance === 'boolean' ? data.showInTotalBalance : undefined,
-      lockRename: typeof data.lockRename === 'boolean' ? data.lockRename : undefined,
-      lockSpending: typeof data.lockSpending === 'boolean' ? data.lockSpending : undefined,
-      lockTransfers: typeof data.lockTransfers === 'boolean' ? data.lockTransfers : undefined,
-      lockBalance: typeof data.lockBalance === 'boolean' ? data.lockBalance : undefined,
-      lockVisibility: typeof data.lockVisibility === 'boolean' ? data.lockVisibility : undefined,
-    };
-  }
-
-  if (intent === 'chat_response') {
-    return {
-      intent: 'chat_response',
-      message: asString(data.message, 'Могу помочь с учётом, анализом и финансовыми решениями. Уточни цель или сумму.'),
-    };
-  }
-
   if (intent === 'repeat_last') return { intent: 'repeat_last' };
 
   if (intent === 'stats') {
@@ -460,6 +411,13 @@ function normalizeParsed(input: unknown): AIParsedCommand {
       balance: Number(data.balance) || 0,
     };
   }
+  if (intent === 'advice') {
+    return {
+      intent: 'advice',
+      question: asString(data.question || data.description, ''),
+    };
+  }
+
   if (intent === 'financial_planning') {
     return {
       intent: 'financial_planning',
@@ -470,6 +428,7 @@ function normalizeParsed(input: unknown): AIParsedCommand {
       question: asString(data.question || data.description, ''),
     };
   }
+  if (intent === 'repeat_last') return { intent: 'repeat_last' };
 
   if (intent === 'help') return { intent: 'help' };
 
@@ -479,19 +438,6 @@ function normalizeParsed(input: unknown): AIParsedCommand {
 export class LLMCommandInterpreter {
   private readonly fallbackParser = new AIParser();
   private readonly ollama = new OllamaProvider();
-
-  private looksLikeAdvice(command: string) {
-    const normalized = command.toLowerCase();
-    return (
-      normalized.includes('как ') ||
-      normalized.includes('совет') ||
-      normalized.includes('сэконом') ||
-      normalized.includes('эконом') ||
-      normalized.includes('копить') ||
-      normalized.includes('откладывать') ||
-      normalized.includes('почему')
-    );
-  }
 private pickModel(command: string) {
     const normalized = command.toLowerCase();
 
@@ -522,13 +468,6 @@ private pickModel(command: string) {
 
     const fastResult = fastFinanceParse(trimmed);
     if (fastResult) return fastResult;
-
-    if (this.looksLikeAdvice(trimmed)) {
-      return {
-        intent: 'chat_response',
-        message: 'Могу помочь. Базово: сначала зафиксируй обязательные расходы, потом найди 1–2 категории перерасхода и поставь лимит. Если хочешь, я могу разобрать твои расходы за месяц.',
-      };
-    }
 
     if (env.aiMode !== 'ollama') {
       return this.fallbackParser.parse(command);
