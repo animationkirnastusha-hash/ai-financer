@@ -120,7 +120,7 @@ export function TaxonomySettingsPanel() {
   }
 
   return (
-    <section className="rounded-[28px] border border-white/8 bg-white/[0.04] p-4">
+    <section className="max-w-full overflow-hidden rounded-[28px] border border-white/8 bg-white/[0.04] p-4">
       <div className="text-[11px] uppercase tracking-[0.16em] text-white/35">
         Sections & categories
       </div>
@@ -141,31 +141,31 @@ export function TaxonomySettingsPanel() {
         </div>
       ) : null}
 
-      <div className="mt-4 grid gap-3">
+      <div className="mt-4 grid min-w-0 gap-3">
         <form
           onSubmit={handleCreateSection}
-          className="rounded-[24px] border border-white/8 bg-black/20 p-3"
+          className="min-w-0 rounded-[24px] border border-white/8 bg-black/20 p-3"
         >
           <div className="text-sm font-medium text-white">Создать раздел</div>
-          <div className="mt-3 grid grid-cols-[72px_1fr] gap-2">
+          <div className="mt-3 grid min-w-0 grid-cols-[56px_minmax(0,1fr)] gap-2 sm:grid-cols-[72px_minmax(0,1fr)]">
             <input
               value={sectionIcon}
               onChange={(event) => setSectionIcon(event.target.value)}
               placeholder="🏠"
               maxLength={4}
-              className="rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-3 text-center text-sm text-white outline-none placeholder:text-white/25"
+              className="min-w-0 rounded-2xl border border-white/10 bg-white/[0.04] px-2 py-3 text-center text-sm text-white outline-none placeholder:text-white/25 sm:px-3"
             />
             <input
               value={sectionName}
               onChange={(event) => setSectionName(event.target.value)}
               placeholder="Например: Дом"
-              className="rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-3 text-sm text-white outline-none placeholder:text-white/25"
+              className="min-w-0 rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-3 text-sm text-white outline-none placeholder:text-white/25"
             />
           </div>
           <button
             type="submit"
             disabled={!sectionName.trim() || isCreating}
-            className="mt-3 w-full rounded-2xl bg-white px-4 py-3 text-sm font-medium text-black disabled:cursor-not-allowed disabled:opacity-40"
+            className="mt-3 block w-full min-w-0 rounded-2xl bg-white px-4 py-3 text-sm font-medium text-black disabled:cursor-not-allowed disabled:opacity-40"
           >
             {isCreating ? 'Создаю…' : 'Добавить раздел'}
           </button>
@@ -173,22 +173,22 @@ export function TaxonomySettingsPanel() {
 
         <form
           onSubmit={handleCreateCategory}
-          className="rounded-[24px] border border-white/8 bg-black/20 p-3"
+          className="min-w-0 rounded-[24px] border border-white/8 bg-black/20 p-3"
         >
           <div className="text-sm font-medium text-white">Создать категорию</div>
-          <div className="mt-3 grid grid-cols-[72px_1fr] gap-2">
+          <div className="mt-3 grid min-w-0 grid-cols-[56px_minmax(0,1fr)] gap-2 sm:grid-cols-[72px_minmax(0,1fr)]">
             <input
               value={categoryIcon}
               onChange={(event) => setCategoryIcon(event.target.value)}
               placeholder="🛒"
               maxLength={4}
-              className="rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-3 text-center text-sm text-white outline-none placeholder:text-white/25"
+              className="min-w-0 rounded-2xl border border-white/10 bg-white/[0.04] px-2 py-3 text-center text-sm text-white outline-none placeholder:text-white/25 sm:px-3"
             />
             <input
               value={categoryName}
               onChange={(event) => setCategoryName(event.target.value)}
               placeholder="Например: Продукты"
-              className="rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-3 text-sm text-white outline-none placeholder:text-white/25"
+              className="min-w-0 rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-3 text-sm text-white outline-none placeholder:text-white/25"
             />
           </div>
 
@@ -209,7 +209,7 @@ export function TaxonomySettingsPanel() {
             ))}
           </div>
 
-          <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
+          <div className="mt-3 -mx-1 flex max-w-full gap-2 overflow-x-auto px-1 pb-1">
             <button
               type="button"
               onClick={() => setSelectedSectionId(null)}
@@ -240,7 +240,7 @@ export function TaxonomySettingsPanel() {
           <button
             type="submit"
             disabled={!categoryName.trim() || isCreating}
-            className="mt-3 w-full rounded-2xl bg-white px-4 py-3 text-sm font-medium text-black disabled:cursor-not-allowed disabled:opacity-40"
+            className="mt-3 block w-full min-w-0 rounded-2xl bg-white px-4 py-3 text-sm font-medium text-black disabled:cursor-not-allowed disabled:opacity-40"
           >
             {isCreating ? 'Создаю…' : 'Добавить категорию'}
           </button>
@@ -249,7 +249,7 @@ export function TaxonomySettingsPanel() {
 
       <div className="mt-4 rounded-[24px] border border-emerald-300/12 bg-emerald-300/8 p-3">
         <div className="text-sm font-medium text-emerald-50">Быстрый старт</div>
-        <div className="mt-3 grid grid-cols-2 gap-2">
+        <div className="mt-3 grid grid-cols-1 gap-2 min-[360px]:grid-cols-2">
           {SECTION_PRESETS.map((preset) => (
             <button
               key={preset.name}
@@ -261,7 +261,7 @@ export function TaxonomySettingsPanel() {
             </button>
           ))}
         </div>
-        <div className="mt-2 grid grid-cols-2 gap-2">
+        <div className="mt-2 grid grid-cols-1 gap-2 min-[360px]:grid-cols-2">
           {CATEGORY_PRESETS.map((preset) => (
             <button
               key={preset.name}
