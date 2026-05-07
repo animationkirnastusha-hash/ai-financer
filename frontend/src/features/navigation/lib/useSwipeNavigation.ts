@@ -5,9 +5,10 @@ import type { AppScreen } from '@/features/navigation/model/navigation.store';
 type Options = {
   currentScreen: AppScreen;
   navigateTo: (screen: AppScreen) => void;
+  goBack: () => void;
 };
 
-const MAIN_SCREENS: AppScreen[] = ['dashboard', 'ai-core', 'sections', 'settings'];
+const MAIN_SCREENS: AppScreen[] = ['dashboard', 'ai-core', 'accounts'];
 
 function isInteractiveTarget(target: EventTarget | null) {
   if (!(target instanceof HTMLElement)) return false;
@@ -17,7 +18,7 @@ function isInteractiveTarget(target: EventTarget | null) {
   );
 }
 
-export function useSwipeNavigation({ currentScreen, navigateTo }: Options) {
+export function useSwipeNavigation({ currentScreen, navigateTo, goBack }: Options) {
   const startX = useRef(0);
   const startY = useRef(0);
   const startedOnInteractive = useRef(false);
@@ -44,7 +45,14 @@ export function useSwipeNavigation({ currentScreen, navigateTo }: Options) {
       if (Math.abs(deltaX) < 72 || Math.abs(deltaY) > 70) return;
 
       const currentIndex = MAIN_SCREENS.indexOf(currentScreen);
-      if (currentIndex === -1) return;
+
+      if (currentIndex === -1) {
+        if (deltaX > 0) {
+          goBack();
+          telegramHaptic('light');
+        }
+        return;
+      }
 
       const nextIndex = deltaX < 0 ? currentIndex + 1 : currentIndex - 1;
       const nextScreen = MAIN_SCREENS[nextIndex];
@@ -62,7 +70,7 @@ export function useSwipeNavigation({ currentScreen, navigateTo }: Options) {
       window.removeEventListener('touchstart', handleTouchStart);
       window.removeEventListener('touchend', handleTouchEnd);
     };
-  }, [currentScreen, navigateTo]);
+  }, [currentScreen, goBack, navigateTo]);
 
   return {
     mainScreens: MAIN_SCREENS,

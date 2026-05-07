@@ -4,13 +4,14 @@ import { useSettingsStore } from '@/features/settings/model/settings.store';
 import { SettingsSection } from '@/features/settings/ui/SettingsSection';
 import { ToggleRow } from '@/features/settings/ui/ToggleRow';
 import { PageHeader } from '@/shared/ui/PageHeader';
-import { TaxonomySettingsPanel } from '@/features/sections/ui/TaxonomySettingsPanel';
+import { useNavigationStore } from '@/features/navigation/model/navigation.store';
 
 type Props = {
   onBack: () => void;
 };
 
 export default function SettingsPage({ onBack }: Props) {
+  const navigateTo = useNavigationStore((state) => state.navigateTo);
   const {
     voiceEnabled,
     voiceBetaEnabled,
@@ -103,7 +104,36 @@ export default function SettingsPage({ onBack }: Props) {
             />
           </SettingsSection>
 
-          <TaxonomySettingsPanel />
+          <section className="rounded-[28px] border border-white/8 bg-white/[0.04] p-4">
+            <div className="text-[11px] uppercase tracking-[0.16em] text-white/35">
+              Structure
+            </div>
+
+            <div className="mt-3 text-xl font-semibold text-white">
+              Разделы и категории
+            </div>
+
+            <p className="mt-2 text-sm leading-6 text-white/55">
+              Это настройка структуры твоих финансов. Здесь создаются разделы,
+              категории и правила, а AI должен уметь делать то же самое командой.
+            </p>
+
+            <button
+              type="button"
+              onClick={() => navigateTo('taxonomy-settings')}
+              className="mt-4 flex w-full items-center justify-between rounded-[22px] border border-emerald-300/14 bg-emerald-300/10 px-4 py-3 text-left"
+            >
+              <span>
+                <span className="block text-sm font-medium text-emerald-50">
+                  Открыть разделы и категории
+                </span>
+                <span className="mt-1 block text-xs text-emerald-50/55">
+                  Свайп вправо вернёт обратно в настройки
+                </span>
+              </span>
+              <span className="text-lg text-emerald-100">›</span>
+            </button>
+          </section>
 
           <section className="rounded-[28px] border border-white/8 bg-white/[0.04] p-4">
             <div className="text-[11px] uppercase tracking-[0.16em] text-white/35">

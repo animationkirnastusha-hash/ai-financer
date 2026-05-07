@@ -8,12 +8,14 @@ import { CommandListSheet } from '@/features/commands/ui/CommandListSheet';
 import { useNavigationStore } from '@/features/navigation/model/navigation.store';
 import { useSwipeNavigation } from '@/features/navigation/lib/useSwipeNavigation';
 import { MainMenuDots } from '@/features/navigation/ui/MainMenuDots';
+import { AppTopActions } from '@/features/navigation/ui/AppTopActions';
 import { PremiumUpgradeSheet } from '@/features/premium/ui/PremiumUpgradeSheet';
 import { LaunchOnboardingSheet } from '@/features/onboarding/ui/LaunchOnboardingSheet';
 
 import AccountsPage from '@/pages/accounts/AccountsPage';
 import DashboardPage from '@/pages/dashboard/DashboardPage';
 import SettingsPage from '@/pages/settings/SettingsPage';
+import TaxonomySettingsPage from '@/pages/settings/TaxonomySettingsPage';
 import TransactionsPage from '@/pages/transactions/TransactionsPage';
 import SectionsPage from '@/pages/sections/SectionsPage';
 
@@ -48,6 +50,7 @@ export function AppRouter() {
   useSwipeNavigation({
     currentScreen,
     navigateTo,
+    goBack,
   });
 
   const runGlobalCommand = (command: string) => {
@@ -88,7 +91,7 @@ export function AppRouter() {
       normalized.includes('папк') ||
       normalized.includes('групп')
     ) {
-      navigateTo('sections');
+      navigateTo('taxonomy-settings');
       return;
     }
 
@@ -107,8 +110,7 @@ export function AppRouter() {
   const isMainScreen =
     currentScreen === 'dashboard' ||
     currentScreen === 'ai-core' ||
-    currentScreen === 'sections' ||
-    currentScreen === 'settings';
+    currentScreen === 'accounts';
 
   return (
     <div className="telegram-app-shell">
@@ -121,7 +123,12 @@ export function AppRouter() {
         )}
         {currentScreen === 'sections' && <SectionsPage onBack={goBack} />}
         {currentScreen === 'settings' && <SettingsPage onBack={goBack} />}
+        {currentScreen === 'taxonomy-settings' && (
+          <TaxonomySettingsPage onBack={goBack} />
+        )}
       </div>
+
+      <AppTopActions />
 
       {isMainScreen ? (
         <MainMenuDots currentScreen={currentScreen} onNavigate={navigateTo} />

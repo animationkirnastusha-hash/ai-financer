@@ -5,11 +5,10 @@ type Props = {
   onNavigate: (screen: AppScreen) => void;
 };
 
-const items: Array<{ screen: AppScreen; label: string; aria: string }> = [
-  { screen: 'dashboard', label: '•', aria: 'dashboard' },
-  { screen: 'ai-core', label: '•', aria: 'ai-core' },
-  { screen: 'sections', label: '•', aria: 'sections' },
-  { screen: 'settings', label: '•', aria: 'settings' },
+const items: Array<{ screen: AppScreen; aria: string }> = [
+  { screen: 'dashboard', aria: 'Dashboard' },
+  { screen: 'ai-core', aria: 'AI Core' },
+  { screen: 'accounts', aria: 'Accounts' },
 ];
 
 export function MainMenuDots({ currentScreen, onNavigate }: Props) {
@@ -29,7 +28,7 @@ export function MainMenuDots({ currentScreen, onNavigate }: Props) {
               type="button"
               onClick={() => onNavigate(item.screen)}
               className={`h-3 w-3 rounded-full transition ${
-                active ? 'bg-emerald-300' : 'bg-white/25'
+                active ? 'scale-110 bg-emerald-300 shadow-[0_0_16px_rgba(110,231,183,0.45)]' : 'bg-white/25'
               }`}
               aria-label={item.aria}
               title={item.aria}

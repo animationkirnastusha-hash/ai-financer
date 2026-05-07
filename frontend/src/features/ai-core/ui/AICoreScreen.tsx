@@ -8,7 +8,6 @@ import { AICoreQuickPrompts } from '@/features/ai-core/ui/AICoreQuickPrompts';
 import { AICoreRecentActivity } from '@/features/ai-core/ui/AICoreRecentActivity';
 import { useAICoreController } from '@/features/ai-core/model/useAICoreController';
 import { CommandListSheet } from '@/features/commands/ui/CommandListSheet';
-import { useNavigationStore } from '@/features/navigation/model/navigation.store';
 import { LastTransactionCard } from '@/features/transactions/ui/LastTransactionCard';
 import { TransactionsHistoryDrawer } from '@/features/transactions/ui/TransactionsHistoryDrawer';
 import { EditTransactionModal } from '@/features/transactions/ui/EditTransactionModal';
@@ -17,7 +16,6 @@ import { useTransactionsStore } from '@/features/transactions/model/transactions
 import type { TransactionDto } from '@/features/transactions/api/transactions.api';
 
 export function AICoreScreen() {
-  const navigateTo = useNavigationStore((state) => state.navigateTo);
   const [historyOpen, setHistoryOpen] = useState(false);
 
   const {
@@ -123,13 +121,7 @@ export function AICoreScreen() {
               </div>
             </div>
 
-            <button
-              type="button"
-              onClick={() => navigateTo('settings')}
-              className="flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-white/[0.04]"
-            >
-              <span className="text-emerald-200 text-lg">•••</span>
-            </button>
+            <div className="h-11 w-24" aria-hidden="true" />
           </div>
         </header>
 

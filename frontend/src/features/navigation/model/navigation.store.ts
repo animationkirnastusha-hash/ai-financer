@@ -6,7 +6,8 @@ export type AppScreen =
   | 'accounts'
   | 'transactions'
   | 'sections'
-  | 'settings';
+  | 'settings'
+  | 'taxonomy-settings';
 
 type NavigationState = {
   currentScreen: AppScreen;
@@ -14,16 +15,26 @@ type NavigationState = {
 
   isAIMenuOpen: boolean;
   isGlobalCommandListOpen: boolean;
+  hasSystemNotifications: boolean;
+  isNotificationsOpen: boolean;
 
   navigateTo: (screen: AppScreen) => void;
   goBack: () => void;
+  goHome: () => void;
 
   openAIMenu: () => void;
   closeAIMenu: () => void;
 
   openGlobalCommandList: () => void;
   closeGlobalCommandList: () => void;
+
+  openNotifications: () => void;
+  closeNotifications: () => void;
 };
+
+function compactHistory(history: AppScreen[], currentScreen: AppScreen, nextScreen: AppScreen) {
+  return [...history.filter((screen) => screen !== nextScreen), currentScreen];
+}
 
 export const useNavigationStore = create<NavigationState>((set, get) => ({
   currentScreen: 'ai-core',
@@ -31,42 +42,75 @@ export const useNavigationStore = create<NavigationState>((set, get) => ({
 
   isAIMenuOpen: false,
   isGlobalCommandListOpen: false,
+  hasSystemNotifications: true,
+  isNotificationsOpen: false,
 
   navigateTo: (screen) => {
     const { currentScreen, history } = get();
 
     if (screen === currentScreen) {
-      set({ isAIMenuOpen: false, isGlobalCommandListOpen: false });
+      set({
+        isAIMenuOpen: false,
+        isGlobalCommandListOpen: false,
+        isNotificationsOpen: false,
+      });
       return;
     }
 
     set({
       currentScreen: screen,
-      history: [...history, currentScreen],
+      history: compactHistory(history, currentScreen, screen),
       isAIMenuOpen: false,
       isGlobalCommandListOpen: false,
+      isNotificationsOpen: false,
     });
   },
 
   goBack: () => {
     const { history, currentScreen } = get();
-    if (history.length === 0) return;
+    const nextHistory = [...history];
+    let previous = nextHistory.pop();
 
-    const previous = history[history.length - 1];
-    const nextHistory = history.slice(0, -1);
+    while (previous === currentScreen) {
+      previous = nextHistory.pop();
+    }
+
+    if (!previous) return;
 
     set({
-      currentScreen: previous ?? currentScreen,
+      currentScreen: previous,
       history: nextHistory,
       isAIMenuOpen: false,
       isGlobalCommandListOpen: false,
+      isNotificationsOpen: false,
     });
   },
 
-  openAIMenu: () => set({ isAIMenuOpen: true }),
+  goHome: () =>
+    set({
+      currentScreen: 'ai-core',
+      history: [],
+      isAIMenuOpen: false,
+      isGlobalCommandListOpen: false,
+      isNotificationsOpen: false,
+    }),
+
+  openAIMenu: () => set({ isAIMenuOpen: true, isNotificationsOpen: false }),
   closeAIMenu: () => set({ isAIMenuOpen: false }),
 
   openGlobalCommandList: () =>
-    set({ isGlobalCommandListOpen: true, isAIMenuOpen: false }),
+    set({
+      isGlobalCommandListOpen: true,
+      isAIMenuOpen: false,
+      isNotificationsOpen: false,
+    }),
   closeGlobalCommandList: () => set({ isGlobalCommandListOpen: false }),
+
+  openNotifications: () =>
+    set({
+      isNotificationsOpen: true,
+      isAIMenuOpen: false,
+      isGlobalCommandListOpen: false,
+    }),
+  closeNotifications: () => set({ isNotificationsOpen: false }),
 }));
