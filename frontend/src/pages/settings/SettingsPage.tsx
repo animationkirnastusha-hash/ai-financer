@@ -6,11 +6,7 @@ import { ToggleRow } from '@/features/settings/ui/ToggleRow';
 import { PageHeader } from '@/shared/ui/PageHeader';
 import { useNavigationStore } from '@/features/navigation/model/navigation.store';
 
-type Props = {
-  onBack: () => void;
-};
-
-export default function SettingsPage({ onBack }: Props) {
+export default function SettingsPage() {
   const navigateTo = useNavigationStore((state) => state.navigateTo);
   const {
     voiceEnabled,
@@ -56,7 +52,7 @@ export default function SettingsPage({ onBack }: Props) {
 
   return (
     <div className="flex h-dvh flex-col bg-[linear-gradient(180deg,#0b1016_0%,#090d13_100%)] text-white">
-      <PageHeader title="Settings" onBack={onBack} />
+      <PageHeader title="Settings" />
 
       <div className="flex-1 overflow-y-auto px-4 pb-28">
         <div className="space-y-4">

@@ -116,15 +116,15 @@ export function AppRouter() {
     <div className="telegram-app-shell">
       <div className="telegram-app-content">
         {currentScreen === 'ai-core' && <AICoreScreen />}
-        {currentScreen === 'dashboard' && <DashboardPage onBack={goBack} />}
-        {currentScreen === 'accounts' && <AccountsPage onBack={goBack} />}
+        {currentScreen === 'dashboard' && <DashboardPage />}
+        {currentScreen === 'accounts' && <AccountsPage />}
         {currentScreen === 'transactions' && (
           <TransactionsPage onBack={goBack} />
         )}
         {currentScreen === 'sections' && <SectionsPage onBack={goBack} />}
-        {currentScreen === 'settings' && <SettingsPage onBack={goBack} />}
+        {currentScreen === 'settings' && <SettingsPage />}
         {currentScreen === 'taxonomy-settings' && (
-          <TaxonomySettingsPage onBack={goBack} />
+          <TaxonomySettingsPage />
         )}
       </div>
 

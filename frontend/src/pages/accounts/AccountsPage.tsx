@@ -12,12 +12,7 @@ import { AccountDetailsSheet } from '@/features/accounts/ui/AccountDetailsSheet'
 import { AccountTransferSheet } from '@/features/accounts/ui/AccountTransferSheet';
 import { EditAccountModal } from '@/features/accounts/ui/EditAccountModal';
 import { EmptyAccountsState } from '@/features/accounts/ui/EmptyAccountsState';
-import { PageHeader } from '@/shared/ui/PageHeader';
 import { formatMoney } from '@/shared/lib/money';
-
-type Props = {
-  onBack: () => void;
-};
 
 type CurrencyGroup = {
   currency: string;
@@ -25,7 +20,7 @@ type CurrencyGroup = {
   accounts: AccountDto[];
 };
 
-export default function AccountsPage({ onBack }: Props) {
+export default function AccountsPage() {
   const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
   const [transferFromAccountId, setTransferFromAccountId] = useState<string | null>(null);
 
@@ -114,9 +109,7 @@ export default function AccountsPage({ onBack }: Props) {
 
   return (
     <div className="flex h-dvh flex-col bg-[linear-gradient(180deg,#0b1016_0%,#090d13_100%)] text-white">
-      <PageHeader title="Accounts" onBack={onBack} />
-
-      <div className="flex-1 overflow-y-auto px-4 pb-28">
+      <div className="flex-1 overflow-y-auto px-4 pb-28 pt-[calc(env(safe-area-inset-top)+78px)]">
         <div className="mx-auto max-w-[560px] space-y-4">
           <AccountsSummary total={formatMoney(mainGroup?.total ?? 0, mainCurrency)} />
 

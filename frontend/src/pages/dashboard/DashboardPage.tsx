@@ -3,7 +3,6 @@ import { useEffect, useMemo } from 'react';
 import { useAccountsStore } from '@/features/accounts/model/accounts.store';
 import { useNavigationStore } from '@/features/navigation/model/navigation.store';
 import { useTransactionsStore } from '@/features/transactions/model/transactions.store';
-import { PageHeader } from '@/shared/ui/PageHeader';
 import { DashboardMetricCard } from '@/features/dashboard/ui/DashboardMetricCard';
 import { DashboardSection } from '@/features/dashboard/ui/DashboardSection';
 import { InsightPill } from '@/features/dashboard/ui/InsightPill';
@@ -12,10 +11,6 @@ import { QuickActionCard } from '@/features/dashboard/ui/QuickActionCard';
 import { formatMoney, formatTransactionDate } from '@/shared/lib/money';
 import { PremiumInlineCard } from '@/features/premium/ui/PremiumInlineCard';
 import { usePremiumStore } from '@/features/premium/model/premium.store';
-type Props = {
-  onBack?: () => void;
-};
-
 const quickActions = [
   {
     title: 'Добавить расход',
@@ -41,7 +36,7 @@ function isCurrentMonth(dateValue: string) {
   );
 }
 
-export default function DashboardPage({ onBack }: Props) {
+export default function DashboardPage() {
   const navigateTo = useNavigationStore((state) => state.navigateTo);
 
   const accounts = useAccountsStore((state) => state.items);
@@ -136,16 +131,14 @@ export default function DashboardPage({ onBack }: Props) {
 
   return (
     <div className="flex h-dvh flex-col bg-[radial-gradient(circle_at_top,rgba(16,185,129,0.10),transparent_24%),linear-gradient(180deg,#0b1016_0%,#090d13_100%)] text-white">
-      <PageHeader title="Dashboard" onBack={onBack} />
-
-      <div className="flex-1 overflow-y-auto px-4 pb-28">
+      <div className="flex-1 overflow-y-auto px-4 pb-28 pt-[calc(env(safe-area-inset-top)+78px)]">
         <div className="mx-auto w-full max-w-[560px] space-y-4">
-          <section className="rounded-[32px] border border-white/10 bg-white/[0.05] p-5 backdrop-blur-xl">
+          <section className="rounded-[30px] border border-white/10 bg-white/[0.05] p-5 backdrop-blur-xl">
             <div className="text-[11px] uppercase tracking-[0.18em] text-emerald-300/70">
               AI Overview
             </div>
 
-            <h1 className="mt-3 text-3xl font-semibold leading-tight text-white">
+            <h1 className="mt-3 text-[28px] font-semibold leading-tight text-white">
               {accounts.length === 0
                 ? 'Начни с первого счёта'
                 : transactions.length === 0
@@ -158,7 +151,7 @@ export default function DashboardPage({ onBack }: Props) {
                 ? 'Создай счёт, потом запиши доход или расход — AI начнёт собирать финансовую картину.'
                 : transactions.length === 0
                   ? 'Теперь добавь первую операцию через AI: доход, расход или перевод.'
-                  : 'Dashboard берёт данные из тех же счетов и транзакций, что остальные страницы.'}
+                  : 'AI синхронизировал счета, операции и разделы.'}
             </p>
 
             <div className="mt-4 flex flex-wrap gap-2">

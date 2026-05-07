@@ -1,14 +1,10 @@
 import { TaxonomySettingsPanel } from '@/features/sections/ui/TaxonomySettingsPanel';
 import { PageHeader } from '@/shared/ui/PageHeader';
 
-type Props = {
-  onBack: () => void;
-};
-
-export default function TaxonomySettingsPage({ onBack }: Props) {
+export default function TaxonomySettingsPage() {
   return (
     <div className="flex h-dvh flex-col bg-[linear-gradient(180deg,#0b1016_0%,#090d13_100%)] text-white">
-      <PageHeader title="Разделы и категории" onBack={onBack} />
+      <PageHeader title="Разделы и категории" />
 
       <div className="flex-1 overflow-y-auto px-4 pb-28">
         <TaxonomySettingsPanel />
