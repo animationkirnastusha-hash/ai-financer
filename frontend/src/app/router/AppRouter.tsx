@@ -112,8 +112,7 @@ export function AppRouter() {
     currentScreen === 'ai-core' ||
     currentScreen === 'accounts';
 
-  const isSettingsFlowScreen =
-    currentScreen === 'settings' || currentScreen === 'taxonomy-settings';
+  const isSettingsFlowScreen = currentScreen === 'taxonomy-settings';
 
   return (
     <div className="telegram-app-shell">

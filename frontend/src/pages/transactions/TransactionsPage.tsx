@@ -2,12 +2,16 @@ import { useEffect, useMemo } from 'react';
 
 import { useNavigationStore } from '@/features/navigation/model/navigation.store';
 import { useTransactionsStore } from '@/features/transactions/model/transactions.store';
+import { TransactionEditSheet } from '@/features/transactions/ui/TransactionEditSheet';
 import { TransactionsTimeline } from '@/features/transactions/ui/TransactionsTimeline';
 import { TransactionsSummary } from '@/features/transactions/ui/TransactionsSummary';
 import { PageHeader } from '@/shared/ui/PageHeader';
+import { EmptyState } from '@/shared/ui/EmptyState';
+import { ErrorState } from '@/shared/ui/ErrorState';
 import { formatMoney } from '@/shared/lib/money';
 import { PremiumInlineCard } from '@/features/premium/ui/PremiumInlineCard';
 import { usePremiumStore } from '@/features/premium/model/premium.store';
+
 type Props = {
   onBack: () => void;
 };
@@ -23,14 +27,20 @@ function isCurrentMonth(dateValue: string) {
 }
 
 export default function TransactionsPage({ onBack }: Props) {
-  const navigateTo = useNavigationStore((s) => s.navigateTo);
+  const navigateTo = useNavigationStore((state) => state.navigateTo);
 
   const transactions = useTransactionsStore((state) => state.items);
+  const editing = useTransactionsStore((state) => state.editing);
   const isLoading = useTransactionsStore((state) => state.isLoading);
+  const isMutating = useTransactionsStore((state) => state.isMutating);
   const error = useTransactionsStore((state) => state.error);
   const loadTransactions = useTransactionsStore((state) => state.loadTransactions);
   const openEdit = useTransactionsStore((state) => state.openEdit);
+  const closeEdit = useTransactionsStore((state) => state.closeEdit);
+  const saveEdit = useTransactionsStore((state) => state.saveEdit);
+  const deleteItem = useTransactionsStore((state) => state.deleteItem);
   const openPremium = usePremiumStore((state) => state.openPremium);
+
   useEffect(() => {
     void loadTransactions();
   }, [loadTransactions]);
@@ -70,23 +80,25 @@ export default function TransactionsPage({ onBack }: Props) {
           <TransactionsSummary
             expenses={formatMoney(summary.expenses, 'RUB', { sign: 'minus' })}
             income={formatMoney(summary.income, 'RUB', { sign: 'plus' })}
-          />  
-            <PremiumInlineCard
-  onOpen={openPremium}
-  trigger={{
-    kind: 'locked_insight',
-    title: 'AI может найти, где ты теряешь деньги',
-    description:
-      'Free показывает операции и базовые суммы. Premium разберёт повторяющиеся траты, лишние подписки и категории риска.',
-    cta: 'Показать скрытые расходы',
-    value:
-      summary.expenses > 0
-        ? `Расходы месяца: ${formatMoney(summary.expenses, 'RUB', {
-            sign: 'minus',
-          })}`
-        : 'Добавь операции — AI начнёт анализ',
-  }}
-/>
+          />
+
+          <PremiumInlineCard
+            onOpen={openPremium}
+            trigger={{
+              kind: 'locked_insight',
+              title: 'AI может найти, где ты теряешь деньги',
+              description:
+                'Base показывает операции, разделы и базовые суммы. Premium разберёт повторяющиеся траты, лишние подписки и категории риска.',
+              cta: 'Показать скрытые расходы',
+              value:
+                summary.expenses > 0
+                  ? `Расходы месяца: ${formatMoney(summary.expenses, 'RUB', {
+                      sign: 'minus',
+                    })}`
+                  : 'Добавь операции — AI начнёт анализ',
+            }}
+          />
+
           {summary.foreignCount > 0 ? (
             <div className="rounded-[24px] border border-amber-300/15 bg-amber-300/8 p-4 text-sm leading-6 text-amber-100/75">
               Операции в USD/EUR не смешиваются с ₽-статистикой без курса.
@@ -100,7 +112,8 @@ export default function TransactionsPage({ onBack }: Props) {
             </div>
 
             <div className="mt-3 text-sm leading-6 text-white/60">
-              AI может быстро показать траты за период, найти категорию или помочь добавить операцию.
+              Операции можно редактировать вручную или попросить AI: поменять категорию,
+              перенести в раздел, исправить сумму или удалить ошибочную запись.
             </div>
 
             <button
@@ -112,15 +125,48 @@ export default function TransactionsPage({ onBack }: Props) {
             </button>
           </section>
 
-          <TransactionsTimeline
-            transactions={transactions}
-            isLoading={isLoading}
-            error={error}
-            onRefresh={() => void loadTransactions(true)}
-            onOpenTransaction={openEdit}
-          />
+          {error && transactions.length === 0 ? (
+            <ErrorState
+              title="Операции не загрузились"
+              message={error}
+              onRetry={() => void loadTransactions(true)}
+              onOpenAI={() => navigateTo('ai-core')}
+            />
+          ) : !isLoading && transactions.length === 0 ? (
+            <EmptyState
+              eyebrow="Операции"
+              title="История пока пустая"
+              description="Добавь первую операцию через AI: расход, доход или перевод между счетами."
+              actionLabel="Открыть AI Core"
+              onAction={() => navigateTo('ai-core')}
+            />
+          ) : (
+            <TransactionsTimeline
+              transactions={transactions}
+              isLoading={isLoading}
+              error={error}
+              onRefresh={() => void loadTransactions(true)}
+              onOpenTransaction={openEdit}
+            />
+          )}
         </div>
       </div>
+
+      <TransactionEditSheet
+        open={Boolean(editing)}
+        transaction={editing}
+        isSaving={isMutating}
+        onClose={closeEdit}
+        onSave={saveEdit}
+        onDelete={async (transaction) => {
+          await deleteItem(transaction);
+          closeEdit();
+        }}
+        onOpenAI={() => {
+          closeEdit();
+          navigateTo('ai-core');
+        }}
+      />
     </div>
   );
 }

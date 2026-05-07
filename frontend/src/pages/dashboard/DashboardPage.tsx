@@ -10,6 +10,8 @@ import { RecentActivityCard } from '@/features/dashboard/ui/RecentActivityCard';
 import { QuickActionCard } from '@/features/dashboard/ui/QuickActionCard';
 import { formatMoney, formatTransactionDate } from '@/shared/lib/money';
 import { PremiumInlineCard } from '@/features/premium/ui/PremiumInlineCard';
+import { EmptyState } from '@/shared/ui/EmptyState';
+import { ErrorState } from '@/shared/ui/ErrorState';
 import { usePremiumStore } from '@/features/premium/model/premium.store';
 const quickActions = [
   {
@@ -40,9 +42,11 @@ export default function DashboardPage() {
   const navigateTo = useNavigationStore((state) => state.navigateTo);
 
   const accounts = useAccountsStore((state) => state.items);
+  const accountsError = useAccountsStore((state) => state.error);
   const loadAccounts = useAccountsStore((state) => state.loadAccounts);
 
   const transactions = useTransactionsStore((state) => state.items);
+  const transactionsError = useTransactionsStore((state) => state.error);
   const loadTransactions = useTransactionsStore((state) => state.loadTransactions);
 
   const openPremium = usePremiumStore((state) => state.openPremium);
@@ -160,6 +164,31 @@ export default function DashboardPage() {
               ))}
             </div>
           </section>
+
+          {accountsError || transactionsError ? (
+            <ErrorState
+              title="Часть данных не загрузилась"
+              message={accountsError || transactionsError}
+              onRetry={() => void Promise.allSettled([loadAccounts(true), loadTransactions(true)])}
+              onOpenAI={() => navigateTo('ai-core')}
+            />
+          ) : accounts.length === 0 ? (
+            <EmptyState
+              eyebrow="Первый запуск"
+              title="Создай первый счёт"
+              description="После этого AI сможет считать баланс, записывать доходы и расходы, распределять операции по категориям и разделам."
+              actionLabel="Открыть AI Core"
+              onAction={() => navigateTo('ai-core')}
+            />
+          ) : transactions.length === 0 ? (
+            <EmptyState
+              eyebrow="Счета готовы"
+              title="Добавь первую операцию"
+              description="Напиши AI: “+50000 зарплата” или “кофе 350”. Это базовый сценарий приложения."
+              actionLabel="Открыть AI Core"
+              onAction={() => navigateTo('ai-core')}
+            />
+          ) : null}
 
           <section className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             {metrics.map((metric) => (

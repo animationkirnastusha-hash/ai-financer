@@ -34,7 +34,6 @@ export type TransactionDto = {
     color?: string | null;
     type?: string;
   } | null;
-  sectionId?: string | null;
   section?: {
     id: string;
     name: string;

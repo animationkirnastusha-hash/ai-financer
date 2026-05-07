@@ -12,6 +12,7 @@ import { AccountDetailsSheet } from '@/features/accounts/ui/AccountDetailsSheet'
 import { AccountTransferSheet } from '@/features/accounts/ui/AccountTransferSheet';
 import { EditAccountModal } from '@/features/accounts/ui/EditAccountModal';
 import { EmptyAccountsState } from '@/features/accounts/ui/EmptyAccountsState';
+import { ErrorState } from '@/shared/ui/ErrorState';
 import { formatMoney } from '@/shared/lib/money';
 
 type CurrencyGroup = {
@@ -28,6 +29,7 @@ export default function AccountsPage() {
 
   const items = useAccountsStore((state) => state.items);
   const isLoading = useAccountsStore((state) => state.isLoading);
+  const error = useAccountsStore((state) => state.error);
   const loadAccounts = useAccountsStore((state) => state.loadAccounts);
 
   const mainCurrency = useSettingsStore((state) => state.mainCurrency);
@@ -193,7 +195,14 @@ export default function AccountsPage() {
             </div>
           </section>
 
-          {isLoading ? (
+          {error && items.length === 0 ? (
+            <ErrorState
+              title="Счета не загрузились"
+              message={error}
+              onRetry={() => void loadAccounts(true)}
+              onOpenAI={() => navigateTo('ai-core')}
+            />
+          ) : isLoading ? (
             <div className="rounded-[28px] border border-white/8 bg-white/[0.04] p-5 text-sm text-white/60">
               Загружаю счета...
             </div>

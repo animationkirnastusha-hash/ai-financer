@@ -8,9 +8,12 @@ type Props = {
 
 const groupLabels = {
   money: 'Деньги',
+  organization: 'Разделы и категории',
   analysis: 'Аналитика',
   navigation: 'Навигация',
 } as const;
+
+const groupOrder = ['money', 'organization', 'analysis', 'navigation'] as const;
 
 export function CommandListSheet({ open, onClose, onRunCommand }: Props) {
   if (!open) return null;
@@ -32,7 +35,7 @@ export function CommandListSheet({ open, onClose, onRunCommand }: Props) {
           <div className="flex items-center justify-between gap-3">
             <div>
               <div className="text-[11px] uppercase tracking-[0.16em] text-white/35">
-                Examples
+                Commands
               </div>
               <div className="mt-1 text-lg font-semibold text-white">
                 Что можно сказать AI
@@ -49,12 +52,12 @@ export function CommandListSheet({ open, onClose, onRunCommand }: Props) {
           </div>
 
           <p className="mt-3 text-sm leading-6 text-white/55">
-            Это не жёсткие шаблоны. Это примеры естественных фраз — можно
-            писать и говорить по-своему.
+            Это примеры, а не строгие шаблоны. Все базовые действия доступны и вручную,
+            и через AI: счета, операции, разделы, категории и распределение расходов.
           </p>
 
           <div className="mt-5 space-y-5">
-            {(['money', 'analysis', 'navigation'] as const).map((group) => {
+            {groupOrder.map((group) => {
               const items = groups[group] || [];
 
               if (items.length === 0) return null;
