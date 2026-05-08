@@ -30,14 +30,13 @@ export function MainMenuDots({
   items = MAIN_ITEMS,
   bottomOffset = 8,
 }: Props) {
-  const [hiddenByUi, setHiddenByUi] = useState(false);
+  const [composerFocused, setComposerFocused] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
 
   useEffect(() => {
     const sync = () => {
-      setHiddenByUi(
-        document.body.classList.contains('ai-composer-focused') ||
-          document.body.classList.contains('ai-core-modal-open'),
-      );
+      setComposerFocused(document.body.classList.contains('ai-composer-focused'));
+      setModalOpen(document.body.classList.contains('ai-modal-open'));
     };
 
     sync();
@@ -54,11 +53,11 @@ export function MainMenuDots({
   return (
     <div
       className={`main-nav-dots pointer-events-auto fixed left-0 right-0 z-[70] flex justify-center px-4 transition duration-200 ${
-        hiddenByUi ? 'translate-y-2 opacity-0 pointer-events-none' : 'translate-y-0 opacity-100'
+        composerFocused || modalOpen ? 'translate-y-2 opacity-0 pointer-events-none' : 'translate-y-0 opacity-100'
       }`}
       style={{ bottom: `calc(env(safe-area-inset-bottom) + ${bottomOffset}px)` }}
       data-no-swipe="true"
-      aria-hidden={hiddenByUi}
+      aria-hidden={composerFocused || modalOpen}
     >
       <div className="flex items-center gap-2 rounded-full border border-white/10 bg-black/35 px-3 py-2 shadow-2xl backdrop-blur-xl">
         {items.map((item) => {
@@ -76,7 +75,7 @@ export function MainMenuDots({
               }`}
               aria-label={item.aria}
               title={item.aria}
-              tabIndex={hiddenByUi ? -1 : 0}
+              tabIndex={composerFocused || modalOpen ? -1 : 0}
             />
           );
         })}

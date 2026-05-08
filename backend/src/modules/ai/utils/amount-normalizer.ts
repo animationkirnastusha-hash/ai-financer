@@ -1,4 +1,4 @@
-const WORD_NUMBERS: Record<string, number> = {
+const ONES: Record<string, number> = {
   ноль: 0,
   один: 1,
   одна: 1,
@@ -12,6 +12,9 @@ const WORD_NUMBERS: Record<string, number> = {
   семь: 7,
   восемь: 8,
   девять: 9,
+};
+
+const TEENS: Record<string, number> = {
   десять: 10,
   одиннадцать: 11,
   двенадцать: 12,
@@ -22,6 +25,9 @@ const WORD_NUMBERS: Record<string, number> = {
   семнадцать: 17,
   восемнадцать: 18,
   девятнадцать: 19,
+};
+
+const TENS: Record<string, number> = {
   двадцать: 20,
   тридцать: 30,
   сорок: 40,
@@ -30,6 +36,9 @@ const WORD_NUMBERS: Record<string, number> = {
   семьдесят: 70,
   восемьдесят: 80,
   девяносто: 90,
+};
+
+const HUNDREDS: Record<string, number> = {
   сто: 100,
   двести: 200,
   триста: 300,
@@ -41,132 +50,213 @@ const WORD_NUMBERS: Record<string, number> = {
   девятьсот: 900,
 };
 
-const MULTIPLIERS: Record<string, number> = {
-  тысяча: 1_000,
-  тысячи: 1_000,
-  тысяч: 1_000,
-  тыща: 1_000,
-  тыщи: 1_000,
-  тыщ: 1_000,
-  тыс: 1_000,
-  к: 1_000,
-  k: 1_000,
-  миллион: 1_000_000,
-  миллиона: 1_000_000,
-  миллионов: 1_000_000,
-  млн: 1_000_000,
+const SLANG: Record<string, number> = {
+  чирик: 10_000,
+  десятка: 10_000,
+  десятку: 10_000,
+  двадцатка: 20_000,
+  двадцатку: 20_000,
+  полтос: 50_000,
+  сотка: 100_000,
+  сотку: 100_000,
+  пятихатка: 500,
+  косарь: 1000,
+  штука: 1000,
+  штуку: 1000,
+  пятак: 5000,
+  пятерка: 5000,
+  пятерку: 5000,
+  пятерочка: 5000,
 };
 
-const CURRENCY_WORDS = /₽|руб(?:лей|ля|ль)?|р\.?(?=\s|$)|доллар(?:ов|а)?|бакс(?:ов|а)?|usd|\$|евро|eur|€/gi;
+const MAGNITUDE_WORDS = new Set([
+  'тыс',
+  'тыща',
+  'тыщи',
+  'тыщ',
+  'тысяча',
+  'тысячи',
+  'тысяч',
+  'к',
+  'k',
+  'млн',
+  'миллион',
+  'миллиона',
+  'миллионов',
+]);
 
-function parseRussianNumberWords(raw: string): number | null {
-  const normalized = raw
+const CURRENCY_WORDS = new Set([
+  '₽',
+  'руб',
+  'рубль',
+  'рубля',
+  'рублей',
+  'р',
+  'доллар',
+  'доллара',
+  'долларов',
+  'бакс',
+  'бакса',
+  'баксов',
+  'usd',
+  '$',
+  'евро',
+  'eur',
+  '€',
+]);
+
+function normalizeToken(token: string) {
+  return token
     .toLowerCase()
-    .replace(/ё/g, 'е')
-    .replace(CURRENCY_WORDS, ' ')
-    .replace(/\s+/g, ' ')
+    .replaceAll('ё', 'е')
+    .replace(/[.,!?;:()«»"']/g, '')
     .trim();
+}
 
-  if (!normalized) return null;
+function tokenValue(token: string) {
+  return ONES[token] ?? TEENS[token] ?? TENS[token] ?? HUNDREDS[token] ?? null;
+}
 
-  const tokens = normalized.split(' ');
-  let total = 0;
-  let current = 0;
+function parseNumberWords(tokens: string[], start: number) {
+  let value = 0;
+  let index = start;
   let matched = false;
 
-  for (const token of tokens) {
-    if (WORD_NUMBERS[token] !== undefined) {
-      current += WORD_NUMBERS[token];
-      matched = true;
-      continue;
-    }
-
-    const multiplier = MULTIPLIERS[token];
-    if (multiplier) {
-      total += (current || 1) * multiplier;
-      current = 0;
-      matched = true;
-      continue;
-    }
-
-    return null;
+  while (index < tokens.length) {
+    const part = tokenValue(tokens[index]);
+    if (part === null) break;
+    value += part;
+    matched = true;
+    index += 1;
   }
 
-  const value = total + current;
-  return matched && value > 0 ? value : null;
+  if (!matched) return null;
+
+  const magnitude = tokens[index];
+  if (magnitude && MAGNITUDE_WORDS.has(magnitude)) {
+    const multiplier = magnitude === 'млн' || magnitude.startsWith('миллион') ? 1_000_000 : 1000;
+    index += 1;
+    return { value: value * multiplier, end: index };
+  }
+
+  return { value, end: index };
 }
 
-export function normalizeAmount(raw: unknown): number | null {
-  if (raw === null || raw === undefined) return null;
+function parseDigitToken(tokens: string[], index: number) {
+  const current = tokens[index];
+  const glued = current.match(/^(\d+(?:[.,]\d+)?)(кк|к|k|тыс|млн)$/i);
 
-  const rawText = String(raw).trim();
-  const wordValue = parseRussianNumberWords(rawText);
-  if (wordValue !== null) return Math.round(wordValue);
+  if (glued) {
+    const num = Number(glued[1].replace(',', '.'));
+    const suffix = glued[2].toLowerCase();
+    const multiplier = suffix === 'кк' || suffix === 'млн' ? 1_000_000 : 1000;
+    return { value: Math.round(num * multiplier), end: index + 1 };
+  }
 
-  const source = rawText
-    .toLowerCase()
-    .replace(/ё/g, 'е')
-    .replace(/,/g, '.')
-    .replace(CURRENCY_WORDS, '')
-    .replace(/\s+/g, '');
+  if (!/^\d+(?:[.,]\d+)?$/.test(current)) return null;
 
+  let value = Number(current.replace(',', '.'));
+  let end = index + 1;
+  const next = tokens[end];
+
+  if (next && MAGNITUDE_WORDS.has(next)) {
+    value *= next === 'млн' || next.startsWith('миллион') ? 1_000_000 : 1000;
+    end += 1;
+  }
+
+  return { value: Math.round(value), end };
+}
+
+export function normalizeAmount(value: unknown): number | null {
+  if (typeof value === 'number') {
+    return Number.isFinite(value) && value > 0 ? Math.round(value) : null;
+  }
+
+  if (typeof value !== 'string') return null;
+
+  const source = value.trim().toLowerCase().replaceAll('ё', 'е');
   if (!source) return null;
 
-  const slang: Record<string, number> = {
-    чирик: 10_000,
-    десятка: 10_000,
-    двадцатка: 20_000,
-    полтос: 50_000,
-    сотка: 100_000,
-    пятихатка: 500,
-    косарь: 1000,
-    штука: 1000,
-    пятак: 5000,
-    пятерка: 5000,
-    пятерочка: 5000,
-  };
+  const clean = source.replace(/\s+/g, '');
+  const compact = clean.replace(',', '.');
 
-  if (slang[source]) return slang[source];
+  if (SLANG[source]) return SLANG[source];
 
-  const millionMatch = source.match(/^(\d+(?:\.\d+)?)(кк|млн|миллион|миллиона|миллионов)$/i);
-  if (millionMatch) return Math.round(Number(millionMatch[1]) * 1_000_000);
-
-  const thousandMatch = source.match(/^(\d+(?:\.\d+)?)(к|k|тыс|тысяч|тысячи|тыща|тыщи|тыщ)$/i);
-  if (thousandMatch) return Math.round(Number(thousandMatch[1]) * 1_000);
-
-  const numberMatch = source.match(/^\d+(?:\.\d+)?$/);
-  if (!numberMatch) return null;
-
-  const value = Number(source);
-  return Number.isFinite(value) ? Math.round(value) : null;
-}
-
-const digitAmountPattern = /(\d+(?:[.,]\d+)?\s*(?:кк|к|k|тыс|тысяч|тысячи|тыща|тыщи|тыщ|млн|миллион(?:а|ов)?)?|чирик|десятка|двадцатка|полтос|сотка|пятихатка|косарь|штука|пятак|пятерка|пятерочка)(?:\s*(?:₽|руб(?:лей|ля|ль)?|р\.?|доллар(?:ов|а)?|бакс(?:ов|а)?|usd|\$|евро|eur|€))?/gi;
-const wordAmountPattern = /((?:один|одна|одно|два|две|три|четыре|пять|шесть|семь|восемь|девять|десять|одиннадцать|двенадцать|тринадцать|четырнадцать|пятнадцать|шестнадцать|семнадцать|восемнадцать|девятнадцать|двадцать|тридцать|сорок|пятьдесят|шестьдесят|семьдесят|восемьдесят|девяносто|сто|двести|триста|четыреста|пятьсот|шестьсот|семьсот|восемьсот|девятьсот)(?:\s+(?:один|одна|одно|два|две|три|четыре|пять|шесть|семь|восемь|девять|десять|одиннадцать|двенадцать|тринадцать|четырнадцать|пятнадцать|шестнадцать|семнадцать|восемнадцать|девятнадцать|двадцать|тридцать|сорок|пятьдесят|шестьдесят|семьдесят|восемьдесят|девяносто|сто|двести|триста|четыреста|пятьсот|шестьсот|семьсот|восемьсот|девятьсот))*\s+(?:тысяча|тысячи|тысяч|тыща|тыщи|тыщ|миллион|миллиона|миллионов|млн))(?:\s*(?:₽|руб(?:лей|ля|ль)?|р\.?|доллар(?:ов|а)?|бакс(?:ов|а)?|usd|\$|евро|eur|€))?/gi;
-
-export function extractAmountFromText(text: string): number | null {
-  const normalizedText = text.toLowerCase().replace(/ё/g, 'е');
-  const wordMatches = Array.from(normalizedText.matchAll(wordAmountPattern));
-
-  for (const match of wordMatches) {
-    const amount = normalizeAmount(match[1]);
-    if (amount !== null && amount > 0) return amount;
+  const gluedMatch = compact.match(/^(\d+(?:\.\d+)?)(кк|к|k|тыс|тысяч|тысячи|млн|миллион|миллиона|миллионов)$/i);
+  if (gluedMatch) {
+    const multiplier = gluedMatch[2].startsWith('м') || gluedMatch[2].startsWith('мил') || gluedMatch[2] === 'кк' ? 1_000_000 : 1000;
+    return Math.round(Number(gluedMatch[1]) * multiplier);
   }
 
-  const digitMatches = Array.from(normalizedText.matchAll(digitAmountPattern));
+  if (/^\d+(?:\.\d+)?$/.test(compact)) return Math.round(Number(compact));
 
-  for (const match of digitMatches) {
-    const amount = normalizeAmount(match[1]);
-    if (amount !== null && amount > 0) return amount;
+  const tokens = source.split(/\s+/).map(normalizeToken).filter(Boolean);
+
+  if (tokens.length === 1 && SLANG[tokens[0]]) return SLANG[tokens[0]];
+
+  for (let index = 0; index < tokens.length; index += 1) {
+    const digit = parseDigitToken(tokens, index);
+    if (digit && digit.value > 0) return digit.value;
+
+    const words = parseNumberWords(tokens, index);
+    if (words && words.value > 0) return words.value;
+  }
+
+  return null;
+}
+
+export function extractAmountFromText(text: string): number | null {
+  const tokens = text
+    .toLowerCase()
+    .replaceAll('ё', 'е')
+    .split(/\s+/)
+    .map(normalizeToken)
+    .filter(Boolean);
+
+  for (let index = 0; index < tokens.length; index += 1) {
+    const slang = SLANG[tokens[index]];
+    if (slang) return slang;
+
+    const digit = parseDigitToken(tokens, index);
+    if (digit && digit.value > 0) return digit.value;
+
+    const words = parseNumberWords(tokens, index);
+    if (words && words.value > 0) return words.value;
   }
 
   return null;
 }
 
 export function stripAmountFromText(text: string) {
-  return text
-    .replace(wordAmountPattern, ' ')
-    .replace(digitAmountPattern, ' ')
+  const tokens = text.split(/\s+/);
+  const normalized = tokens.map(normalizeToken);
+  const remove = new Set<number>();
+
+  for (let index = 0; index < normalized.length; index += 1) {
+    if (!normalized[index]) continue;
+
+    if (SLANG[normalized[index]]) {
+      remove.add(index);
+      continue;
+    }
+
+    const digit = parseDigitToken(normalized, index);
+    if (digit) {
+      for (let i = index; i < digit.end; i += 1) remove.add(i);
+      if (CURRENCY_WORDS.has(normalized[digit.end])) remove.add(digit.end);
+      continue;
+    }
+
+    const words = parseNumberWords(normalized, index);
+    if (words) {
+      for (let i = index; i < words.end; i += 1) remove.add(i);
+      if (CURRENCY_WORDS.has(normalized[words.end])) remove.add(words.end);
+    }
+  }
+
+  return tokens
+    .filter((_, index) => !remove.has(index))
+    .join(' ')
     .replace(/\s+/g, ' ')
     .trim();
 }

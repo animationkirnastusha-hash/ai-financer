@@ -13,61 +13,66 @@ function asString(value: unknown, fallback = '') {
 }
 
 function asOptionalString(value: unknown) {
-  const normalized = asString(value);
+  const normalized = cleanAccountReference(asString(value));
   return normalized ? normalized : undefined;
 }
 
 function asAmount(value: unknown) {
   const normalized = normalizeAmount(value);
 
-  if (normalized !== null && normalized > 0) {
-    return normalized;
-  }
+  if (normalized !== null && normalized > 0) return normalized;
 
   const numberValue = Number(value);
   return Number.isFinite(numberValue) && numberValue > 0 ? Math.round(numberValue) : null;
 }
 
-
-function cleanAccountName(value: unknown, fallback = 'Новый счёт') {
-  const raw = asString(value, fallback);
-  const cleaned = raw
-    .replace(/^и\s+/i, '')
-    .replace(/^а\s+/i, '')
-    .replace(/^назов(?:и|ем|ать)\s+(?:его|ее|её|счет|счёт)?\s*/i, '')
-    .replace(/^с\s+названием\s+/i, '')
-    .replace(/^под\s+названием\s+/i, '')
-    .replace(/\s+(?:и|потом|затем)\s+(?:положи|закинь|внеси|пополни|добавь|зачисли).+$/i, '')
-    .replace(/\b(?:положи|закинь|внеси|пополни|добавь|зачисли)\b.+$/i, '')
-    .replace(/[«»"]/g, '')
-    .replace(/\s+/g, ' ')
-    .trim();
-
-  return cleaned || fallback;
-}
-
 function normalizeCurrency(value: unknown): 'RUB' | 'USD' | 'EUR' {
   const raw = asString(value, 'RUB').toLowerCase();
-
-  if (raw.includes('usd') || raw.includes('доллар') || raw.includes('$')) return 'USD';
+  if (raw.includes('usd') || raw.includes('доллар') || raw.includes('$') || raw.includes('бакс')) return 'USD';
   if (raw.includes('eur') || raw.includes('евро') || raw.includes('€')) return 'EUR';
-
   return 'RUB';
+}
+
+function cleanAccountName(value: string) {
+  const cleaned = value
+    .replace(/[«»"']/g, '')
+    .replace(/\b(и|а|назови|назвать|его|ее|её|счет|счёт|аккаунт|положи|положить|закинь|закинуть|внеси|внести|пополни|пополнить|добавь|добавить)\b/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return cleaned || 'Новый счёт';
+}
+
+function cleanAccountReference(value: string) {
+  return value
+    .replace(/[«»"']/g, '')
+    .replace(/\b(счет|счёт|карта|карту|кошелек|кошелёк|на|в|с|со|из)\b/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 function normalizeAccountType(value: unknown): string {
   const raw = asString(value, 'card').toLowerCase();
-
   if (raw.includes('cash') || raw.includes('налич') || raw.includes('кэш')) return 'cash';
   if (raw.includes('saving') || raw.includes('накоп') || raw.includes('копил')) return 'savings';
   if (raw.includes('invest') || raw.includes('инвест')) return 'investment';
-
   return 'card';
 }
 
-function normalizeTransactionType(value: unknown): 'income' | 'expense' {
-  const raw = asString(value, 'expense').toLowerCase();
-  return raw.includes('income') || raw.includes('доход') || raw.includes('пополн') ? 'income' : 'expense';
+function normalizeTransactionType(value: unknown, fallbackText?: unknown): 'income' | 'expense' {
+  const raw = `${asString(value, 'expense')} ${asString(fallbackText)}`.toLowerCase();
+  if (
+    raw.includes('income') ||
+    raw.includes('доход') ||
+    raw.includes('пополн') ||
+    raw.includes('полож') ||
+    raw.includes('закин') ||
+    raw.includes('внес') ||
+    raw.includes('зачисл') ||
+    raw.includes('поступ')
+  ) {
+    return 'income';
+  }
+  return 'expense';
 }
 
 function convertToolCall(call: AIToolCall): AIParsedAtomicCommand[] {
@@ -75,10 +80,9 @@ function convertToolCall(call: AIToolCall): AIParsedAtomicCommand[] {
 
   switch (call.tool) {
     case 'create_account': {
-      const name = cleanAccountName(args.name || args.accountName, 'Новый счёт');
+      const name = cleanAccountName(asString(args.name || args.accountName, 'Новый счёт'));
       const initialBalance = asAmount(args.initialBalance ?? args.balance);
       const currency = normalizeCurrency(args.currency);
-
       const createAccount: AIParsedAtomicCommand = {
         intent: 'create_account',
         name,
@@ -87,9 +91,7 @@ function convertToolCall(call: AIToolCall): AIParsedAtomicCommand[] {
         balance: 0,
       };
 
-      if (!initialBalance) {
-        return [createAccount];
-      }
+      if (!initialBalance) return [createAccount];
 
       return [
         createAccount,
@@ -107,10 +109,10 @@ function convertToolCall(call: AIToolCall): AIParsedAtomicCommand[] {
       const amount = asAmount(args.amount);
       if (!amount) return [];
 
-      const type = normalizeTransactionType(args.type);
+      const type = normalizeTransactionType(args.type, `${args.description ?? ''} ${args.category ?? ''} ${args.rawCategory ?? ''}`);
       const category = asString(
         args.category || args.rawCategory || args.description,
-        type === 'income' ? 'доход' : 'расход',
+        type === 'income' ? 'пополнение' : 'расход',
       );
 
       return [
@@ -120,7 +122,7 @@ function convertToolCall(call: AIToolCall): AIParsedAtomicCommand[] {
               amount,
               rawCategory: category,
               description: asString(args.description, category),
-              accountName: asOptionalString(args.accountName ? cleanAccountName(args.accountName, '') : undefined),
+              accountName: asOptionalString(args.accountName),
               sectionName: asOptionalString(args.sectionName),
             }
           : {
@@ -128,7 +130,7 @@ function convertToolCall(call: AIToolCall): AIParsedAtomicCommand[] {
               amount,
               rawCategory: category,
               description: asString(args.description, category),
-              accountName: asOptionalString(args.accountName ? cleanAccountName(args.accountName, '') : undefined),
+              accountName: asOptionalString(args.accountName),
               sectionName: asOptionalString(args.sectionName),
             },
       ];
@@ -136,15 +138,13 @@ function convertToolCall(call: AIToolCall): AIParsedAtomicCommand[] {
 
     case 'transfer_money': {
       const amount = asAmount(args.amount);
-      const toAccountName = cleanAccountName(args.toAccountName || args.to || args.targetAccountName, '');
-
+      const toAccountName = asOptionalString(args.toAccountName || args.to || args.targetAccountName);
       if (!amount || !toAccountName) return [];
-
       return [
         {
           intent: 'transfer',
           amount,
-          fromAccountName: asOptionalString(args.fromAccountName || args.from || args.sourceAccountName ? cleanAccountName(args.fromAccountName || args.from || args.sourceAccountName, '') : undefined),
+          fromAccountName: asOptionalString(args.fromAccountName || args.from || args.sourceAccountName),
           toAccountName,
         },
       ];
@@ -158,12 +158,11 @@ function convertToolCall(call: AIToolCall): AIParsedAtomicCommand[] {
     case 'create_category': {
       const name = asString(args.name || args.category || args.rawCategory);
       if (!name) return [];
-
       return [
         {
           intent: 'create_category',
           name,
-          type: normalizeTransactionType(args.type),
+          type: normalizeTransactionType(args.type, args.name || args.category || args.rawCategory),
           sectionName: asOptionalString(args.sectionName),
         },
       ];
@@ -172,9 +171,7 @@ function convertToolCall(call: AIToolCall): AIParsedAtomicCommand[] {
     case 'assign_expenses_to_section': {
       const rawQuery = asString(args.rawQuery || args.category || args.query || args.description);
       const sectionName = asString(args.sectionName || args.name);
-
       if (!rawQuery || !sectionName) return [];
-
       return [{ intent: 'assign_expenses_to_section', rawQuery, sectionName }];
     }
 
@@ -221,9 +218,7 @@ export function normalizeToolPlanToParsedCommand(value: unknown): AIParsedComman
   if (!looksLikeToolPlan(value)) return null;
 
   const actions = value.toolCalls
-    .filter((item): item is AIToolCall => {
-      return isRecord(item) && typeof item.tool === 'string' && isRecord(item.args ?? {});
-    })
+    .filter((item): item is AIToolCall => isRecord(item) && typeof item.tool === 'string' && isRecord(item.args ?? {}))
     .flatMap(convertToolCall)
     .filter((item) => item.intent !== 'unknown' && item.intent !== 'help');
 
@@ -232,9 +227,7 @@ export function normalizeToolPlanToParsedCommand(value: unknown): AIParsedComman
     return question ? { intent: 'advice', question } : { intent: 'unknown' };
   }
 
-  if (actions.length === 1 && !value.premiumSuggestion) {
-    return actions[0];
-  }
+  if (actions.length === 1 && !value.premiumSuggestion) return actions[0];
 
   return {
     intent: 'batch',

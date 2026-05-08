@@ -23,49 +23,49 @@ function pickRecord(...values: unknown[]): UnknownRecord | undefined {
   for (const value of values) {
     if (isRecord(value)) return value;
   }
-
   return undefined;
 }
 
 function readString(record: UnknownRecord | undefined, keys: string[]): string | undefined {
   if (!record) return undefined;
-
   for (const key of keys) {
     const value = record[key];
     if (typeof value === 'string' && value.trim()) return value.trim();
   }
-
   return undefined;
 }
 
 function readNumber(record: UnknownRecord | undefined, keys: string[]): number | undefined {
   if (!record) return undefined;
-
   for (const key of keys) {
     const value = record[key];
-
     if (typeof value === 'number' && Number.isFinite(value)) return value;
-
     if (typeof value === 'string') {
       const normalized = Number(value.replace(/\s/g, '').replace(',', '.'));
       if (Number.isFinite(normalized)) return normalized;
     }
   }
-
   return undefined;
 }
 
-function formatAmount(amount: number | undefined, currency = '₽') {
-  if (typeof amount !== 'number') return undefined;
+function currencySymbol(currency = 'RUB') {
+  if (currency === 'RUB' || currency === '₽') return '₽';
+  if (currency === 'USD' || currency === '$') return '$';
+  if (currency === 'EUR' || currency === '€') return '€';
+  return currency;
+}
 
-  return `${new Intl.NumberFormat('ru-RU', {
+function formatAmount(amount: number | undefined, currency = 'RUB') {
+  if (typeof amount !== 'number') return undefined;
+  const formatted = new Intl.NumberFormat('ru-RU', {
     maximumFractionDigits: amount % 1 === 0 ? 0 : 2,
-  }).format(amount)} ${currency}`;
+  }).format(amount);
+  const symbol = currencySymbol(currency);
+  return symbol === '$' || symbol === '€' ? `${symbol}${formatted}` : `${formatted} ${symbol}`;
 }
 
 function intentLabel(intent?: string, type?: string) {
   const normalized = (intent || type || '').toLowerCase();
-
   if (normalized.includes('expense')) return 'Расход';
   if (normalized.includes('income')) return 'Доход';
   if (normalized.includes('transfer')) return 'Перевод';
@@ -73,57 +73,22 @@ function intentLabel(intent?: string, type?: string) {
   if (normalized.includes('section')) return 'Раздел';
   if (normalized.includes('categor')) return 'Категория';
   if (normalized.includes('delete')) return 'Удаление';
-
+  if (normalized.includes('batch')) return 'Пакет действий';
   return 'AI-действие';
 }
 
 function riskTone(risk?: string): PendingActionView['riskTone'] {
   const value = (risk || '').toLowerCase();
-
   if (value.includes('high') || value.includes('critical')) return 'high';
   if (value.includes('medium')) return 'medium';
-
   return 'safe';
 }
 
 function riskLabel(risk?: string) {
   const value = (risk || '').toLowerCase();
-
   if (value.includes('high') || value.includes('critical')) return 'Высокий риск';
   if (value.includes('medium')) return 'Нужна проверка';
-  if (value.includes('low')) return 'Низкий риск';
-
-  return 'Безопасное действие';
-}
-
-function humanExplanation(intent?: string, type?: string) {
-  const normalized = (intent || type || '').toLowerCase();
-
-  if (normalized.includes('expense')) {
-    return 'AI подготовил расход. Проверь сумму, раздел, категорию и счёт — после подтверждения операция появится в ленте.';
-  }
-
-  if (normalized.includes('income')) {
-    return 'AI подготовил доход. После подтверждения сумма будет добавлена на выбранный счёт.';
-  }
-
-  if (normalized.includes('transfer')) {
-    return 'AI подготовил перевод между счетами. После подтверждения балансы будут изменены.';
-  }
-
-  if (normalized.includes('section')) {
-    return 'AI подготовил изменение раздела. Это базовая функция: всё, что можно сделать вручную, можно создать и через AI.';
-  }
-
-  if (normalized.includes('categor')) {
-    return 'AI подготовил изменение категории. Проверь название и раздел перед сохранением.';
-  }
-
-  if (normalized.includes('account')) {
-    return 'AI подготовил действие со счётом. Проверь валюту и начальный баланс перед подтверждением.';
-  }
-
-  return 'AI понял запрос и подготовил действие. Проверь детали перед выполнением.';
+  return 'Безопасно';
 }
 
 function compactRows(rows: Array<{ label: string; value?: string | number | null }>) {
@@ -132,42 +97,58 @@ function compactRows(rows: Array<{ label: string; value?: string | number | null
     .map((row) => ({ label: row.label, value: String(row.value) }));
 }
 
+function getBatchRows(parsed: UnknownRecord | undefined) {
+  const actions = Array.isArray(parsed?.actions) ? parsed.actions : [];
+  return actions
+    .map((action, index) => {
+      if (!isRecord(action)) return null;
+      const intent = readString(action, ['intent']) || 'action';
+      const name = readString(action, ['name', 'accountName', 'description', 'rawCategory']);
+      const amount = readNumber(action, ['amount', 'balance']);
+      const currency = readString(action, ['currency']) || 'RUB';
+      const label = intentLabel(intent);
+      const value = [name, formatAmount(amount, currency)].filter(Boolean).join(' · ');
+      return { label: `${index + 1}. ${label}`, value: value || label };
+    })
+    .filter((item): item is { label: string; value: string } => Boolean(item));
+}
+
 export function getPendingActionView(item: PendingActionItem): PendingActionView {
   const payload = pickRecord(item.payload, item.parsed);
   const parsed = pickRecord(payload?.parsed, payload?.data, payload?.transaction, payload) || payload;
-  const currency = readString(parsed, ['currency', 'currencyCode']) || '₽';
-  const amount = readNumber(parsed, ['amount', 'value', 'sum']);
+  const isBatch = item.intent === 'batch' || Array.isArray(parsed?.actions);
+  const currency = readString(parsed, ['currency', 'currencyCode']) || 'RUB';
+  const amount = readNumber(parsed, ['amount', 'value', 'sum', 'balance']);
   const amountLabel = formatAmount(amount, currency);
   const description = readString(parsed, ['description', 'merchant', 'title', 'name']);
-  const category = readString(parsed, ['categoryName', 'category', 'categoryTitle']);
+  const category = readString(parsed, ['categoryName', 'category', 'rawCategory', 'categoryTitle']);
   const section = readString(parsed, ['sectionName', 'section', 'sectionTitle']);
-  const account = readString(parsed, ['accountName', 'account', 'fromAccountName']);
+  const account = readString(parsed, ['accountName', 'account', 'fromAccountName', 'name']);
   const toAccount = readString(parsed, ['toAccountName', 'targetAccountName']);
-  const title =
-    item.summary ||
-    description ||
-    item.command ||
-    `${intentLabel(item.intent, item.type)} ожидает подтверждения`;
 
-  const rows = compactRows([
-    { label: 'Сумма', value: amountLabel },
-    { label: 'Описание', value: description },
-    { label: 'Раздел', value: section },
-    { label: 'Категория', value: category },
-    { label: 'Счёт', value: account },
-    { label: 'Куда', value: toAccount },
-  ]);
+  const rows = isBatch
+    ? getBatchRows(parsed)
+    : compactRows([
+        { label: 'Сумма', value: amountLabel },
+        { label: 'Название', value: description },
+        { label: 'Раздел', value: section },
+        { label: 'Категория', value: category },
+        { label: 'Счёт', value: account },
+        { label: 'Куда', value: toAccount },
+      ]);
+
+  const title = item.summary || description || item.command || `${intentLabel(item.intent, item.type)} ожидает подтверждения`;
 
   return {
     title,
     subtitle: item.command || 'Проверь действие перед выполнением',
-    intentLabel: intentLabel(item.intent, item.type),
+    intentLabel: isBatch ? 'Пакет действий' : intentLabel(item.intent, item.type),
     riskLabel: riskLabel(item.riskLevel),
     riskTone: riskTone(item.riskLevel),
     amountLabel,
     currency,
     rows,
-    explanation: humanExplanation(item.intent, item.type),
+    explanation: 'Проверь детали. После подтверждения AI выполнит действие, а ты сможешь исправить его в истории.',
     rawPayload: payload,
   };
 }

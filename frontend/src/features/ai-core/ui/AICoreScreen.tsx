@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import type React from 'react';
 import { PendingActionsDrawer } from '@/features/pending-actions/ui/PendingActionsDrawer';
 import { FinancePreviewCard } from '@/features/chat/ui/FinancePreviewCard';
 import { AICoreOrb } from '@/features/ai-core/ui/AICoreOrb';
@@ -9,245 +10,153 @@ import { CommandListSheet } from '@/features/commands/ui/CommandListSheet';
 import { TransactionsHistoryDrawer } from '@/features/transactions/ui/TransactionsHistoryDrawer';
 import { EditTransactionModal } from '@/features/transactions/ui/EditTransactionModal';
 import { useTransactionsStore } from '@/features/transactions/model/transactions.store';
-import type { TransactionDto } from '@/features/transactions/api/transactions.api';
-import { useNavigationStore } from '@/features/navigation/model/navigation.store';
-import { cn } from '@/shared/lib/cn';
 import { formatMoney, formatTransactionDate } from '@/shared/lib/money';
+import type { TransactionDto } from '@/features/transactions/api/transactions.api';
 
-type PanelModal = 'summary' | 'recent' | null;
+type PanelModal = 'summary' | 'latest' | null;
 
-function getTxTitle(transaction: TransactionDto) {
-  if (transaction.type === 'transfer') {
-    return `${transaction.account?.name ?? 'Счёт'} → ${transaction.toAccount?.name ?? 'Счёт'}`;
-  }
-
+function transactionLabel(transaction: TransactionDto | null) {
+  if (!transaction) return 'Нет операций';
   return transaction.description || transaction.category?.name || 'Операция';
 }
 
-function getTxSubtitle(transaction: TransactionDto) {
-  const parts = [
-    formatTransactionDate(transaction.date),
-    transaction.account?.name,
-    transaction.section?.name,
-  ].filter(Boolean);
-
-  return parts.join(' · ') || 'Финансы';
-}
-
-function getTxIcon(transaction: TransactionDto) {
-  if (transaction.type === 'income') return transaction.category?.icon ?? '💰';
-  if (transaction.type === 'transfer') return '↔️';
-  return transaction.category?.icon ?? '📝';
-}
-
-function getTxAmount(transaction: TransactionDto) {
-  const currency = transaction.account?.currency ?? 'RUB';
-  const sign = transaction.type === 'income' ? 'plus' : transaction.type === 'expense' ? 'minus' : 'none';
-  return formatMoney(Number(transaction.amount) || 0, currency, { sign });
-}
-
-function TransactionRow({
-  transaction,
-  withActions = false,
-  isMutating = false,
-  onEdit,
-  onDelete,
-}: {
-  transaction: TransactionDto;
-  withActions?: boolean;
-  isMutating?: boolean;
-  onEdit?: (transaction: TransactionDto) => void;
-  onDelete?: (transaction: TransactionDto) => void;
-}) {
+function transactionAmount(transaction: TransactionDto | null) {
+  if (!transaction) return '—';
   const isIncome = transaction.type === 'income';
+  const isExpense = transaction.type === 'expense';
 
-  return (
-    <div className="rounded-[22px] border border-white/8 bg-black/20 p-3">
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex min-w-0 items-center gap-3">
-          <div className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-white/[0.07] text-lg">
-            {getTxIcon(transaction)}
-          </div>
-
-          <div className="min-w-0">
-            <div className="truncate text-sm font-semibold text-white">
-              {getTxTitle(transaction)}
-            </div>
-            <div className="mt-0.5 truncate text-xs text-white/42">
-              {getTxSubtitle(transaction)}
-            </div>
-          </div>
-        </div>
-
-        <div className={cn('shrink-0 text-sm font-semibold', isIncome ? 'text-emerald-300' : 'text-white')}>
-          {getTxAmount(transaction)}
-        </div>
-      </div>
-
-      {withActions ? (
-        <div className="mt-3 grid grid-cols-2 gap-2">
-          <button
-            type="button"
-            onClick={() => onEdit?.(transaction)}
-            className="rounded-2xl border border-white/10 bg-white/[0.06] px-3 py-2 text-sm text-white active:scale-[0.99]"
-          >
-            Исправить
-          </button>
-          <button
-            type="button"
-            disabled={isMutating}
-            onClick={() => onDelete?.(transaction)}
-            className="rounded-2xl border border-rose-300/15 bg-rose-400/10 px-3 py-2 text-sm text-rose-100 active:scale-[0.99] disabled:opacity-40"
-          >
-            Отменить
-          </button>
-        </div>
-      ) : null}
-    </div>
-  );
+  return formatMoney(Number(transaction.amount) || 0, transaction.account?.currency || 'RUB', {
+    sign: isIncome ? 'plus' : isExpense ? 'minus' : 'none',
+  });
 }
 
-function AICorePanelModal({
+function CorePanelModal({
+  open,
   type,
   items,
-  monthlyStats,
-  isMutating,
+  monthlyTotal,
   onClose,
+  onOpenHistory,
   onEdit,
   onDelete,
-  onOpenAll,
 }: {
-  type: Exclude<PanelModal, null>;
+  open: boolean;
+  type: PanelModal;
   items: TransactionDto[];
-  monthlyStats: ReturnType<typeof useTransactionsStore.getState>['monthlyStats'];
-  isMutating: boolean;
+  monthlyTotal: number;
   onClose: () => void;
+  onOpenHistory: () => void;
   onEdit: (transaction: TransactionDto) => void;
-  onDelete: (transaction: TransactionDto) => void;
-  onOpenAll: () => void;
+  onDelete: (transaction: TransactionDto) => Promise<void>;
 }) {
-  const [touchStartY, setTouchStartY] = useState<number | null>(null);
-
   useEffect(() => {
-    document.body.classList.add('ai-core-modal-open');
-    return () => document.body.classList.remove('ai-core-modal-open');
-  }, []);
+    document.body.classList.toggle('ai-modal-open', open);
+    return () => document.body.classList.remove('ai-modal-open');
+  }, [open]);
 
-  const isSummary = type === 'summary';
-  const recent = items.slice(0, 6);
+  if (!open || !type) return null;
+
+  const recent = items.slice(0, type === 'latest' ? 6 : 12);
+  const title = type === 'summary' ? 'Операции' : 'Последние операции';
+  const subtitle = type === 'summary'
+    ? `${items.length} операций · ${formatMoney(monthlyTotal, 'RUB', { sign: 'plus' })}`
+    : 'Можно исправить или удалить последние действия';
+
+  const handleBackdropPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
+    const target = event.target as HTMLElement;
+    if (target.dataset.modalBackdrop === 'true') onClose();
+  };
 
   return (
     <div
-      className="fixed inset-0 z-[120] flex items-end bg-black/65 px-3 pb-3 pt-16 text-white"
+      className="fixed inset-0 z-[120] flex items-end bg-black/55 backdrop-blur-md"
+      data-modal-backdrop="true"
       data-no-swipe="true"
-      data-ai-core-modal="true"
-      onClick={onClose}
-      onTouchStart={(event) => setTouchStartY(event.touches[0]?.clientY ?? null)}
-      onTouchEnd={(event) => {
-        const endY = event.changedTouches[0]?.clientY;
-        if (touchStartY !== null && endY && endY - touchStartY > 80) onClose();
-      }}
+      onPointerDown={handleBackdropPointerDown}
     >
-      <div
-        className="mx-auto max-h-[82dvh] w-full max-w-[560px] overflow-y-auto rounded-[30px] border border-white/10 bg-[#0b1016] p-4 shadow-2xl no-scrollbar"
-        onClick={(event) => event.stopPropagation()}
-      >
-        <div className="mx-auto mb-4 h-1.5 w-14 rounded-full bg-white/15" />
-
-        <div className="flex items-start justify-between gap-4">
+      <div className="mx-auto max-h-[82dvh] w-full max-w-[560px] overflow-hidden rounded-t-[34px] border border-white/10 bg-[#08111b] shadow-[0_-24px_80px_rgba(0,0,0,0.55)]">
+        <div className="flex items-start justify-between gap-3 border-b border-white/8 px-5 py-4">
           <div>
-            <div className="text-[11px] uppercase tracking-[0.18em] text-white/35">
-              {isSummary ? 'Операции' : 'Последние операции'}
+            <div className="text-[11px] uppercase tracking-[0.2em] text-white/38">
+              {title}
             </div>
-            <div className="mt-1 text-xl font-semibold text-white">
-              {isSummary ? 'Структура месяца' : 'Быстрые действия'}
-            </div>
+            <div className="mt-1 text-sm text-white/64">{subtitle}</div>
           </div>
 
           <button
             type="button"
             onClick={onClose}
-            className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl border border-white/10 bg-white/[0.05] text-xl text-white/75"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] text-xl text-white/70"
             aria-label="Закрыть"
           >
             ×
           </button>
         </div>
 
-        {isSummary ? (
-          <div className="mt-5 space-y-4">
-            <div className="grid grid-cols-3 gap-2">
-              <div className="rounded-2xl border border-white/8 bg-white/[0.04] p-3">
-                <div className="text-[10px] uppercase tracking-[0.14em] text-white/32">Всего</div>
-                <div className="mt-1 text-lg font-semibold text-white">{monthlyStats?.count ?? items.length}</div>
-              </div>
-              <div className="rounded-2xl border border-emerald-300/10 bg-emerald-400/8 p-3">
-                <div className="text-[10px] uppercase tracking-[0.14em] text-white/32">Доход</div>
-                <div className="mt-1 text-lg font-semibold text-emerald-300">
-                  {formatMoney(monthlyStats?.income ?? 0, 'RUB', { sign: 'plus' })}
-                </div>
-              </div>
-              <div className="rounded-2xl border border-white/8 bg-white/[0.04] p-3">
-                <div className="text-[10px] uppercase tracking-[0.14em] text-white/32">Расход</div>
-                <div className="mt-1 text-lg font-semibold text-white">
-                  {formatMoney(monthlyStats?.expenses ?? 0, 'RUB', { sign: 'minus' })}
-                </div>
-              </div>
+        <div className="max-h-[62dvh] space-y-2 overflow-y-auto px-4 py-4 no-scrollbar">
+          {recent.length === 0 ? (
+            <div className="rounded-2xl border border-white/8 bg-white/[0.035] p-4 text-sm text-white/55">
+              Пока нет операций.
             </div>
-
-            {monthlyStats?.topCategories?.length ? (
-              <section className="rounded-[24px] border border-white/8 bg-black/18 p-3">
-                <div className="text-[10px] uppercase tracking-[0.16em] text-white/35">По категориям</div>
-                <div className="mt-3 space-y-2">
-                  {monthlyStats.topCategories.slice(0, 6).map((category) => (
-                    <div key={category.name} className="flex items-center justify-between gap-3 rounded-2xl bg-white/[0.035] px-3 py-2">
-                      <div className="min-w-0 truncate text-sm text-white/82">
-                        {category.icon ? `${category.icon} ` : ''}{category.name}
+          ) : (
+            recent.map((item) => {
+              const isIncome = item.type === 'income';
+              return (
+                <div
+                  key={item.id}
+                  className="rounded-2xl border border-white/8 bg-white/[0.035] p-3"
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="truncate text-sm font-medium text-white">
+                        {transactionLabel(item)}
                       </div>
-                      <div className="shrink-0 text-sm font-medium text-white">
-                        {formatMoney(category.amount, 'RUB')}
+                      <div className="mt-1 text-xs text-white/42">
+                        {formatTransactionDate(item.date)} · {item.account?.name || 'Счёт'}
                       </div>
                     </div>
-                  ))}
-                </div>
-              </section>
-            ) : null}
 
-            <section className="space-y-2">
-              <div className="text-[10px] uppercase tracking-[0.16em] text-white/35">Последние записи</div>
-              {recent.length ? recent.map((item) => <TransactionRow key={item.id} transaction={item} />) : (
-                <div className="rounded-2xl border border-white/8 bg-white/[0.04] p-4 text-sm text-white/50">
-                  Операций пока нет.
-                </div>
-              )}
-            </section>
-          </div>
-        ) : (
-          <div className="mt-5 space-y-3">
-            {recent.length ? recent.map((item) => (
-              <TransactionRow
-                key={item.id}
-                transaction={item}
-                withActions
-                isMutating={isMutating}
-                onEdit={onEdit}
-                onDelete={onDelete}
-              />
-            )) : (
-              <div className="rounded-2xl border border-white/8 bg-white/[0.04] p-4 text-sm text-white/50">
-                Последних операций пока нет.
-              </div>
-            )}
-          </div>
-        )}
+                    <div className={`shrink-0 text-sm font-semibold ${isIncome ? 'text-emerald-300' : 'text-white'}`}>
+                      {transactionAmount(item)}
+                    </div>
+                  </div>
 
-        <button
-          type="button"
-          onClick={onOpenAll}
-          className="mt-5 w-full rounded-2xl border border-emerald-300/16 bg-emerald-400/10 px-4 py-3 text-sm font-medium text-emerald-100 active:scale-[0.99]"
-        >
-          Вся история
-        </button>
+                  {type === 'latest' ? (
+                    <div className="mt-3 flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => onEdit(item)}
+                        className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1.5 text-xs text-white/78"
+                      >
+                        Исправить
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => void onDelete(item)}
+                        className="rounded-full border border-rose-300/15 bg-rose-400/10 px-3 py-1.5 text-xs text-rose-100"
+                      >
+                        Отменить
+                      </button>
+                    </div>
+                  ) : null}
+                </div>
+              );
+            })
+          )}
+        </div>
+
+        <div className="border-t border-white/8 px-4 pb-[calc(env(safe-area-inset-bottom)+16px)] pt-3">
+          <button
+            type="button"
+            onClick={() => {
+              onClose();
+              onOpenHistory();
+            }}
+            className="w-full rounded-2xl border border-emerald-300/20 bg-emerald-400/12 px-4 py-3 text-sm font-medium text-emerald-100"
+          >
+            Вся история
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -255,8 +164,7 @@ function AICorePanelModal({
 
 export function AICoreScreen() {
   const [historyOpen, setHistoryOpen] = useState(false);
-  const [activePanelModal, setActivePanelModal] = useState<PanelModal>(null);
-  const navigateTo = useNavigationStore((state) => state.navigateTo);
+  const [panelModal, setPanelModal] = useState<PanelModal>(null);
 
   const {
     items,
@@ -313,8 +221,24 @@ export function AICoreScreen() {
     void refreshDashboard();
   }, [refreshDashboard]);
 
-  const recentItems = useMemo(() => items.slice(0, 6), [items]);
-  const latestTx = latest ?? items[0] ?? null;
+  const latestTransaction = latest ?? items[0] ?? null;
+  const modalOpen = panelModal !== null || isPendingOpen || historyOpen || Boolean(editing) || isCommandListOpen;
+
+  useEffect(() => {
+    document.body.classList.toggle('ai-modal-open', modalOpen);
+    return () => document.body.classList.remove('ai-modal-open');
+  }, [modalOpen]);
+
+  const monthTotal = useMemo(() => {
+    if (monthlyStats && typeof monthlyStats.balance === 'number') return monthlyStats.balance;
+
+    return items.reduce((sum, item) => {
+      const value = Number(item.amount) || 0;
+      if (item.type === 'income') return sum + value;
+      if (item.type === 'expense') return sum - value;
+      return sum;
+    }, 0);
+  }, [items, monthlyStats]);
 
   const liveText =
     voiceState === 'recording'
@@ -334,7 +258,7 @@ export function AICoreScreen() {
   };
 
   const handleEdit = (transaction: TransactionDto) => {
-    setActivePanelModal(null);
+    setPanelModal(null);
     openEdit(transaction);
   };
 
@@ -343,10 +267,7 @@ export function AICoreScreen() {
     await refreshDashboard();
   };
 
-  const openAllHistory = () => {
-    setActivePanelModal(null);
-    navigateTo('transactions');
-  };
+  const showComposer = isCommandPanelOpen && !modalOpen;
 
   return (
     <div className="flex h-dvh flex-col overflow-hidden bg-[radial-gradient(circle_at_top,rgba(16,185,129,0.10),transparent_28%),linear-gradient(180deg,#040811_0%,#07111b_100%)] text-white">
@@ -357,13 +278,12 @@ export function AICoreScreen() {
               type="button"
               onClick={openCommandList}
               className="flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-white/[0.04]"
-              aria-label="Открыть меню AI"
             >
-              <span className="text-emerald-200 text-xl">⌘</span>
+              <span className="text-xl text-emerald-200">⌘</span>
             </button>
 
             <div className="text-center">
-              <div className="text-[32px] font-semibold tracking-tight leading-none">ai finance</div>
+              <div className="text-[32px] font-semibold leading-none tracking-tight">ai finance</div>
               <div className="mt-1 text-xs text-white/38">ваш финансовый ai</div>
             </div>
 
@@ -378,56 +298,53 @@ export function AICoreScreen() {
             <div className="grid grid-cols-2 gap-3">
               <button
                 type="button"
-                onClick={() => setActivePanelModal('summary')}
-                className="rounded-[26px] border border-white/10 bg-white/[0.045] p-4 text-left shadow-[0_0_40px_rgba(0,0,0,0.18)] active:scale-[0.99]"
+                onClick={() => setPanelModal('summary')}
+                className="rounded-[24px] border border-white/10 bg-white/[0.045] p-4 text-left transition active:scale-[0.99]"
               >
-                <div className="text-[10px] uppercase tracking-[0.18em] text-white/35">Операции</div>
-                <div className="mt-3 text-xl font-semibold text-white">{monthlyStats?.count ?? items.length}</div>
-                <div className="mt-1 text-sm text-emerald-300">
-                  {formatMoney(monthlyStats?.balance ?? 0, 'RUB', { sign: 'plus' })}
+                <div className="text-[10px] uppercase tracking-[0.2em] text-white/38">Операции</div>
+                <div className="mt-3 text-2xl font-semibold text-white">{items.length}</div>
+                <div className="mt-1 text-sm font-medium text-emerald-300">
+                  {formatMoney(monthTotal, 'RUB', { sign: monthTotal >= 0 ? 'plus' : 'minus' })}
                 </div>
               </button>
 
               <button
                 type="button"
-                onClick={() => setActivePanelModal('recent')}
-                className="relative rounded-[26px] border border-white/10 bg-white/[0.045] p-4 text-left shadow-[0_0_40px_rgba(0,0,0,0.18)] active:scale-[0.99]"
+                onClick={() => setPanelModal('latest')}
+                className="relative rounded-[24px] border border-white/10 bg-white/[0.045] p-4 text-left transition active:scale-[0.99]"
               >
-                {recentItems.length > 0 ? (
-                  <span className="absolute right-3 top-3 grid h-5 min-w-5 place-items-center rounded-full bg-emerald-400 px-1 text-[11px] font-semibold text-black">
-                    {Math.min(recentItems.length, 6)}
-                  </span>
+                {latestTransaction ? (
+                  <span className="absolute right-4 top-4 h-2.5 w-2.5 rounded-full bg-emerald-300 shadow-[0_0_14px_rgba(110,231,183,0.45)]" />
                 ) : null}
-                <div className="text-[10px] uppercase tracking-[0.18em] text-white/35">Последнее</div>
+                <div className="text-[10px] uppercase tracking-[0.2em] text-white/38">Последнее</div>
                 <div className="mt-3 truncate text-lg font-semibold text-white">
-                  {latestTx ? getTxTitle(latestTx) : 'Нет операций'}
+                  {transactionLabel(latestTransaction)}
                 </div>
-                <div className="mt-1 truncate text-sm text-white/45">
-                  {latestTx ? `${getTxAmount(latestTx)} · ${formatTransactionDate(latestTx.date)}` : 'История пуста'}
+                <div className="mt-1 text-sm text-white/45">
+                  {latestTransaction ? transactionAmount(latestTransaction) : 'пока пусто'}
                 </div>
               </button>
             </div>
 
             <div className="flex items-center justify-between rounded-2xl border border-white/8 bg-white/[0.035] px-4 py-3">
-              <div className="flex min-w-0 items-center gap-2">
-                <div className="h-2.5 w-2.5 shrink-0 rounded-full bg-emerald-400 animate-pulse" />
-                <span className="truncate text-sm text-white/72">{liveText}</span>
+              <div className="flex items-center gap-2">
+                <div className="h-2.5 w-2.5 rounded-full bg-emerald-400 animate-pulse" />
+                <span className="text-sm text-white/72">{liveText}</span>
               </div>
 
               {pendingActions.length > 0 ? (
                 <button
-                  type="button"
                   onClick={openPending}
-                  className="shrink-0 rounded-full border border-amber-300/20 bg-amber-300/10 px-3 py-1 text-xs text-amber-100"
+                  className="rounded-full border border-amber-300/20 bg-amber-300/10 px-3 py-1 text-xs text-amber-100"
                 >
                   Ждёт: {pendingActions.length}
                 </button>
               ) : (
-                <span className="shrink-0 text-xs text-emerald-200/80">Active</span>
+                <span className="text-xs text-emerald-200/80">Active</span>
               )}
             </div>
 
-            <section className="relative flex flex-col items-center justify-center py-8">
+            <section className="relative flex flex-col items-center justify-center py-5">
               <AICoreOrb
                 state={coreState}
                 isVoiceLocked={isVoiceLocked}
@@ -440,11 +357,20 @@ export function AICoreScreen() {
                 onLockedCancel={cancelLockedVoice}
               />
 
-              <div className="mt-6 text-center">
+              <div className="mt-5 text-center">
                 <div className="text-lg font-medium text-white">Зажми и говори</div>
                 <div className="mt-1 text-sm text-white/38">вверх — замок, влево — отмена</div>
               </div>
             </section>
+
+            {showComposer ? (
+              <AICoreInput
+                value={inputValue}
+                onChange={setInputValue}
+                onSubmit={submit}
+                disabled={isSending}
+              />
+            ) : null}
 
             {latestAssistantMessage?.kind === 'preview' ? (
               <FinancePreviewCard
@@ -466,7 +392,7 @@ export function AICoreScreen() {
 
             {voiceError ? (
               <section className="rounded-2xl border border-rose-400/15 bg-rose-400/10 px-4 py-3 text-sm text-rose-100">
-                Не удалось получить доступ к микрофону. Зажми сферу снова и разреши микрофон, либо используй текст.
+                Голос временно недоступен. Нажми и удерживай сферу ещё раз, чтобы повторить запрос доступа к микрофону.
               </section>
             ) : null}
 
@@ -479,9 +405,16 @@ export function AICoreScreen() {
         </div>
       </div>
 
-      {isCommandPanelOpen && !activePanelModal ? (
-        <AICoreInput value={inputValue} onChange={setInputValue} onSubmit={submit} disabled={isSending} />
-      ) : null}
+      <CorePanelModal
+        open={panelModal !== null}
+        type={panelModal}
+        items={items}
+        monthlyTotal={monthTotal}
+        onClose={() => setPanelModal(null)}
+        onOpenHistory={() => setHistoryOpen(true)}
+        onEdit={handleEdit}
+        onDelete={handleDelete}
+      />
 
       <PendingActionsDrawer
         open={isPendingOpen}
@@ -508,20 +441,11 @@ export function AICoreScreen() {
         onSave={saveEdit}
       />
 
-      <CommandListSheet open={isCommandListOpen} onClose={closeCommandList} onRunCommand={runQuickCommand} />
-
-      {activePanelModal ? (
-        <AICorePanelModal
-          type={activePanelModal}
-          items={items}
-          monthlyStats={monthlyStats}
-          isMutating={isMutating}
-          onClose={() => setActivePanelModal(null)}
-          onEdit={handleEdit}
-          onDelete={handleDelete}
-          onOpenAll={openAllHistory}
-        />
-      ) : null}
+      <CommandListSheet
+        open={isCommandListOpen}
+        onClose={closeCommandList}
+        onRunCommand={runQuickCommand}
+      />
     </div>
   );
 }
