@@ -28,8 +28,12 @@ export function useAICoreController() {
   const [mode, setMode] = useState<AICoreMode>('text');
   const [isCommandPanelOpen, setIsCommandPanelOpen] = useState(true);
   const [isCommandListOpen, setIsCommandListOpen] = useState(false);
+  const [isVoiceLocked, setIsVoiceLocked] = useState(false);
+  const [voiceGestureHint, setVoiceGestureHint] = useState<string | null>(null);
 
   const lastSpokenMessageIdRef = useRef<string | null>(null);
+  const voiceStartRequestIdRef = useRef(0);
+  const voiceWasCancelledRef = useRef(false);
 
   const handleSingleCommand = useCallback(
     async (rawText: string) => {
@@ -57,11 +61,12 @@ export function useAICoreController() {
 
   const handleIntentOrMessage = useCallback(
     async (rawText: string) => {
-      const text = rawText.trim();
-      if (!text) return;
+      const trimmed = rawText.trim();
+
+      if (!trimmed) return;
 
       setCoreState('thinking');
-      await handleSingleCommand(text);
+      await handleSingleCommand(trimmed);
       setInputValue('');
     },
     [handleSingleCommand],
@@ -120,6 +125,8 @@ export function useAICoreController() {
     if (!voice.error) return;
 
     setMode('text');
+    setIsVoiceLocked(false);
+    setVoiceGestureHint(null);
     setIsCommandPanelOpen(true);
     setCoreState('expanded');
   }, [voice.error]);
@@ -143,16 +150,20 @@ export function useAICoreController() {
   const openCommandPanel = useCallback(() => {
     voice.stopSpeaking();
     setMode('text');
+    setIsVoiceLocked(false);
+    setVoiceGestureHint(null);
     setIsCommandPanelOpen(true);
     setCoreState('expanded');
   }, [voice]);
 
   const closeCommandPanel = useCallback(() => {
-  setInputValue('');
-  voice.reset();
-  setIsCommandPanelOpen(true);
-  setCoreState('expanded');
-}, [voice]);
+    setInputValue('');
+    voice.reset();
+    setIsVoiceLocked(false);
+    setVoiceGestureHint(null);
+    setIsCommandPanelOpen(true);
+    setCoreState('expanded');
+  }, [voice]);
 
   const openCommandList = useCallback(() => {
     setIsCommandListOpen(true);
@@ -172,48 +183,59 @@ export function useAICoreController() {
     [handleIntentOrMessage, voice],
   );
 
-  const stopVoiceRecording = useCallback(() => {
-    if (voice.state !== 'recording') return;
-
-    telegramHaptic('light');
-    setCoreState('thinking');
-    voice.stop();
-  }, [voice]);
-
   const handleOrbTap = useCallback(() => {
     voice.stopSpeaking();
+    openCommandPanel();
+  }, [openCommandPanel, voice]);
 
+  const handleOrbHoldStart = useCallback(async () => {
     if (!voiceEnabled || !voiceBetaEnabled) {
       openCommandPanel();
       return;
     }
 
-    if (voice.state === 'recording') {
-      stopVoiceRecording();
-      return;
-    }
-
-    telegramHaptic('medium');
-    setMode('voice');
-    setIsCommandPanelOpen(true);
-    setInputValue('');
-    setCoreState('listening');
-    voice.start();
-  }, [openCommandPanel, stopVoiceRecording, voice, voiceBetaEnabled, voiceEnabled]);
-
-  const handleOrbHoldStart = useCallback(() => {
-    if (!voiceEnabled || !voiceBetaEnabled) {
-      openCommandPanel();
-      return;
-    }
+    const requestId = voiceStartRequestIdRef.current + 1;
+    voiceStartRequestIdRef.current = requestId;
+    voiceWasCancelledRef.current = false;
 
     telegramHaptic('medium');
     voice.stopSpeaking();
     setMode('voice');
-    setIsCommandPanelOpen(false);
+    setIsVoiceLocked(false);
     setInputValue('');
+    setIsCommandPanelOpen(false);
     setCoreState('listening');
-    voice.start();
+    setVoiceGestureHint('Держи и говори • влево — отмена • вверх — замок');
+
+    const startResult = await voice.start();
+
+    if (voiceStartRequestIdRef.current !== requestId) return;
+
+    if (voiceWasCancelledRef.current) {
+      voice.cancel();
+      return;
+    }
+
+    if (startResult === 'permission-granted') {
+      telegramHaptic('light');
+      setMode('text');
+      setIsVoiceLocked(false);
+      setIsCommandPanelOpen(true);
+      setCoreState('expanded');
+      setVoiceGestureHint('Микрофон разрешён. Зажми сферу ещё раз и говори.');
+      return;
+    }
+
+    if (startResult === 'error') {
+      setMode('text');
+      setIsVoiceLocked(false);
+      setIsCommandPanelOpen(true);
+      setCoreState('expanded');
+      setVoiceGestureHint(null);
+      return;
+    }
+
+    setVoiceGestureHint('Держи и говори • влево — отмена • вверх — замок');
   }, [openCommandPanel, voice, voiceBetaEnabled, voiceEnabled]);
 
   const handleOrbHoldEnd = useCallback(() => {
@@ -222,10 +244,44 @@ export function useAICoreController() {
       return;
     }
 
+    if (isVoiceLocked) return;
+    if (voice.state !== 'recording') return;
+
     telegramHaptic('light');
+    setVoiceGestureHint(null);
     setCoreState('thinking');
     voice.stop();
-  }, [openCommandPanel, voice, voiceBetaEnabled, voiceEnabled]);
+  }, [isVoiceLocked, openCommandPanel, voice, voiceBetaEnabled, voiceEnabled]);
+
+  const handleOrbVoiceCancel = useCallback(() => {
+    voiceWasCancelledRef.current = true;
+    voiceStartRequestIdRef.current += 1;
+
+    telegramHaptic('heavy');
+    setIsVoiceLocked(false);
+    setVoiceGestureHint(null);
+    setCoreState('expanded');
+    setIsCommandPanelOpen(true);
+    voice.cancel();
+  }, [voice]);
+
+  const handleOrbVoiceLock = useCallback(() => {
+    if (voice.state !== 'recording') return;
+
+    telegramHaptic('medium');
+    setIsVoiceLocked(true);
+    setVoiceGestureHint('Микрофон закреплён. Нажми «Готово», когда закончишь.');
+  }, [voice.state]);
+
+  const finishLockedVoice = useCallback(() => {
+    if (voice.state !== 'recording') return;
+
+    telegramHaptic('light');
+    setIsVoiceLocked(false);
+    setVoiceGestureHint(null);
+    setCoreState('thinking');
+    voice.stop();
+  }, [voice]);
 
   const submit = useCallback(async () => {
     const trimmed = inputValue.trim();
@@ -245,6 +301,8 @@ export function useAICoreController() {
     setInputValue,
     isCommandPanelOpen,
     isCommandListOpen,
+    isVoiceLocked,
+    voiceGestureHint,
 
     openCommandPanel,
     closeCommandPanel,
@@ -255,7 +313,9 @@ export function useAICoreController() {
     handleOrbTap,
     handleOrbHoldStart,
     handleOrbHoldEnd,
-    stopVoiceRecording,
+    handleOrbVoiceCancel,
+    handleOrbVoiceLock,
+    finishLockedVoice,
     submit,
 
     latestAssistantMessage,

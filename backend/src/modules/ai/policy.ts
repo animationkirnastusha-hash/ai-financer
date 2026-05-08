@@ -7,17 +7,20 @@ export class AIActionPolicy {
     reason?: string;
   } {
     if (command.intent === 'batch') {
-      const policies = command.actions.map((action) => this.evaluate(action));
-      const highestRisk = policies.some((item) => item.riskLevel === 'high')
+      const childPolicies = command.actions.map((action) => this.evaluate(action));
+      const requiresConfirmation = childPolicies.some((item) => item.requiresConfirmation);
+      const riskLevel = childPolicies.some((item) => item.riskLevel === 'high')
         ? 'high'
-        : policies.some((item) => item.riskLevel === 'medium')
+        : childPolicies.some((item) => item.riskLevel === 'medium')
           ? 'medium'
           : 'low';
 
       return {
-        requiresConfirmation: policies.some((item) => item.requiresConfirmation),
-        riskLevel: highestRisk,
-        reason: policies.find((item) => item.reason)?.reason ?? 'Составное действие AI',
+        requiresConfirmation,
+        riskLevel,
+        reason: requiresConfirmation
+          ? 'В запросе несколько действий, часть из них требует подтверждения'
+          : undefined,
       };
     }
 

@@ -101,6 +101,98 @@ function getAccountName(input: string, currency: 'RUB' | 'USD' | 'EUR') {
   return 'Новый счёт';
 }
 
+
+function normalizeAccountName(value: string) {
+  return value
+    .replace(/\b(и|а|потом|затем|туда|сюда|на него|на нее|на неё)\b/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function parseCreateAccountWithInitialIncome(input: string): AIParsedCommand | null {
+  if (!isCreateAccount(input)) return null;
+
+  const depositMatch = input.match(
+    /(?:и\s+)?(?:положи|положить|закинь|закинуть|внеси|внести|пополн[иь]|добавь|добавить|зачисли|зачислить)\s+(?:туда|на\s+(?:него|нее|неё|счет|счёт|карту|кошелек|кошелёк))?\s*(.+)$/i,
+  );
+
+  if (!depositMatch) return null;
+
+  const amount = parseAmount(depositMatch[1]);
+  if (!amount) return null;
+
+  const beforeDeposit = input.slice(0, depositMatch.index).trim();
+  const currency = detectCurrency(input);
+  const name = normalizeAccountName(getAccountName(beforeDeposit || input, currency));
+
+  return {
+    intent: 'batch',
+    originalText: input,
+    actions: [
+      {
+        intent: 'create_account',
+        name: name || 'Новый счёт',
+        type: input.includes('налич') ? 'cash' : 'card',
+        currency,
+        balance: 0,
+      },
+      {
+        intent: 'income',
+        amount,
+        rawCategory: 'пополнение',
+        description: 'пополнение счёта',
+        accountName: name || 'Новый счёт',
+      },
+    ],
+  };
+}
+
+function splitCompoundCommand(input: string) {
+  return input
+    .split(/\s+(?:и|потом|затем|после этого)\s+|[;\n]+/gi)
+    .map((item) => item.trim())
+    .filter((item) => item.length >= 3);
+}
+
+function parseCompoundCommand(input: string): AIParsedCommand | null {
+  const parts = splitCompoundCommand(input);
+
+  if (parts.length < 2) return null;
+
+  const actions: AIParsedCommand[] = [];
+  let lastAccountName: string | undefined;
+
+  for (const part of parts) {
+    const expanded = lastAccountName
+      ? part.replace(/\b(туда|на него|на нее|на неё)\b/gi, `на ${lastAccountName}`)
+      : part;
+
+    const parsed = fastFinanceParse(expanded);
+    if (!parsed || parsed.intent === 'unknown') continue;
+
+    if (parsed.intent === 'batch') {
+      actions.push(...parsed.actions);
+      const created = parsed.actions.find((item) => item.intent === 'create_account') as Extract<AIParsedCommand, { intent: 'create_account' }> | undefined;
+      if (created?.name) lastAccountName = created.name;
+      continue;
+    }
+
+    actions.push(parsed);
+
+    if (parsed.intent === 'create_account') {
+      lastAccountName = parsed.name;
+    }
+  }
+
+  if (actions.length < 2) return null;
+
+  return {
+    intent: 'batch',
+    originalText: input,
+    actions: actions.filter((item): item is Exclude<AIParsedCommand, { intent: 'batch' }> => item.intent !== 'batch'),
+  };
+}
+
 function parsePlanning(input: string): AIParsedCommand {
   const amounts = parseAllAmounts(input);
 
@@ -136,6 +228,12 @@ function parsePlanning(input: string): AIParsedCommand {
 export function fastFinanceParse(command: string): AIParsedCommand | null {
   const input = normalize(command);
   if (!input) return null;
+
+  const accountWithInitialIncome = parseCreateAccountWithInitialIncome(input);
+  if (accountWithInitialIncome) return accountWithInitialIncome;
+
+  const compound = parseCompoundCommand(input);
+  if (compound) return compound;
 
   const sectionAssignment = input.match(/^(?:запиши|перенеси)\s+все\s+(?:расходы|траты)\s+(?:по|на)\s+(.+?)\s+в\s+раздел\s+(.+)$/i);
 

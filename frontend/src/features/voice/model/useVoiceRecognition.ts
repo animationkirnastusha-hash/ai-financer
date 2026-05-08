@@ -56,6 +56,7 @@ export function useVoiceRecognition({
   const transcriptRef = useRef('');
   const finalTranscriptRef = useRef('');
   const manualStopRef = useRef(false);
+  const cancelStopRef = useRef(false);
   const activeRef = useRef(false);
   const finalWasSentRef = useRef(false);
   const fallbackTimerRef = useRef<number | null>(null);
@@ -86,7 +87,7 @@ export function useVoiceRecognition({
     const text =
       finalTranscriptRef.current.trim() || transcriptRef.current.trim();
 
-    if (!text || finalWasSentRef.current) return;
+    if (!text || finalWasSentRef.current || cancelStopRef.current) return;
 
     finalWasSentRef.current = true;
 
@@ -115,6 +116,7 @@ export function useVoiceRecognition({
 
     recognition.onstart = () => {
       manualStopRef.current = false;
+      cancelStopRef.current = false;
       activeRef.current = true;
       finalWasSentRef.current = false;
       transcriptRef.current = '';
@@ -154,7 +156,7 @@ export function useVoiceRecognition({
     recognition.onerror = (event) => {
       const nextError = event.error || event.message || 'speech-error';
 
-      if (nextError === 'aborted' && manualStopRef.current) {
+      if ((nextError === 'aborted' || nextError === 'no-speech') && (manualStopRef.current || cancelStopRef.current)) {
         return;
       }
 
@@ -170,6 +172,16 @@ export function useVoiceRecognition({
 
       const text =
         finalTranscriptRef.current.trim() || transcriptRef.current.trim();
+
+      if (cancelStopRef.current) {
+        transcriptRef.current = '';
+        finalTranscriptRef.current = '';
+        setTranscript('');
+        setStateSafe('idle');
+        manualStopRef.current = false;
+        cancelStopRef.current = false;
+        return;
+      }
 
       if (!text && manualStopRef.current) {
         setError('no-speech');
@@ -221,6 +233,7 @@ export function useVoiceRecognition({
     finalTranscriptRef.current = '';
     finalWasSentRef.current = false;
     manualStopRef.current = false;
+    cancelStopRef.current = false;
 
     setTranscript('');
     setError(null);
@@ -238,6 +251,7 @@ export function useVoiceRecognition({
     if (!recognitionRef.current || !isSupported) return;
 
     manualStopRef.current = true;
+    cancelStopRef.current = false;
 
     if (!activeRef.current) {
       setStateSafe('idle');
@@ -276,8 +290,11 @@ export function useVoiceRecognition({
     }
   }, [clearFallbackTimer, emitFinalText, isSupported, setStateSafe]);
 
-  const reset = useCallback(() => {
+  const cancelListening = useCallback(() => {
     clearFallbackTimer();
+    cancelStopRef.current = true;
+    manualStopRef.current = false;
+    finalWasSentRef.current = true;
 
     try {
       recognitionRef.current?.abort();
@@ -287,14 +304,15 @@ export function useVoiceRecognition({
 
     transcriptRef.current = '';
     finalTranscriptRef.current = '';
-    manualStopRef.current = false;
     activeRef.current = false;
-    finalWasSentRef.current = false;
-
     setTranscript('');
     setError(null);
     setStateSafe(isSupported ? 'idle' : 'unsupported');
   }, [clearFallbackTimer, isSupported, setStateSafe]);
+
+  const reset = useCallback(() => {
+    cancelListening();
+  }, [cancelListening]);
 
   return {
     state,
@@ -303,6 +321,7 @@ export function useVoiceRecognition({
     error,
     startListening,
     stopListening,
+    cancelListening,
     reset,
   };
 }

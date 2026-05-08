@@ -1,58 +1,54 @@
-import { TransactionService } from '../transactions/service';
-import { AccountService } from '../accounts/service';
-import { CategoryService } from '../categories/service';
-import { SectionService } from '../sections/service';
-import { AIParsedCommand, AIResult } from './types';
-import { AIResolverService } from './ai-resolver.service';
-import { AIPreviewBuilder } from './ai-preview.builder';
+import { TransactionService } from '../../transactions/service';
+import { AccountService } from '../../accounts/service';
+import { CategoryService } from '../../categories/service';
+import { SectionService } from '../../sections/service';
+import { AIResolverService } from '../ai-resolver.service';
+import type { AIParsedAtomicCommand, AIParsedCommand, AIResult, AIRiskLevel } from '../types';
 
 const transactionService = new TransactionService();
 const accountService = new AccountService();
 const categoryService = new CategoryService();
 const sectionService = new SectionService();
 
-export class AIExecutorService {
+export class AIToolExecutor {
   private readonly resolver = new AIResolverService();
-  private readonly preview = new AIPreviewBuilder();
 
-  async execute(
-    userId: string,
-    parsedCommand: AIParsedCommand,
-    riskLevel: 'low' | 'medium' | 'high'
-  ): Promise<AIResult> {
-    switch (parsedCommand.intent) {
-      case 'batch': {
-        const results: AIResult[] = [];
+  async executePlan(userId: string, command: AIParsedCommand, riskLevel: AIRiskLevel): Promise<AIResult> {
+    if (command.intent !== 'batch') {
+      return this.executeAtomic(userId, command, riskLevel);
+    }
 
-        for (const action of parsedCommand.actions) {
-          const result = await this.execute(userId, action, riskLevel);
-          results.push(result);
-        }
+    const results: AIResult[] = [];
 
-        const executedCount = results.filter((item) => item.executed).length;
-        const failed = results.find((item) => !item.success);
-        const summary = results
-          .map((item, index) => `${index + 1}. ${item.message.replace(/^✅\s*/, '')}`)
-          .join('\n');
-
-        return {
-          success: !failed,
-          intent: 'batch',
-          executed: executedCount > 0,
-          requiresConfirmation: false,
-          riskLevel,
-          message: failed
-            ? `Я выполнил часть запроса, но на одном шаге нужна правка:\n${summary}`
-            : `Готово, выполнил ${executedCount} действия:\n${summary}${parsedCommand.premiumSuggestion ? `\n\nPremium может усилить это: ${parsedCommand.premiumSuggestion}` : ''}`,
-          parsed: {
-            type: 'batch',
-            actions: parsedCommand.actions,
-            executedCount,
-            premiumSuggestion: parsedCommand.premiumSuggestion ?? null,
-          },
-          data: results,
-        };
+    for (const action of command.actions) {
+      if (action.intent === 'unknown' || action.intent === 'help' || action.intent === 'advice') {
+        continue;
       }
+
+      results.push(await this.executeAtomic(userId, action, riskLevel));
+    }
+
+    const failed = results.find((result) => !result.success);
+    if (failed) return failed;
+
+    return {
+      success: true,
+      intent: 'batch',
+      executed: true,
+      requiresConfirmation: false,
+      riskLevel,
+      message: this.buildBatchMessage(results),
+      parsed: {
+        summary: command.summary ?? null,
+        actions: command.actions,
+        results: results.map((result) => result.parsed),
+      },
+      data: results.map((result) => result.data),
+    };
+  }
+
+  async executeAtomic(userId: string, parsedCommand: AIParsedAtomicCommand, riskLevel: AIRiskLevel): Promise<AIResult> {
+    switch (parsedCommand.intent) {
       case 'expense': {
         const account = await this.resolver.resolveAccountForMoneyFlow(userId, parsedCommand.accountName);
         const category = await this.resolver.findOrCreateCategory(userId, parsedCommand.rawCategory, 'expense');
@@ -76,7 +72,7 @@ export class AIExecutorService {
           executed: true,
           requiresConfirmation: false,
           riskLevel,
-          message: `✅ Записал расход: ${category.icon ?? '📝'} ${category.name} — ${parsedCommand.amount} ₽.`,
+          message: `Записал расход ${parsedCommand.amount} ₽: ${category.name}.`,
           parsed: {
             type: 'expense',
             amount: parsedCommand.amount,
@@ -115,7 +111,7 @@ export class AIExecutorService {
           executed: true,
           requiresConfirmation: false,
           riskLevel,
-          message: `✅ Записал доход: ${category.icon ?? '💰'} ${category.name} — ${parsedCommand.amount} ₽.`,
+          message: `Записал доход ${parsedCommand.amount} ₽: ${category.name}.`,
           parsed: {
             type: 'income',
             amount: parsedCommand.amount,
@@ -133,7 +129,6 @@ export class AIExecutorService {
 
       case 'transfer': {
         const resolved = await this.resolver.resolveTransfer(userId, parsedCommand);
-
         const transaction = await transactionService.createTransaction(userId, {
           accountId: resolved.fromAccount.id,
           toAccountId: resolved.toAccount.id,
@@ -149,7 +144,7 @@ export class AIExecutorService {
           executed: true,
           requiresConfirmation: false,
           riskLevel,
-          message: `✅ Перевёл ${parsedCommand.amount} ₽ со счёта «${resolved.fromAccount.name}» на «${resolved.toAccount.name}».`,
+          message: `Перевёл ${parsedCommand.amount} ₽ со счёта «${resolved.fromAccount.name}» на «${resolved.toAccount.name}».`,
           parsed: {
             type: 'transfer',
             amount: parsedCommand.amount,
@@ -163,6 +158,34 @@ export class AIExecutorService {
         };
       }
 
+      case 'create_account': {
+        const account = await accountService.createAccount(userId, {
+          name: parsedCommand.name,
+          type: parsedCommand.type,
+          currency: parsedCommand.currency,
+          balance: parsedCommand.balance,
+          showInTotalBalance: true,
+          icon: parsedCommand.type === 'cash' ? '💵' : '💳',
+          color: '#5B8DEF',
+        });
+
+        return {
+          success: true,
+          intent: 'create_account',
+          executed: true,
+          requiresConfirmation: false,
+          riskLevel,
+          message: `Создал счёт «${account.name}».`,
+          parsed: {
+            name: parsedCommand.name,
+            type: parsedCommand.type,
+            currency: parsedCommand.currency,
+            balance: parsedCommand.balance,
+          },
+          data: account,
+        };
+      }
+
       case 'create_category': {
         const section = parsedCommand.sectionName
           ? await sectionService.findOrCreateSection(userId, parsedCommand.sectionName)
@@ -171,9 +194,9 @@ export class AIExecutorService {
         const category = await categoryService.createCategory(userId, {
           name: parsedCommand.name,
           type: parsedCommand.type,
-          sectionId: section?.id,
           icon: parsedCommand.type === 'income' ? '💰' : '📝',
           color: parsedCommand.type === 'income' ? '#00ffaa' : '#ff6b6b',
+          sectionId: section?.id ?? null,
         });
 
         return {
@@ -182,31 +205,29 @@ export class AIExecutorService {
           executed: true,
           requiresConfirmation: false,
           riskLevel,
-          message: `✨ Категория «${category.name}» создана.`,
+          message: section
+            ? `Создал категорию «${category.name}» в разделе «${section.name}».`
+            : `Создал категорию «${category.name}».`,
           parsed: {
-            name: parsedCommand.name,
-            type: parsedCommand.type,
-            sectionName: parsedCommand.sectionName ?? null,
+            name: category.name,
+            type: category.type,
+            sectionId: section?.id ?? null,
+            sectionName: section?.name ?? null,
           },
           data: category,
         };
       }
 
       case 'create_section': {
-        const section = await sectionService.createSection(userId, {
-          name: parsedCommand.name,
-        });
-
+        const section = await sectionService.createSection(userId, { name: parsedCommand.name });
         return {
           success: true,
           intent: 'create_section',
           executed: true,
           requiresConfirmation: false,
           riskLevel,
-          message: `🗂️ Раздел «${section.name}» создан. Теперь в него можно складывать категории и расходы.`,
-          parsed: {
-            name: section.name,
-          },
+          message: `Создал раздел «${section.name}».`,
+          parsed: { name: section.name },
           data: section,
         };
       }
@@ -225,8 +246,8 @@ export class AIExecutorService {
           riskLevel,
           message:
             result.updatedCount > 0
-              ? `✅ Перенёс ${result.updatedCount} расходов по запросу «${parsedCommand.rawQuery}» в раздел «${result.section.name}».`
-              : `🗂️ Раздел «${result.section.name}» создан, но подходящих расходов по запросу «${parsedCommand.rawQuery}» пока не нашёл.`,
+              ? `Перенёс ${result.updatedCount} расходов в раздел «${result.section.name}».`
+              : `Раздел «${result.section.name}» готов, но подходящих расходов пока не нашёл.`,
           parsed: {
             rawQuery: parsedCommand.rawQuery,
             sectionId: result.section.id,
@@ -237,36 +258,36 @@ export class AIExecutorService {
         };
       }
 
-      case 'create_account': {
-        const account = await accountService.createAccount(userId, {
-          name: parsedCommand.name,
-          type: parsedCommand.type,
-          currency: parsedCommand.currency,
-          balance: parsedCommand.balance,
-          showInTotalBalance: true,
-          icon: '💳',
-          color: '#5B8DEF',
-        });
-
+      case 'update_settings':
         return {
           success: true,
-          intent: 'create_account',
-          executed: true,
+          intent: 'update_settings',
+          executed: false,
           requiresConfirmation: false,
           riskLevel,
-          message: `✅ Счёт «${account.name}» создан.`,
+          message: `Я понял настройку «${parsedCommand.key}». Подключение изменения этой настройки через AI уже заложено в engine.`,
           parsed: {
-            name: parsedCommand.name,
-            type: parsedCommand.type,
-            currency: parsedCommand.currency,
-            balance: parsedCommand.balance,
+            key: parsedCommand.key,
+            value: parsedCommand.value,
+            status: 'foundation_ready',
           },
-          data: account,
         };
-      }
 
       default:
-        return this.preview.buildPreview(userId, parsedCommand, false, riskLevel);
+        return {
+          success: false,
+          intent: 'unknown',
+          executed: false,
+          requiresConfirmation: false,
+          riskLevel: 'low',
+          message: 'Я понял запрос не полностью. Напиши сумму, счёт или действие чуть конкретнее — я сделаю базовую часть.',
+          parsed: null,
+        };
     }
+  }
+
+  private buildBatchMessage(results: AIResult[]) {
+    const lines = results.map((result) => `• ${result.message.replace(/^✅\s*/u, '')}`);
+    return `Готово, я выполнил ${results.length} действия:\n${lines.join('\n')}`;
   }
 }

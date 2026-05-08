@@ -1,4 +1,5 @@
 export type AIIntent =
+  | 'batch'
   | 'expense'
   | 'income'
   | 'transfer'
@@ -7,12 +8,12 @@ export type AIIntent =
   | 'create_section'
   | 'assign_expenses_to_section'
   | 'create_account'
+  | 'update_settings'
   | 'stats'
   | 'financial_planning'
   | 'advice'
   | 'repeat_last'
   | 'help'
-  | 'batch'
   | 'unknown';
 
 export type AIRiskLevel = 'low' | 'medium' | 'high';
@@ -77,6 +78,12 @@ export interface AIParsedCreateAccount {
   balance: number;
 }
 
+export interface AIParsedUpdateSettings {
+  intent: 'update_settings';
+  key: string;
+  value: unknown;
+}
+
 export interface AIParsedStats {
   intent: 'stats';
   type: 'income' | 'expense';
@@ -92,7 +99,6 @@ export interface AIParsedFinancialPlanning {
   question: string;
 }
 
-
 export interface AIParsedAdvice {
   intent: 'advice';
   question: string;
@@ -106,32 +112,11 @@ export interface AIParsedHelp {
   intent: 'help';
 }
 
-export type AIParsedBatchAction =
-  | AIParsedExpense
-  | AIParsedIncome
-  | AIParsedTransfer
-  | AIParsedShowAccounts
-  | AIParsedCreateCategory
-  | AIParsedCreateSection
-  | AIParsedAssignExpensesToSection
-  | AIParsedCreateAccount
-  | AIParsedStats
-  | AIParsedFinancialPlanning
-  | AIParsedAdvice
-  | AIParsedRepeatLast
-  | AIParsedHelp;
-
-export interface AIParsedBatch {
-  intent: 'batch';
-  actions: AIParsedBatchAction[];
-  summary?: string;
-}
-
 export interface AIParsedUnknown {
   intent: 'unknown';
 }
 
-export type AIParsedCommand =
+export type AIParsedAtomicCommand =
   | AIParsedExpense
   | AIParsedIncome
   | AIParsedTransfer
@@ -140,13 +125,23 @@ export type AIParsedCommand =
   | AIParsedCreateSection
   | AIParsedAssignExpensesToSection
   | AIParsedCreateAccount
+  | AIParsedUpdateSettings
   | AIParsedStats
   | AIParsedFinancialPlanning
   | AIParsedAdvice
   | AIParsedRepeatLast
   | AIParsedHelp
-  | AIParsedBatch
   | AIParsedUnknown;
+
+export interface AIParsedBatchCommand {
+  intent: 'batch';
+  actions: AIParsedAtomicCommand[];
+  originalText?: string;
+  summary?: string;
+  premiumSuggestion?: string;
+}
+
+export type AIParsedCommand = AIParsedAtomicCommand | AIParsedBatchCommand;
 
 export interface AIActionPolicyResult {
   canExecute: boolean;
