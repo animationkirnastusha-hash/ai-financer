@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import type React from 'react';
 import { cn } from '@/shared/lib/cn';
 import type { AICoreState } from '@/features/ai-core/model/aiCore.types';
 
@@ -10,11 +11,19 @@ type Props = {
 };
 
 function getStateLabel(state: AICoreState) {
-  if (state === 'listening') return 'Слушаю...';
-  if (state === 'thinking') return 'Думаю...';
-  if (state === 'responding') return 'Отвечаю...';
-  if (state === 'expanded') return 'Печать активна';
-  return 'Нажми и скажи';
+  if (state === 'listening') return 'Слушаю';
+  if (state === 'thinking') return 'Думаю';
+  if (state === 'responding') return 'Готово';
+  if (state === 'expanded') return 'Введите команду';
+  return 'AI Core';
+}
+
+function getStateHint(state: AICoreState) {
+  if (state === 'listening') return 'удерживай, пока говоришь';
+  if (state === 'thinking') return 'проверяю действие';
+  if (state === 'responding') return 'можно продолжать';
+  if (state === 'expanded') return 'или зажми сферу для голоса';
+  return 'нажми или зажми';
 }
 
 function getRingClasses(state: AICoreState) {
@@ -126,14 +135,25 @@ export function AICoreOrb({ state, onTap, onHoldStart, onHoldEnd }: Props) {
         onPointerMove={handlePointerMove}
         onContextMenu={(event) => event.preventDefault()}
         className={cn(
-          'relative flex h-56 w-56 select-none items-center justify-center rounded-full border transition-all duration-300 active:scale-[0.985]',
+          'relative flex h-52 w-52 select-none items-center justify-center rounded-full border transition-all duration-300 active:scale-[0.985] sm:h-56 sm:w-56',
           getRingClasses(state),
         )}
+        aria-label="AI Core"
       >
         <div className="absolute -inset-8 rounded-full border border-emerald-300/10" />
         <div className="absolute -inset-4 rounded-full border border-cyan-300/10" />
         <div className="absolute inset-4 rounded-full border border-white/10" />
         <div className="absolute inset-9 rounded-full border border-white/8" />
+
+        {state === 'listening' ? (
+          <div className="absolute bottom-12 flex items-end gap-1">
+            <span className="h-3 w-1 rounded-full bg-cyan-200/60" />
+            <span className="h-6 w-1 rounded-full bg-cyan-200/80" />
+            <span className="h-4 w-1 rounded-full bg-cyan-200/65" />
+            <span className="h-7 w-1 rounded-full bg-cyan-200/90" />
+            <span className="h-3 w-1 rounded-full bg-cyan-200/60" />
+          </div>
+        ) : null}
 
         <div className="relative text-center">
           <div className="text-[11px] uppercase tracking-[0.24em] text-emerald-200/80">
@@ -144,7 +164,7 @@ export function AICoreOrb({ state, onTap, onHoldStart, onHoldEnd }: Props) {
             {getStateLabel(state)}
           </div>
 
-          <div className="mt-2 text-sm text-white/42">или напиши</div>
+          <div className="mt-2 text-sm text-white/42">{getStateHint(state)}</div>
         </div>
       </button>
     </div>
