@@ -31,6 +31,7 @@ export function useVoiceInput({
 }: UseVoiceInputParams) {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [permissionPrimed, setPermissionPrimed] = useState(false);
+  const [permissionError, setPermissionError] = useState<string | null>(null);
   const permissionRequestInFlightRef = useRef(false);
 
   const speech = useVoiceRecognition({
@@ -47,18 +48,15 @@ export function useVoiceInput({
   }, [speech.isSupported]);
 
   const ensurePermissionBeforeRecording = useCallback(async (): Promise<boolean> => {
+    setPermissionError(null);
+
     if (permissionPrimed) return true;
     if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia) {
       setPermissionPrimed(true);
       return true;
     }
 
-    const permissionState = await getMicrophonePermissionState();
-
-    if (permissionState === 'granted') {
-      setPermissionPrimed(true);
-      return true;
-    }
+    await getMicrophonePermissionState();
 
     if (permissionRequestInFlightRef.current) return false;
 
@@ -69,6 +67,10 @@ export function useVoiceInput({
       stream.getTracks().forEach((track) => track.stop());
       setPermissionPrimed(true);
       return false;
+    } catch (error) {
+      setPermissionPrimed(false);
+      setPermissionError('microphone-denied');
+      throw error;
     } finally {
       permissionRequestInFlightRef.current = false;
     }
@@ -76,6 +78,7 @@ export function useVoiceInput({
 
   const start = useCallback(async (): Promise<VoiceStartResult> => {
     window.speechSynthesis?.cancel();
+    setPermissionError(null);
 
     try {
       const canStartNow = await ensurePermissionBeforeRecording();
@@ -118,6 +121,7 @@ export function useVoiceInput({
   const reset = useCallback(() => {
     window.speechSynthesis?.cancel();
     setIsSpeaking(false);
+    setPermissionError(null);
     speech.reset();
     recorder.reset();
   }, [recorder, speech]);
@@ -163,7 +167,7 @@ export function useVoiceInput({
     return recorder.state;
   }, [isSpeaking, mode, recorder.state, speech.state]);
 
-  const error = mode === 'speech' ? speech.error : recorder.error;
+  const error = permissionError ?? (mode === 'speech' ? speech.error : recorder.error);
   const transcript = mode === 'speech' ? speech.transcript : '';
   const isSupported = speech.isSupported || recorder.isSupported;
 

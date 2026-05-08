@@ -136,7 +136,7 @@ export function AppRouter() {
         <MainMenuDots
           currentScreen={currentScreen}
           onNavigate={navigateTo}
-          bottomOffset={currentScreen === 'ai-core' ? 142 : 72}
+          bottomOffset={currentScreen === 'ai-core' ? 12 : 72}
         />
       ) : null}
 

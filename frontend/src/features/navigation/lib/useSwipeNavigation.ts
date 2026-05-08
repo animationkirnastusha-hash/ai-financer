@@ -18,6 +18,10 @@ function isInteractiveTarget(target: EventTarget | null) {
   );
 }
 
+function isBlockedByVoiceGesture() {
+  return document.body.classList.contains('ai-voice-gesture-active');
+}
+
 export function useSwipeNavigation({ currentScreen, navigateTo, goBack }: Options) {
   const startX = useRef(0);
   const startY = useRef(0);
@@ -28,13 +32,13 @@ export function useSwipeNavigation({ currentScreen, navigateTo, goBack }: Option
       const touch = event.touches[0];
       if (!touch) return;
 
-      startedOnInteractive.current = isInteractiveTarget(event.target);
+      startedOnInteractive.current = isInteractiveTarget(event.target) || isBlockedByVoiceGesture();
       startX.current = touch.clientX;
       startY.current = touch.clientY;
     };
 
     const handleTouchEnd = (event: TouchEvent) => {
-      if (startedOnInteractive.current) return;
+      if (startedOnInteractive.current || isBlockedByVoiceGesture()) return;
 
       const touch = event.changedTouches[0];
       if (!touch) return;
