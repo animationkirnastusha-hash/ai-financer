@@ -1,162 +1,19 @@
-import type { AIToolName } from './tool-types';
-
-export interface AIToolDefinition {
-  name: AIToolName;
-  description: string;
-  args: Record<string, string>;
-}
-
-export const AI_TOOL_REGISTRY: AIToolDefinition[] = [
-  {
-    name: 'create_account',
-    description: 'Создать счёт, карту, кошелёк, наличку, накопительный или инвестиционный счёт.',
-    args: {
-      name: 'Название счёта так, как его сказал пользователь.',
-      type: 'cash | card | savings | investment. Если пользователь говорит наличка/кэш — cash; карта/банк — card; накопления/копилка — savings; инвестиции — investment.',
-      currency: 'RUB | USD | EUR. Если валюта не указана — RUB.',
-      initialBalance: 'Начальный баланс, если пользователь сказал, что на счёте уже лежит сумма. Если пользователь сказал “положи/закинь/пополни”, лучше создать отдельный create_transaction income.',
-    },
-  },
-  {
-    name: 'create_transaction',
-    description: 'Создать доход или расход. Подходит для любых естественных фраз: купил, оплатил, списали, пришло, получил, положи, закинь, внеси, пополни.',
-    args: {
-      type: 'income | expense.',
-      amount: 'Сумма числом. 50к = 50000, 1.5к = 1500, полтос = 50, косарь = 1000.',
-      category: 'Смысл операции: зарплата, кофе, еда, такси, пополнение, кэшбек и т.д.',
-      description: 'Короткое человеческое описание операции.',
-      accountName: 'Счёт, если пользователь указал куда/откуда: на Наличку, с Карты, в Альфу. Не выдумывать.',
-      sectionName: 'Раздел, если пользователь явно указал: в Дом, в Развлечения, в раздел Настроение.',
-    },
-  },
-  {
-    name: 'transfer_money',
-    description: 'Перевод между своими счетами: переведи, перекинь, с карты на наличку, между счетами.',
-    args: {
-      amount: 'Сумма числом.',
-      fromAccountName: 'Откуда переводить, если указано.',
-      toAccountName: 'Куда переводить. Обязательное поле.',
-    },
-  },
-  {
-    name: 'create_section',
-    description: 'Создать пользовательский раздел/пространство: Дом, Развлечения, Настроение, Работа, Подписки.',
-    args: {
-      name: 'Название раздела.',
-    },
-  },
-  {
-    name: 'create_category',
-    description: 'Создать категорию доходов или расходов и при необходимости привязать к разделу.',
-    args: {
-      name: 'Название категории.',
-      type: 'income | expense. Если не ясно — expense.',
-      sectionName: 'Название раздела, если указано.',
-    },
-  },
-  {
-    name: 'assign_expenses_to_section',
-    description: 'Массово отправить уже существующие расходы/траты/покупки по смыслу в раздел.',
-    args: {
-      rawQuery: 'Что искать: продукты, водка, steam, кофе, такси, подписки.',
-      sectionName: 'В какой раздел перенести.',
-    },
-  },
-
-  {
-    name: 'update_settings',
-    description: 'Изменить настройки приложения: валюта, язык, отображение, дефолтный счёт, правила счетов. Если настройка пока не поддержана backend, вернуть tool всё равно можно — executor даст мягкий ответ.',
-    args: {
-      key: 'Ключ настройки человеческим смыслом: defaultCurrency, primaryAccount, incomeDefaultAccount, theme, language, notifications и т.д.',
-      value: 'Новое значение настройки.',
-    },
-  },
-  {
-    name: 'show_accounts',
-    description: 'Показать/открыть счета пользователя.',
-    args: {},
-  },
-  {
-    name: 'show_stats',
-    description: 'Показать статистику расходов/доходов.',
-    args: {
-      type: 'income | expense.',
-      category: 'Категория, если указана.',
-    },
-  },
-  {
-    name: 'financial_planning',
-    description: 'Планирование, цели, накопления, прогнозы, финансовые модели. В Base отвечаем базово, Premium может углубить.',
-    args: {
-      monthlyIncome: 'Доход в месяц, если указан.',
-      monthlyExpenses: 'Расходы в месяц, если указаны.',
-      targetAmount: 'Цель накопления, если указана.',
-      targetDateText: 'Срок словами, если указан.',
-      question: 'Исходный вопрос пользователя.',
-    },
-  },
-  {
-    name: 'answer_advice',
-    description: 'Совет, объяснение, вопрос без изменения данных.',
-    args: {
-      question: 'Исходный вопрос пользователя.',
-    },
-  },
-  {
-    name: 'repeat_last',
-    description: 'Повторить прошлое действие: ещё, повтори, так же, то же самое.',
-    args: {},
-  },
-];
-
-export function buildToolRegistryPrompt() {
-  const tools = AI_TOOL_REGISTRY
-    .map((tool) => {
-      const args = Object.entries(tool.args)
-        .map(([name, description]) => `      "${name}": "${description}"`)
-        .join(',\n');
-
-      return `  ${tool.name}: ${tool.description}\n    args: {\n${args}\n    }`;
-    })
-    .join('\n\n');
-
+export function buildToolRegistryPrompt(): string {
   return `
-Ты AI Action Engine для финансового приложения.
-Твоя задача — не искать точную команду, а понять смысл человеческой речи и разложить запрос на toolCalls.
+You are AI-financer tool planner.
 
-НЕ затачивайся под примеры. Пользователь может писать с ошибками, сленгом, разговорно, несколькими действиями в одной фразе.
+Available tools:
+- create_account
+- create_transaction
+- transfer_money
+- create_category
+- create_section
+- assign_section
+- update_settings
 
-Верни строго JSON одного из двух видов:
-
-1) Если можно выполнить действие:
+Return JSON with:
 {
-  "toolCalls": [
-    { "tool": "create_transaction", "args": { "type": "expense", "amount": 350, "category": "кофе", "description": "кофе" } }
-  ],
-  "userMessage": "Коротко что понял"
+  "toolCalls": []
 }
-
-2) Если данных не хватает:
-{
-  "toolCalls": [],
-  "userMessage": "Короткий уточняющий вопрос без технических слов"
-}
-
-Доступные tools:
-${tools}
-
-Правила понимания:
-- "положи", "закинь", "внеси", "пополни", "добавь на счёт", "кинь туда" обычно означают доход/пополнение счёта.
-- "купил", "оплатил", "потратил", "списали", "ушло", "минус", "потерял на" обычно означают расход.
-- "+50000 зарплата", "зарплата пришла", "получил", "кэшбек", "вернули" — доход.
-- "переведи", "перекинь", "с ... на ..." — перевод между счетами, если есть два счёта.
-- Если пользователь создал счёт и в той же фразе просит положить туда деньги — это два toolCalls: create_account + create_transaction income с accountName этого счёта.
-- Если в одном сообщении несколько действий — верни несколько toolCalls в правильном порядке.
-- Если пользователь просит изменить настройки — используй update_settings.
-- Если пользователь просит сделать и Base-действия, и глубокий прогноз/автооптимизацию — выполни Base toolCalls и добавь premiumSuggestion.
-- Не отказывайся фразой "команда не понята". Либо собери toolCalls, либо задай один короткий уточняющий вопрос.
-- Не выдумывай счёт, если пользователь его не указал. Можно не передавать accountName — backend выберет дефолтный.
-- Не выдумывай лишние действия.
-- Ответ должен быть только валидный JSON, без markdown и без <think>.
 `;
 }

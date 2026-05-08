@@ -160,20 +160,6 @@ function convertToolCall(call: AIToolCall): AIParsedAtomicCommand[] {
       return [{ intent: 'assign_expenses_to_section', rawQuery, sectionName }];
     }
 
-
-    case 'update_settings': {
-      const key = asString(args.key || args.setting || args.name);
-      if (!key) return [];
-
-      return [
-        {
-          intent: 'update_settings',
-          key,
-          value: args.value ?? args.enabled ?? args.currency ?? args.accountName ?? args.theme ?? null,
-        },
-      ];
-    }
-
     case 'show_accounts':
       return [{ intent: 'show_accounts' }];
 

@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { useVoiceRecognition } from '@/features/voice/model/useVoiceRecognition';
 import { useVoiceRecorder } from '@/features/voice/model/useVoiceRecorder';
 import type {
@@ -11,36 +11,17 @@ type UseVoiceInputParams = {
   lang?: string;
 };
 
-export type VoiceStartResult = 'recording' | 'permission-granted' | 'error';
+type VoiceStartResult = 'started' | 'permission-ready' | 'error';
 
-type MicrophonePermissionName = PermissionName | 'microphone';
-
-async function primeMicrophonePermission(): Promise<VoiceStartResult> {
-  if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia) {
-    return 'recording';
-  }
-
-  let permissionState: PermissionState | 'unknown' = 'unknown';
-
-  if (navigator.permissions?.query) {
-    try {
-      const status = await navigator.permissions.query({
-        name: 'microphone' as MicrophonePermissionName,
-      });
-      permissionState = status.state;
-    } catch {
-      permissionState = 'unknown';
-    }
-  }
-
-  if (permissionState === 'granted') return 'recording';
+async function getMicrophonePermissionState(): Promise<PermissionState | null> {
+  if (typeof navigator === 'undefined') return null;
+  if (!('permissions' in navigator)) return null;
 
   try {
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    stream.getTracks().forEach((track) => track.stop());
-    return 'permission-granted';
+    const status = await navigator.permissions.query({ name: 'microphone' as PermissionName });
+    return status.state;
   } catch {
-    return 'error';
+    return null;
   }
 }
 
@@ -49,7 +30,8 @@ export function useVoiceInput({
   lang = 'ru-RU',
 }: UseVoiceInputParams) {
   const [isSpeaking, setIsSpeaking] = useState(false);
-  const [speechPermissionPrimed, setSpeechPermissionPrimed] = useState(false);
+  const [permissionPrimed, setPermissionPrimed] = useState(false);
+  const permissionRequestInFlightRef = useRef(false);
 
   const speech = useVoiceRecognition({
     lang,
@@ -64,31 +46,56 @@ export function useVoiceInput({
     return speech.isSupported ? 'speech' : 'recorder';
   }, [speech.isSupported]);
 
+  const ensurePermissionBeforeRecording = useCallback(async (): Promise<boolean> => {
+    if (permissionPrimed) return true;
+    if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia) {
+      setPermissionPrimed(true);
+      return true;
+    }
+
+    const permissionState = await getMicrophonePermissionState();
+
+    if (permissionState === 'granted') {
+      setPermissionPrimed(true);
+      return true;
+    }
+
+    if (permissionRequestInFlightRef.current) return false;
+
+    permissionRequestInFlightRef.current = true;
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      stream.getTracks().forEach((track) => track.stop());
+      setPermissionPrimed(true);
+      return false;
+    } finally {
+      permissionRequestInFlightRef.current = false;
+    }
+  }, [permissionPrimed]);
+
   const start = useCallback(async (): Promise<VoiceStartResult> => {
     window.speechSynthesis?.cancel();
 
-    if (speech.isSupported) {
-      if (!speechPermissionPrimed) {
-        const permissionResult = await primeMicrophonePermission();
+    try {
+      const canStartNow = await ensurePermissionBeforeRecording();
 
-        if (permissionResult === 'permission-granted') {
-          setSpeechPermissionPrimed(true);
-          return 'permission-granted';
-        }
-
-        if (permissionResult === 'error') {
-          return 'error';
-        }
-
-        setSpeechPermissionPrimed(true);
+      if (!canStartNow) {
+        return 'permission-ready';
       }
 
-      speech.startListening();
-      return 'recording';
-    }
+      if (speech.isSupported) {
+        speech.startListening();
+        return 'started';
+      }
 
-    return recorder.startRecording();
-  }, [recorder, speech, speechPermissionPrimed]);
+      await recorder.startRecording();
+      return 'started';
+    } catch (err) {
+      console.error(err);
+      return 'error';
+    }
+  }, [ensurePermissionBeforeRecording, recorder, speech]);
 
   const stop = useCallback(() => {
     if (speech.isSupported) {
@@ -166,6 +173,7 @@ export function useVoiceInput({
     error,
     transcript,
     isSupported,
+    permissionPrimed,
     start,
     stop,
     cancel,

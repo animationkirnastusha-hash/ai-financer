@@ -7,7 +7,6 @@ export type AIToolName =
   | 'create_section'
   | 'create_category'
   | 'assign_expenses_to_section'
-  | 'update_settings'
   | 'show_accounts'
   | 'show_stats'
   | 'financial_planning'

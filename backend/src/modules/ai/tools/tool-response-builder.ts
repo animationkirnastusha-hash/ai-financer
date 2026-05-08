@@ -8,37 +8,37 @@ function formatAmount(amount?: number) {
 function describeAtomic(command: Exclude<AIParsedCommand, { intent: 'batch' }>) {
   switch (command.intent) {
     case 'create_account':
-      return `создам счёт «${command.name}»`;
+      return `создать счёт «${command.name}»`;
     case 'income':
-      return `добавлю доход ${formatAmount(command.amount)}${command.accountName ? ` на «${command.accountName}»` : ''}`;
+      return `добавить доход ${formatAmount(command.amount)}${command.accountName ? ` на «${command.accountName}»` : ''}`;
     case 'expense':
-      return `запишу расход ${formatAmount(command.amount)}${command.rawCategory ? `: ${command.rawCategory}` : ''}`;
+      return `записать расход ${formatAmount(command.amount)}${command.rawCategory ? `: ${command.rawCategory}` : ''}`;
     case 'transfer':
-      return `переведу ${formatAmount(command.amount)}${command.fromAccountName ? ` с «${command.fromAccountName}»` : ''} на «${command.toAccountName}»`;
+      return `перевести ${formatAmount(command.amount)}${command.fromAccountName ? ` с «${command.fromAccountName}»` : ''} на «${command.toAccountName}»`;
     case 'create_section':
-      return `создам раздел «${command.name}»`;
+      return `создать раздел «${command.name}»`;
     case 'create_category':
-      return `создам категорию «${command.name}»${command.sectionName ? ` в разделе «${command.sectionName}»` : ''}`;
+      return `создать категорию «${command.name}»${command.sectionName ? ` в разделе «${command.sectionName}»` : ''}`;
     case 'assign_expenses_to_section':
-      return `перенесу «${command.rawQuery}» в раздел «${command.sectionName}»`;
+      return `перенести «${command.rawQuery}» в раздел «${command.sectionName}»`;
     case 'show_accounts':
-      return 'открою счета';
+      return 'открыть счета';
     case 'stats':
-      return 'покажу статистику';
+      return 'показать статистику';
     case 'financial_planning':
-      return 'подготовлю базовый финансовый план';
+      return 'подготовить базовый финансовый план';
     case 'advice':
-      return 'отвечу как финансовый помощник';
+      return 'ответить как финансовый помощник';
     case 'repeat_last':
-      return 'повторю последнее действие';
+      return 'повторить последнее действие';
     default:
-      return 'обработаю запрос';
+      return 'обработать запрос';
   }
 }
 
 export function buildToolResponseText(command: AIParsedCommand) {
   if (command.intent === 'unknown') {
-    return 'Я понял, что нужно что-то сделать с финансами, но мне не хватает деталей. Уточни сумму, счёт или действие.';
+    return 'Я понял общий смысл, но мне не хватает деталей. Уточни сумму, счёт или действие.';
   }
 
   if (command.intent === 'help') {
@@ -47,8 +47,13 @@ export function buildToolResponseText(command: AIParsedCommand) {
 
   if (command.intent === 'batch') {
     const parts = command.actions.map((action) => describeAtomic(action));
-    return `Понял. Я выполню: ${parts.join('; ')}.`;
+
+    if (parts.length === 0) {
+      return 'Понял. Проверь детали перед подтверждением.';
+    }
+
+    return `Понял: ${parts.join('; ')}. Проверь детали и подтверди.`;
   }
 
-  return `Понял: ${describeAtomic(command)}.`;
+  return `Понял: ${describeAtomic(command)}. Проверь детали и подтверди.`;
 }

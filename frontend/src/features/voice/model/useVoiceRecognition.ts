@@ -56,10 +56,11 @@ export function useVoiceRecognition({
   const transcriptRef = useRef('');
   const finalTranscriptRef = useRef('');
   const manualStopRef = useRef(false);
-  const cancelStopRef = useRef(false);
+  const shouldListenRef = useRef(false);
   const activeRef = useRef(false);
   const finalWasSentRef = useRef(false);
   const fallbackTimerRef = useRef<number | null>(null);
+  const restartTimerRef = useRef<number | null>(null);
 
   const [state, setState] = useState<VoiceRecognitionState>('idle');
   const [transcript, setTranscript] = useState('');
@@ -83,11 +84,17 @@ export function useVoiceRecognition({
     }
   }, []);
 
-  const emitFinalText = useCallback(async () => {
-    const text =
-      finalTranscriptRef.current.trim() || transcriptRef.current.trim();
+  const clearRestartTimer = useCallback(() => {
+    if (restartTimerRef.current !== null) {
+      window.clearTimeout(restartTimerRef.current);
+      restartTimerRef.current = null;
+    }
+  }, []);
 
-    if (!text || finalWasSentRef.current || cancelStopRef.current) return;
+  const emitFinalText = useCallback(async () => {
+    const text = finalTranscriptRef.current.trim() || transcriptRef.current.trim();
+
+    if (!text || finalWasSentRef.current) return;
 
     finalWasSentRef.current = true;
 
@@ -112,17 +119,13 @@ export function useVoiceRecognition({
     const recognition = new SpeechRecognitionCtor();
     recognition.lang = lang;
     recognition.interimResults = true;
-    recognition.continuous = false;
+    recognition.continuous = true;
 
     recognition.onstart = () => {
       manualStopRef.current = false;
-      cancelStopRef.current = false;
       activeRef.current = true;
-      finalWasSentRef.current = false;
-      transcriptRef.current = '';
-      finalTranscriptRef.current = '';
       clearFallbackTimer();
-      setTranscript('');
+      clearRestartTimer();
       setError(null);
       setStateSafe('listening');
     };
@@ -145,8 +148,10 @@ export function useVoiceRecognition({
       const normalizedLiveText = liveText.trim();
       const normalizedFinalText = finalText.trim();
 
-      transcriptRef.current = normalizedLiveText;
-      setTranscript(normalizedLiveText);
+      if (normalizedLiveText) {
+        transcriptRef.current = normalizedLiveText;
+        setTranscript(normalizedLiveText);
+      }
 
       if (normalizedFinalText) {
         finalTranscriptRef.current = normalizedFinalText;
@@ -156,12 +161,25 @@ export function useVoiceRecognition({
     recognition.onerror = (event) => {
       const nextError = event.error || event.message || 'speech-error';
 
-      if ((nextError === 'aborted' || nextError === 'no-speech') && (manualStopRef.current || cancelStopRef.current)) {
+      if ((nextError === 'aborted' || nextError === 'no-speech') && manualStopRef.current) {
         return;
       }
 
       activeRef.current = false;
       clearFallbackTimer();
+      clearRestartTimer();
+
+      if (shouldListenRef.current && nextError === 'no-speech') {
+        restartTimerRef.current = window.setTimeout(() => {
+          try {
+            recognitionRef.current?.start();
+          } catch {
+            // Browser may still be finishing the previous session.
+          }
+        }, 140);
+        return;
+      }
+
       setError(nextError);
       setStateSafe('error');
     };
@@ -170,18 +188,20 @@ export function useVoiceRecognition({
       activeRef.current = false;
       clearFallbackTimer();
 
-      const text =
-        finalTranscriptRef.current.trim() || transcriptRef.current.trim();
+      if (shouldListenRef.current && !manualStopRef.current) {
+        restartTimerRef.current = window.setTimeout(() => {
+          if (!shouldListenRef.current || activeRef.current) return;
 
-      if (cancelStopRef.current) {
-        transcriptRef.current = '';
-        finalTranscriptRef.current = '';
-        setTranscript('');
-        setStateSafe('idle');
-        manualStopRef.current = false;
-        cancelStopRef.current = false;
+          try {
+            recognitionRef.current?.start();
+          } catch {
+            // ignore restart race
+          }
+        }, 140);
         return;
       }
+
+      const text = finalTranscriptRef.current.trim() || transcriptRef.current.trim();
 
       if (!text && manualStopRef.current) {
         setError('no-speech');
@@ -191,9 +211,11 @@ export function useVoiceRecognition({
         setStateSafe('idle');
       }
 
+      const shouldEmit = manualStopRef.current && text;
       manualStopRef.current = false;
+      shouldListenRef.current = false;
 
-      if (text) {
+      if (shouldEmit) {
         void emitFinalText();
       }
     };
@@ -202,6 +224,7 @@ export function useVoiceRecognition({
 
     return () => {
       clearFallbackTimer();
+      clearRestartTimer();
 
       try {
         recognition.abort();
@@ -211,10 +234,12 @@ export function useVoiceRecognition({
 
       recognitionRef.current = null;
       activeRef.current = false;
+      shouldListenRef.current = false;
     };
   }, [
     SpeechRecognitionCtor,
     clearFallbackTimer,
+    clearRestartTimer,
     emitFinalText,
     lang,
     setStateSafe,
@@ -233,7 +258,7 @@ export function useVoiceRecognition({
     finalTranscriptRef.current = '';
     finalWasSentRef.current = false;
     manualStopRef.current = false;
-    cancelStopRef.current = false;
+    shouldListenRef.current = true;
 
     setTranscript('');
     setError(null);
@@ -243,6 +268,7 @@ export function useVoiceRecognition({
     } catch (err) {
       console.error('Speech start failed', err);
       setError('start-failed');
+      shouldListenRef.current = false;
       setStateSafe('error');
     }
   }, [isSupported, setStateSafe]);
@@ -251,9 +277,16 @@ export function useVoiceRecognition({
     if (!recognitionRef.current || !isSupported) return;
 
     manualStopRef.current = true;
-    cancelStopRef.current = false;
+    shouldListenRef.current = false;
+    clearRestartTimer();
 
     if (!activeRef.current) {
+      const text = finalTranscriptRef.current.trim() || transcriptRef.current.trim();
+
+      if (text) {
+        void emitFinalText();
+      }
+
       setStateSafe('idle');
       return;
     }
@@ -272,8 +305,7 @@ export function useVoiceRecognition({
           // ignore
         }
 
-        const text =
-          finalTranscriptRef.current.trim() || transcriptRef.current.trim();
+        const text = finalTranscriptRef.current.trim() || transcriptRef.current.trim();
 
         if (!text) {
           setError('no-speech');
@@ -288,12 +320,13 @@ export function useVoiceRecognition({
       setError('stop-failed');
       setStateSafe('error');
     }
-  }, [clearFallbackTimer, emitFinalText, isSupported, setStateSafe]);
+  }, [clearFallbackTimer, clearRestartTimer, emitFinalText, isSupported, setStateSafe]);
 
   const cancelListening = useCallback(() => {
     clearFallbackTimer();
-    cancelStopRef.current = true;
+    clearRestartTimer();
     manualStopRef.current = false;
+    shouldListenRef.current = false;
     finalWasSentRef.current = true;
 
     try {
@@ -305,10 +338,11 @@ export function useVoiceRecognition({
     transcriptRef.current = '';
     finalTranscriptRef.current = '';
     activeRef.current = false;
+
     setTranscript('');
     setError(null);
     setStateSafe(isSupported ? 'idle' : 'unsupported');
-  }, [clearFallbackTimer, isSupported, setStateSafe]);
+  }, [clearFallbackTimer, clearRestartTimer, isSupported, setStateSafe]);
 
   const reset = useCallback(() => {
     cancelListening();

@@ -40,11 +40,10 @@ export function AICoreScreen() {
     handleOrbTap,
     handleOrbHoldStart,
     handleOrbHoldEnd,
-    handleOrbVoiceCancel,
-    handleOrbVoiceLock,
+    handleOrbHoldCancel,
+    handleOrbHoldLock,
     finishLockedVoice,
-    isVoiceLocked,
-    voiceGestureHint,
+    cancelLockedVoice,
 
     latestAssistantMessage,
 
@@ -62,6 +61,7 @@ export function AICoreScreen() {
     voiceState,
     voiceError,
     isVoiceSupported,
+    isVoiceLocked,
 
     isCommandPanelOpen,
     isCommandListOpen,
@@ -78,7 +78,9 @@ export function AICoreScreen() {
 
   const liveText =
     voiceState === 'recording'
-      ? voiceTranscript || 'Слушаю...'
+      ? isVoiceLocked
+        ? voiceTranscript || 'Запись закреплена'
+        : voiceTranscript || 'Слушаю...'
       : voiceState === 'uploading'
         ? 'Обрабатываю голос...'
         : voiceState === 'speaking'
@@ -174,13 +176,13 @@ export function AICoreScreen() {
               <AICoreOrb
                 state={coreState}
                 isVoiceLocked={isVoiceLocked}
-                voiceGestureHint={voiceGestureHint}
                 onTap={handleOrbTap}
                 onHoldStart={handleOrbHoldStart}
                 onHoldEnd={handleOrbHoldEnd}
-                onVoiceCancel={handleOrbVoiceCancel}
-                onVoiceLock={handleOrbVoiceLock}
-                onVoiceLockedFinish={finishLockedVoice}
+                onHoldCancel={handleOrbHoldCancel}
+                onHoldLock={handleOrbHoldLock}
+                onLockedDone={finishLockedVoice}
+                onLockedCancel={cancelLockedVoice}
               />
 
               <div className="mt-5 text-center">
@@ -189,7 +191,7 @@ export function AICoreScreen() {
                 </div>
 
                 <div className="mt-1 text-sm text-white/38">
-                  отпусти — отправить, влево — отмена
+                  вверх — замок, влево — отмена
                 </div>
               </div>
             </section>
