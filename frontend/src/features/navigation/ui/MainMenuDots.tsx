@@ -36,7 +36,7 @@ export function MainMenuDots({
   useEffect(() => {
     const sync = () => {
       setComposerFocused(document.body.classList.contains('ai-composer-focused'));
-      setModalOpen(document.body.classList.contains('ai-modal-open'));
+      setModalOpen(document.body.classList.contains('ai-modal-open') || document.body.classList.contains('ai-any-modal-open') || document.body.classList.contains('ai-core-modal-open'));
     };
 
     sync();

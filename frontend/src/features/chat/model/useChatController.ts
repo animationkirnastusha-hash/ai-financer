@@ -124,13 +124,13 @@ export function useChatController() {
   );
 
   const confirmAction = useCallback(
-    async (actionId: string) => {
+    async (actionId: string, parsedOverride?: Record<string, unknown>) => {
       if (!actionId) return;
 
       setPendingActions((prev) => prev.filter((item) => item.id !== actionId));
 
       try {
-        const response: any = await pendingActionsApi.confirm(actionId);
+        const response: any = await pendingActionsApi.confirm(actionId, parsedOverride);
 
         const assistantText = response?.message || '✅ Действие подтверждено.';
 
@@ -206,28 +206,6 @@ export function useChatController() {
     [refreshFinanceState],
   );
 
-
-  const updatePendingAction = useCallback(
-    async (actionId: string, parsed: Record<string, unknown>, command?: string) => {
-      if (!actionId) return;
-
-      try {
-        const response: any = await pendingActionsApi.update(actionId, { parsed, command });
-        const updated = response?.pendingAction;
-
-        if (updated) {
-          setPendingActions((prev) =>
-            prev.map((item) => (item.id === actionId ? { ...item, ...updated } : item)),
-          );
-        }
-      } catch (error) {
-        console.error('Update pending action failed', error);
-        throw error;
-      }
-    },
-    [],
-  );
-
   const undoMessageAction = useCallback(
     async (auditLogId: string) => {
       if (!auditLogId) return;
@@ -287,7 +265,6 @@ export function useChatController() {
     sendMessage,
     confirmAction,
     cancelAction,
-    updatePendingAction,
     undoMessageAction,
 
     openPending,

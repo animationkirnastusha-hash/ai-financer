@@ -10,11 +10,16 @@ export class AIService {
     return aiTrustService.handleCommand(userId, command, options);
   }
 
-  async confirmCommand(userId: string, pendingActionId: string) {
-    return aiTrustService.confirmCommand(userId, pendingActionId);
+  async confirmCommand(userId: string, pendingActionId: string, parsedOverride?: Record<string, unknown>) {
+    return aiTrustService.confirmCommand(userId, pendingActionId, parsedOverride);
   }
 
-  async updatePendingAction(userId: string, pendingActionId: string, parsed: Record<string, unknown>, command?: string) {
+  async updatePendingAction(
+    userId: string,
+    pendingActionId: string,
+    parsed: Record<string, unknown>,
+    command?: string,
+  ) {
     return aiTrustService.updatePendingAction(userId, pendingActionId, parsed, command);
   }
 

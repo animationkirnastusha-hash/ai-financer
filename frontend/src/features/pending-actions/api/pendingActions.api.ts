@@ -16,12 +16,9 @@ export const pendingActionsApi = {
     return [];
   },
 
-  confirm: (pendingActionId: string) =>
-    apiClient.post('/ai/confirm', { pendingActionId }),
+  confirm: (pendingActionId: string, parsedOverride?: Record<string, unknown>) =>
+    apiClient.post('/ai/confirm', { pendingActionId, parsedOverride }),
 
   cancel: (pendingActionId: string) =>
     apiClient.post('/ai/cancel', { pendingActionId }),
-
-  update: (pendingActionId: string, payload: { parsed: Record<string, unknown>; command?: string }) =>
-    apiClient.patch(`/ai/pending-actions/${pendingActionId}`, payload),
 };

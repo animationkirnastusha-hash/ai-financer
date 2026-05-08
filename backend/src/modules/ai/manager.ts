@@ -126,13 +126,10 @@ export class AIManager {
   }
 
 
-  async executeParsed(userId: string, command: string, parsedCommand: AIParsedCommand, riskLevel: 'low' | 'medium' | 'high' = 'medium'): Promise<AIResult> {
-    const startedAt = Date.now();
-
-    await this.applyContextFallback(parsedCommand, await this.memory.getRecentMessages(userId, 6));
-    const result = await this.executor.execute(userId, parsedCommand, riskLevel);
-    await this.logSuccess(userId, command, result, startedAt);
-    return result;
+  async executeConfirmedParsed(userId: string, parsedCommand: AIParsedCommand): Promise<AIResult> {
+    await this.applyContextFallback(parsedCommand, []);
+    const policy = this.policy.evaluate(parsedCommand);
+    return this.executor.execute(userId, parsedCommand, policy.riskLevel);
   }
 
   private async logSuccess(userId: string, command: string, result: AIResult, startedAt: number) {

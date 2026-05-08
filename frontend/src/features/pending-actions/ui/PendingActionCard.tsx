@@ -1,5 +1,4 @@
 import { useMemo, useState } from 'react';
-import type React from 'react';
 
 import { Button, Surface } from '@/shared/ui';
 import { formatTime } from '@/shared/lib/format';
@@ -7,110 +6,121 @@ import { cn } from '@/shared/lib/cn';
 import type { PendingActionItem } from '@/features/pending-actions/model/pendingActions.types';
 import { getPendingActionView } from '@/features/pending-actions/lib/pendingActionView';
 
+type EditableRecord = Record<string, any>;
+
 type Props = {
   item: PendingActionItem;
-  onConfirm: (id: string) => Promise<void> | void;
+  onConfirm: (id: string, parsedOverride?: Record<string, unknown>) => Promise<void> | void;
   onCancel: (id: string) => Promise<void> | void;
-  onUpdate?: (id: string, parsed: Record<string, unknown>, command?: string) => Promise<void> | void;
 };
 
-type EditableAction = Record<string, unknown>;
-
-const ACCOUNT_TYPES = ['card', 'cash', 'savings', 'investment'];
-const CURRENCIES = ['RUB', 'USD', 'EUR'];
-
-function isRecord(value: unknown): value is Record<string, unknown> {
+function isRecord(value: unknown): value is EditableRecord {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 }
 
-function cloneParsed(parsed: Record<string, unknown> | null | undefined): Record<string, unknown> {
-  if (!parsed) return {};
-  return JSON.parse(JSON.stringify(parsed)) as Record<string, unknown>;
+function clonePayload(item: PendingActionItem): EditableRecord {
+  const source = isRecord(item.parsed) ? item.parsed : isRecord(item.payload) ? item.payload : {};
+  return JSON.parse(JSON.stringify(source));
 }
 
-function getEditableActions(parsed: Record<string, unknown>) {
-  if (Array.isArray(parsed.actions)) return parsed.actions.filter(isRecord) as EditableAction[];
-  return [parsed];
+function inputValue(value: unknown) {
+  if (value === undefined || value === null) return '';
+  return String(value);
 }
 
-function actionLabel(action: EditableAction, index: number) {
-  const intent = String(action.intent ?? '').toLowerCase();
-  if (intent === 'create_account') return `${index + 1}. Счёт`;
-  if (intent === 'income') return `${index + 1}. Доход`;
-  if (intent === 'expense') return `${index + 1}. Расход`;
-  if (intent === 'transfer') return `${index + 1}. Перевод`;
-  if (intent === 'create_category') return `${index + 1}. Категория`;
-  if (intent === 'create_section') return `${index + 1}. Раздел`;
-  return `${index + 1}. Действие`;
+function updateAtPath(source: EditableRecord, path: Array<string | number>, value: string) {
+  const next = JSON.parse(JSON.stringify(source));
+  let cursor: any = next;
+
+  for (let index = 0; index < path.length - 1; index += 1) {
+    cursor = cursor[path[index]];
+  }
+
+  const key = path[path.length - 1];
+  const numericKeys = new Set(['amount', 'balance', 'initialBalance']);
+  cursor[key] = numericKeys.has(String(key)) ? Number(value.replace(/\s/g, '').replace(',', '.')) || 0 : value;
+
+  return next;
 }
 
-function EditableField({ label, value, onChange, inputMode = 'text' }: { label: string; value: string; onChange: (value: string) => void; inputMode?: React.HTMLAttributes<HTMLInputElement>['inputMode'] }) {
+function EditableField({
+  label,
+  value,
+  onChange,
+  inputMode,
+}: {
+  label: string;
+  value: unknown;
+  onChange: (value: string) => void;
+  inputMode?: 'text' | 'decimal';
+}) {
   return (
-    <label className="block rounded-2xl border border-white/8 bg-black/20 px-3 py-2">
-      <div className="mb-1 text-[11px] text-white/38">{label}</div>
+    <label className="grid gap-1.5 rounded-2xl border border-white/8 bg-white/[0.035] px-3 py-2.5">
+      <span className="text-[11px] uppercase tracking-[0.14em] text-white/35">{label}</span>
       <input
-        inputMode={inputMode}
-        value={value}
+        value={inputValue(value)}
         onChange={(event) => onChange(event.target.value)}
-        className="w-full bg-transparent text-sm text-white outline-none placeholder:text-white/25"
+        inputMode={inputMode === 'decimal' ? 'decimal' : 'text'}
+        className="w-full bg-transparent text-sm font-medium text-white outline-none placeholder:text-white/24"
       />
     </label>
   );
 }
 
-function SelectField({ label, value, options, onChange }: { label: string; value: string; options: string[]; onChange: (value: string) => void }) {
+function EditableAction({
+  action,
+  index,
+  onChange,
+}: {
+  action: EditableRecord;
+  index?: number;
+  onChange: (path: Array<string | number>, value: string) => void;
+}) {
+  const intent = String(action.intent || action.type || '').toLowerCase();
+  const isMoney = intent.includes('income') || intent.includes('expense') || intent.includes('transfer');
+  const isAccount = intent.includes('account') || action.name !== undefined || action.currency !== undefined;
+
   return (
-    <label className="block rounded-2xl border border-white/8 bg-black/20 px-3 py-2">
-      <div className="mb-1 text-[11px] text-white/38">{label}</div>
-      <select
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        className="w-full bg-transparent text-sm text-white outline-none"
-      >
-        {options.map((option) => (
-          <option key={option} value={option}>{option}</option>
-        ))}
-      </select>
-    </label>
+    <div className="rounded-[22px] border border-white/8 bg-black/15 p-3">
+      {index !== undefined ? (
+        <div className="mb-3 text-[11px] uppercase tracking-[0.16em] text-white/38">
+          Действие {index + 1}
+        </div>
+      ) : null}
+
+      <div className="grid gap-2">
+        {isAccount ? (
+          <>
+            <EditableField label="Название" value={action.name ?? action.accountName} onChange={(value) => onChange(['name'], value)} />
+            <div className="grid grid-cols-2 gap-2">
+              <EditableField label="Тип" value={action.type || 'card'} onChange={(value) => onChange(['type'], value)} />
+              <EditableField label="Валюта" value={action.currency || 'RUB'} onChange={(value) => onChange(['currency'], value.toUpperCase())} />
+            </div>
+          </>
+        ) : null}
+
+        {isMoney ? (
+          <>
+            <EditableField label="Сумма" value={action.amount ?? action.balance} inputMode="decimal" onChange={(value) => onChange(['amount'], value)} />
+            <EditableField label="Счёт" value={action.accountName || action.toAccountName || action.account} onChange={(value) => onChange(['accountName'], value)} />
+            <EditableField label="Описание" value={action.description || action.rawCategory || action.categoryName} onChange={(value) => onChange(['description'], value)} />
+          </>
+        ) : null}
+      </div>
+    </div>
   );
 }
 
-export function PendingActionCard({ item, onConfirm, onCancel, onUpdate }: Props) {
-  const [processingAction, setProcessingAction] = useState<'confirm' | 'cancel' | 'save' | null>(null);
+export function PendingActionCard({ item, onConfirm, onCancel }: Props) {
+  const [processingAction, setProcessingAction] = useState<'confirm' | 'cancel' | null>(null);
   const [showRawPayload, setShowRawPayload] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
-  const [draft, setDraft] = useState<Record<string, unknown>>(() => cloneParsed(item.parsed));
-  const view = getPendingActionView({ ...item, parsed: draft });
+  const [draft, setDraft] = useState<EditableRecord>(() => clonePayload(item));
+  const view = useMemo(() => getPendingActionView({ ...item, parsed: draft }), [draft, item]);
   const isProcessing = processingAction !== null;
+  const actions = Array.isArray(draft.actions) ? draft.actions.filter(isRecord) : [];
 
-  const actions = useMemo(() => getEditableActions(draft), [draft]);
-
-  const setActionValue = (index: number, key: string, value: unknown) => {
-    setDraft((current) => {
-      const next = cloneParsed(current);
-      if (Array.isArray(next.actions)) {
-        const arr = [...next.actions];
-        const action = isRecord(arr[index]) ? { ...arr[index] } : {};
-        action[key] = value;
-        arr[index] = action;
-        next.actions = arr;
-        return next;
-      }
-
-      next[key] = value;
-      return next;
-    });
-  };
-
-  const handleSaveDraft = async () => {
-    if (!onUpdate || isProcessing) return;
-    setProcessingAction('save');
-    try {
-      await onUpdate(item.id, draft, item.command);
-      setIsEditing(false);
-    } finally {
-      setProcessingAction(null);
-    }
+  const updateDraft = (path: Array<string | number>, value: string) => {
+    setDraft((current) => updateAtPath(current, path, value));
   };
 
   const handleConfirm = async (event: React.MouseEvent<HTMLButtonElement>) => {
@@ -121,10 +131,7 @@ export function PendingActionCard({ item, onConfirm, onCancel, onUpdate }: Props
 
     setProcessingAction('confirm');
     try {
-      if (onUpdate && isEditing) {
-        await onUpdate(item.id, draft, item.command);
-      }
-      await onConfirm(item.id);
+      await onConfirm(item.id, draft);
     } finally {
       setProcessingAction(null);
     }
@@ -151,7 +158,7 @@ export function PendingActionCard({ item, onConfirm, onCancel, onUpdate }: Props
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
               <span className="rounded-full border border-amber-300/20 bg-amber-300/10 px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.16em] text-amber-100/85">
-                AI Preview
+                Требуется подтверждение
               </span>
               <span
                 className={cn(
@@ -174,9 +181,7 @@ export function PendingActionCard({ item, onConfirm, onCancel, onUpdate }: Props
             </div>
 
             {view.amountLabel && view.title ? (
-              <div className="mt-1 text-sm leading-5 text-white/65">
-                {view.title}
-              </div>
+              <div className="mt-1 text-sm leading-5 text-white/65">{view.title}</div>
             ) : null}
           </div>
 
@@ -186,91 +191,35 @@ export function PendingActionCard({ item, onConfirm, onCancel, onUpdate }: Props
         </div>
 
         <div className="mt-4 rounded-[22px] border border-white/8 bg-black/20 px-3.5 py-3 text-sm leading-6 text-white/76">
-          <span className="text-amber-100">Проверь:</span> {view.explanation}
+          <span className="text-amber-100">Проверь и исправь:</span> можно изменить сумму, счёт, название или валюту до подтверждения.
         </div>
 
-        {isEditing ? (
-          <div className="mt-3 grid gap-3 rounded-[22px] border border-emerald-300/12 bg-emerald-300/[0.04] p-3">
-            {actions.map((action, index) => {
-              const intent = String(action.intent ?? '');
-              return (
-                <div key={index} className="grid gap-2 rounded-2xl border border-white/8 bg-black/15 p-3">
-                  <div className="text-xs font-medium text-white/70">{actionLabel(action, index)}</div>
+        <div className="mt-3 grid gap-2">
+          {actions.length > 0 ? (
+            actions.map((action, index) => (
+              <EditableAction
+                key={`${index}-${action.intent}`}
+                action={action}
+                index={index}
+                onChange={(path, value) => updateDraft(['actions', index, ...path], value)}
+              />
+            ))
+          ) : (
+            <EditableAction action={draft} onChange={(path, value) => updateDraft(path, value)} />
+          )}
+        </div>
 
-                  {intent === 'create_account' ? (
-                    <div className="grid gap-2 sm:grid-cols-2">
-                      <EditableField label="Название" value={String(action.name ?? '')} onChange={(value) => setActionValue(index, 'name', value)} />
-                      <SelectField label="Валюта" value={String(action.currency ?? 'RUB')} options={CURRENCIES} onChange={(value) => setActionValue(index, 'currency', value)} />
-                      <SelectField label="Тип" value={String(action.type ?? 'card')} options={ACCOUNT_TYPES} onChange={(value) => setActionValue(index, 'type', value)} />
-                    </div>
-                  ) : null}
-
-                  {intent === 'income' || intent === 'expense' ? (
-                    <div className="grid gap-2 sm:grid-cols-2">
-                      <EditableField label="Сумма" inputMode="decimal" value={String(action.amount ?? '')} onChange={(value) => setActionValue(index, 'amount', Number(value.replace(',', '.')) || value)} />
-                      <EditableField label="Счёт" value={String(action.accountName ?? '')} onChange={(value) => setActionValue(index, 'accountName', value)} />
-                      <EditableField label="Категория" value={String(action.rawCategory ?? '')} onChange={(value) => setActionValue(index, 'rawCategory', value)} />
-                      <EditableField label="Описание" value={String(action.description ?? '')} onChange={(value) => setActionValue(index, 'description', value)} />
-                    </div>
-                  ) : null}
-
-                  {intent === 'transfer' ? (
-                    <div className="grid gap-2 sm:grid-cols-2">
-                      <EditableField label="Сумма" inputMode="decimal" value={String(action.amount ?? '')} onChange={(value) => setActionValue(index, 'amount', Number(value.replace(',', '.')) || value)} />
-                      <EditableField label="Откуда" value={String(action.fromAccountName ?? '')} onChange={(value) => setActionValue(index, 'fromAccountName', value)} />
-                      <EditableField label="Куда" value={String(action.toAccountName ?? '')} onChange={(value) => setActionValue(index, 'toAccountName', value)} />
-                    </div>
-                  ) : null}
-                </div>
-              );
-            })}
-
-            <button
-              type="button"
-              disabled={!onUpdate || isProcessing}
-              onClick={() => void handleSaveDraft()}
-              className="rounded-2xl border border-emerald-300/20 bg-emerald-400/12 px-4 py-3 text-sm font-medium text-emerald-100 disabled:opacity-50"
-            >
-              {processingAction === 'save' ? 'Сохраняю...' : 'Сохранить правки'}
-            </button>
-          </div>
-        ) : view.rows.length > 0 ? (
-          <div className="mt-3 grid gap-2">
-            {view.rows.map((row) => (
-              <div
-                key={`${row.label}-${row.value}`}
-                className="flex items-center justify-between gap-3 rounded-2xl border border-white/8 bg-white/[0.035] px-3 py-2.5 text-sm"
-              >
-                <span className="text-white/45">{row.label}</span>
-                <span className="max-w-[62%] truncate text-right font-medium text-white/88">
-                  {row.value}
-                </span>
-              </div>
-            ))}
-          </div>
-        ) : null}
-
-        <div className="mt-3 flex flex-wrap gap-3">
+        {view.rawPayload ? (
           <button
             type="button"
-            onClick={() => setIsEditing((value) => !value)}
-            className="text-xs text-emerald-100/75 transition hover:text-emerald-100"
+            onClick={() => setShowRawPayload((value) => !value)}
+            className="mt-3 text-xs text-white/38 transition hover:text-white/65"
           >
-            {isEditing ? 'Скрыть редактирование' : 'Редактировать перед подтверждением'}
+            {showRawPayload ? 'Скрыть технические данные' : 'Показать технические данные'}
           </button>
+        ) : null}
 
-          {view.rawPayload ? (
-            <button
-              type="button"
-              onClick={() => setShowRawPayload((value) => !value)}
-              className="text-xs text-white/38 transition hover:text-white/65"
-            >
-              {showRawPayload ? 'Скрыть технические данные' : 'Показать технические данные'}
-            </button>
-          ) : null}
-        </div>
-
-        {showRawPayload && view.rawPayload ? (
+        {showRawPayload ? (
           <pre className="mt-3 max-h-44 overflow-auto rounded-2xl border border-white/8 bg-black/25 p-3 text-xs text-white/55">
             {JSON.stringify(draft, null, 2)}
           </pre>
@@ -281,12 +230,7 @@ export function PendingActionCard({ item, onConfirm, onCancel, onUpdate }: Props
             {processingAction === 'confirm' ? 'Выполняю...' : 'Подтвердить'}
           </Button>
 
-          <Button
-            variant="secondary"
-            disabled={isProcessing}
-            onClick={handleCancel}
-            fullWidth
-          >
+          <Button variant="secondary" disabled={isProcessing} onClick={handleCancel} fullWidth>
             {processingAction === 'cancel' ? 'Отменяю...' : 'Отмена'}
           </Button>
         </div>

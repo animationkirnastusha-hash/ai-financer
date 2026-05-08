@@ -7,7 +7,7 @@ import { useAccountsStore } from '@/features/accounts/model/accounts.store';
 import { CommandListSheet } from '@/features/commands/ui/CommandListSheet';
 import { useNavigationStore } from '@/features/navigation/model/navigation.store';
 import { useSwipeNavigation } from '@/features/navigation/lib/useSwipeNavigation';
-import { MainMenuDots, SETTINGS_FLOW_ITEMS } from '@/features/navigation/ui/MainMenuDots';
+import { MainMenuDots } from '@/features/navigation/ui/MainMenuDots';
 import { AppTopActions } from '@/features/navigation/ui/AppTopActions';
 import { PremiumUpgradeSheet } from '@/features/premium/ui/PremiumUpgradeSheet';
 import { LaunchOnboardingSheet } from '@/features/onboarding/ui/LaunchOnboardingSheet';
@@ -90,8 +90,7 @@ export function AppRouter() {
     navigateTo('ai-core');
   };
 
-  const isMainScreen = currentScreen === 'dashboard' || currentScreen === 'ai-core' || currentScreen === 'accounts';
-  const isSettingsFlowScreen = currentScreen === 'taxonomy-settings';
+  const showRootDots = currentScreen === 'ai-core';
 
   return (
     <div className="telegram-app-shell">
@@ -107,12 +106,8 @@ export function AppRouter() {
 
       <AppTopActions />
 
-      {isMainScreen ? (
-        <MainMenuDots currentScreen={currentScreen} onNavigate={navigateTo} bottomOffset={currentScreen === 'ai-core' ? 28 : 72} />
-      ) : null}
-
-      {isSettingsFlowScreen ? (
-        <MainMenuDots currentScreen={currentScreen} onNavigate={navigateTo} items={SETTINGS_FLOW_ITEMS} bottomOffset={34} />
+      {showRootDots ? (
+        <MainMenuDots currentScreen={currentScreen} onNavigate={navigateTo} bottomOffset={28} />
       ) : null}
 
       {currentScreen !== 'ai-core' ? <AIAssistantDock onOpen={openAIMenu} /> : null}

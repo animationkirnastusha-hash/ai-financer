@@ -197,7 +197,6 @@ export function AICoreScreen() {
     pendingActions,
     confirmAction,
     cancelAction,
-    updatePendingAction,
 
     isPendingOpen,
     openPending,
@@ -263,8 +262,8 @@ export function AICoreScreen() {
     openEdit(transaction);
   };
 
-  const handleAfterConfirm = async (actionId: string) => {
-    await confirmAction(actionId);
+  const handleAfterConfirm = async (actionId: string, parsedOverride?: Record<string, unknown>) => {
+    await confirmAction(actionId, parsedOverride);
     await refreshDashboard();
   };
 
@@ -423,7 +422,6 @@ export function AICoreScreen() {
         onClose={closePending}
         onConfirm={handleAfterConfirm}
         onCancel={cancelAction}
-        onUpdate={updatePendingAction}
       />
 
       <TransactionsHistoryDrawer

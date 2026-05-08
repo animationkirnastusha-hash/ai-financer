@@ -54,7 +54,9 @@ export const confirmCommand = asyncHandler(async (req: Request, res: Response) =
     throw new BadRequestError('pendingActionId is required');
   }
 
-  const result = await aiService.confirmCommand(userId, pendingActionId);
+  const parsedOverride = req.body.parsedOverride && typeof req.body.parsedOverride === 'object' ? req.body.parsedOverride : undefined;
+
+  const result = await aiService.confirmCommand(userId, pendingActionId, parsedOverride);
 
   res.json(result);
 });
@@ -98,7 +100,13 @@ export const updatePendingAction = asyncHandler(async (req: Request, res: Respon
     throw new BadRequestError('parsed object is required');
   }
 
-  const result = await aiService.updatePendingAction(userId, pendingActionId, parsed, command);
+  const result = await aiService.updatePendingAction(
+    userId,
+    pendingActionId,
+    parsed as Record<string, unknown>,
+    command,
+  );
+
   res.json(result);
 });
 

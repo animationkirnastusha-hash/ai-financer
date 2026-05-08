@@ -7,9 +7,8 @@ type Props = {
   open: boolean;
   items: PendingActionItem[];
   onClose: () => void;
-  onConfirm: (id: string) => void;
+  onConfirm: (id: string, parsedOverride?: Record<string, unknown>) => void;
   onCancel: (id: string) => void;
-  onUpdate?: (id: string, parsed: Record<string, unknown>, command?: string) => Promise<void> | void;
 };
 
 export function PendingActionsDrawer({
@@ -18,7 +17,6 @@ export function PendingActionsDrawer({
   onClose,
   onConfirm,
   onCancel,
-  onUpdate,
 }: Props) {
   useEffect(() => {
     document.body.classList.toggle('ai-modal-open', open);
@@ -39,7 +37,6 @@ export function PendingActionsDrawer({
               item={item}
               onConfirm={onConfirm}
               onCancel={onCancel}
-              onUpdate={onUpdate}
             />
           ))
         )}

@@ -137,7 +137,9 @@ export function getPendingActionView(item: PendingActionItem): PendingActionView
         { label: 'Куда', value: toAccount },
       ]);
 
-  const title = item.summary || description || item.command || `${intentLabel(item.intent, item.type)} ожидает подтверждения`;
+  const title = isBatch
+    ? `Проверь ${getBatchRows(parsed).length || 'несколько'} действия`
+    : item.summary || description || `${intentLabel(item.intent, item.type)} ожидает подтверждения`;
 
   return {
     title,

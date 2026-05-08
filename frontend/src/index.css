@@ -142,3 +142,35 @@ body.ai-screen-slide-right .ai-screen-transition {
     transform: translateX(0) scale(1);
   }
 }
+
+body.ai-any-modal-open .main-nav-dots,
+body.ai-any-modal-open .ai-assistant-dock,
+body.ai-any-modal-open .ai-core-input-shell {
+  display: none !important;
+}
+
+@keyframes aiPageInLeft {
+  from {
+    opacity: 0.4;
+    transform: perspective(700px) rotateY(10deg) translateX(28px) scale(0.985);
+    filter: blur(4px);
+  }
+  to {
+    opacity: 1;
+    transform: perspective(700px) rotateY(0deg) translateX(0) scale(1);
+    filter: blur(0);
+  }
+}
+
+@keyframes aiPageInRight {
+  from {
+    opacity: 0.4;
+    transform: perspective(700px) rotateY(-10deg) translateX(-28px) scale(0.985);
+    filter: blur(4px);
+  }
+  to {
+    opacity: 1;
+    transform: perspective(700px) rotateY(0deg) translateX(0) scale(1);
+    filter: blur(0);
+  }
+}

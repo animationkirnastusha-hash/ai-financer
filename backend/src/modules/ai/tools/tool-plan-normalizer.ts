@@ -1,4 +1,4 @@
-import { extractBestAmountFromText, normalizeAmount } from '../utils/amount-normalizer';
+import { normalizeAmount } from '../utils/amount-normalizer';
 import type { AIParsedCommand, AIParsedAtomicCommand } from '../types';
 import type { AIToolCall, AIToolPlan } from './tool-types';
 
@@ -12,44 +12,70 @@ function asString(value: unknown, fallback = '') {
   return fallback;
 }
 
-function normalizeCurrency(value: unknown, context = ''): 'RUB' | 'USD' | 'EUR' {
-  const raw = `${asString(value)} ${context}`.toLowerCase().replaceAll('ё', 'е');
-  if (/\b(usd|доллар|доллара|долларов|бакс|бакса|баксов)\b|\$/i.test(raw)) return 'USD';
-  if (/\b(eur|евро)\b|€/i.test(raw)) return 'EUR';
+function asOptionalString(value: unknown) {
+  const normalized = cleanAccountReference(asString(value));
+  return normalized ? normalized : undefined;
+}
+
+function asAmount(value: unknown) {
+  const normalized = normalizeAmount(value);
+
+  if (normalized !== null && normalized > 0) return normalized;
+
+  const numberValue = Number(value);
+  return Number.isFinite(numberValue) && numberValue > 0 ? Math.round(numberValue) : null;
+}
+
+function normalizeCurrency(value: unknown): 'RUB' | 'USD' | 'EUR' {
+  const raw = asString(value, 'RUB').toLowerCase();
+  if (raw.includes('usd') || raw.includes('доллар') || raw.includes('$') || raw.includes('бакс')) return 'USD';
+  if (raw.includes('eur') || raw.includes('евро') || raw.includes('€')) return 'EUR';
   return 'RUB';
+}
+
+function extractNaturalAmountFromText(text: unknown): number | null {
+  const raw = asString(text);
+  if (!raw) return null;
+  return normalizeAmount(raw);
+}
+
+function extractNaturalAccountName(text: unknown, currency: 'RUB' | 'USD' | 'EUR'): string | null {
+  const raw = asString(text);
+  if (!raw) return null;
+
+  const quoted = raw.match(/(?:назови|назвать|имя|название|дай\s+(?:ему|ей)?\s*название|присвой\s+(?:ему|ей)?\s*(?:название|имя)?)\s+(?:его|ее|её|счета|счёта)?\s*[«"]([^»"]+)[»"]/i)?.[1];
+  if (quoted) return cleanAccountName(quoted);
+
+  const named = raw.match(/(?:дай\s+(?:ему|ей)?\s*название|присвой\s+(?:ему|ей)?\s*(?:название|имя)?|назови|назвать)\s+(?:его|ее|её|счет|счёт|карту|кошелек|кошелёк)?\s+(.+?)(?:\s+(?:и|потом|затем|положи|положить|закинь|внеси|пополни|добавь|на сумму|с балансом)\b|$)/i)?.[1];
+  if (named) return cleanAccountName(named);
+
+  const explicit = raw.match(/(?:счет|счёт|карту|кошелек|кошелёк)\s+[«"]?(.+?)(?:[»"]|\s+(?:и|потом|затем|положи|положить|закинь|внеси|пополни|добавь|на сумму|с балансом)\b|$)/i)?.[1];
+  if (explicit) {
+    const cleaned = cleanAccountName(explicit);
+    if (cleaned && !/^(в|на)?\s*(рублях|долларах|евро|usd|eur)$/i.test(cleaned)) return cleaned;
+  }
+
+  if (/налич|кэш|cash/i.test(raw)) return 'Наличка';
+  if (currency === 'USD') return 'Доллары';
+  if (currency === 'EUR') return 'Евро';
+  return null;
 }
 
 function cleanAccountName(value: string) {
   const cleaned = value
     .replace(/[«»"']/g, '')
-    .replace(/\b(и|а|назови|назвать|его|ее|её|счет|счёт|аккаунт|карту|карта|кошелек|кошелёк)\b/gi, ' ')
-    .replace(/\b(присвой|присвоить|поставь|сделай|валюту|валюта|ему|ей|для|как)\b/gi, ' ')
-    .replace(/\b(положи|положить|закинь|закинуть|внеси|внести|пополни|пополнить|добавь|добавить|туда|сюда|на него|на нее|на неё)\b/gi, ' ')
-    .replace(/\b(рублей|рубля|руб|долларов|доллара|доллар|доллары|баксов|бакса|бакс|usd|eur|евро)\b/gi, ' ')
-    .replace(/\d+[\d\s.,]*(?:кк|к|k|тыс|тысяч|тысячи|млн)?/gi, ' ')
+    .replace(/\b(и|а|назови|назвать|его|ее|её|счет|счёт|аккаунт|положи|положить|закинь|закинуть|внеси|внести|пополни|пополнить|добавь|добавить)\b/gi, ' ')
     .replace(/\s+/g, ' ')
     .trim();
   return cleaned || 'Новый счёт';
 }
 
 function cleanAccountReference(value: string) {
-  return cleanAccountName(value)
-    .replace(/\b(на|в|с|со|из|от)\b/gi, ' ')
+  return value
+    .replace(/[«»"']/g, '')
+    .replace(/\b(счет|счёт|карта|карту|кошелек|кошелёк|на|в|с|со|из)\b/gi, ' ')
     .replace(/\s+/g, ' ')
     .trim();
-}
-
-function asOptionalString(value: unknown) {
-  const normalized = cleanAccountReference(asString(value));
-  return normalized ? normalized : undefined;
-}
-
-function asAmount(value: unknown, context?: string) {
-  const normalized = context ? extractBestAmountFromText(context, value) : normalizeAmount(value);
-  if (normalized !== null && normalized > 0) return normalized;
-
-  const numberValue = Number(value);
-  return Number.isFinite(numberValue) && numberValue > 0 ? Math.round(numberValue) : null;
 }
 
 function normalizeAccountType(value: unknown): string {
@@ -77,28 +103,21 @@ function normalizeTransactionType(value: unknown, fallbackText?: unknown): 'inco
   return 'expense';
 }
 
-function inferAccountNameFromText(text: string) {
-  const named = text.match(/(?:назови|назвать|имя|название)\s+(?:его|ее|её|счета|счёта)?\s*[«"]?(.+?)(?:[»"]|\s+(?:и|потом|затем|положи|закинь|внеси|пополни|добавь|присвой|присвоить)\b|$)/i)?.[1];
-  if (named) return cleanAccountName(named);
-
-  const create = text.match(/(?:счет|счёт|карту|карта|кошелек|кошелёк)\s+[«"]?(.+?)(?:[»"]|\s+(?:и|потом|затем|положи|закинь|внеси|пополни|добавь|присвой|присвоить|поставь|сделай|на сумму|с балансом)\b|$)/i)?.[1];
-  return create ? cleanAccountName(create) : undefined;
-}
-
-function convertToolCall(call: AIToolCall, planText: string): AIParsedAtomicCommand[] {
+function convertToolCall(call: AIToolCall, originalText?: string): AIParsedAtomicCommand[] {
   const args = isRecord(call.args) ? call.args : {};
-  const localText = `${planText} ${asString(args.description)} ${asString(args.name)} ${asString(args.accountName)}`;
 
   switch (call.tool) {
     case 'create_account': {
-      const inferredName = inferAccountNameFromText(planText);
-      const name = cleanAccountName(asString(args.name || args.accountName || inferredName, inferredName ?? 'Новый счёт'));
-      const initialBalance = asAmount(args.initialBalance ?? args.balance, planText);
-      const currency = normalizeCurrency(args.currency, planText);
+      const currency = normalizeCurrency(args.currency || originalText);
+      const naturalName = extractNaturalAccountName(originalText, currency);
+      const name = naturalName || cleanAccountName(asString(args.name || args.accountName, 'Новый счёт'));
+      const naturalAmount = extractNaturalAmountFromText(originalText);
+      let initialBalance = asAmount(args.initialBalance ?? args.balance) ?? null;
+      if (initialBalance && naturalAmount && naturalAmount > initialBalance && initialBalance <= 100) initialBalance = naturalAmount;
       const createAccount: AIParsedAtomicCommand = {
         intent: 'create_account',
         name,
-        type: normalizeAccountType(args.type || planText),
+        type: normalizeAccountType(args.type),
         currency,
         balance: 0,
       };
@@ -118,12 +137,16 @@ function convertToolCall(call: AIToolCall, planText: string): AIParsedAtomicComm
     }
 
     case 'create_transaction': {
-      const amount = asAmount(args.amount, localText);
+      let amount = asAmount(args.amount);
+      const naturalAmount = extractNaturalAmountFromText(originalText);
+      if (amount && naturalAmount && naturalAmount > amount && amount <= 100) amount = naturalAmount;
       if (!amount) return [];
 
-      const type = normalizeTransactionType(args.type, `${args.description ?? ''} ${args.category ?? ''} ${args.rawCategory ?? ''} ${planText}`);
-      const category = asString(args.category || args.rawCategory || args.description, type === 'income' ? 'пополнение' : 'расход');
-      const accountName = asOptionalString(args.accountName) ?? inferAccountNameFromText(planText);
+      const type = normalizeTransactionType(args.type, `${args.description ?? ''} ${args.category ?? ''} ${args.rawCategory ?? ''}`);
+      const category = asString(
+        args.category || args.rawCategory || args.description,
+        type === 'income' ? 'пополнение' : 'расход',
+      );
 
       return [
         type === 'income'
@@ -132,7 +155,7 @@ function convertToolCall(call: AIToolCall, planText: string): AIParsedAtomicComm
               amount,
               rawCategory: category,
               description: asString(args.description, category),
-              accountName,
+              accountName: asOptionalString(args.accountName),
               sectionName: asOptionalString(args.sectionName),
             }
           : {
@@ -140,14 +163,14 @@ function convertToolCall(call: AIToolCall, planText: string): AIParsedAtomicComm
               amount,
               rawCategory: category,
               description: asString(args.description, category),
-              accountName,
+              accountName: asOptionalString(args.accountName),
               sectionName: asOptionalString(args.sectionName),
             },
       ];
     }
 
     case 'transfer_money': {
-      const amount = asAmount(args.amount, planText);
+      const amount = asAmount(args.amount);
       const toAccountName = asOptionalString(args.toAccountName || args.to || args.targetAccountName);
       if (!amount || !toAccountName) return [];
       return [
@@ -227,14 +250,13 @@ export function looksLikeToolPlan(value: unknown): value is AIToolPlan {
 export function normalizeToolPlanToParsedCommand(value: unknown): AIParsedCommand | null {
   if (!looksLikeToolPlan(value)) return null;
 
-  const planText = asString(value.originalText || value.userMessage);
   const actions = value.toolCalls
     .filter((item): item is AIToolCall => isRecord(item) && typeof item.tool === 'string' && isRecord(item.args ?? {}))
-    .flatMap((call) => convertToolCall(call, planText))
+    .flatMap((call) => convertToolCall(call, asString(value.originalText || value.userMessage)))
     .filter((item) => item.intent !== 'unknown' && item.intent !== 'help');
 
   if (actions.length === 0) {
-    const question = asString(value.userMessage || value.originalText);
+    const question = asString(value.userMessage);
     return question ? { intent: 'advice', question } : { intent: 'unknown' };
   }
 
@@ -243,7 +265,7 @@ export function normalizeToolPlanToParsedCommand(value: unknown): AIParsedComman
   return {
     intent: 'batch',
     actions,
-    originalText: planText || undefined,
+    originalText: asOptionalString(value.originalText),
     premiumSuggestion: asOptionalString(value.premiumSuggestion),
   };
 }

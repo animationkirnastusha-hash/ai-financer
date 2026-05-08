@@ -22,8 +22,7 @@ function isBlockedByUi() {
   return (
     document.body.classList.contains('ai-voice-gesture-active') ||
     document.body.classList.contains('ai-composer-focused') ||
-    document.body.classList.contains('ai-core-modal-open') ||
-    document.body.classList.contains('ai-modal-open')
+    document.body.classList.contains('ai-core-modal-open') || document.body.classList.contains('ai-any-modal-open')
   );
 }
 
