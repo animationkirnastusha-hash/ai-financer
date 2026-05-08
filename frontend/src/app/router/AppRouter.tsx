@@ -133,7 +133,11 @@ export function AppRouter() {
       <AppTopActions />
 
       {isMainScreen ? (
-        <MainMenuDots currentScreen={currentScreen} onNavigate={navigateTo} />
+        <MainMenuDots
+          currentScreen={currentScreen}
+          onNavigate={navigateTo}
+          bottomOffset={currentScreen === 'ai-core' ? 142 : 72}
+        />
       ) : null}
 
       {isSettingsFlowScreen ? (
@@ -145,7 +149,9 @@ export function AppRouter() {
         />
       ) : null}
 
-      <AIAssistantDock onOpen={openAIMenu} />
+      {currentScreen !== 'ai-core' ? (
+        <AIAssistantDock onOpen={openAIMenu} />
+      ) : null}
 
       <AIMenuSheet
         open={isAIMenuOpen}

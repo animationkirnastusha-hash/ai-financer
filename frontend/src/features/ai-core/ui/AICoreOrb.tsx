@@ -27,29 +27,29 @@ function getStateLabel(state: AICoreState, isVoiceLocked: boolean) {
 }
 
 function getStateHint(state: AICoreState, isVoiceLocked: boolean) {
-  if (isVoiceLocked) return 'говори свободно, затем нажми «Готово»';
-  if (state === 'listening') return 'отпусти — отправить, влево — отменить';
+  if (isVoiceLocked) return 'нажми сферу, чтобы отправить';
+  if (state === 'listening') return 'отпусти — отправить';
   if (state === 'thinking') return 'проверяю действие';
   if (state === 'responding') return 'можно продолжать';
-  if (state === 'expanded') return 'зажми сферу для голоса';
-  return 'нажми или зажми';
+  if (state === 'expanded') return 'зажми для голоса';
+  return 'зажми для голоса';
 }
 
 function getRingClasses(state: AICoreState, isVoiceLocked: boolean) {
   if (isVoiceLocked) {
-    return 'scale-[1.07] border-emerald-200/60 bg-emerald-400/18 shadow-[0_0_110px_rgba(52,211,153,0.36)]';
+    return 'scale-[1.06] border-emerald-200/60 bg-emerald-400/18 shadow-[0_0_110px_rgba(52,211,153,0.36)]';
   }
 
   if (state === 'listening') {
-    return 'scale-[1.06] border-cyan-300/50 bg-cyan-400/15 shadow-[0_0_96px_rgba(34,211,238,0.34)]';
+    return 'scale-[1.05] border-cyan-300/50 bg-cyan-400/15 shadow-[0_0_96px_rgba(34,211,238,0.34)]';
   }
 
   if (state === 'thinking') {
-    return 'scale-[1.04] border-amber-300/40 bg-amber-400/12 shadow-[0_0_80px_rgba(251,191,36,0.24)]';
+    return 'scale-[1.03] border-amber-300/40 bg-amber-400/12 shadow-[0_0_80px_rgba(251,191,36,0.24)]';
   }
 
   if (state === 'responding') {
-    return 'scale-[1.05] border-emerald-300/45 bg-emerald-400/15 shadow-[0_0_90px_rgba(52,211,153,0.30)]';
+    return 'scale-[1.04] border-emerald-300/45 bg-emerald-400/15 shadow-[0_0_90px_rgba(52,211,153,0.30)]';
   }
 
   return 'border-emerald-300/30 bg-emerald-400/8 shadow-[0_0_86px_rgba(45,212,191,0.24)]';
@@ -74,6 +74,9 @@ export function AICoreOrb({
   const startYRef = useRef(0);
   const [gesture, setGesture] = useState<VoiceGesture>('idle');
 
+  const isListening = state === 'listening' || isVoiceLocked;
+  const showGestureBar = state === 'listening' && !isVoiceLocked;
+
   const clearHoldTimer = () => {
     if (holdTimerRef.current !== null) {
       window.clearTimeout(holdTimerRef.current);
@@ -97,7 +100,7 @@ export function AICoreOrb({
     didHoldRef.current = false;
     gestureCompletedRef.current = false;
     setGesture('idle');
-    unlockPageGestures();
+    if (!isVoiceLocked) unlockPageGestures();
   };
 
   const finishPointerInteraction = () => {
@@ -113,19 +116,19 @@ export function AICoreOrb({
 
     if (wasCompleted) {
       setGesture('idle');
-      unlockPageGestures();
+      if (!isVoiceLocked) unlockPageGestures();
       return;
     }
 
     if (wasHold) {
       setGesture('idle');
-      unlockPageGestures();
+      if (!isVoiceLocked) unlockPageGestures();
       onHoldEnd();
       return;
     }
 
     setGesture('idle');
-    unlockPageGestures();
+    if (!isVoiceLocked) unlockPageGestures();
     onTap();
   };
 
@@ -146,6 +149,12 @@ export function AICoreOrb({
       document.head.appendChild(style);
     }
 
+    const preventPageMove = (event: Event) => {
+      if (pointerIsDownRef.current || isVoiceLocked) {
+        event.preventDefault();
+      }
+    };
+
     const handleGlobalPointerUp = () => finishPointerInteraction();
 
     const handleGlobalPointerCancel = () => {
@@ -157,23 +166,38 @@ export function AICoreOrb({
 
     window.addEventListener('pointerup', handleGlobalPointerUp);
     window.addEventListener('pointercancel', handleGlobalPointerCancel);
+    window.addEventListener('touchmove', preventPageMove, { passive: false });
+    window.addEventListener('wheel', preventPageMove, { passive: false });
 
     return () => {
       window.removeEventListener('pointerup', handleGlobalPointerUp);
       window.removeEventListener('pointercancel', handleGlobalPointerCancel);
+      window.removeEventListener('touchmove', preventPageMove);
+      window.removeEventListener('wheel', preventPageMove);
       unlockPageGestures();
     };
-  }, [onHoldCancel]);
+  }, [isVoiceLocked, onHoldCancel]);
+
+  useEffect(() => {
+    if (isVoiceLocked) {
+      lockPageGestures();
+      return;
+    }
+
+    if (!pointerIsDownRef.current) unlockPageGestures();
+  }, [isVoiceLocked]);
 
   const handlePointerDown = (event: React.PointerEvent<HTMLButtonElement>) => {
     if (isVoiceLocked) return;
 
+    event.preventDefault();
     event.currentTarget.setPointerCapture?.(event.pointerId);
     pointerIsDownRef.current = true;
     didHoldRef.current = false;
     gestureCompletedRef.current = false;
     startXRef.current = event.clientX;
     startYRef.current = event.clientY;
+    lockPageGestures();
 
     clearHoldTimer();
 
@@ -182,7 +206,6 @@ export function AICoreOrb({
 
       didHoldRef.current = true;
       setGesture('holding');
-      lockPageGestures();
       onHoldStart();
     }, 260);
   };
@@ -222,112 +245,91 @@ export function AICoreOrb({
     setGesture('holding');
   };
 
-  const isListening = state === 'listening' || isVoiceLocked;
-
   return (
     <div className="flex flex-col items-center" data-no-swipe="true">
-      <div className="relative flex w-full justify-center">
-        {isListening ? (
-          <>
-            <div
-              className={cn(
-                'pointer-events-none absolute -left-1 top-1/2 z-10 flex -translate-y-1/2 items-center gap-2 rounded-full border px-3 py-2 text-xs transition-all duration-200',
-                gesture === 'cancel'
-                  ? 'translate-x-1 border-rose-300/45 bg-rose-400/18 text-rose-100 opacity-100'
-                  : 'border-white/10 bg-white/[0.06] text-white/45 opacity-80',
-              )}
-            >
-              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-rose-400/15 text-lg">
-                ←
-              </span>
-              <span>отмена</span>
-            </div>
+      {showGestureBar ? (
+        <div className="mb-5 grid w-full max-w-[320px] grid-cols-2 gap-2 px-2">
+          <div
+            className={cn(
+              'rounded-2xl border px-3 py-2 text-center transition-all duration-200',
+              gesture === 'lock'
+                ? 'border-emerald-200/45 bg-emerald-400/18 text-emerald-100 shadow-[0_0_28px_rgba(52,211,153,0.20)]'
+                : 'border-white/10 bg-white/[0.045] text-white/50',
+            )}
+          >
+            <div className="text-lg leading-none">🔒</div>
+            <div className="mt-1 text-[10px] uppercase tracking-[0.16em]">вверх</div>
+          </div>
 
-            <div
-              className={cn(
-                'pointer-events-none absolute -top-14 left-1/2 z-10 flex -translate-x-1/2 flex-col items-center gap-1 transition-all duration-200',
-                gesture === 'lock' || isVoiceLocked ? 'opacity-100' : 'opacity-75',
-              )}
-            >
-              <div
-                className={cn(
-                  'flex h-11 w-11 items-center justify-center rounded-full border text-xl transition-all duration-200',
-                  gesture === 'lock' || isVoiceLocked
-                    ? 'border-emerald-200/50 bg-emerald-400/18 text-emerald-100 shadow-[0_0_36px_rgba(52,211,153,0.25)]'
-                    : 'border-white/10 bg-white/[0.06] text-white/45',
-                )}
-              >
-                🔒
-              </div>
-              <div className="rounded-full border border-white/10 bg-black/30 px-2 py-1 text-[10px] uppercase tracking-[0.14em] text-white/45">
-                вверх — замок
-              </div>
-            </div>
-          </>
+          <div
+            className={cn(
+              'rounded-2xl border px-3 py-2 text-center transition-all duration-200',
+              gesture === 'cancel'
+                ? 'border-rose-200/45 bg-rose-400/18 text-rose-100 shadow-[0_0_28px_rgba(251,113,133,0.18)]'
+                : 'border-white/10 bg-white/[0.045] text-white/50',
+            )}
+          >
+            <div className="text-lg leading-none">←</div>
+            <div className="mt-1 text-[10px] uppercase tracking-[0.16em]">отмена</div>
+          </div>
+        </div>
+      ) : null}
+
+      <button
+        type="button"
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onClick={() => {
+          if (isVoiceLocked) onLockedDone();
+        }}
+        onContextMenu={(event) => event.preventDefault()}
+        className={cn(
+          'relative flex h-52 w-52 select-none items-center justify-center rounded-full border transition-all duration-300 active:scale-[0.985] sm:h-56 sm:w-56',
+          isListening ? 'touch-none' : 'touch-manipulation',
+          gesture === 'cancel' ? '-translate-x-4 border-rose-300/50 bg-rose-400/14 shadow-[0_0_80px_rgba(251,113,133,0.26)]' : null,
+          gesture === 'lock' ? '-translate-y-4' : null,
+          getRingClasses(state, isVoiceLocked),
+        )}
+        aria-label="AI Core"
+      >
+        <div className="absolute -inset-8 rounded-full border border-emerald-300/10" />
+        <div className="absolute -inset-4 rounded-full border border-cyan-300/10" />
+        <div className="absolute inset-4 rounded-full border border-white/10" />
+        <div className="absolute inset-9 rounded-full border border-white/8" />
+
+        {isListening ? (
+          <div className="absolute bottom-11 flex items-end gap-1">
+            <span className="h-3 w-1 rounded-full bg-cyan-200/60" />
+            <span className="h-6 w-1 rounded-full bg-cyan-200/80" />
+            <span className="h-4 w-1 rounded-full bg-cyan-200/65" />
+            <span className="h-7 w-1 rounded-full bg-cyan-200/90" />
+            <span className="h-3 w-1 rounded-full bg-cyan-200/60" />
+          </div>
         ) : null}
 
-        <button
-          type="button"
-          onPointerDown={handlePointerDown}
-          onPointerMove={handlePointerMove}
-          onContextMenu={(event) => event.preventDefault()}
-          className={cn(
-            'relative flex h-52 w-52 select-none items-center justify-center rounded-full border transition-all duration-300 active:scale-[0.985] sm:h-56 sm:w-56',
-            isListening ? 'touch-none' : 'touch-manipulation',
-            gesture === 'cancel' ? '-translate-x-4 border-rose-300/50 bg-rose-400/14 shadow-[0_0_80px_rgba(251,113,133,0.26)]' : null,
-            gesture === 'lock' ? '-translate-y-5' : null,
-            getRingClasses(state, isVoiceLocked),
-          )}
-          aria-label="AI Core"
-        >
-          <div className="absolute -inset-8 rounded-full border border-emerald-300/10" />
-          <div className="absolute -inset-4 rounded-full border border-cyan-300/10" />
-          <div className="absolute inset-4 rounded-full border border-white/10" />
-          <div className="absolute inset-9 rounded-full border border-white/8" />
-
-          {isListening ? (
-            <div className="absolute bottom-12 flex items-end gap-1">
-              <span className="h-3 w-1 rounded-full bg-cyan-200/60" />
-              <span className="h-6 w-1 rounded-full bg-cyan-200/80" />
-              <span className="h-4 w-1 rounded-full bg-cyan-200/65" />
-              <span className="h-7 w-1 rounded-full bg-cyan-200/90" />
-              <span className="h-3 w-1 rounded-full bg-cyan-200/60" />
-            </div>
-          ) : null}
-
-          <div className="relative text-center">
-            <div className="text-[11px] uppercase tracking-[0.24em] text-emerald-200/80">
-              AI Core
-            </div>
-
-            <div className="mt-6 text-2xl font-semibold text-white">
-              {getStateLabel(state, isVoiceLocked)}
-            </div>
-
-            <div className="mt-2 max-w-[150px] text-sm leading-5 text-white/42">
-              {getStateHint(state, isVoiceLocked)}
-            </div>
+        <div className="relative flex max-w-[165px] flex-col items-center justify-center text-center">
+          <div className="text-[11px] uppercase tracking-[0.24em] text-emerald-200/80">
+            AI Core
           </div>
-        </button>
-      </div>
+
+          <div className="mt-6 text-center text-2xl font-semibold leading-tight text-white">
+            {getStateLabel(state, isVoiceLocked)}
+          </div>
+
+          <div className="mt-2 text-center text-sm leading-5 text-white/42">
+            {getStateHint(state, isVoiceLocked)}
+          </div>
+        </div>
+      </button>
 
       {isVoiceLocked ? (
-        <div className="mt-5 flex items-center gap-3">
-          <button
-            type="button"
-            onClick={onLockedCancel}
-            className="rounded-full border border-rose-300/20 bg-rose-400/10 px-5 py-3 text-sm font-medium text-rose-100"
-          >
-            Отмена
-          </button>
-          <button
-            type="button"
-            onClick={onLockedDone}
-            className="rounded-full border border-emerald-300/25 bg-emerald-400/15 px-5 py-3 text-sm font-medium text-emerald-100"
-          >
-            Готово
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={onLockedCancel}
+          className="mt-5 rounded-full border border-rose-300/20 bg-rose-400/10 px-8 py-3 text-sm font-medium text-rose-100 shadow-[0_0_28px_rgba(251,113,133,0.10)]"
+        >
+          Отменить запись
+        </button>
       ) : null}
     </div>
   );

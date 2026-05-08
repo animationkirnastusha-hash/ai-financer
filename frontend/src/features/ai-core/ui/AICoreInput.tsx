@@ -4,7 +4,6 @@ type Props = {
   value: string;
   onChange: (value: string) => void;
   onSubmit: () => Promise<void>;
-  onClose?: () => void;
   disabled?: boolean;
 };
 
@@ -12,7 +11,6 @@ export function AICoreInput({
   value,
   onChange,
   onSubmit,
-  onClose,
   disabled = false,
 }: Props) {
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
@@ -25,6 +23,14 @@ export function AICoreInput({
     input.style.height = 'auto';
     input.style.height = `${Math.min(input.scrollHeight, 128)}px`;
   }, [value]);
+
+  useEffect(() => {
+    document.body.classList.toggle('ai-composer-focused', focused);
+
+    return () => {
+      document.body.classList.remove('ai-composer-focused');
+    };
+  }, [focused]);
 
   const submit = async () => {
     if (disabled || !value.trim()) return;
@@ -41,7 +47,7 @@ export function AICoreInput({
 
   return (
     <div
-      className="fixed bottom-[calc(env(safe-area-inset-bottom)+8px)] left-0 right-0 z-[90] mx-auto w-full max-w-[560px] px-4"
+      className="fixed bottom-[calc(env(safe-area-inset-bottom)+42px)] left-0 right-0 z-[90] mx-auto w-full max-w-[560px] px-4"
       data-ai-composer="true"
       data-no-swipe="true"
     >
@@ -50,17 +56,11 @@ export function AICoreInput({
           <textarea
             ref={inputRef}
             value={value}
-            onFocus={() => {
-              setFocused(true);
-              document.body.classList.add('ai-composer-focused');
-            }}
-            onBlur={() => {
-              setFocused(false);
-              document.body.classList.remove('ai-composer-focused');
-            }}
+            onFocus={() => setFocused(true)}
+            onBlur={() => setFocused(false)}
             onChange={(event) => onChange(event.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Напиши как человеку: создай Наличка и положи туда 50к"
+            placeholder="Введите команду..."
             rows={1}
             className="max-h-32 min-h-12 flex-1 resize-none rounded-[22px] border border-white/8 bg-black/25 px-4 py-3 text-base leading-6 text-white outline-none placeholder:text-white/30"
           />
@@ -88,21 +88,6 @@ export function AICoreInput({
           >
             ↑
           </button>
-        </div>
-
-        <div className="flex items-center justify-between px-3 pb-1 pt-2 text-[11px] text-white/35">
-          <span>{focused ? 'Enter — отправить, Shift+Enter — новая строка' : 'Поле ввода всегда закреплено снизу'}</span>
-
-          {onClose ? (
-            <button
-              type="button"
-              onMouseDown={(event) => event.preventDefault()}
-              onClick={onClose}
-              className="text-white/45"
-            >
-              Очистить
-            </button>
-          ) : null}
         </div>
       </div>
     </div>
