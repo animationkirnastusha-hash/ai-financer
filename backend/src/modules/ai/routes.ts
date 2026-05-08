@@ -4,6 +4,7 @@ import {
   confirmCommand,
   cancelCommand,
   getPendingActions,
+  updatePendingAction,
   getAuditLogs,
   undoCommand,
 } from './controller';
@@ -14,6 +15,7 @@ const router = Router();
 router.use(authMiddleware);
 
 router.get('/pending-actions', getPendingActions);
+router.patch('/pending-actions/:id', updatePendingAction);
 router.get('/audit-logs', getAuditLogs);
 
 router.post('/parse', parseCommand);

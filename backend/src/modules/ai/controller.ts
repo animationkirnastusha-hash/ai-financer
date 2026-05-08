@@ -78,6 +78,30 @@ export const cancelCommand = asyncHandler(async (req: Request, res: Response) =>
   res.json(result);
 });
 
+
+export const updatePendingAction = asyncHandler(async (req: Request, res: Response) => {
+  const userId = req.userId;
+
+  if (!userId) {
+    throw new BadRequestError('Unauthorized user');
+  }
+
+  const pendingActionId = typeof req.params.id === 'string' ? req.params.id : '';
+  const parsed = req.body.parsed;
+  const command = typeof req.body.command === 'string' ? req.body.command : undefined;
+
+  if (!pendingActionId.trim()) {
+    throw new BadRequestError('pendingActionId is required');
+  }
+
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    throw new BadRequestError('parsed object is required');
+  }
+
+  const result = await aiService.updatePendingAction(userId, pendingActionId, parsed, command);
+  res.json(result);
+});
+
 export const getPendingActions = asyncHandler(async (req: Request, res: Response) => {
   const userId = req.userId;
 

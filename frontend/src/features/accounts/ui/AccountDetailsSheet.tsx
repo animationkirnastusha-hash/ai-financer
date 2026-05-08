@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import type { AccountDto } from '@/features/accounts/api/accounts.api';
 import { formatMoney } from '@/shared/lib/money';
 
@@ -30,6 +31,11 @@ export function AccountDetailsSheet({
   onDelete,
   onAskAI,
 }: Props) {
+  useEffect(() => {
+    document.body.classList.toggle('ai-modal-open', open);
+    return () => document.body.classList.remove('ai-modal-open');
+  }, [open]);
+
   if (!open || !account) return null;
 
   const transactionCount = Number(account.transactionCount ?? 0);
@@ -43,7 +49,7 @@ export function AccountDetailsSheet({
   };
 
   return (
-    <div className="fixed inset-0 z-[96] flex items-end bg-black/60 backdrop-blur-sm">
+    <div data-no-swipe="true" data-ai-core-modal="true" className="fixed inset-0 z-[120] flex items-end bg-black/60 backdrop-blur-sm">
       <div className="max-h-[92dvh] w-full overflow-y-auto rounded-t-[30px] border border-white/10 bg-[#0b1016] px-4 pb-6 pt-4 text-white shadow-2xl">
         <div className="mx-auto mb-4 h-1.5 w-14 rounded-full bg-white/15" />
 

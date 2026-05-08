@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import type { AccountDto } from '@/features/accounts/api/accounts.api';
 import { formatMoney } from '@/shared/lib/money';
@@ -25,6 +25,11 @@ export function AccountTransferSheet({
   onClose,
   onSubmit,
 }: Props) {
+  useEffect(() => {
+    document.body.classList.toggle('ai-modal-open', open);
+    return () => document.body.classList.remove('ai-modal-open');
+  }, [open]);
+
   const [toAccountId, setToAccountId] = useState('');
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
@@ -70,7 +75,7 @@ export function AccountTransferSheet({
   };
 
   return (
-    <div className="fixed inset-0 z-[112] flex items-end bg-black/70 backdrop-blur-sm">
+    <div data-no-swipe="true" data-ai-core-modal="true" className="fixed inset-0 z-[120] flex items-end bg-black/70 backdrop-blur-sm">
       <div className="max-h-[92dvh] w-full overflow-y-auto rounded-t-[30px] border border-white/10 bg-[#0b1016] px-4 pb-6 pt-4 text-white shadow-2xl">
         <div className="mx-auto mb-4 h-1.5 w-14 rounded-full bg-white/15" />
 

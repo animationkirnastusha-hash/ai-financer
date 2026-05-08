@@ -125,6 +125,16 @@ export class AIManager {
     }
   }
 
+
+  async executeParsed(userId: string, command: string, parsedCommand: AIParsedCommand, riskLevel: 'low' | 'medium' | 'high' = 'medium'): Promise<AIResult> {
+    const startedAt = Date.now();
+
+    await this.applyContextFallback(parsedCommand, await this.memory.getRecentMessages(userId, 6));
+    const result = await this.executor.execute(userId, parsedCommand, riskLevel);
+    await this.logSuccess(userId, command, result, startedAt);
+    return result;
+  }
+
   private async logSuccess(userId: string, command: string, result: AIResult, startedAt: number) {
     await this.memory.saveMessage({
       userId,

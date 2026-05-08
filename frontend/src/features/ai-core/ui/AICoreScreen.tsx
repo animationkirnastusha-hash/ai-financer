@@ -197,6 +197,7 @@ export function AICoreScreen() {
     pendingActions,
     confirmAction,
     cancelAction,
+    updatePendingAction,
 
     isPendingOpen,
     openPending,
@@ -422,6 +423,7 @@ export function AICoreScreen() {
         onClose={closePending}
         onConfirm={handleAfterConfirm}
         onCancel={cancelAction}
+        onUpdate={updatePendingAction}
       />
 
       <TransactionsHistoryDrawer

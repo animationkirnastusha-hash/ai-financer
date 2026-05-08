@@ -38,6 +38,11 @@ export function EditAccountModal({ account, open, isSaving = false, onClose, onS
     setLockVisibility(Boolean(account.lockVisibility));
   }, [account]);
 
+  useEffect(() => {
+    document.body.classList.toggle('ai-modal-open', open);
+    return () => document.body.classList.remove('ai-modal-open');
+  }, [open]);
+
   if (!open || !account) return null;
 
   const handleSubmit = async () => {
@@ -58,7 +63,7 @@ export function EditAccountModal({ account, open, isSaving = false, onClose, onS
   };
 
   return (
-    <div className="fixed inset-0 z-[110] flex items-end bg-black/70 backdrop-blur-sm">
+    <div data-no-swipe="true" data-ai-core-modal="true" className="fixed inset-0 z-[120] flex items-end bg-black/70 backdrop-blur-sm">
       <div className="max-h-[92dvh] w-full overflow-y-auto rounded-t-[30px] border border-white/10 bg-[#0b1016] px-4 pb-6 pt-4 text-white shadow-2xl">
         <div className="mx-auto mb-4 h-1.5 w-14 rounded-full bg-white/15" />
         <div className="mx-auto max-w-[560px] space-y-4">

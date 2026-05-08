@@ -21,4 +21,7 @@ export const pendingActionsApi = {
 
   cancel: (pendingActionId: string) =>
     apiClient.post('/ai/cancel', { pendingActionId }),
+
+  update: (pendingActionId: string, payload: { parsed: Record<string, unknown>; command?: string }) =>
+    apiClient.patch(`/ai/pending-actions/${pendingActionId}`, payload),
 };

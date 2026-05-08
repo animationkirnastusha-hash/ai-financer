@@ -203,7 +203,7 @@ export function AICoreOrb({
       setGesture('holding');
       lockPageGestures();
       onHoldStart();
-    }, 420);
+    }, 620);
   };
 
   const handlePointerMove = (event: React.PointerEvent<HTMLButtonElement>) => {
@@ -214,7 +214,7 @@ export function AICoreOrb({
     const distance = Math.hypot(deltaX, deltaY);
 
     if (!didHoldRef.current) {
-      if (distance > 14) {
+      if (distance > 10) {
         resetPointerState();
       }
       return;
@@ -295,8 +295,8 @@ export function AICoreOrb({
         onClick={handleClick}
         onContextMenu={(event) => event.preventDefault()}
         className={cn(
-          'relative flex h-52 w-52 select-none items-center justify-center rounded-full border transition-all duration-300 sm:h-56 sm:w-56',
-          isListening ? 'touch-none' : 'touch-pan-y',
+          'relative flex h-52 w-52 select-none items-center justify-center rounded-full border transition-all duration-300 sm:h-56 sm:w-56 touch-none',
+          null,
           gesture === 'cancel' ? '-translate-x-4 border-rose-300/50 bg-rose-400/14 shadow-[0_0_80px_rgba(251,113,133,0.26)]' : null,
           gesture === 'lock' ? '-translate-y-4' : null,
           getRingClasses(state, isVoiceLocked),

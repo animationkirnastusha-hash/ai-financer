@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { PREMIUM_PLAN, PREMIUM_PRICE_NOTE } from '../model/premium.catalog';
 import { usePremiumStore } from '../model/premium.store';
 
@@ -6,6 +7,11 @@ export function PremiumUpgradeSheet() {
   const trigger = usePremiumStore((state) => state.activeTrigger);
   const close = usePremiumStore((state) => state.closePremium);
 
+  useEffect(() => {
+    document.body.classList.toggle('ai-modal-open', open);
+    return () => document.body.classList.remove('ai-modal-open');
+  }, [open]);
+
   if (!open || !trigger) return null;
 
   const primaryFeatures = PREMIUM_PLAN.featureGroups.flatMap((group) =>
@@ -13,7 +19,7 @@ export function PremiumUpgradeSheet() {
   );
 
   return (
-    <div className="fixed inset-0 z-[120] flex items-end bg-black/65 backdrop-blur-sm">
+    <div data-no-swipe="true" data-ai-core-modal="true" className="fixed inset-0 z-[120] flex items-end bg-black/65 backdrop-blur-sm">
       <div className="max-h-[92dvh] w-full overflow-y-auto rounded-t-[32px] border border-white/10 bg-[#0b1016] px-4 pb-[calc(env(safe-area-inset-bottom)+24px)] pt-4 text-white shadow-2xl">
         <div className="mx-auto mb-4 h-1.5 w-14 rounded-full bg-white/15" />
 

@@ -1,10 +1,26 @@
+import { useEffect, useState } from 'react';
+
 type Props = {
   onOpen: () => void;
 };
 
 export function AIAssistantDock({ onOpen }: Props) {
+  const [hiddenByModal, setHiddenByModal] = useState(false);
+
+  useEffect(() => {
+    const sync = () => setHiddenByModal(document.body.classList.contains('ai-modal-open'));
+    sync();
+
+    const observer = new MutationObserver(sync);
+    observer.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+
+    return () => observer.disconnect();
+  }, []);
+
+  if (hiddenByModal) return null;
+
   return (
-    <button 
+    <button
       type="button"
       onClick={onOpen}
       className="ai-assistant-dock fixed right-4 z-[60] flex h-14 w-14 items-center justify-center rounded-full border border-emerald-300/20 bg-[#0d1713]/80 text-white shadow-[0_0_44px_rgba(52,211,153,0.22)] backdrop-blur-xl transition active:scale-95"

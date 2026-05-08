@@ -206,6 +206,28 @@ export function useChatController() {
     [refreshFinanceState],
   );
 
+
+  const updatePendingAction = useCallback(
+    async (actionId: string, parsed: Record<string, unknown>, command?: string) => {
+      if (!actionId) return;
+
+      try {
+        const response: any = await pendingActionsApi.update(actionId, { parsed, command });
+        const updated = response?.pendingAction;
+
+        if (updated) {
+          setPendingActions((prev) =>
+            prev.map((item) => (item.id === actionId ? { ...item, ...updated } : item)),
+          );
+        }
+      } catch (error) {
+        console.error('Update pending action failed', error);
+        throw error;
+      }
+    },
+    [],
+  );
+
   const undoMessageAction = useCallback(
     async (auditLogId: string) => {
       if (!auditLogId) return;
@@ -265,6 +287,7 @@ export function useChatController() {
     sendMessage,
     confirmAction,
     cancelAction,
+    updatePendingAction,
     undoMessageAction,
 
     openPending,

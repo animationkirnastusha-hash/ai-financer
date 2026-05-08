@@ -69,40 +69,12 @@ const SLANG: Record<string, number> = {
   пятерочка: 5000,
 };
 
-const MAGNITUDE_WORDS = new Set([
-  'тыс',
-  'тыща',
-  'тыщи',
-  'тыщ',
-  'тысяча',
-  'тысячи',
-  'тысяч',
-  'к',
-  'k',
-  'млн',
-  'миллион',
-  'миллиона',
-  'миллионов',
-]);
-
+const THOUSAND_WORDS = new Set(['тыс', 'тыща', 'тыщи', 'тыщ', 'тысяча', 'тысячи', 'тысяч', 'к', 'k']);
+const MILLION_WORDS = new Set(['млн', 'миллион', 'миллиона', 'миллионов']);
 const CURRENCY_WORDS = new Set([
-  '₽',
-  'руб',
-  'рубль',
-  'рубля',
-  'рублей',
-  'р',
-  'доллар',
-  'доллара',
-  'долларов',
-  'бакс',
-  'бакса',
-  'баксов',
-  'usd',
-  '$',
-  'евро',
-  'eur',
-  '€',
+  '₽', 'руб', 'рубль', 'рубля', 'рублей', 'р',
+  'доллар', 'доллара', 'долларов', 'доллары', 'бакс', 'бакса', 'баксов', 'usd', '$',
+  'евро', 'eur', '€',
 ]);
 
 function normalizeToken(token: string) {
@@ -115,6 +87,17 @@ function normalizeToken(token: string) {
 
 function tokenValue(token: string) {
   return ONES[token] ?? TEENS[token] ?? TENS[token] ?? HUNDREDS[token] ?? null;
+}
+
+function isMagnitude(token?: string) {
+  return Boolean(token && (THOUSAND_WORDS.has(token) || MILLION_WORDS.has(token)));
+}
+
+function magnitudeMultiplier(token?: string) {
+  if (!token) return 1;
+  if (MILLION_WORDS.has(token)) return 1_000_000;
+  if (THOUSAND_WORDS.has(token)) return 1000;
+  return 1;
 }
 
 function parseNumberWords(tokens: string[], start: number) {
@@ -132,11 +115,9 @@ function parseNumberWords(tokens: string[], start: number) {
 
   if (!matched) return null;
 
-  const magnitude = tokens[index];
-  if (magnitude && MAGNITUDE_WORDS.has(magnitude)) {
-    const multiplier = magnitude === 'млн' || magnitude.startsWith('миллион') ? 1_000_000 : 1000;
+  if (isMagnitude(tokens[index])) {
+    value *= magnitudeMultiplier(tokens[index]);
     index += 1;
-    return { value: value * multiplier, end: index };
   }
 
   return { value, end: index };
@@ -144,23 +125,32 @@ function parseNumberWords(tokens: string[], start: number) {
 
 function parseDigitToken(tokens: string[], index: number) {
   const current = tokens[index];
-  const glued = current.match(/^(\d+(?:[.,]\d+)?)(кк|к|k|тыс|млн)$/i);
+  const compact = current.replace(/\s/g, '').replace(',', '.');
+  const glued = compact.match(/^(\d+(?:\.\d+)?)(кк|к|k|тыс|тысяч|тысячи|млн|миллион|миллиона|миллионов)$/i);
 
   if (glued) {
-    const num = Number(glued[1].replace(',', '.'));
-    const suffix = glued[2].toLowerCase();
-    const multiplier = suffix === 'кк' || suffix === 'млн' ? 1_000_000 : 1000;
-    return { value: Math.round(num * multiplier), end: index + 1 };
+    const num = Number(glued[1]);
+    const suffix = normalizeToken(glued[2]);
+    return { value: Math.round(num * magnitudeMultiplier(suffix)), end: index + 1 };
   }
 
-  if (!/^\d+(?:[.,]\d+)?$/.test(current)) return null;
+  if (!/^\d+(?:\.\d+)?$/.test(compact)) return null;
 
-  let value = Number(current.replace(',', '.'));
+  let value = Number(compact);
   let end = index + 1;
-  const next = tokens[end];
 
-  if (next && MAGNITUDE_WORDS.has(next)) {
-    value *= next === 'млн' || next.startsWith('миллион') ? 1_000_000 : 1000;
+  // 10 000 / 1 500 where split by space
+  if (tokens[end] && /^\d{3}$/.test(tokens[end])) {
+    let joined = current;
+    while (tokens[end] && /^\d{3}$/.test(tokens[end])) {
+      joined += tokens[end];
+      end += 1;
+    }
+    value = Number(joined);
+  }
+
+  if (isMagnitude(tokens[end])) {
+    value *= magnitudeMultiplier(tokens[end]);
     end += 1;
   }
 
@@ -177,41 +167,10 @@ export function normalizeAmount(value: unknown): number | null {
   const source = value.trim().toLowerCase().replaceAll('ё', 'е');
   if (!source) return null;
 
-  const clean = source.replace(/\s+/g, '');
-  const compact = clean.replace(',', '.');
-
-  if (SLANG[source]) return SLANG[source];
-
-  const gluedMatch = compact.match(/^(\d+(?:\.\d+)?)(кк|к|k|тыс|тысяч|тысячи|млн|миллион|миллиона|миллионов)$/i);
-  if (gluedMatch) {
-    const multiplier = gluedMatch[2].startsWith('м') || gluedMatch[2].startsWith('мил') || gluedMatch[2] === 'кк' ? 1_000_000 : 1000;
-    return Math.round(Number(gluedMatch[1]) * multiplier);
-  }
-
-  if (/^\d+(?:\.\d+)?$/.test(compact)) return Math.round(Number(compact));
+  const directSlang = SLANG[normalizeToken(source)];
+  if (directSlang) return directSlang;
 
   const tokens = source.split(/\s+/).map(normalizeToken).filter(Boolean);
-
-  if (tokens.length === 1 && SLANG[tokens[0]]) return SLANG[tokens[0]];
-
-  for (let index = 0; index < tokens.length; index += 1) {
-    const digit = parseDigitToken(tokens, index);
-    if (digit && digit.value > 0) return digit.value;
-
-    const words = parseNumberWords(tokens, index);
-    if (words && words.value > 0) return words.value;
-  }
-
-  return null;
-}
-
-export function extractAmountFromText(text: string): number | null {
-  const tokens = text
-    .toLowerCase()
-    .replaceAll('ё', 'е')
-    .split(/\s+/)
-    .map(normalizeToken)
-    .filter(Boolean);
 
   for (let index = 0; index < tokens.length; index += 1) {
     const slang = SLANG[tokens[index]];
@@ -225,6 +184,18 @@ export function extractAmountFromText(text: string): number | null {
   }
 
   return null;
+}
+
+export function extractAmountFromText(text: string): number | null {
+  return normalizeAmount(text);
+}
+
+export function extractBestAmountFromText(text: string, fallback?: unknown): number | null {
+  const fromText = extractAmountFromText(text);
+  const fromFallback = normalizeAmount(fallback);
+
+  if (fromText && fromFallback && fromFallback < 1000 && fromText >= 1000) return fromText;
+  return fromText ?? fromFallback;
 }
 
 export function stripAmountFromText(text: string) {
