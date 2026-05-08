@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useRef } from 'react';
 import type React from 'react';
 import { cn } from '@/shared/lib/cn';
 import type { AICoreState } from '@/features/ai-core/model/aiCore.types';
@@ -6,24 +6,25 @@ import type { AICoreState } from '@/features/ai-core/model/aiCore.types';
 type Props = {
   state: AICoreState;
   onTap: () => void;
-  onHoldStart: () => void;
-  onHoldEnd: () => void;
+  onHoldStart?: () => void;
+  onHoldEnd?: () => void;
+  onSwipeLeft?: () => void;
 };
 
 function getStateLabel(state: AICoreState) {
   if (state === 'listening') return 'Слушаю';
   if (state === 'thinking') return 'Думаю';
   if (state === 'responding') return 'Готово';
-  if (state === 'expanded') return 'Введите команду';
+  if (state === 'expanded') return 'Готов';
   return 'AI Core';
 }
 
 function getStateHint(state: AICoreState) {
-  if (state === 'listening') return 'удерживай, пока говоришь';
-  if (state === 'thinking') return 'проверяю действие';
+  if (state === 'listening') return 'свайп влево по сфере — выключить запись';
+  if (state === 'thinking') return 'разбираю запрос на действия';
   if (state === 'responding') return 'можно продолжать';
-  if (state === 'expanded') return 'или зажми сферу для голоса';
-  return 'нажми или зажми';
+  if (state === 'expanded') return 'тап по сфере — включить голос';
+  return 'тап — включить голос, текст снизу';
 }
 
 function getRingClasses(state: AICoreState) {
@@ -42,88 +43,39 @@ function getRingClasses(state: AICoreState) {
   return 'border-emerald-300/30 bg-emerald-400/8 shadow-[0_0_86px_rgba(45,212,191,0.24)]';
 }
 
-export function AICoreOrb({ state, onTap, onHoldStart, onHoldEnd }: Props) {
-  const holdTimerRef = useRef<number | null>(null);
-  const didHoldRef = useRef(false);
+export function AICoreOrb({ state, onTap, onSwipeLeft }: Props) {
   const pointerIsDownRef = useRef(false);
-  const cancelledByMoveRef = useRef(false);
   const startXRef = useRef(0);
   const startYRef = useRef(0);
-
-  const clearHoldTimer = () => {
-    if (holdTimerRef.current !== null) {
-      window.clearTimeout(holdTimerRef.current);
-      holdTimerRef.current = null;
-    }
-  };
-
-  const finishPointerInteraction = () => {
-    if (!pointerIsDownRef.current) return;
-
-    const wasHold = didHoldRef.current;
-    const wasCancelled = cancelledByMoveRef.current;
-
-    clearHoldTimer();
-
-    pointerIsDownRef.current = false;
-    didHoldRef.current = false;
-    cancelledByMoveRef.current = false;
-
-    if (wasCancelled) return;
-
-    if (wasHold) {
-      onHoldEnd();
-      return;
-    }
-
-    onTap();
-  };
-
-  useEffect(() => {
-    const handleGlobalPointerUp = () => finishPointerInteraction();
-
-    const handleGlobalPointerCancel = () => {
-      clearHoldTimer();
-      pointerIsDownRef.current = false;
-      didHoldRef.current = false;
-      cancelledByMoveRef.current = false;
-    };
-
-    window.addEventListener('pointerup', handleGlobalPointerUp);
-    window.addEventListener('pointercancel', handleGlobalPointerCancel);
-
-    return () => {
-      window.removeEventListener('pointerup', handleGlobalPointerUp);
-      window.removeEventListener('pointercancel', handleGlobalPointerCancel);
-    };
-  }, []);
+  const swipedRef = useRef(false);
 
   const handlePointerDown = (event: React.PointerEvent<HTMLButtonElement>) => {
     pointerIsDownRef.current = true;
-    didHoldRef.current = false;
-    cancelledByMoveRef.current = false;
+    swipedRef.current = false;
     startXRef.current = event.clientX;
     startYRef.current = event.clientY;
-
-    clearHoldTimer();
-
-    holdTimerRef.current = window.setTimeout(() => {
-      if (!pointerIsDownRef.current || cancelledByMoveRef.current) return;
-
-      didHoldRef.current = true;
-      onHoldStart();
-    }, 340);
   };
 
   const handlePointerMove = (event: React.PointerEvent<HTMLButtonElement>) => {
-    if (!pointerIsDownRef.current) return;
+    if (!pointerIsDownRef.current || swipedRef.current) return;
 
-    const deltaX = Math.abs(event.clientX - startXRef.current);
+    const deltaX = event.clientX - startXRef.current;
     const deltaY = Math.abs(event.clientY - startYRef.current);
 
-    if (deltaX > 14 || deltaY > 14) {
-      cancelledByMoveRef.current = true;
-      clearHoldTimer();
+    if (state === 'listening' && deltaX < -46 && deltaY < 42) {
+      swipedRef.current = true;
+      pointerIsDownRef.current = false;
+      onSwipeLeft?.();
+    }
+  };
+
+  const handlePointerUp = () => {
+    if (!pointerIsDownRef.current) return;
+
+    pointerIsDownRef.current = false;
+
+    if (!swipedRef.current && state !== 'listening') {
+      onTap();
     }
   };
 
@@ -133,6 +85,11 @@ export function AICoreOrb({ state, onTap, onHoldStart, onHoldEnd }: Props) {
         type="button"
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={() => {
+          pointerIsDownRef.current = false;
+          swipedRef.current = false;
+        }}
         onContextMenu={(event) => event.preventDefault()}
         className={cn(
           'relative flex h-52 w-52 select-none items-center justify-center rounded-full border transition-all duration-300 active:scale-[0.985] sm:h-56 sm:w-56',
@@ -146,13 +103,19 @@ export function AICoreOrb({ state, onTap, onHoldStart, onHoldEnd }: Props) {
         <div className="absolute inset-9 rounded-full border border-white/8" />
 
         {state === 'listening' ? (
-          <div className="absolute bottom-12 flex items-end gap-1">
-            <span className="h-3 w-1 rounded-full bg-cyan-200/60" />
-            <span className="h-6 w-1 rounded-full bg-cyan-200/80" />
-            <span className="h-4 w-1 rounded-full bg-cyan-200/65" />
-            <span className="h-7 w-1 rounded-full bg-cyan-200/90" />
-            <span className="h-3 w-1 rounded-full bg-cyan-200/60" />
-          </div>
+          <>
+            <div className="absolute bottom-12 flex items-end gap-1">
+              <span className="h-3 w-1 animate-pulse rounded-full bg-cyan-200/60" />
+              <span className="h-6 w-1 animate-pulse rounded-full bg-cyan-200/80 [animation-delay:80ms]" />
+              <span className="h-4 w-1 animate-pulse rounded-full bg-cyan-200/65 [animation-delay:140ms]" />
+              <span className="h-7 w-1 animate-pulse rounded-full bg-cyan-200/90 [animation-delay:220ms]" />
+              <span className="h-3 w-1 animate-pulse rounded-full bg-cyan-200/60 [animation-delay:300ms]" />
+            </div>
+
+            <div className="absolute -left-6 top-1/2 -translate-y-1/2 rounded-full border border-cyan-200/20 bg-cyan-300/10 px-3 py-1 text-[11px] text-cyan-100">
+              ← стоп
+            </div>
+          </>
         ) : null}
 
         <div className="relative text-center">
@@ -164,7 +127,7 @@ export function AICoreOrb({ state, onTap, onHoldStart, onHoldEnd }: Props) {
             {getStateLabel(state)}
           </div>
 
-          <div className="mt-2 text-sm text-white/42">{getStateHint(state)}</div>
+          <div className="mt-2 max-w-36 text-sm text-white/42">{getStateHint(state)}</div>
         </div>
       </button>
     </div>

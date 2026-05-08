@@ -21,6 +21,33 @@ export class AIExecutorService {
     riskLevel: 'low' | 'medium' | 'high'
   ): Promise<AIResult> {
     switch (parsedCommand.intent) {
+      case 'batch': {
+        const results: AIResult[] = [];
+
+        for (const action of parsedCommand.actions) {
+          const result = await this.execute(userId, action, riskLevel);
+          results.push(result);
+        }
+
+        const executedCount = results.filter((result) => result.executed).length;
+        const messages = results.map((result) => result.message.replace(/^✅\s*/u, '').replace(/^✨\s*/u, '').replace(/^🗂️\s*/u, ''));
+
+        return {
+          success: results.every((result) => result.success),
+          intent: 'batch',
+          executed: true,
+          requiresConfirmation: false,
+          riskLevel,
+          message: `✅ Сделал ${executedCount} действий: ${messages.join(' ')}`,
+          parsed: {
+            type: 'batch',
+            summary: parsedCommand.summary ?? null,
+            actions: results.map((result) => result.parsed),
+          },
+          data: results.map((result) => result.data),
+        };
+      }
+
       case 'expense': {
         const account = await this.resolver.resolveAccountForMoneyFlow(userId, parsedCommand.accountName);
         const category = await this.resolver.findOrCreateCategory(userId, parsedCommand.rawCategory, 'expense');
@@ -132,11 +159,16 @@ export class AIExecutorService {
       }
 
       case 'create_category': {
+        const section = parsedCommand.sectionName
+          ? await sectionService.findOrCreateSection(userId, parsedCommand.sectionName)
+          : null;
+
         const category = await categoryService.createCategory(userId, {
           name: parsedCommand.name,
           type: parsedCommand.type,
           icon: parsedCommand.type === 'income' ? '💰' : '📝',
           color: parsedCommand.type === 'income' ? '#00ffaa' : '#ff6b6b',
+          sectionId: section?.id ?? null,
         });
 
         return {
@@ -149,6 +181,8 @@ export class AIExecutorService {
           parsed: {
             name: parsedCommand.name,
             type: parsedCommand.type,
+            sectionId: section?.id ?? null,
+            sectionName: section?.name ?? null,
           },
           data: category,
         };

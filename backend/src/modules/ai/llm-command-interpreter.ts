@@ -22,6 +22,58 @@ const SYSTEM_PROMPT = `
 Если не понял:
 {"intent":"unknown"}
 
+
+========================
+AI-NATIVE MULTI ACTION MODE
+========================
+
+Пользователь может говорить естественно, не командами.
+Твоя задача — понять намерение и разложить сообщение на backend-действия.
+Не заставляй пользователя подбирать слова.
+
+Если в одном сообщении несколько действий, верни:
+{
+  "intent":"batch",
+  "summary":"коротко что будет сделано",
+  "actions":[ ... ]
+}
+
+Примеры:
+"Создай счет Наличка и положи туда 50 тысяч рублей"
+{
+  "intent":"batch",
+  "summary":"создать счет Наличка и записать доход 50000 на него",
+  "actions":[
+    {"intent":"create_account","name":"Наличка","type":"cash","currency":"RUB","balance":0},
+    {"intent":"income","amount":50000,"rawCategory":"пополнение","description":"пополнение счета Наличка","accountName":"Наличка"}
+  ]
+}
+
+"Создай раздел Дом, категорию продукты и запиши туда магнит 1200"
+{
+  "intent":"batch",
+  "summary":"создать структуру Дом/продукты и записать расход",
+  "actions":[
+    {"intent":"create_section","name":"Дом"},
+    {"intent":"create_category","name":"продукты","type":"expense","sectionName":"Дом"},
+    {"intent":"expense","amount":1200,"rawCategory":"продукты","description":"магнит","sectionName":"Дом"}
+  ]
+}
+
+"Положи 50к на наличку" = income на счет наличка.
+"Закинь 10 тысяч на карту" = income на счет карта.
+"Сними 5000 с карты в наличку" = transfer с карты на наличку.
+"Купил продуктов в дом на 1500" = expense, rawCategory продукты, sectionName Дом.
+
+Базовая версия должна делать все доступные ручные действия через AI:
+- создать/изменить счета, категории, разделы;
+- записать доход, расход, перевод;
+- распределить расходы по разделам;
+- показать счета и базовую статистику.
+
+Если запрос содержит premium-часть, НЕ отказывайся.
+Сделай базовую часть запроса, а premium-часть можешь описать как рекомендацию в message/summary только если она не требует backend-действия.
+
 ========================
 SUPPORTED INTENTS
 ========================
@@ -40,6 +92,7 @@ advice
 repeat_last
 help
 unknown
+batch
 
 ========================
 ВАЖНО
@@ -305,7 +358,7 @@ UNKNOWN
 }
 
 Последнее правило:
-верни только один валидный JSON object.
+верни один валидный JSON object. Если в сообщении несколько действий — верни batch.
 `;
 
 function stripThinkingBlocks(value: string) {
@@ -349,11 +402,39 @@ function asPositiveNumber(value: unknown) {
   return amount;
 }
 
+
+function normalizeAction(input: unknown): AIParsedCommand {
+  const parsed = normalizeParsed(input);
+  if (parsed.intent === 'batch') {
+    return { intent: 'unknown' };
+  }
+  return parsed;
+}
+
+function isExecutableBatchAction(action: AIParsedCommand): action is Exclude<AIParsedCommand, { intent: 'batch' } | { intent: 'unknown' }> {
+  return action.intent !== 'batch' && action.intent !== 'unknown';
+}
+
 function normalizeParsed(input: unknown): AIParsedCommand {
   if (!input || typeof input !== 'object') return { intent: 'unknown' };
 
   const data = input as Record<string, unknown>;
   const intent = asString(data.intent, 'unknown').toLowerCase();
+
+  if (intent === 'batch') {
+    const rawActions = Array.isArray(data.actions) ? data.actions : [];
+    const actions = rawActions.map(normalizeAction).filter(isExecutableBatchAction);
+
+    if (actions.length === 0) {
+      return { intent: 'unknown' };
+    }
+
+    return {
+      intent: 'batch',
+      actions,
+      summary: data.summary ? asString(data.summary) : undefined,
+    };
+  }
 
   if (intent === 'expense' || intent === 'income') {
     const rawCategory = asString(
@@ -399,7 +480,8 @@ function normalizeParsed(input: unknown): AIParsedCommand {
       intent: 'create_category',
       name: asString(data.name || data.rawCategory, 'Новая категория'),
       type: data.type === 'income' ? 'income' : 'expense',
-    };
+      sectionName: data.sectionName ? asString(data.sectionName) : undefined,
+    } as AIParsedCommand;
   }
 
   if (intent === 'create_section') {
@@ -455,6 +537,65 @@ function normalizeParsed(input: unknown): AIParsedCommand {
   return { intent: 'unknown' };
 }
 
+
+function parseHumanMoneyAmount(raw: string): number | null {
+  const normalized = raw.toLowerCase().replace(',', '.').replace(/\s+/g, ' ').trim();
+  const match = normalized.match(/(\d+(?:\.\d+)?)\s*(к|тыс|тысяч|млн|миллион|миллиона|миллионов)?/i);
+  if (!match) return null;
+  const base = Number(match[1]);
+  if (!Number.isFinite(base) || base <= 0) return null;
+  const unit = match[2] ?? '';
+  if (/^(к|тыс|тысяч)$/i.test(unit)) return base * 1000;
+  if (/^(млн|миллион|миллиона|миллионов)$/i.test(unit)) return base * 1000000;
+  return base;
+}
+
+function inferAccountType(name: string, command: string) {
+  const value = `${name} ${command}`.toLowerCase().replace(/ё/g, 'е');
+  if (/налич|кэш|cash/.test(value)) return 'cash';
+  if (/копил|накоп|сбер|saving/.test(value)) return 'savings';
+  if (/инвест|брокер/.test(value)) return 'investment';
+  return 'card';
+}
+
+function parseNaturalCompositeFallback(command: string): AIParsedCommand | null {
+  const normalized = command.trim().replace(/\s+/g, ' ');
+  const lower = normalized.toLowerCase().replace(/ё/g, 'е');
+
+  const createAndPut = lower.match(/(?:создай|открой)\s+счет\s+(.+?)\s+(?:и\s+)?(?:положи|закинь|пополн|добавь|внеси)\s+(?:туда\s+|на\s+него\s+|в\s+него\s+)?(.+?)(?:\s+руб|\s+рублей|$)/i);
+  if (createAndPut) {
+    const name = createAndPut[1].trim().replace(/[.,!?]+$/g, '');
+    const amount = parseHumanMoneyAmount(createAndPut[2]);
+    if (name && amount) {
+      return {
+        intent: 'batch',
+        summary: `Создать счёт «${name}» и записать на него доход ${amount}`,
+        actions: [
+          { intent: 'create_account', name, type: inferAccountType(name, lower), currency: 'RUB', balance: 0 },
+          { intent: 'income', amount, rawCategory: 'пополнение', description: `пополнение счёта ${name}`, accountName: name },
+        ],
+      };
+    }
+  }
+
+  const putToAccount = lower.match(/(?:положи|закинь|пополн|добавь|внеси)\s+(.+?)\s+(?:на|в)\s+(?:счет\s+)?(.+)$/i);
+  if (putToAccount) {
+    const amount = parseHumanMoneyAmount(putToAccount[1]);
+    const accountName = putToAccount[2].trim().replace(/[.,!?]+$/g, '');
+    if (amount && accountName) {
+      return {
+        intent: 'income',
+        amount,
+        rawCategory: 'пополнение',
+        description: `пополнение счёта ${accountName}`,
+        accountName,
+      };
+    }
+  }
+
+  return null;
+}
+
 export class LLMCommandInterpreter {
   private readonly fallbackParser = new AIParser();
   private readonly ollama = new OllamaProvider();
@@ -485,6 +626,9 @@ private pickModel(command: string) {
     if (!trimmed) {
       throw new BadRequestError('Command is required');
     }
+
+    const naturalComposite = parseNaturalCompositeFallback(trimmed);
+    if (naturalComposite) return naturalComposite;
 
     const fastResult = fastFinanceParse(trimmed);
     if (fastResult) return fastResult;

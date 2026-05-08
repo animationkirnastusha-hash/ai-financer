@@ -4,7 +4,6 @@ import type {
   AICoreMode,
   AICoreState,
 } from '@/features/ai-core/model/aiCore.types';
-import { splitAICommands } from '@/features/ai-core/lib/splitAICommands';
 import { useChatController } from '@/features/chat/model/useChatController';
 import { parseNavigationIntent } from '@/features/navigation/lib/parseNavigationIntent';
 import { useNavigationStore } from '@/features/navigation/model/navigation.store';
@@ -58,16 +57,11 @@ export function useAICoreController() {
 
   const handleIntentOrMessage = useCallback(
     async (rawText: string) => {
-      const parts = splitAICommands(rawText);
-
-      if (parts.length === 0) return;
+      const text = rawText.trim();
+      if (!text) return;
 
       setCoreState('thinking');
-
-      for (const part of parts) {
-        await handleSingleCommand(part);
-      }
-
+      await handleSingleCommand(text);
       setInputValue('');
     },
     [handleSingleCommand],
@@ -178,10 +172,34 @@ export function useAICoreController() {
     [handleIntentOrMessage, voice],
   );
 
+  const stopVoiceRecording = useCallback(() => {
+    if (voice.state !== 'recording') return;
+
+    telegramHaptic('light');
+    setCoreState('thinking');
+    voice.stop();
+  }, [voice]);
+
   const handleOrbTap = useCallback(() => {
     voice.stopSpeaking();
-    openCommandPanel();
-  }, [openCommandPanel, voice]);
+
+    if (!voiceEnabled || !voiceBetaEnabled) {
+      openCommandPanel();
+      return;
+    }
+
+    if (voice.state === 'recording') {
+      stopVoiceRecording();
+      return;
+    }
+
+    telegramHaptic('medium');
+    setMode('voice');
+    setIsCommandPanelOpen(true);
+    setInputValue('');
+    setCoreState('listening');
+    voice.start();
+  }, [openCommandPanel, stopVoiceRecording, voice, voiceBetaEnabled, voiceEnabled]);
 
   const handleOrbHoldStart = useCallback(() => {
     if (!voiceEnabled || !voiceBetaEnabled) {
@@ -237,6 +255,7 @@ export function useAICoreController() {
     handleOrbTap,
     handleOrbHoldStart,
     handleOrbHoldEnd,
+    stopVoiceRecording,
     submit,
 
     latestAssistantMessage,

@@ -40,6 +40,7 @@ export function AICoreScreen() {
     handleOrbTap,
     handleOrbHoldStart,
     handleOrbHoldEnd,
+    stopVoiceRecording,
 
     latestAssistantMessage,
 
@@ -126,7 +127,7 @@ export function AICoreScreen() {
         </header>
 
         {/* BODY */}
-        <div className="flex-1 overflow-y-auto px-4 pb-44 no-scrollbar">
+        <div className="flex-1 overflow-y-auto px-4 pb-36 no-scrollbar">
 
           <div className="space-y-4">
 
@@ -171,15 +172,16 @@ export function AICoreScreen() {
                 onTap={handleOrbTap}
                 onHoldStart={handleOrbHoldStart}
                 onHoldEnd={handleOrbHoldEnd}
+                onSwipeLeft={stopVoiceRecording}
               />
 
               <div className="mt-5 text-center">
                 <div className="text-lg font-medium text-white">
-                  Нажми и скажи
+                  Нажми сферу и говори
                 </div>
 
                 <div className="mt-1 text-sm text-white/38">
-                  или напиши команду ниже
+                  свайп сферы влево остановит запись
                 </div>
               </div>
             </section>

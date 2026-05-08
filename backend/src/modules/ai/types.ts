@@ -12,6 +12,7 @@ export type AIIntent =
   | 'advice'
   | 'repeat_last'
   | 'help'
+  | 'batch'
   | 'unknown';
 
 export type AIRiskLevel = 'low' | 'medium' | 'high';
@@ -54,6 +55,7 @@ export interface AIParsedCreateCategory {
   intent: 'create_category';
   name: string;
   type: 'income' | 'expense';
+  sectionName?: string;
 }
 
 export interface AIParsedCreateSection {
@@ -104,6 +106,27 @@ export interface AIParsedHelp {
   intent: 'help';
 }
 
+export type AIParsedBatchAction =
+  | AIParsedExpense
+  | AIParsedIncome
+  | AIParsedTransfer
+  | AIParsedShowAccounts
+  | AIParsedCreateCategory
+  | AIParsedCreateSection
+  | AIParsedAssignExpensesToSection
+  | AIParsedCreateAccount
+  | AIParsedStats
+  | AIParsedFinancialPlanning
+  | AIParsedAdvice
+  | AIParsedRepeatLast
+  | AIParsedHelp;
+
+export interface AIParsedBatch {
+  intent: 'batch';
+  actions: AIParsedBatchAction[];
+  summary?: string;
+}
+
 export interface AIParsedUnknown {
   intent: 'unknown';
 }
@@ -122,6 +145,7 @@ export type AIParsedCommand =
   | AIParsedAdvice
   | AIParsedRepeatLast
   | AIParsedHelp
+  | AIParsedBatch
   | AIParsedUnknown;
 
 export interface AIActionPolicyResult {

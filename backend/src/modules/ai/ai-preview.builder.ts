@@ -17,6 +17,36 @@ export class AIPreviewBuilder {
     reason?: string
   ): Promise<AIResult> {
     switch (parsedCommand.intent) {
+      case 'batch': {
+        const lines = parsedCommand.actions.map((action, index) => {
+          if (action.intent === 'create_account') return `${index + 1}. Создать счёт «${action.name}»`;
+          if (action.intent === 'income') return `${index + 1}. Записать доход ${action.amount} ₽${action.accountName ? ` на «${action.accountName}»` : ''}`;
+          if (action.intent === 'expense') return `${index + 1}. Записать расход ${action.amount} ₽ — ${action.rawCategory}`;
+          if (action.intent === 'transfer') return `${index + 1}. Перевести ${action.amount} ₽ на «${action.toAccountName}»`;
+          if (action.intent === 'create_section') return `${index + 1}. Создать раздел «${action.name}»`;
+          if (action.intent === 'create_category') return `${index + 1}. Создать категорию «${action.name}»`;
+          if (action.intent === 'assign_expenses_to_section') return `${index + 1}. Перенести расходы «${action.rawQuery}» в «${action.sectionName}»`;
+          return `${index + 1}. Выполнить ${action.intent}`;
+        });
+
+        return {
+          success: true,
+          intent: 'batch',
+          executed: false,
+          requiresConfirmation,
+          riskLevel,
+          message: requiresConfirmation
+            ? `Я понял запрос как ${parsedCommand.actions.length} действий. Подтверди, и я выполню:\n${lines.join('\n')}`
+            : `Я понял запрос как ${parsedCommand.actions.length} действий:\n${lines.join('\n')}`,
+          parsed: {
+            type: 'batch',
+            summary: parsedCommand.summary ?? null,
+            actions: parsedCommand.actions,
+            reason: reason ?? null,
+          },
+        };
+      }
+
       case 'help':
         return {
           success: true,
@@ -213,6 +243,7 @@ export class AIPreviewBuilder {
           parsed: {
             name: parsedCommand.name,
             type: parsedCommand.type,
+            sectionName: parsedCommand.sectionName ?? null,
             icon: parsedCommand.type === 'income' ? '💰' : '📝',
             color: parsedCommand.type === 'income' ? '#00ffaa' : '#ff6b6b',
           },

@@ -19,14 +19,6 @@ export function AICoreInput({
   const [focused, setFocused] = useState(false);
 
   useEffect(() => {
-    const timer = window.setTimeout(() => {
-      inputRef.current?.focus();
-    }, 120);
-
-    return () => window.clearTimeout(timer);
-  }, []);
-
-  useEffect(() => {
     const input = inputRef.current;
     if (!input) return;
 
@@ -37,7 +29,7 @@ export function AICoreInput({
   const submit = async () => {
     if (disabled || !value.trim()) return;
     await onSubmit();
-    inputRef.current?.focus();
+    window.setTimeout(() => inputRef.current?.focus(), 40);
   };
 
   const handleKeyDown = async (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -49,15 +41,11 @@ export function AICoreInput({
 
   return (
     <div
-      className={`z-[90] mx-auto w-full max-w-[560px] px-4 transition-all ${
-        focused
-          ? 'fixed bottom-[calc(env(safe-area-inset-bottom)+8px)] left-0 right-0'
-          : ''
-      }`}
+      className="fixed bottom-[calc(env(safe-area-inset-bottom)+8px)] left-0 right-0 z-[90] mx-auto w-full max-w-[560px] px-4"
       data-ai-composer="true"
       data-no-swipe="true"
     >
-      <div className="rounded-[28px] border border-white/10 bg-[#0b1016]/95 p-2 shadow-2xl backdrop-blur-xl">
+      <div className="rounded-[28px] border border-white/10 bg-[#0b1016]/95 p-2 shadow-[0_-18px_60px_rgba(0,0,0,0.45)] backdrop-blur-xl">
         <div className="flex items-end gap-2">
           <textarea
             ref={inputRef}
@@ -72,7 +60,7 @@ export function AICoreInput({
             }}
             onChange={(event) => onChange(event.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Кофе 350, +50000 зарплата..."
+            placeholder="Напиши как человеку: создай Наличка и положи туда 50к"
             rows={1}
             className="max-h-32 min-h-12 flex-1 resize-none rounded-[22px] border border-white/8 bg-black/25 px-4 py-3 text-base leading-6 text-white outline-none placeholder:text-white/30"
           />
@@ -102,22 +90,20 @@ export function AICoreInput({
           </button>
         </div>
 
-        {focused ? (
-          <div className="flex items-center justify-between px-3 pb-1 pt-2 text-[11px] text-white/35">
-            <span>Enter — отправить, Shift+Enter — новая строка</span>
+        <div className="flex items-center justify-between px-3 pb-1 pt-2 text-[11px] text-white/35">
+          <span>{focused ? 'Enter — отправить, Shift+Enter — новая строка' : 'Поле ввода всегда закреплено снизу'}</span>
 
-            {onClose ? (
-              <button
-                type="button"
-                onMouseDown={(event) => event.preventDefault()}
-                onClick={onClose}
-                className="text-white/45"
-              >
-                Свернуть
-              </button>
-            ) : null}
-          </div>
-        ) : null}
+          {onClose ? (
+            <button
+              type="button"
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={onClose}
+              className="text-white/45"
+            >
+              Очистить
+            </button>
+          ) : null}
+        </div>
       </div>
     </div>
   );
