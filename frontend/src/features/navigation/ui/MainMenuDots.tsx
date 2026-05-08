@@ -28,39 +28,39 @@ export function MainMenuDots({
   currentScreen,
   onNavigate,
   items = MAIN_ITEMS,
-  bottomOffset = 16,
+  bottomOffset = 8,
 }: Props) {
-  const [composerFocused, setComposerFocused] = useState(false);
+  const [hiddenByUi, setHiddenByUi] = useState(false);
 
   useEffect(() => {
     const sync = () => {
-      setComposerFocused(document.body.classList.contains('ai-composer-focused'));
-    };
-
-    const handleFocusChange = (event: Event) => {
-      const customEvent = event as CustomEvent<{ focused?: boolean }>;
-      setComposerFocused(Boolean(customEvent.detail?.focused));
+      setHiddenByUi(
+        document.body.classList.contains('ai-composer-focused') ||
+          document.body.classList.contains('ai-core-modal-open'),
+      );
     };
 
     sync();
-    window.addEventListener('ai-composer-focus-change', handleFocusChange);
-    window.visualViewport?.addEventListener('resize', sync);
 
-    return () => {
-      window.removeEventListener('ai-composer-focus-change', handleFocusChange);
-      window.visualViewport?.removeEventListener('resize', sync);
-    };
+    const observer = new MutationObserver(sync);
+    observer.observe(document.body, {
+      attributes: true,
+      attributeFilter: ['class'],
+    });
+
+    return () => observer.disconnect();
   }, []);
-
-  if (composerFocused) return null;
 
   return (
     <div
-      className="pointer-events-none fixed left-0 right-0 z-[95] flex justify-center transition-opacity duration-200"
+      className={`main-nav-dots pointer-events-auto fixed left-0 right-0 z-[70] flex justify-center px-4 transition duration-200 ${
+        hiddenByUi ? 'translate-y-2 opacity-0 pointer-events-none' : 'translate-y-0 opacity-100'
+      }`}
       style={{ bottom: `calc(env(safe-area-inset-bottom) + ${bottomOffset}px)` }}
       data-no-swipe="true"
+      aria-hidden={hiddenByUi}
     >
-      <div className="pointer-events-auto flex items-center gap-2 rounded-full border border-white/10 bg-black/45 px-3 py-2 shadow-2xl backdrop-blur-xl">
+      <div className="flex items-center gap-2 rounded-full border border-white/10 bg-black/35 px-3 py-2 shadow-2xl backdrop-blur-xl">
         {items.map((item) => {
           const active = item.screen === currentScreen;
 
@@ -76,6 +76,7 @@ export function MainMenuDots({
               }`}
               aria-label={item.aria}
               title={item.aria}
+              tabIndex={hiddenByUi ? -1 : 0}
             />
           );
         })}

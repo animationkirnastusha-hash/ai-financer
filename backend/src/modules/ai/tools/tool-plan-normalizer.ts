@@ -28,6 +28,24 @@ function asAmount(value: unknown) {
   return Number.isFinite(numberValue) && numberValue > 0 ? Math.round(numberValue) : null;
 }
 
+
+function cleanAccountName(value: unknown, fallback = 'Новый счёт') {
+  const raw = asString(value, fallback);
+  const cleaned = raw
+    .replace(/^и\s+/i, '')
+    .replace(/^а\s+/i, '')
+    .replace(/^назов(?:и|ем|ать)\s+(?:его|ее|её|счет|счёт)?\s*/i, '')
+    .replace(/^с\s+названием\s+/i, '')
+    .replace(/^под\s+названием\s+/i, '')
+    .replace(/\s+(?:и|потом|затем)\s+(?:положи|закинь|внеси|пополни|добавь|зачисли).+$/i, '')
+    .replace(/\b(?:положи|закинь|внеси|пополни|добавь|зачисли)\b.+$/i, '')
+    .replace(/[«»"]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  return cleaned || fallback;
+}
+
 function normalizeCurrency(value: unknown): 'RUB' | 'USD' | 'EUR' {
   const raw = asString(value, 'RUB').toLowerCase();
 
@@ -57,7 +75,7 @@ function convertToolCall(call: AIToolCall): AIParsedAtomicCommand[] {
 
   switch (call.tool) {
     case 'create_account': {
-      const name = asString(args.name || args.accountName, 'Новый счёт');
+      const name = cleanAccountName(args.name || args.accountName, 'Новый счёт');
       const initialBalance = asAmount(args.initialBalance ?? args.balance);
       const currency = normalizeCurrency(args.currency);
 
@@ -102,7 +120,7 @@ function convertToolCall(call: AIToolCall): AIParsedAtomicCommand[] {
               amount,
               rawCategory: category,
               description: asString(args.description, category),
-              accountName: asOptionalString(args.accountName),
+              accountName: asOptionalString(args.accountName ? cleanAccountName(args.accountName, '') : undefined),
               sectionName: asOptionalString(args.sectionName),
             }
           : {
@@ -110,7 +128,7 @@ function convertToolCall(call: AIToolCall): AIParsedAtomicCommand[] {
               amount,
               rawCategory: category,
               description: asString(args.description, category),
-              accountName: asOptionalString(args.accountName),
+              accountName: asOptionalString(args.accountName ? cleanAccountName(args.accountName, '') : undefined),
               sectionName: asOptionalString(args.sectionName),
             },
       ];
@@ -118,7 +136,7 @@ function convertToolCall(call: AIToolCall): AIParsedAtomicCommand[] {
 
     case 'transfer_money': {
       const amount = asAmount(args.amount);
-      const toAccountName = asString(args.toAccountName || args.to || args.targetAccountName);
+      const toAccountName = cleanAccountName(args.toAccountName || args.to || args.targetAccountName, '');
 
       if (!amount || !toAccountName) return [];
 
@@ -126,7 +144,7 @@ function convertToolCall(call: AIToolCall): AIParsedAtomicCommand[] {
         {
           intent: 'transfer',
           amount,
-          fromAccountName: asOptionalString(args.fromAccountName || args.from || args.sourceAccountName),
+          fromAccountName: asOptionalString(args.fromAccountName || args.from || args.sourceAccountName ? cleanAccountName(args.fromAccountName || args.from || args.sourceAccountName, '') : undefined),
           toAccountName,
         },
       ];

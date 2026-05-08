@@ -106,3 +106,39 @@ body.ai-composer-focused .ai-assistant-dock {
 .ai-pressable:active {
   transform: scale(0.985);
 }
+
+body.ai-core-modal-open .main-nav-dots,
+body.ai-core-modal-open .ai-assistant-dock {
+  display: none !important;
+}
+
+.ai-screen-transition {
+  animation: aiScreenSlide 240ms cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: transform, opacity;
+}
+
+@keyframes aiScreenSlide {
+  from {
+    opacity: 0.78;
+    transform: translateX(18px) scale(0.995);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+body.ai-screen-slide-right .ai-screen-transition {
+  animation-name: aiScreenSlideRight;
+}
+
+@keyframes aiScreenSlideRight {
+  from {
+    opacity: 0.78;
+    transform: translateX(-18px) scale(0.995);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}

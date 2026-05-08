@@ -4,56 +4,73 @@ type Props = {
   onRunCommand: (command: string) => void;
 };
 
-const capabilities = [
-  'Создание счетов, доходов, расходов и переводов',
-  'Настройка разделов и категорий',
-  'Распределение операций по смыслу',
-  'Переходы по экранам приложения',
+const items = [
+  {
+    title: 'AI Core',
+    description: 'Вернуться к главному AI-экрану',
+    command: 'открой главный экран',
+  },
+  {
+    title: 'Счета',
+    description: 'Открыть счета и баланс',
+    command: 'открой счета',
+  },
+  {
+    title: 'История',
+    description: 'Открыть все операции',
+    command: 'открой историю операций',
+  },
+  {
+    title: 'Разделы и категории',
+    description: 'Настроить структуру расходов',
+    command: 'открой разделы и категории',
+  },
+  {
+    title: 'Настройки',
+    description: 'Открыть настройки приложения',
+    command: 'открой настройки',
+  },
 ];
 
-export function CommandListSheet({ open, onClose }: Props) {
+export function CommandListSheet({ open, onClose, onRunCommand }: Props) {
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[90] flex items-end bg-black/60 backdrop-blur-sm" data-no-swipe="true">
-      <div className="max-h-[82dvh] w-full overflow-y-auto rounded-t-[28px] border border-white/10 bg-[#0b1016] px-4 pb-6 pt-4 text-white shadow-2xl">
+    <div className="fixed inset-0 z-[120] flex items-end bg-black/60 px-3 pb-3 backdrop-blur-sm" data-no-swipe="true">
+      <div className="mx-auto max-h-[86dvh] w-full max-w-[560px] overflow-y-auto rounded-[30px] border border-white/10 bg-[#0b1016] p-4 text-white shadow-2xl no-scrollbar">
         <div className="mx-auto mb-4 h-1.5 w-14 rounded-full bg-white/15" />
 
-        <div className="mx-auto max-w-[560px]">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <div className="text-[11px] uppercase tracking-[0.16em] text-white/35">
-                AI
-              </div>
-              <div className="mt-1 text-lg font-semibold text-white">
-                Возможности AI
-              </div>
-            </div>
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <div className="text-[11px] uppercase tracking-[0.16em] text-white/35">Меню</div>
+            <div className="mt-1 text-lg font-semibold text-white">Быстрый переход</div>
+          </div>
 
+          <button
+            type="button"
+            onClick={onClose}
+            className="grid h-10 w-10 place-items-center rounded-2xl border border-white/10 bg-white/[0.05] text-xl text-white/75"
+            aria-label="Закрыть"
+          >
+            ×
+          </button>
+        </div>
+
+        <div className="mt-5 space-y-3">
+          {items.map((item) => (
             <button
+              key={item.title}
               type="button"
-              onClick={onClose}
-              className="grid h-11 w-11 place-items-center rounded-2xl border border-white/10 bg-white/6 text-xl text-white"
-              aria-label="Закрыть"
+              onClick={() => {
+                onRunCommand(item.command);
+                onClose();
+              }}
+              className="w-full rounded-[24px] border border-white/8 bg-white/[0.04] p-4 text-left transition active:scale-[0.99]"
             >
-              ×
+              <div className="text-sm font-semibold text-white">{item.title}</div>
+              <div className="mt-1 text-xs leading-5 text-white/45">{item.description}</div>
             </button>
-          </div>
-
-          <p className="mt-3 text-sm leading-6 text-white/58">
-            AI не требует точных шаблонов. Пиши или говори обычными словами — приложение подготовит понятное действие и покажет подтверждение.
-          </p>
-
-          <div className="mt-5 grid gap-3">
-            {capabilities.map((item) => (
-              <div
-                key={item}
-                className="rounded-[22px] border border-white/8 bg-white/[0.04] px-4 py-3 text-sm text-white/75"
-              >
-                {item}
-              </div>
-            ))}
-          </div>
+          ))}
         </div>
       </div>
     </div>

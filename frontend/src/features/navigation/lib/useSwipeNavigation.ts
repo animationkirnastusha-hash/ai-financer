@@ -14,12 +14,16 @@ function isInteractiveTarget(target: EventTarget | null) {
   if (!(target instanceof HTMLElement)) return false;
 
   return Boolean(
-    target.closest('input, textarea, button, select, [data-no-swipe="true"]'),
+    target.closest('input, textarea, button, select, [data-no-swipe="true"], [data-ai-core-modal="true"]'),
   );
 }
 
-function isBlockedByVoiceGesture() {
-  return document.body.classList.contains('ai-voice-gesture-active');
+function isBlockedByUi() {
+  return (
+    document.body.classList.contains('ai-voice-gesture-active') ||
+    document.body.classList.contains('ai-composer-focused') ||
+    document.body.classList.contains('ai-core-modal-open')
+  );
 }
 
 export function useSwipeNavigation({ currentScreen, navigateTo, goBack }: Options) {
@@ -32,13 +36,13 @@ export function useSwipeNavigation({ currentScreen, navigateTo, goBack }: Option
       const touch = event.touches[0];
       if (!touch) return;
 
-      startedOnInteractive.current = isInteractiveTarget(event.target) || isBlockedByVoiceGesture();
+      startedOnInteractive.current = isBlockedByUi() || isInteractiveTarget(event.target);
       startX.current = touch.clientX;
       startY.current = touch.clientY;
     };
 
     const handleTouchEnd = (event: TouchEvent) => {
-      if (startedOnInteractive.current || isBlockedByVoiceGesture()) return;
+      if (startedOnInteractive.current || isBlockedByUi()) return;
 
       const touch = event.changedTouches[0];
       if (!touch) return;
@@ -62,6 +66,9 @@ export function useSwipeNavigation({ currentScreen, navigateTo, goBack }: Option
       const nextScreen = MAIN_SCREENS[nextIndex];
 
       if (!nextScreen) return;
+
+      document.body.classList.toggle('ai-screen-slide-left', deltaX < 0);
+      document.body.classList.toggle('ai-screen-slide-right', deltaX > 0);
 
       navigateTo(nextScreen);
       telegramHaptic('light');

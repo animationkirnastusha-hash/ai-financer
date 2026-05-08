@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type React from 'react';
 import { cn } from '@/shared/lib/cn';
 import type { AICoreState } from '@/features/ai-core/model/aiCore.types';
@@ -18,7 +18,7 @@ type Props = {
 };
 
 function getStateLabel(state: AICoreState, isVoiceLocked: boolean) {
-  if (isVoiceLocked) return 'Запись';
+  if (isVoiceLocked) return 'Запись закреплена';
   if (state === 'listening') return 'Слушаю';
   if (state === 'thinking') return 'Думаю';
   if (state === 'responding') return 'Готово';
@@ -28,8 +28,7 @@ function getStateLabel(state: AICoreState, isVoiceLocked: boolean) {
 function getStateHint(state: AICoreState, isVoiceLocked: boolean) {
   if (isVoiceLocked) return 'нажми сферу, чтобы отправить';
   if (state === 'listening') return 'отпусти — отправить';
-  if (state === 'thinking') return 'проверяю запрос';
-  if (state === 'responding') return 'можно продолжать';
+  if (state === 'thinking') return 'проверяю действие';
   return 'зажми для голоса';
 }
 
@@ -56,7 +55,6 @@ function getRingClasses(state: AICoreState, isVoiceLocked: boolean) {
 export function AICoreOrb({
   state,
   isVoiceLocked = false,
-  onTap,
   onHoldStart,
   onHoldEnd,
   onHoldCancel,
@@ -73,35 +71,35 @@ export function AICoreOrb({
   const [gesture, setGesture] = useState<VoiceGesture>('idle');
 
   const isListening = state === 'listening' || isVoiceLocked;
-  const showGestureTargets = state === 'listening' && !isVoiceLocked && pointerIsDownRef.current;
+  const showGestureBar = state === 'listening' && !isVoiceLocked;
 
-  const clearHoldTimer = useCallback(() => {
+  const clearHoldTimer = () => {
     if (holdTimerRef.current !== null) {
       window.clearTimeout(holdTimerRef.current);
       holdTimerRef.current = null;
     }
-  }, []);
+  };
 
-  const lockPageGestures = useCallback(() => {
+  const lockPageGestures = () => {
     document.documentElement.classList.add('ai-voice-gesture-active');
     document.body.classList.add('ai-voice-gesture-active');
-  }, []);
+  };
 
-  const unlockPageGestures = useCallback(() => {
+  const unlockPageGestures = () => {
     document.documentElement.classList.remove('ai-voice-gesture-active');
     document.body.classList.remove('ai-voice-gesture-active');
-  }, []);
+  };
 
-  const resetPointerState = useCallback(() => {
+  const resetPointerState = () => {
     clearHoldTimer();
     pointerIsDownRef.current = false;
     didHoldRef.current = false;
     gestureCompletedRef.current = false;
     setGesture('idle');
     if (!isVoiceLocked) unlockPageGestures();
-  }, [clearHoldTimer, isVoiceLocked, unlockPageGestures]);
+  };
 
-  const finishPointerInteraction = useCallback(() => {
+  const finishPointerInteraction = () => {
     if (!pointerIsDownRef.current) return;
 
     const wasHold = didHoldRef.current;
@@ -111,19 +109,24 @@ export function AICoreOrb({
     pointerIsDownRef.current = false;
     didHoldRef.current = false;
     gestureCompletedRef.current = false;
-    setGesture('idle');
 
-    if (!isVoiceLocked) unlockPageGestures();
-
-    if (wasCompleted) return;
+    if (wasCompleted) {
+      setGesture('idle');
+      if (!isVoiceLocked) unlockPageGestures();
+      return;
+    }
 
     if (wasHold) {
+      setGesture('idle');
+      if (!isVoiceLocked) unlockPageGestures();
       onHoldEnd();
       return;
     }
 
-    onTap();
-  }, [clearHoldTimer, isVoiceLocked, onHoldEnd, onTap, unlockPageGestures]);
+    // Tap without hold is intentionally ignored: this prevents accidental voice activation while scrolling.
+    setGesture('idle');
+    if (!isVoiceLocked) unlockPageGestures();
+  };
 
   useEffect(() => {
     const styleId = 'ai-voice-gesture-style';
@@ -138,9 +141,6 @@ export function AICoreOrb({
           overscroll-behavior: none !important;
           touch-action: none !important;
         }
-        body.ai-voice-gesture-active * {
-          overscroll-behavior: none !important;
-        }
       `;
       document.head.appendChild(style);
     }
@@ -154,7 +154,9 @@ export function AICoreOrb({
     const handleGlobalPointerUp = () => finishPointerInteraction();
 
     const handleGlobalPointerCancel = () => {
-      if (didHoldRef.current && !gestureCompletedRef.current) onHoldCancel();
+      if (didHoldRef.current && !gestureCompletedRef.current) {
+        onHoldCancel();
+      }
       resetPointerState();
     };
 
@@ -170,7 +172,7 @@ export function AICoreOrb({
       window.removeEventListener('wheel', preventPageMove);
       unlockPageGestures();
     };
-  }, [finishPointerInteraction, isVoiceLocked, onHoldCancel, resetPointerState, unlockPageGestures]);
+  }, [isVoiceLocked, onHoldCancel]);
 
   useEffect(() => {
     if (isVoiceLocked) {
@@ -179,21 +181,18 @@ export function AICoreOrb({
     }
 
     if (!pointerIsDownRef.current) unlockPageGestures();
-  }, [isVoiceLocked, lockPageGestures, unlockPageGestures]);
+  }, [isVoiceLocked]);
 
   const handlePointerDown = (event: React.PointerEvent<HTMLButtonElement>) => {
     if (isVoiceLocked) return;
 
     event.preventDefault();
-    event.stopPropagation();
     event.currentTarget.setPointerCapture?.(event.pointerId);
     pointerIsDownRef.current = true;
     didHoldRef.current = false;
     gestureCompletedRef.current = false;
     startXRef.current = event.clientX;
     startYRef.current = event.clientY;
-    lockPageGestures();
-    setGesture('idle');
 
     clearHoldTimer();
 
@@ -201,40 +200,47 @@ export function AICoreOrb({
       if (!pointerIsDownRef.current || gestureCompletedRef.current) return;
 
       didHoldRef.current = true;
+      lockPageGestures();
       setGesture('holding');
       onHoldStart();
-    }, 240);
+    }, 280);
   };
 
   const handlePointerMove = (event: React.PointerEvent<HTMLButtonElement>) => {
-    if (!pointerIsDownRef.current || !didHoldRef.current || gestureCompletedRef.current) return;
-
-    event.preventDefault();
-    event.stopPropagation();
+    if (!pointerIsDownRef.current || gestureCompletedRef.current) return;
 
     const deltaX = event.clientX - startXRef.current;
     const deltaY = event.clientY - startYRef.current;
 
-    if (deltaX <= -66) {
+    if (!didHoldRef.current) {
+      if (Math.abs(deltaX) > 14 || Math.abs(deltaY) > 14) {
+        clearHoldTimer();
+      }
+      return;
+    }
+
+    event.preventDefault();
+
+    if (deltaX <= -58) {
       gestureCompletedRef.current = true;
       setGesture('cancel');
       onHoldCancel();
       return;
     }
 
-    if (deltaY <= -72) {
+    if (deltaY <= -64) {
       gestureCompletedRef.current = true;
       setGesture('lock');
       onHoldLock();
       return;
     }
 
-    if (deltaX < -22) {
+    if (deltaX < -18) {
       setGesture('cancel');
       return;
     }
 
-    if (deltaY < -24) {
+    if (deltaY < -20) {
       setGesture('lock');
       return;
     }
@@ -243,33 +249,41 @@ export function AICoreOrb({
   };
 
   return (
-    <div className="relative flex w-full flex-col items-center py-2" data-no-swipe="true">
-      {showGestureTargets ? (
-        <>
+    <div className="flex flex-col items-center" data-no-swipe="true">
+      {showGestureBar ? (
+        <div className="mb-5 grid w-full max-w-[320px] grid-cols-2 gap-2 px-2">
           <div
             className={cn(
-              'absolute -top-7 left-1/2 z-20 flex -translate-x-1/2 items-center gap-2 rounded-2xl border px-4 py-2 text-xs font-medium transition-all duration-200',
+              'rounded-[22px] border px-3 py-3 text-center transition-all duration-200',
               gesture === 'lock'
-                ? 'translate-y-[-8px] border-emerald-200/45 bg-emerald-400/20 text-emerald-100 shadow-[0_0_28px_rgba(52,211,153,0.22)]'
-                : 'border-white/10 bg-black/35 text-white/55 backdrop-blur-xl',
+                ? 'border-emerald-200/45 bg-emerald-400/18 text-emerald-100 shadow-[0_0_28px_rgba(52,211,153,0.20)]'
+                : 'border-white/10 bg-white/[0.045] text-white/50',
             )}
           >
-            <span className="text-base leading-none">🔒</span>
-            <span>свайп вверх</span>
+            <div className="text-xl leading-none">🔒</div>
+            <div className="mt-1 text-[10px] uppercase tracking-[0.16em]">вверх — замок</div>
           </div>
 
           <div
             className={cn(
-              'absolute left-2 top-1/2 z-20 flex -translate-y-1/2 items-center gap-2 rounded-2xl border px-3 py-2 text-xs font-medium transition-all duration-200',
+              'rounded-[22px] border px-3 py-3 text-center transition-all duration-200',
               gesture === 'cancel'
-                ? '-translate-x-2 border-rose-200/45 bg-rose-400/20 text-rose-100 shadow-[0_0_28px_rgba(251,113,133,0.20)]'
-                : 'border-white/10 bg-black/35 text-white/55 backdrop-blur-xl',
+                ? 'border-rose-200/45 bg-rose-400/18 text-rose-100 shadow-[0_0_28px_rgba(251,113,133,0.18)]'
+                : 'border-white/10 bg-white/[0.045] text-white/50',
             )}
           >
-            <span className="text-base leading-none">←</span>
-            <span>отмена</span>
+            <div className="text-xl leading-none">←</div>
+            <div className="mt-1 text-[10px] uppercase tracking-[0.16em]">влево — отмена</div>
           </div>
-        </>
+        </div>
+      ) : null}
+
+      {isVoiceLocked ? (
+        <div className="mb-5 rounded-[22px] border border-emerald-300/20 bg-emerald-400/10 px-6 py-3 text-center text-emerald-100 shadow-[0_0_32px_rgba(52,211,153,0.14)]">
+          <div className="text-2xl leading-none">🔒</div>
+          <div className="mt-1 text-[10px] uppercase tracking-[0.18em] text-emerald-100/65">замок</div>
+          <div className="mt-1 text-sm">Запись закреплена</div>
+        </div>
       ) : null}
 
       <button
@@ -279,13 +293,10 @@ export function AICoreOrb({
         onClick={() => {
           if (isVoiceLocked) onLockedDone();
         }}
-        onTouchMove={(event) => {
-          if (pointerIsDownRef.current || isVoiceLocked) event.preventDefault();
-        }}
         onContextMenu={(event) => event.preventDefault()}
         className={cn(
-          'relative flex h-52 w-52 select-none items-center justify-center rounded-full border text-center transition-all duration-300 active:scale-[0.985] sm:h-56 sm:w-56',
-          'touch-none',
+          'relative flex h-52 w-52 select-none items-center justify-center rounded-full border transition-all duration-300 active:scale-[0.985] sm:h-56 sm:w-56',
+          isListening ? 'touch-none' : 'touch-manipulation',
           gesture === 'cancel' ? '-translate-x-4 border-rose-300/50 bg-rose-400/14 shadow-[0_0_80px_rgba(251,113,133,0.26)]' : null,
           gesture === 'lock' ? '-translate-y-4' : null,
           getRingClasses(state, isVoiceLocked),
@@ -307,18 +318,10 @@ export function AICoreOrb({
           </div>
         ) : null}
 
-        <div className="relative flex h-full max-w-[164px] flex-col items-center justify-center text-center">
-          <div className="text-[11px] uppercase tracking-[0.24em] text-emerald-200/80">
-            AI Core
-          </div>
-
-          <div className="mt-4 text-center text-2xl font-semibold leading-tight text-white">
-            {getStateLabel(state, isVoiceLocked)}
-          </div>
-
-          <div className="mt-2 text-center text-sm leading-5 text-white/45">
-            {getStateHint(state, isVoiceLocked)}
-          </div>
+        <div className="relative flex max-w-[165px] flex-col items-center justify-center text-center">
+          <div className="text-[11px] uppercase tracking-[0.24em] text-emerald-200/80">AI Core</div>
+          <div className="mt-6 text-center text-2xl font-semibold leading-tight text-white">{getStateLabel(state, isVoiceLocked)}</div>
+          <div className="mt-2 text-center text-sm leading-5 text-white/42">{getStateHint(state, isVoiceLocked)}</div>
         </div>
       </button>
 
@@ -326,7 +329,7 @@ export function AICoreOrb({
         <button
           type="button"
           onClick={onLockedCancel}
-          className="mt-5 rounded-full border border-rose-300/20 bg-rose-400/10 px-8 py-3 text-sm font-medium text-rose-100 shadow-[0_0_28px_rgba(251,113,133,0.10)]"
+          className="mt-6 rounded-full border border-rose-300/20 bg-rose-400/10 px-8 py-3 text-sm font-medium text-rose-100 shadow-[0_0_28px_rgba(251,113,133,0.10)]"
         >
           Отменить запись
         </button>

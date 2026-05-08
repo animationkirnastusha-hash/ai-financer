@@ -26,11 +26,18 @@ function parseAllAmounts(input: string): number[] {
 }
 
 function detectCurrency(input: string): 'RUB' | 'USD' | 'EUR' {
-  if (input.includes('доллар') || input.includes('usd') || input.includes('$')) {
+  const normalized = input.toLowerCase().replace(/ё/g, 'е');
+
+  if (
+    normalized.includes('доллар') ||
+    normalized.includes('бакс') ||
+    normalized.includes('usd') ||
+    normalized.includes('$')
+  ) {
     return 'USD';
   }
 
-  if (input.includes('евро') || input.includes('eur') || input.includes('€')) {
+  if (normalized.includes('евро') || normalized.includes('eur') || normalized.includes('€')) {
     return 'EUR';
   }
 
@@ -88,17 +95,53 @@ function isFinancialPlanning(input: string) {
   );
 }
 
-function getAccountName(input: string, currency: 'RUB' | 'USD' | 'EUR') {
-  const explicit = input.match(/(?:счет|счёт|карту|кошелек|кошелёк)\s+["«]?([^"»]+)["»]?/i)?.[1]?.trim();
+function cleanupAccountName(value: string) {
+  return value
+    .replace(/^и\s+/i, '')
+    .replace(/^а\s+/i, '')
+    .replace(/^назов(?:и|ем|ать)\s+(?:его|ее|её|счет|счёт)?\s*/i, '')
+    .replace(/^с\s+названием\s+/i, '')
+    .replace(/^под\s+названием\s+/i, '')
+    .replace(/\s+(?:и|потом|затем)\s+(?:положи|закинь|внеси|пополни|добавь|зачисли).+$/i, '')
+    .replace(/\b(?:положи|закинь|внеси|пополни|добавь|зачисли)\b.+$/i, '')
+    .replace(/[«»"]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
 
-  if (explicit && !explicit.includes('на сумму')) {
-    return explicit.replace(/^названи[ея]\s+/i, '').trim();
+function getAccountName(input: string, currency: 'RUB' | 'USD' | 'EUR') {
+  const normalized = input.replace(/ё/g, 'е');
+
+  const named = normalized.match(/(?:назов(?:и|ем|ать)|название|имя)\s+(?:его|ее|её|счета|счет|счёт)?\s*[«"]?([^«»"]+)[»"]?/i)?.[1];
+  if (named) {
+    const cleaned = cleanupAccountName(named);
+    if (cleaned) return cleaned;
+  }
+
+  const quoted = normalized.match(/(?:счет|счёт|карту|кошелек|кошелёк)\s+[«"]([^«»"]+)[»"]/i)?.[1];
+  if (quoted) {
+    const cleaned = cleanupAccountName(quoted);
+    if (cleaned) return cleaned;
+  }
+
+  const explicit = normalized.match(/(?:счет|счёт|карту|кошелек|кошелёк)\s+([^,.;]+?)(?:\s+(?:и|потом|затем)\s+|$)/i)?.[1];
+  if (explicit) {
+    const cleaned = cleanupAccountName(explicit);
+
+    if (
+      cleaned &&
+      !/^на\s+/i.test(cleaned) &&
+      !/^(и|а|туда|сюда)$/i.test(cleaned) &&
+      !/^(долларовый|долларов|доллары|евро|рублевый|рублевыи)$/i.test(cleaned)
+    ) {
+      return cleaned;
+    }
   }
 
   if (currency === 'USD') return 'Долларовый счёт';
   if (currency === 'EUR') return 'Евро счёт';
 
-  return 'Новый счёт';
+  return input.includes('налич') ? 'Наличка' : 'Новый счёт';
 }
 
 

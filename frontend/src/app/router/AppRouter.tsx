@@ -24,26 +24,16 @@ export function AppRouter() {
   const goBack = useNavigationStore((state) => state.goBack);
 
   const isAIMenuOpen = useNavigationStore((state) => state.isAIMenuOpen);
-  const isGlobalCommandListOpen = useNavigationStore(
-    (state) => state.isGlobalCommandListOpen,
-  );
+  const isGlobalCommandListOpen = useNavigationStore((state) => state.isGlobalCommandListOpen);
 
   const navigateTo = useNavigationStore((state) => state.navigateTo);
   const openAIMenu = useNavigationStore((state) => state.openAIMenu);
   const closeAIMenu = useNavigationStore((state) => state.closeAIMenu);
-  const openGlobalCommandList = useNavigationStore(
-    (state) => state.openGlobalCommandList,
-  );
-  const closeGlobalCommandList = useNavigationStore(
-    (state) => state.closeGlobalCommandList,
-  );
+  const openGlobalCommandList = useNavigationStore((state) => state.openGlobalCommandList);
+  const closeGlobalCommandList = useNavigationStore((state) => state.closeGlobalCommandList);
 
-  const isCreateAccountOpen = useAccountFlowStore(
-    (state) => state.isCreateAccountOpen,
-  );
-  const closeCreateAccount = useAccountFlowStore(
-    (state) => state.closeCreateAccount,
-  );
+  const isCreateAccountOpen = useAccountFlowStore((state) => state.isCreateAccountOpen);
+  const closeCreateAccount = useAccountFlowStore((state) => state.closeCreateAccount);
 
   const createAccount = useAccountsStore((state) => state.createAccount);
 
@@ -56,20 +46,17 @@ export function AppRouter() {
   const runGlobalCommand = (command: string) => {
     const normalized = command.trim().toLowerCase();
 
-    if (
-      normalized.includes('дашборд') ||
-      normalized.includes('главн') ||
-      normalized.includes('сводк')
-    ) {
+    if (normalized.includes('главн') || normalized.includes('core') || normalized.includes('ai')) {
+      navigateTo('ai-core');
+      return;
+    }
+
+    if (normalized.includes('дашборд') || normalized.includes('сводк')) {
       navigateTo('dashboard');
       return;
     }
 
-    if (
-      normalized.includes('сч') ||
-      normalized.includes('баланс') ||
-      normalized.includes('карт')
-    ) {
+    if (normalized.includes('сч') || normalized.includes('баланс') || normalized.includes('карт')) {
       navigateTo('accounts');
       return;
     }
@@ -95,11 +82,7 @@ export function AppRouter() {
       return;
     }
 
-    if (
-      normalized.includes('настрой') ||
-      normalized.includes('профиль') ||
-      normalized.includes('подписк')
-    ) {
+    if (normalized.includes('настрой') || normalized.includes('профиль') || normalized.includes('подписк')) {
       navigateTo('settings');
       return;
     }
@@ -107,51 +90,32 @@ export function AppRouter() {
     navigateTo('ai-core');
   };
 
-  const isMainScreen =
-    currentScreen === 'dashboard' ||
-    currentScreen === 'ai-core' ||
-    currentScreen === 'accounts';
-
+  const isMainScreen = currentScreen === 'dashboard' || currentScreen === 'ai-core' || currentScreen === 'accounts';
   const isSettingsFlowScreen = currentScreen === 'taxonomy-settings';
 
   return (
     <div className="telegram-app-shell">
-      <div className="telegram-app-content">
+      <div key={currentScreen} className="telegram-app-content ai-screen-transition">
         {currentScreen === 'ai-core' && <AICoreScreen />}
         {currentScreen === 'dashboard' && <DashboardPage />}
         {currentScreen === 'accounts' && <AccountsPage />}
-        {currentScreen === 'transactions' && (
-          <TransactionsPage onBack={goBack} />
-        )}
+        {currentScreen === 'transactions' && <TransactionsPage onBack={goBack} />}
         {currentScreen === 'sections' && <SectionsPage onBack={goBack} />}
         {currentScreen === 'settings' && <SettingsPage />}
-        {currentScreen === 'taxonomy-settings' && (
-          <TaxonomySettingsPage />
-        )}
+        {currentScreen === 'taxonomy-settings' && <TaxonomySettingsPage />}
       </div>
 
       <AppTopActions />
 
       {isMainScreen ? (
-        <MainMenuDots
-          currentScreen={currentScreen}
-          onNavigate={navigateTo}
-          bottomOffset={currentScreen === 'ai-core' ? 12 : 72}
-        />
+        <MainMenuDots currentScreen={currentScreen} onNavigate={navigateTo} bottomOffset={currentScreen === 'ai-core' ? 28 : 72} />
       ) : null}
 
       {isSettingsFlowScreen ? (
-        <MainMenuDots
-          currentScreen={currentScreen}
-          onNavigate={navigateTo}
-          items={SETTINGS_FLOW_ITEMS}
-          bottomOffset={34}
-        />
+        <MainMenuDots currentScreen={currentScreen} onNavigate={navigateTo} items={SETTINGS_FLOW_ITEMS} bottomOffset={34} />
       ) : null}
 
-      {currentScreen !== 'ai-core' ? (
-        <AIAssistantDock onOpen={openAIMenu} />
-      ) : null}
+      {currentScreen !== 'ai-core' ? <AIAssistantDock onOpen={openAIMenu} /> : null}
 
       <AIMenuSheet
         open={isAIMenuOpen}
@@ -161,11 +125,7 @@ export function AppRouter() {
         onOpenVoice={() => navigateTo('ai-core')}
       />
 
-      <CommandListSheet
-        open={isGlobalCommandListOpen}
-        onClose={closeGlobalCommandList}
-        onRunCommand={runGlobalCommand}
-      />
+      <CommandListSheet open={isGlobalCommandListOpen} onClose={closeGlobalCommandList} onRunCommand={runGlobalCommand} />
 
       <CreateAccountSheet
         open={isCreateAccountOpen}
