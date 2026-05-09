@@ -44,48 +44,29 @@ export class AIPendingActionService {
   }
 
   async getPendingAction(userId: string, pendingActionId: string) {
-    const action = await prisma.aIPendingAction.findFirst({
-      where: {
-        id: pendingActionId,
-        userId,
-      },
-    });
-
-    if (!action) {
-      throw new NotFoundError('Pending AI action not found');
-    }
-
-    if (action.status !== 'pending') {
-      throw new BadRequestError('AI action is no longer pending');
-    }
+    const action = await prisma.aIPendingAction.findFirst({ where: { id: pendingActionId, userId } });
+    if (!action) throw new NotFoundError('Pending AI action not found');
+    if (action.status !== 'pending') throw new BadRequestError('AI action is no longer pending');
 
     if (action.expiresAt.getTime() < Date.now()) {
-      await prisma.aIPendingAction.update({
-        where: { id: action.id },
-        data: { status: 'expired' },
-      });
-
+      await prisma.aIPendingAction.update({ where: { id: action.id }, data: { status: 'expired' } });
       throw new BadRequestError('Pending AI action has expired');
     }
 
     return action;
   }
 
-
-
-  async updatePendingAction(params: {
-    userId: string;
-    pendingActionId: string;
-    parsed: Record<string, unknown>;
+  async updatePendingAction(userId: string, pendingActionId: string, params: {
+    parsed?: Record<string, unknown> | null;
     command?: string;
   }) {
-    await this.getPendingAction(params.userId, params.pendingActionId);
+    const action = await this.getPendingAction(userId, pendingActionId);
 
     return prisma.aIPendingAction.update({
-      where: { id: params.pendingActionId },
+      where: { id: action.id },
       data: {
-        parsed: safeStringify(params.parsed),
-        ...(params.command ? { command: params.command } : {}),
+        ...(params.command !== undefined ? { command: params.command } : {}),
+        ...(params.parsed !== undefined ? { parsed: safeStringify(params.parsed) } : {}),
         updatedAt: new Date(),
       },
     });
@@ -94,29 +75,20 @@ export class AIPendingActionService {
   async confirmPendingAction(id: string) {
     return prisma.aIPendingAction.update({
       where: { id },
-      data: {
-        status: 'confirmed',
-        confirmedAt: new Date(),
-      },
+      data: { status: 'confirmed', confirmedAt: new Date() },
     });
   }
 
   async cancelPendingAction(id: string) {
     return prisma.aIPendingAction.update({
       where: { id },
-      data: {
-        status: 'cancelled',
-        cancelledAt: new Date(),
-      },
+      data: { status: 'cancelled', cancelledAt: new Date() },
     });
   }
 
   async getPendingActions(userId: string, includeExpired = false): Promise<AIPendingActionView[]> {
     const rows = await prisma.aIPendingAction.findMany({
-      where: {
-        userId,
-        ...(includeExpired ? {} : { status: 'pending' }),
-      },
+      where: { userId, ...(includeExpired ? {} : { status: 'pending' }) },
       orderBy: [{ createdAt: 'desc' }],
       take: 50,
     });

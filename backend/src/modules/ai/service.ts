@@ -14,12 +14,12 @@ export class AIService {
     return aiTrustService.confirmCommand(userId, pendingActionId);
   }
 
-  async cancelCommand(userId: string, pendingActionId: string) {
-    return aiTrustService.cancelCommand(userId, pendingActionId);
+  async updatePendingAction(userId: string, pendingActionId: string, parsed: Record<string, unknown>, command?: string) {
+    return aiTrustService.updatePendingAction(userId, pendingActionId, { parsed, command });
   }
 
-  async updatePendingAction(userId: string, pendingActionId: string, parsed: Record<string, unknown>, command?: string) {
-    return aiTrustService.updatePendingAction(userId, pendingActionId, parsed, command);
+  async cancelCommand(userId: string, pendingActionId: string) {
+    return aiTrustService.cancelCommand(userId, pendingActionId);
   }
 
   async getPendingActions(userId: string, includeExpired = false) {

@@ -1,12 +1,14 @@
 import type { AIParsedCommand } from './types';
-import { extractAmountFromText, stripAmountFromText, normalizeAmount, extractAmountCandidates, detectCurrency } from './utils/amount-normalizer';
-import { cleanAccountName, compileNaturalCreateAccount, inferAccountType, repairParsedCommand } from './utils/command-compiler';
+import { extractAmountFromText, stripAmountFromText, normalizeAmount } from './utils/amount-normalizer';
+
+type CurrencyCode = 'RUB' | 'USD' | 'EUR' | 'VND';
 
 function normalize(input: string) {
   return input
     .trim()
     .toLowerCase()
     .replaceAll('ё', 'е')
+    .replace(/[«»]/g, '"')
     .replace(/\s+/g, ' ');
 }
 
@@ -15,17 +17,66 @@ function parseAmount(input: string): number | null {
 }
 
 function parseAllAmounts(input: string): number[] {
-  return extractAmountCandidates(input).map((candidate) => candidate.amount);
+  const amount = parseAmount(input);
+  return amount ? [amount] : [];
 }
 
+function detectCurrency(input: string): CurrencyCode {
+  const normalized = normalize(input);
+
+  if (/\$|usd|доллар|бакс/.test(normalized)) return 'USD';
+  if (/€|eur|евро/.test(normalized)) return 'EUR';
+  if (/vnd|донг|вьетнам/.test(normalized)) return 'VND';
+
+  return 'RUB';
+}
+
+function normalizeAccountType(input: string): 'cash' | 'card' | 'savings' | 'investment' {
+  const normalized = normalize(input);
+
+  if (/налич|cash|кэш/.test(normalized)) return 'cash';
+  if (/накоп|копил|сбереж|saving/.test(normalized)) return 'savings';
+  if (/инвест|invest/.test(normalized)) return 'investment';
+  if (/карт|card|банк/.test(normalized)) return 'card';
+
+  return 'cash';
+}
 
 function extractAccountAfter(input: string, words: string[]) {
   for (const word of words) {
-    const match = input.match(new RegExp(`\\s${word}\\s+(.+)$`, 'i'));
-    if (match?.[1]) return match[1].trim();
+    const match = input.match(new RegExp(`(?:^|\\s)${word}\\s+(.+)$`, 'i'));
+    if (match?.[1]) return cleanAccountName(match[1]);
   }
 
   return undefined;
+}
+
+function cleanAccountName(value: string) {
+  return value
+    .replace(/["«»]/g, '')
+    .replace(/\b(и|а|потом|затем|далее|туда|сюда|на\s+него|на\s+нее|на\s+неё|ему|ей)\b/gi, ' ')
+    .replace(/\b(создай|создать|открой|открыть|счет|счёт|аккаунт|кошелек|кошелёк|карту|карта|под|названием|назови|назвать|дай|ему|ей|имя|название)\b/gi, ' ')
+    .replace(/\b(положи|положить|закинь|закинуть|внеси|внести|пополнить|пополни|добавь|добавить|депозит|зачисли|зачислить)\b[\s\S]*$/gi, ' ')
+    .replace(/\b(rub|руб(?:лей|ля|ль)?|₽|usd|доллар(?:ов|а)?|бакс(?:ов|а)?|\$|eur|евро|€|vnd|донг(?:ов|а)?)\b/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function extractExplicitAccountName(input: string, currency: CurrencyCode) {
+  const quoted = input.match(/(?:счет|счёт|карту|кошелек|кошелёк|аккаунт)?\s*["«]([^"»]+)["»]/i)?.[1];
+  if (quoted) return cleanAccountName(quoted);
+
+  const named = input.match(/(?:под\s+названием|назови(?:\s+его)?|назвать(?:\s+его)?|дай(?:\s+ему)?\s+название)\s+(.+?)(?:\s+(?:и|потом|затем|положи|закинь|внеси|пополни|добавь|депозит)\b|$)/i)?.[1];
+  if (named) return cleanAccountName(named);
+
+  const afterAccount = input.match(/(?:создай|создать|открой|открыть)?\s*(?:счет|счёт|карту|кошелек|кошелёк|аккаунт)\s+(.+?)(?:\s+(?:и|потом|затем|положи|закинь|внеси|пополни|добавь|депозит)\b|$)/i)?.[1];
+  if (afterAccount) return cleanAccountName(afterAccount);
+
+  if (currency === 'USD') return 'Доллары';
+  if (currency === 'EUR') return 'Евро';
+  if (currency === 'VND') return 'Донги';
+
+  return 'Новый счёт';
 }
 
 function cleanCategory(input: string) {
@@ -45,12 +96,8 @@ function stripSectionPhrase(input: string) {
 
 function isCreateAccount(input: string) {
   return (
-    (input.includes('создай') || input.includes('создать') || input.includes('открой')) &&
-    (input.includes('счет') ||
-      input.includes('счёт') ||
-      input.includes('карту') ||
-      input.includes('кошелек') ||
-      input.includes('кошелёк'))
+    /(создай|создать|открой|открыть)/.test(input) &&
+    /(счет|счёт|карт|кошелек|кошелёк|аккаунт)/.test(input)
   );
 }
 
@@ -70,21 +117,60 @@ function isFinancialPlanning(input: string) {
   );
 }
 
-function getAccountName(input: string, currency: 'RUB' | 'USD' | 'EUR' | 'VND') {
-  const extracted = cleanAccountName(undefined, input);
-  if (extracted && extracted !== 'Новый счёт') return extracted;
-  if (currency === 'USD') return 'Долларовый счёт';
-  if (currency === 'EUR') return 'Евро счёт';
-  if (currency === 'VND') return 'VND счёт';
-  return 'Новый счёт';
-}
-
-function normalizeAccountName(value: string) {
-  return cleanAccountName(value);
-}
-
 function parseCreateAccountWithInitialIncome(input: string): AIParsedCommand | null {
-  return compileNaturalCreateAccount(input);
+  if (!isCreateAccount(input)) return null;
+
+  const depositMatch = input.match(
+    /(?:\s|^)(?:и\s+)?(?:положи|положить|закинь|закинуть|внеси|внести|пополни|пополнить|добавь|добавить|зачисли|зачислить)\s+(?:туда|на\s+(?:него|нее|неё|счет|счёт|карту|кошелек|кошелёк))?\s*(.+)$/i,
+  );
+
+  const currency = detectCurrency(input);
+  const name = extractExplicitAccountName(
+    depositMatch?.index !== undefined ? input.slice(0, depositMatch.index) : input,
+    currency,
+  );
+
+  if (!depositMatch) {
+    return {
+      intent: 'create_account',
+      name,
+      type: normalizeAccountType(input),
+      currency,
+      balance: 0,
+    };
+  }
+
+  const amount = parseAmount(depositMatch[1]);
+  if (!amount) {
+    return {
+      intent: 'create_account',
+      name,
+      type: normalizeAccountType(input),
+      currency,
+      balance: 0,
+    };
+  }
+
+  return {
+    intent: 'batch',
+    originalText: input,
+    actions: [
+      {
+        intent: 'create_account',
+        name,
+        type: normalizeAccountType(input),
+        currency,
+        balance: 0,
+      },
+      {
+        intent: 'income',
+        amount,
+        rawCategory: 'пополнение',
+        description: /депозит/i.test(depositMatch[1]) ? 'депозит' : 'пополнение счёта',
+        accountName: name,
+      },
+    ],
+  };
 }
 
 function splitCompoundCommand(input: string) {
@@ -96,10 +182,9 @@ function splitCompoundCommand(input: string) {
 
 function parseCompoundCommand(input: string): AIParsedCommand | null {
   const parts = splitCompoundCommand(input);
-
   if (parts.length < 2) return null;
 
-  const actions: AIParsedCommand[] = [];
+  const actions: Array<Exclude<AIParsedCommand, { intent: 'batch' }>> = [];
   let lastAccountName: string | undefined;
 
   for (const part of parts) {
@@ -117,7 +202,7 @@ function parseCompoundCommand(input: string): AIParsedCommand | null {
       continue;
     }
 
-    actions.push(parsed);
+    actions.push(parsed as Exclude<AIParsedCommand, { intent: 'batch' }>);
 
     if (parsed.intent === 'create_account') {
       lastAccountName = parsed.name;
@@ -129,37 +214,17 @@ function parseCompoundCommand(input: string): AIParsedCommand | null {
   return {
     intent: 'batch',
     originalText: input,
-    actions: actions.filter((item): item is Exclude<AIParsedCommand, { intent: 'batch' }> => item.intent !== 'batch'),
+    actions,
   };
 }
 
 function parsePlanning(input: string): AIParsedCommand {
   const amounts = parseAllAmounts(input);
-
-  const monthlyIncome =
-    input.includes('зарплат') || input.includes('доход')
-      ? amounts[0]
-      : undefined;
-
-  const monthlyExpenses =
-    input.includes('расход')
-      ? amounts.length >= 2
-        ? amounts[1]
-        : undefined
-      : undefined;
-
-  const targetAmount =
-    input.includes('скопить') ||
-    input.includes('накопить') ||
-    input.includes('цель')
-      ? amounts.at(-1)
-      : undefined;
-
   return {
     intent: 'financial_planning',
-    monthlyIncome,
-    monthlyExpenses,
-    targetAmount,
+    monthlyIncome: input.includes('зарплат') || input.includes('доход') ? amounts[0] : undefined,
+    monthlyExpenses: input.includes('расход') ? amounts[1] : undefined,
+    targetAmount: input.includes('скопить') || input.includes('накопить') || input.includes('цель') ? amounts.at(-1) : undefined,
     targetDateText: input.includes('концу года') ? 'к концу года' : undefined,
     question: input,
   };
@@ -170,13 +235,12 @@ export function fastFinanceParse(command: string): AIParsedCommand | null {
   if (!input) return null;
 
   const accountWithInitialIncome = parseCreateAccountWithInitialIncome(input);
-  if (accountWithInitialIncome) return repairParsedCommand(accountWithInitialIncome, input);
+  if (accountWithInitialIncome) return accountWithInitialIncome;
 
   const compound = parseCompoundCommand(input);
   if (compound) return compound;
 
   const sectionAssignment = input.match(/^(?:запиши|перенеси)\s+все\s+(?:расходы|траты)\s+(?:по|на)\s+(.+?)\s+в\s+раздел\s+(.+)$/i);
-
   if (sectionAssignment) {
     return {
       intent: 'assign_expenses_to_section',
@@ -186,79 +250,43 @@ export function fastFinanceParse(command: string): AIParsedCommand | null {
   }
 
   const createSection = input.match(/^создай\s+(?:раздел|папку)\s+(.+)$/i);
-
-  if (createSection) {
-    return {
-      intent: 'create_section',
-      name: createSection[1].trim(),
-    };
-  }
+  if (createSection) return { intent: 'create_section', name: createSection[1].trim() };
 
   if (isCreateAccount(input)) {
     const currency = detectCurrency(input);
-    const balance = parseAmount(input) ?? 0;
-
-    return repairParsedCommand({
+    return {
       intent: 'create_account',
-      name: getAccountName(input, currency),
-      type: inferAccountType(input),
+      name: extractExplicitAccountName(input, currency),
+      type: normalizeAccountType(input),
       currency,
-      balance,
-    }, input);
+      balance: parseAmount(input) ?? 0,
+    };
   }
 
-  if (isFinancialPlanning(input)) {
-    return parsePlanning(input);
-  }
+  if (isFinancialPlanning(input)) return parsePlanning(input);
 
-  if (
-    input.includes('покажи счета') ||
-    input.includes('открой счета') ||
-    input.includes('мои счета') ||
-    input === 'счета' ||
-    input === 'счёта'
-  ) {
+  if (input.includes('покажи счета') || input.includes('открой счета') || input.includes('мои счета') || input === 'счета' || input === 'счёта') {
     return { intent: 'show_accounts' };
   }
 
-  if (
-    input.includes('сколько') ||
-    input.includes('статист') ||
-    input.includes('потратил на') ||
-    input.includes('потратила на')
-  ) {
-    return {
-      intent: 'stats',
-      type: input.includes('доход') ? 'income' : 'expense',
-      rawCategory: cleanCategory(input) || undefined,
-    };
+  if (input.includes('сколько') || input.includes('статист') || input.includes('потратил на') || input.includes('потратила на')) {
+    return { intent: 'stats', type: input.includes('доход') ? 'income' : 'expense', rawCategory: cleanCategory(input) || undefined };
   }
 
-  if (
-    input.includes('переведи') ||
-    input.includes('перевести') ||
-    input.includes('перекинь') ||
-    input.includes('перевод')
-  ) {
+  if (input.includes('переведи') || input.includes('перевести') || input.includes('перекинь') || input.includes('перевод')) {
     const amount = parseAmount(input);
     if (!amount) return null;
-
     const fromAccountName = extractAccountAfter(input, ['с', 'со', 'из']);
     const toAccountName = extractAccountAfter(input, ['на', 'в']);
-
     if (!toAccountName) return null;
-
-    return {
-      intent: 'transfer',
-      amount,
-      fromAccountName,
-      toAccountName,
-    };
+    return { intent: 'transfer', amount, fromAccountName, toAccountName };
   }
 
   const isIncome =
     input.startsWith('+') ||
     input.includes('доход') ||
+    input.includes('депозит') ||
+    input.includes('пополн') ||
     input.includes('зарплат') ||
     input.includes('аванс') ||
     input.includes('получил') ||
@@ -270,42 +298,21 @@ export function fastFinanceParse(command: string): AIParsedCommand | null {
   if (isIncome) {
     const amount = parseAmount(input);
     if (!amount) return null;
-
     const sectionName = extractSectionName(input);
     const cleanInput = stripSectionPhrase(input);
     const accountName = extractAccountAfter(cleanInput, ['на', 'в']);
-    const rawCategory = input.includes('зарплат')
-      ? 'зарплата'
-      : input.includes('аванс')
-        ? 'аванс'
-        : cleanCategory(cleanInput) || 'доход';
+    const rawCategory = input.includes('зарплат') ? 'зарплата' : input.includes('аванс') ? 'аванс' : input.includes('депозит') ? 'депозит' : cleanCategory(cleanInput) || 'доход';
 
-    return {
-      intent: 'income',
-      amount,
-      rawCategory,
-      description: rawCategory,
-      accountName,
-      sectionName,
-    };
+    return { intent: 'income', amount, rawCategory, description: rawCategory, accountName, sectionName };
   }
 
   const amount = parseAmount(input);
-
   if (amount) {
     const sectionName = extractSectionName(input);
     const cleanInput = stripSectionPhrase(input);
     const accountName = extractAccountAfter(cleanInput, ['с', 'со', 'из']);
     const rawCategory = cleanCategory(cleanInput) || 'расход';
-
-    return {
-      intent: 'expense',
-      amount,
-      rawCategory,
-      description: rawCategory,
-      accountName,
-      sectionName,
-    };
+    return { intent: 'expense', amount, rawCategory, description: rawCategory, accountName, sectionName };
   }
 
   return null;

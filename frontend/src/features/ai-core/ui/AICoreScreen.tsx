@@ -36,6 +36,7 @@ export function AICoreScreen() {
     inputValue,
     setInputValue,
     submit,
+    closeCommandPanel,
     handleOrbTap,
     handleOrbHoldStart,
     handleOrbHoldEnd,
@@ -74,6 +75,7 @@ export function AICoreScreen() {
     void refreshDashboard();
   }, [refreshDashboard]);
 
+  const pendingCount = pendingActions.length;
 
   const liveText =
     voiceState === 'recording'
@@ -145,12 +147,12 @@ export function AICoreScreen() {
                 <span className="text-sm text-white/72">{liveText}</span>
               </div>
 
-              {pendingActions.length > 0 ? (
+              {pendingCount > 0 ? (
                 <button
                   onClick={openPending}
                   className="rounded-full border border-amber-300/20 bg-amber-300/10 px-3 py-1 text-xs text-amber-100"
                 >
-                  Ждёт: {pendingActions.length}
+                  Ждёт: {pendingCount}
                 </button>
               ) : (
                 <span className="text-xs text-emerald-200/80">Active</span>
@@ -201,6 +203,7 @@ export function AICoreScreen() {
                   value={inputValue}
                   onChange={setInputValue}
                   onSubmit={submit}
+                  onClose={closeCommandPanel}
                   disabled={isSending}
               />
             ) : null}

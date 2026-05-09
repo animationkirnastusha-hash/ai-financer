@@ -4,17 +4,9 @@ type Props = {
   value: string;
   onChange: (value: string) => void;
   onSubmit: () => Promise<void>;
+  onClose?: () => void;
   disabled?: boolean;
 };
-
-function notifyComposerFocus(isFocused: boolean) {
-  document.body.classList.toggle('ai-composer-focused', isFocused);
-  window.dispatchEvent(
-    new CustomEvent('ai-composer-focus-change', {
-      detail: { focused: isFocused },
-    }),
-  );
-}
 
 export function AICoreInput({
   value,
@@ -30,13 +22,15 @@ export function AICoreInput({
     if (!input) return;
 
     input.style.height = 'auto';
-    input.style.height = `${Math.min(input.scrollHeight, 126)}px`;
+    input.style.height = `${Math.min(input.scrollHeight, 128)}px`;
   }, [value]);
 
   useEffect(() => {
-    notifyComposerFocus(focused);
+    document.body.classList.toggle('ai-composer-focused', focused);
 
-    return () => notifyComposerFocus(false);
+    return () => {
+      document.body.classList.remove('ai-composer-focused');
+    };
   }, [focused]);
 
   const submit = async () => {
@@ -58,7 +52,7 @@ export function AICoreInput({
       data-ai-composer="true"
       data-no-swipe="true"
     >
-      <div className="rounded-[28px] border border-white/10 bg-[#0b1016]/95 p-2 shadow-[0_-18px_60px_rgba(0,0,0,0.46)] backdrop-blur-xl">
+      <div className="rounded-[28px] border border-white/10 bg-[#0b1016]/95 p-2 shadow-[0_-18px_60px_rgba(0,0,0,0.45)] backdrop-blur-xl">
         <div className="flex items-end gap-2">
           <textarea
             ref={inputRef}
@@ -67,7 +61,7 @@ export function AICoreInput({
             onBlur={() => setFocused(false)}
             onChange={(event) => onChange(event.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Напиши AI..."
+            placeholder="Введите команду..."
             rows={1}
             className="max-h-32 min-h-12 flex-1 resize-none rounded-[22px] border border-white/8 bg-black/25 px-4 py-3 text-base leading-6 text-white outline-none placeholder:text-white/30"
           />

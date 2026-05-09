@@ -76,9 +76,10 @@ export function inferTransactionType(text: string, explicit?: unknown): 'income'
 }
 
 export function inferCurrency(text: string, explicit?: unknown, fallback: CurrencyCode = 'RUB'): CurrencyCode {
-  const explicitCurrency = extractCurrencyFromText(String(explicit ?? ''), undefined as unknown as CurrencyCode);
+  const explicitCurrency = extractCurrencyFromText(String(explicit ?? ''), fallback);
   if (explicitCurrency) return explicitCurrency;
-  return extractCurrencyFromText(text, fallback);
+
+  return extractCurrencyFromText(text, fallback) ?? fallback;
 }
 
 

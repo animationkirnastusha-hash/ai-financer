@@ -8,20 +8,18 @@ type PendingActionsResponse =
 export const pendingActionsApi = {
   list: async (): Promise<PendingActionItem[]> => {
     const response = await apiClient.get<PendingActionsResponse>('/ai/pending-actions');
-
     if (Array.isArray(response)) return response;
     if (Array.isArray(response.items)) return response.items;
     if (Array.isArray(response.pendingActions)) return response.pendingActions;
-
     return [];
   },
 
-  confirm: (pendingActionId: string, parsedOverride?: Record<string, unknown>) =>
-    apiClient.post('/ai/confirm', { pendingActionId, parsedOverride }),
+  confirm: (pendingActionId: string) =>
+    apiClient.post('/ai/confirm', { pendingActionId }),
 
   cancel: (pendingActionId: string) =>
     apiClient.post('/ai/cancel', { pendingActionId }),
 
-  update: (pendingActionId: string, parsed: Record<string, unknown>, command?: string) =>
-    apiClient.patch(`/ai/pending-actions/${pendingActionId}`, { parsed, command }),
+  update: (pendingActionId: string, parsed: Record<string, unknown>) =>
+    apiClient.patch(`/ai/pending-actions/${pendingActionId}`, { parsed }),
 };

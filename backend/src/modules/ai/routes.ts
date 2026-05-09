@@ -3,8 +3,8 @@ import {
   parseCommand,
   confirmCommand,
   cancelCommand,
-  getPendingActions,
   updatePendingAction,
+  getPendingActions,
   getAuditLogs,
   undoCommand,
 } from './controller';
@@ -20,8 +20,7 @@ router.get('/audit-logs', getAuditLogs);
 router.post('/parse', parseCommand);
 router.post('/confirm', confirmCommand);
 router.post('/cancel', cancelCommand);
-router.patch('/pending-actions/:pendingActionId', updatePendingAction);
-router.post('/pending-actions/:pendingActionId', updatePendingAction);
 router.post('/undo', undoCommand);
+router.patch('/pending-actions/:pendingActionId', updatePendingAction);
 
 export default router;

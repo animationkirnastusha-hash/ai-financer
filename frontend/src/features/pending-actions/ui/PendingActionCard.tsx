@@ -6,35 +6,69 @@ import { cn } from '@/shared/lib/cn';
 import type { PendingActionItem } from '@/features/pending-actions/model/pendingActions.types';
 import { getPendingActionView } from '@/features/pending-actions/lib/pendingActionView';
 
-type EditableAction = Record<string, unknown>;
+type DraftAction = Record<string, any>;
 
 type Props = {
   item: PendingActionItem;
   onConfirm: (id: string) => Promise<void> | void;
   onCancel: (id: string) => Promise<void> | void;
-  onUpdate?: (id: string, parsed: Record<string, unknown>, command?: string) => Promise<void> | void;
+  onUpdate?: (id: string, parsed: Record<string, unknown>) => Promise<void> | void;
 };
 
+const ACCOUNT_TYPES = [
+  { value: 'cash', label: 'Наличные' },
+  { value: 'card', label: 'Карта' },
+  { value: 'savings', label: 'Накопления' },
+  { value: 'investment', label: 'Инвестиции' },
+];
+
+const CURRENCIES = ['RUB', 'USD', 'EUR', 'VND'];
+
 function isRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-function readParsed(item: PendingActionItem): Record<string, unknown> {
-  if (isRecord(item.parsed)) return item.parsed;
-  if (isRecord(item.payload)) return item.payload;
-  return {};
+function clone<T>(value: T): T {
+  return JSON.parse(JSON.stringify(value));
 }
 
-function getActions(parsed: Record<string, unknown>): EditableAction[] {
-  if (parsed.intent === 'batch' && Array.isArray(parsed.actions)) {
-    return parsed.actions.filter(isRecord);
+function getDraftFromItem(item: PendingActionItem): DraftAction {
+  const parsed = isRecord(item.parsed) ? item.parsed : isRecord(item.payload) ? item.payload : {};
+  const intent = String(parsed.intent || parsed.type || item.intent || item.type || 'unknown');
+
+  if (intent === 'batch') {
+    const actions = Array.isArray(parsed.actions) ? parsed.actions.filter(isRecord) : [];
+    return { intent: 'batch', actions: clone(actions) };
   }
-  return [parsed].filter((item) => Object.keys(item).length > 0);
+
+  return {
+    intent,
+    ...clone(parsed),
+  };
 }
 
-function formatActionTitle(action: EditableAction, index: number) {
-  const intent = String(action.intent || '').toLowerCase();
-  if (intent === 'create_account') return `${index + 1}. Создать счёт`;
+function getActions(draft: DraftAction): DraftAction[] {
+  if (draft.intent === 'batch') {
+    return Array.isArray(draft.actions) ? draft.actions : [];
+  }
+
+  return [draft];
+}
+
+function buildPayload(draft: DraftAction): Record<string, unknown> {
+  if (draft.intent === 'batch') {
+    return {
+      intent: 'batch',
+      actions: getActions(draft).map((action) => ({ ...action })),
+    };
+  }
+
+  return { ...draft };
+}
+
+function actionTitle(action: DraftAction, index: number) {
+  const intent = String(action.intent || action.type || '').toLowerCase();
+  if (intent === 'create_account') return `${index + 1}. Счёт`;
   if (intent === 'income') return `${index + 1}. Доход`;
   if (intent === 'expense') return `${index + 1}. Расход`;
   if (intent === 'transfer') return `${index + 1}. Перевод`;
@@ -43,64 +77,145 @@ function formatActionTitle(action: EditableAction, index: number) {
   return `${index + 1}. Действие`;
 }
 
-const fieldLabels: Record<string, string> = {
-  name: 'Название',
-  type: 'Тип',
-  currency: 'Валюта',
-  balance: 'Баланс',
-  amount: 'Сумма',
-  rawCategory: 'Категория',
-  description: 'Описание',
-  accountName: 'Счёт',
-  fromAccountName: 'Откуда',
-  toAccountName: 'Куда',
-  sectionName: 'Раздел',
-};
-
-const editableFieldsByIntent: Record<string, string[]> = {
-  create_account: ['name', 'type', 'currency', 'balance'],
-  income: ['amount', 'accountName', 'rawCategory', 'description', 'sectionName'],
-  expense: ['amount', 'accountName', 'rawCategory', 'description', 'sectionName'],
-  transfer: ['amount', 'fromAccountName', 'toAccountName'],
-  create_category: ['name', 'type', 'sectionName'],
-  create_section: ['name'],
-};
-
-function normalizeInputValue(value: unknown) {
-  if (value === undefined || value === null) return '';
-  return String(value);
+function actionSummary(action: DraftAction) {
+  const intent = String(action.intent || action.type || '').toLowerCase();
+  if (intent === 'create_account') return `${action.name || 'Новый счёт'} · ${action.currency || 'RUB'}`;
+  if (intent === 'income' || intent === 'expense') return `${action.accountName || 'счёт'} · ${action.amount || 0} ₽`;
+  if (intent === 'transfer') return `${action.fromAccountName || 'счёт'} → ${action.toAccountName || 'счёт'} · ${action.amount || 0}`;
+  if (intent === 'create_category') return `${action.name || 'категория'} · ${action.type || 'expense'}`;
+  if (intent === 'create_section') return `${action.name || 'раздел'}`;
+  return 'Проверь параметры';
 }
 
-function coerceValue(key: string, value: string): unknown {
-  if (key === 'amount' || key === 'balance') {
-    const number = Number(value.replace(/\s/g, '').replace(',', '.'));
-    return Number.isFinite(number) ? number : value;
-  }
-  return value.trim();
+function Field({ label, value, onChange, type = 'text' }: {
+  label: string;
+  value: string | number | undefined;
+  onChange: (value: string) => void;
+  type?: string;
+}) {
+  return (
+    <label className="grid gap-1.5 text-xs text-white/45">
+      {label}
+      <input
+        type={type}
+        value={value ?? ''}
+        onChange={(event) => onChange(event.target.value)}
+        className="h-12 rounded-2xl border border-white/8 bg-black/25 px-3 text-base text-white outline-none transition focus:border-emerald-300/35"
+      />
+    </label>
+  );
 }
 
-function rebuildParsed(original: Record<string, unknown>, actions: EditableAction[]): Record<string, unknown> {
-  if (original.intent === 'batch') {
-    return { ...original, actions };
+function SelectField({ label, value, options, onChange }: {
+  label: string;
+  value: string | undefined;
+  options: Array<string | { value: string; label: string }>;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <label className="grid gap-1.5 text-xs text-white/45">
+      {label}
+      <select
+        value={value ?? ''}
+        onChange={(event) => onChange(event.target.value)}
+        className="h-12 rounded-2xl border border-white/8 bg-black/25 px-3 text-base text-white outline-none transition focus:border-emerald-300/35"
+      >
+        {options.map((option) => {
+          const item = typeof option === 'string' ? { value: option, label: option } : option;
+          return <option key={item.value} value={item.value}>{item.label}</option>;
+        })}
+      </select>
+    </label>
+  );
+}
+
+function EditableAction({ action, onChange }: { action: DraftAction; onChange: (next: DraftAction) => void }) {
+  const intent = String(action.intent || action.type || '').toLowerCase();
+  const patch = (key: string, value: unknown) => onChange({ ...action, [key]: value });
+
+  if (intent === 'create_account') {
+    return (
+      <div className="grid gap-3">
+        <Field label="Название счёта" value={action.name} onChange={(value) => patch('name', value)} />
+        <div className="grid grid-cols-2 gap-2">
+          <SelectField label="Тип" value={action.type || 'cash'} options={ACCOUNT_TYPES} onChange={(value) => patch('type', value)} />
+          <SelectField label="Валюта" value={action.currency || 'RUB'} options={CURRENCIES} onChange={(value) => patch('currency', value)} />
+        </div>
+        <Field label="Начальный баланс" type="number" value={action.balance ?? 0} onChange={(value) => patch('balance', Number(value) || 0)} />
+      </div>
+    );
   }
-  return actions[0] ? { ...original, ...actions[0] } : original;
+
+  if (intent === 'income' || intent === 'expense') {
+    return (
+      <div className="grid gap-3">
+        <Field label="Сумма" type="number" value={action.amount} onChange={(value) => patch('amount', Number(value) || 0)} />
+        <Field label="Счёт" value={action.accountName} onChange={(value) => patch('accountName', value)} />
+        <Field label={intent === 'income' ? 'Тип дохода' : 'Категория'} value={action.rawCategory || action.categoryName} onChange={(value) => patch('rawCategory', value)} />
+        <Field label="Описание" value={action.description} onChange={(value) => patch('description', value)} />
+      </div>
+    );
+  }
+
+  if (intent === 'transfer') {
+    return (
+      <div className="grid gap-3">
+        <Field label="Сумма" type="number" value={action.amount} onChange={(value) => patch('amount', Number(value) || 0)} />
+        <Field label="Откуда" value={action.fromAccountName} onChange={(value) => patch('fromAccountName', value)} />
+        <Field label="Куда" value={action.toAccountName} onChange={(value) => patch('toAccountName', value)} />
+      </div>
+    );
+  }
+
+  if (intent === 'create_category') {
+    return (
+      <div className="grid gap-3">
+        <Field label="Название категории" value={action.name} onChange={(value) => patch('name', value)} />
+        <SelectField label="Тип" value={action.type || 'expense'} options={[{ value: 'expense', label: 'Расход' }, { value: 'income', label: 'Доход' }]} onChange={(value) => patch('type', value)} />
+        <Field label="Раздел" value={action.sectionName} onChange={(value) => patch('sectionName', value)} />
+      </div>
+    );
+  }
+
+  if (intent === 'create_section') {
+    return <Field label="Название раздела" value={action.name} onChange={(value) => patch('name', value)} />;
+  }
+
+  return (
+    <div className="rounded-2xl border border-white/8 bg-black/20 p-3 text-sm text-white/55">
+      Это действие можно подтвердить или отменить. Редактирование для него пока не требуется.
+    </div>
+  );
 }
 
 export function PendingActionCard({ item, onConfirm, onCancel, onUpdate }: Props) {
   const [processingAction, setProcessingAction] = useState<'confirm' | 'cancel' | 'save' | null>(null);
-  const [showEditor, setShowEditor] = useState(false);
-  const [showRawPayload, setShowRawPayload] = useState(false);
-  const view = getPendingActionView(item);
-  const originalParsed = useMemo(() => readParsed(item), [item]);
-  const [actions, setActions] = useState<EditableAction[]>(() => getActions(originalParsed));
-  const isProcessing = processingAction !== null;
+  const [isEditing, setIsEditing] = useState(false);
+  const initialDraft = useMemo(() => getDraftFromItem(item), [item]);
+  const [draft, setDraft] = useState<DraftAction>(initialDraft);
 
-  const updateActionField = (index: number, key: string, value: string) => {
-    setActions((current) =>
-      current.map((action, actionIndex) =>
-        actionIndex === index ? { ...action, [key]: coerceValue(key, value) } : action,
-      ),
-    );
+  const view = getPendingActionView({ ...item, parsed: buildPayload(draft) });
+  const isProcessing = processingAction !== null;
+  const actions = getActions(draft);
+
+  const updateAction = (index: number, next: DraftAction) => {
+    if (draft.intent === 'batch') {
+      const nextActions = actions.map((action, actionIndex) => actionIndex === index ? next : action);
+      setDraft({ ...draft, actions: nextActions });
+      return;
+    }
+    setDraft(next);
+  };
+
+  const handleSave = async () => {
+    if (!onUpdate || isProcessing) return;
+    setProcessingAction('save');
+    try {
+      await onUpdate(item.id, buildPayload(draft));
+      setIsEditing(false);
+    } finally {
+      setProcessingAction(null);
+    }
   };
 
   const handleConfirm = async (event: React.MouseEvent<HTMLButtonElement>) => {
@@ -109,6 +224,7 @@ export function PendingActionCard({ item, onConfirm, onCancel, onUpdate }: Props
     if (isProcessing) return;
     setProcessingAction('confirm');
     try {
+      if (onUpdate) await onUpdate(item.id, buildPayload(draft));
       await onConfirm(item.id);
     } finally {
       setProcessingAction(null);
@@ -122,17 +238,6 @@ export function PendingActionCard({ item, onConfirm, onCancel, onUpdate }: Props
     setProcessingAction('cancel');
     try {
       await onCancel(item.id);
-    } finally {
-      setProcessingAction(null);
-    }
-  };
-
-  const handleSave = async () => {
-    if (!onUpdate || isProcessing) return;
-    setProcessingAction('save');
-    try {
-      await onUpdate(item.id, rebuildParsed(originalParsed, actions), item.command);
-      setShowEditor(false);
     } finally {
       setProcessingAction(null);
     }
@@ -158,111 +263,53 @@ export function PendingActionCard({ item, onConfirm, onCancel, onUpdate }: Props
                 {view.riskLabel}
               </span>
             </div>
-
-            <div className="mt-3 text-[11px] uppercase tracking-[0.16em] text-white/35">
-              {view.intentLabel}
-            </div>
-
-            <div className="mt-1 text-lg font-semibold leading-snug text-white">
-              {view.amountLabel || view.title}
-            </div>
-
-            {view.amountLabel && view.title ? (
-              <div className="mt-1 text-sm leading-5 text-white/65">{view.title}</div>
-            ) : null}
+            <div className="mt-3 text-[11px] uppercase tracking-[0.16em] text-white/35">{view.intentLabel}</div>
+            <div className="mt-1 text-lg font-semibold leading-snug text-white">{view.title}</div>
           </div>
-
-          <div className="shrink-0 text-[11px] text-white/35">
-            {item.createdAt ? formatTime(item.createdAt) : '—'}
-          </div>
+          <div className="shrink-0 text-[11px] text-white/35">{item.createdAt ? formatTime(item.createdAt) : '—'}</div>
         </div>
 
         <div className="mt-4 rounded-[22px] border border-white/8 bg-black/20 px-3.5 py-3 text-sm leading-6 text-white/76">
-          {view.explanation}
+          <span className="text-amber-100">ИИ понял так:</span> {view.explanation}
         </div>
 
-        {view.rows.length > 0 ? (
-          <div className="mt-3 grid gap-2">
-            {view.rows.map((row) => (
-              <div
-                key={`${row.label}-${row.value}`}
-                className="flex items-center justify-between gap-3 rounded-2xl border border-white/8 bg-white/[0.035] px-3 py-2.5 text-sm"
-              >
-                <span className="text-white/45">{row.label}</span>
-                <span className="max-w-[62%] truncate text-right font-medium text-white/88">{row.value}</span>
+        <div className="mt-3 grid gap-2">
+          {actions.map((action, index) => (
+            <div key={`${index}-${action.intent || action.type}`} className="rounded-2xl border border-white/8 bg-white/[0.035] p-3">
+              <div className="flex items-center justify-between gap-3 text-sm">
+                <span className="text-white/45">{actionTitle(action, index)}</span>
+                <span className="max-w-[62%] truncate text-right font-medium text-white/88">{actionSummary(action)}</span>
               </div>
-            ))}
-          </div>
-        ) : null}
+              {isEditing ? (
+                <div className="mt-3">
+                  <EditableAction action={action} onChange={(next) => updateAction(index, next)} />
+                </div>
+              ) : null}
+            </div>
+          ))}
+        </div>
 
         {onUpdate ? (
-          <button
-            type="button"
-            onClick={() => setShowEditor((value) => !value)}
-            className="mt-3 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs text-white/70 transition active:scale-95"
-          >
-            {showEditor ? 'Скрыть редактирование' : 'Исправить перед подтверждением'}
-          </button>
-        ) : null}
-
-        {showEditor ? (
-          <div className="mt-3 space-y-3 rounded-[24px] border border-white/8 bg-black/24 p-3">
-            {actions.map((action, index) => {
-              const intent = String(action.intent || '');
-              const fields = editableFieldsByIntent[intent] ?? Object.keys(action).filter((key) => key !== 'intent');
-
-              return (
-                <div key={`${intent}-${index}`} className="space-y-2 rounded-[20px] border border-white/8 bg-white/[0.03] p-3">
-                  <div className="text-xs font-medium uppercase tracking-[0.14em] text-white/40">
-                    {formatActionTitle(action, index)}
-                  </div>
-
-                  <div className="grid gap-2">
-                    {fields.map((field) => (
-                      <label key={field} className="grid gap-1.5 text-xs text-white/45">
-                        {fieldLabels[field] ?? field}
-                        <input
-                          value={normalizeInputValue(action[field])}
-                          onChange={(event) => updateActionField(index, field, event.target.value)}
-                          className="h-10 rounded-2xl border border-white/10 bg-black/28 px-3 text-sm text-white outline-none focus:border-emerald-300/35"
-                        />
-                      </label>
-                    ))}
-                  </div>
-                </div>
-              );
-            })}
-
-            <Button disabled={isProcessing || !onUpdate} onClick={handleSave} fullWidth>
-              {processingAction === 'save' ? 'Сохраняю...' : 'Сохранить правки'}
-            </Button>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button type="button" onClick={() => setIsEditing((value) => !value)} className="rounded-full border border-white/10 bg-white/5 px-3.5 py-2 text-sm text-white/65 transition hover:bg-white/10 hover:text-white">
+              {isEditing ? 'Скрыть редактирование' : 'Исправить перед подтверждением'}
+            </button>
+            {isEditing ? (
+              <button type="button" onClick={handleSave} disabled={isProcessing} className="rounded-full border border-emerald-300/20 bg-emerald-300/10 px-3.5 py-2 text-sm text-emerald-100 transition hover:bg-emerald-300/15 disabled:opacity-60">
+                {processingAction === 'save' ? 'Сохраняю...' : 'Сохранить правки'}
+              </button>
+            ) : null}
           </div>
         ) : null}
 
-        {view.rawPayload ? (
-          <button
-            type="button"
-            onClick={() => setShowRawPayload((value) => !value)}
-            className="mt-3 text-xs text-white/30 transition hover:text-white/55"
-          >
-            {showRawPayload ? 'Скрыть данные' : 'Технические данные'}
-          </button>
-        ) : null}
-
-        {showRawPayload && view.rawPayload ? (
-          <pre className="mt-3 max-h-44 overflow-auto rounded-2xl border border-white/8 bg-black/25 p-3 text-xs text-white/55">
-            {JSON.stringify(view.rawPayload, null, 2)}
-          </pre>
-        ) : null}
+        <details className="mt-3 text-xs text-white/35">
+          <summary className="cursor-pointer select-none">Технические данные</summary>
+          <pre className="mt-3 max-h-44 overflow-auto rounded-2xl border border-white/8 bg-black/25 p-3 text-xs text-white/55">{JSON.stringify(buildPayload(draft), null, 2)}</pre>
+        </details>
 
         <div className="mt-4 grid grid-cols-[1.15fr_0.85fr] gap-2">
-          <Button disabled={isProcessing} onClick={handleConfirm} fullWidth>
-            {processingAction === 'confirm' ? 'Выполняю...' : 'Подтвердить'}
-          </Button>
-
-          <Button variant="secondary" disabled={isProcessing} onClick={handleCancel} fullWidth>
-            {processingAction === 'cancel' ? 'Отменяю...' : 'Отмена'}
-          </Button>
+          <Button disabled={isProcessing} onClick={handleConfirm} fullWidth>{processingAction === 'confirm' ? 'Выполняю...' : 'Подтвердить'}</Button>
+          <Button variant="secondary" disabled={isProcessing} onClick={handleCancel} fullWidth>{processingAction === 'cancel' ? 'Отменяю...' : 'Отмена'}</Button>
         </div>
       </div>
     </Surface>
