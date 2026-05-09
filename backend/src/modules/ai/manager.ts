@@ -20,6 +20,16 @@ export class AIManager {
   private readonly preview = new AIPreviewBuilder();
   private readonly executor = new AIExecutorService();
 
+
+
+  async executeParsed(userId: string, command: string, parsedCommand: AIParsedCommand): Promise<AIResult> {
+    const startedAt = Date.now();
+    const policy = this.policy.evaluate(parsedCommand);
+    const result = await this.executor.execute(userId, parsedCommand, policy.riskLevel);
+    await this.logSuccess(userId, command, result, startedAt);
+    return result;
+  }
+
   async handle(userId: string, command: string, options?: AIHandleOptions): Promise<AIResult> {
     const startedAt = Date.now();
 
@@ -123,13 +133,6 @@ export class AIManager {
 
       throw error;
     }
-  }
-
-
-  async executeConfirmedParsed(userId: string, parsedCommand: AIParsedCommand): Promise<AIResult> {
-    await this.applyContextFallback(parsedCommand, []);
-    const policy = this.policy.evaluate(parsedCommand);
-    return this.executor.execute(userId, parsedCommand, policy.riskLevel);
   }
 
   private async logSuccess(userId: string, command: string, result: AIResult, startedAt: number) {

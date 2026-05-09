@@ -72,14 +72,21 @@ export class AIPendingActionService {
   }
 
 
-  async updatePendingAction(userId: string, pendingActionId: string, params: { parsed?: Record<string, unknown> | null; command?: string }) {
-    const action = await this.getPendingAction(userId, pendingActionId);
+
+  async updatePendingAction(params: {
+    userId: string;
+    pendingActionId: string;
+    parsed: Record<string, unknown>;
+    command?: string;
+  }) {
+    await this.getPendingAction(params.userId, params.pendingActionId);
 
     return prisma.aIPendingAction.update({
-      where: { id: action.id },
+      where: { id: params.pendingActionId },
       data: {
-        ...(params.command !== undefined ? { command: params.command } : {}),
-        ...(params.parsed !== undefined ? { parsed: safeStringify(params.parsed) } : {}),
+        parsed: safeStringify(params.parsed),
+        ...(params.command ? { command: params.command } : {}),
+        updatedAt: new Date(),
       },
     });
   }

@@ -1,7 +1,7 @@
 import { AIManager } from './manager';
 import { AIAuditService } from './audit.service';
 import { AIPendingActionService } from './pending-action.service';
-import { AIHandleOptions, AIParsedCommand, AIParsedAtomicCommand, AIResult } from './types';
+import { AIHandleOptions, AIParsedCommand, AIResult } from './types';
 
 const aiManager = new AIManager();
 const auditService = new AIAuditService();
@@ -16,94 +16,6 @@ function parseStoredJson(value: string | null): Record<string, unknown> | null {
   } catch {
     return null;
   }
-}
-
-
-function asRecord(value: unknown): Record<string, unknown> {
-  return value && typeof value === 'object' && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
-}
-
-function asString(value: unknown, fallback = '') {
-  if (typeof value === 'string') return value.trim() || fallback;
-  if (typeof value === 'number') return String(value);
-  return fallback;
-}
-
-function asNumber(value: unknown, fallback = 0) {
-  if (typeof value === 'number' && Number.isFinite(value)) return value;
-  if (typeof value === 'string') {
-    const parsed = Number(value.replace(/\s/g, '').replace(',', '.'));
-    if (Number.isFinite(parsed)) return parsed;
-  }
-  return fallback;
-}
-
-function normalizePendingAction(intent: string, payload: Record<string, unknown>): AIParsedCommand {
-  if (intent === 'batch' || Array.isArray(payload.actions)) {
-    const actions = Array.isArray(payload.actions)
-      ? payload.actions.map((item) => normalizePendingAction(asString(asRecord(item).intent || asRecord(item).type, 'unknown'), asRecord(item)))
-      : [];
-
-    return {
-      intent: 'batch',
-      actions: actions.filter((item): item is AIParsedAtomicCommand => item.intent !== 'batch' && item.intent !== 'unknown'),
-      originalText: asString(payload.originalText),
-    };
-  }
-
-  if (intent === 'create_account') {
-    return {
-      intent: 'create_account',
-      name: asString(payload.name || payload.accountName, 'Новый счёт'),
-      type: asString(payload.type, 'card'),
-      currency: asString(payload.currency, 'RUB').toUpperCase(),
-      balance: asNumber(payload.balance || payload.initialBalance, 0),
-    };
-  }
-
-  if (intent === 'income' || intent === 'expense' || payload.type === 'income' || payload.type === 'expense') {
-    const type = intent === 'income' || payload.type === 'income' ? 'income' : 'expense';
-    return {
-      intent: type,
-      amount: asNumber(payload.amount, 0),
-      rawCategory: asString(payload.rawCategory || payload.categoryName || payload.category || payload.description, type === 'income' ? 'пополнение' : 'расход'),
-      description: asString(payload.description || payload.rawCategory || payload.categoryName, type === 'income' ? 'пополнение' : 'расход'),
-      accountName: asString(payload.accountName || payload.account, ''),
-      sectionName: asString(payload.sectionName || payload.section, ''),
-    };
-  }
-
-  if (intent === 'transfer' || payload.type === 'transfer') {
-    return {
-      intent: 'transfer',
-      amount: asNumber(payload.amount, 0),
-      fromAccountName: asString(payload.fromAccountName || payload.accountName, ''),
-      toAccountName: asString(payload.toAccountName || payload.accountName || payload.to, ''),
-    };
-  }
-
-  if (intent === 'create_category') {
-    return {
-      intent: 'create_category',
-      name: asString(payload.name || payload.categoryName, 'Новая категория'),
-      type: payload.type === 'income' ? 'income' : 'expense',
-      sectionName: asString(payload.sectionName, ''),
-    };
-  }
-
-  if (intent === 'create_section') {
-    return { intent: 'create_section', name: asString(payload.name || payload.sectionName, 'Новый раздел') };
-  }
-
-  if (intent === 'assign_expenses_to_section') {
-    return {
-      intent: 'assign_expenses_to_section',
-      rawQuery: asString(payload.rawQuery || payload.category || payload.description, ''),
-      sectionName: asString(payload.sectionName || payload.name, ''),
-    };
-  }
-
-  return { intent: 'unknown' };
 }
 
 function enrichUndoMeta(result: AIResult): AIResult {
@@ -167,14 +79,13 @@ export class AITrustService {
     }
   }
 
-  async confirmCommand(userId: string, pendingActionId: string, parsedOverride?: Record<string, unknown>): Promise<AIResult> {
+  async confirmCommand(userId: string, pendingActionId: string): Promise<AIResult> {
     const pendingAction = await pendingActionService.getPendingAction(userId, pendingActionId);
 
-    const overrideSource = parsedOverride && Object.keys(parsedOverride).length > 0 ? parsedOverride : null;
-
+    const parsed = parseStoredJson(pendingAction.parsed) as AIParsedCommand | null;
     const result = enrichUndoMeta(
-      overrideSource
-        ? await aiManager.executeConfirmedParsed(userId, normalizePendingAction(pendingAction.intent, overrideSource))
+      parsed
+        ? await aiManager.executeParsed(userId, pendingAction.command, parsed)
         : await aiManager.handle(userId, pendingAction.command, {
             execute: true,
             confirmed: true,
@@ -197,33 +108,6 @@ export class AITrustService {
     };
 
     return result;
-  }
-
-
-  async updatePendingAction(
-    userId: string,
-    pendingActionId: string,
-    parsed: Record<string, unknown>,
-    command?: string,
-  ) {
-    const updated = await pendingActionService.updatePendingAction(userId, pendingActionId, {
-      parsed,
-      command,
-    });
-
-    return {
-      success: true,
-      intent: updated.intent as AIResult['intent'],
-      executed: false,
-      requiresConfirmation: true,
-      riskLevel: updated.riskLevel as AIResult['riskLevel'],
-      message: 'AI-действие обновлено. Проверь и подтверди выполнение.',
-      parsed,
-      meta: {
-        pendingActionId: updated.id,
-        confirmExpiresAt: updated.expiresAt.toISOString(),
-      },
-    } satisfies AIResult;
   }
 
   async cancelCommand(userId: string, pendingActionId: string) {
@@ -256,6 +140,36 @@ export class AITrustService {
       meta: {
         auditLogId: auditLog.id,
         pendingActionId: pendingAction.id,
+      },
+    } satisfies AIResult;
+  }
+
+
+
+  async updatePendingAction(
+    userId: string,
+    pendingActionId: string,
+    parsed: Record<string, unknown>,
+    command?: string,
+  ) {
+    const updated = await pendingActionService.updatePendingAction({
+      userId,
+      pendingActionId,
+      parsed,
+      command,
+    });
+
+    return {
+      success: true,
+      intent: updated.intent as AIResult['intent'],
+      executed: false,
+      requiresConfirmation: true,
+      riskLevel: updated.riskLevel as AIResult['riskLevel'],
+      message: 'Действие обновлено. Проверь и подтверди.',
+      parsed,
+      meta: {
+        pendingActionId: updated.id,
+        confirmExpiresAt: updated.expiresAt.toISOString(),
       },
     } satisfies AIResult;
   }

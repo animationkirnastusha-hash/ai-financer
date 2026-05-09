@@ -54,9 +54,7 @@ export const confirmCommand = asyncHandler(async (req: Request, res: Response) =
     throw new BadRequestError('pendingActionId is required');
   }
 
-  const parsedOverride = req.body.parsedOverride && typeof req.body.parsedOverride === 'object' ? req.body.parsedOverride : undefined;
-
-  const result = await aiService.confirmCommand(userId, pendingActionId, parsedOverride);
+  const result = await aiService.confirmCommand(userId, pendingActionId);
 
   res.json(result);
 });
@@ -81,6 +79,7 @@ export const cancelCommand = asyncHandler(async (req: Request, res: Response) =>
 });
 
 
+
 export const updatePendingAction = asyncHandler(async (req: Request, res: Response) => {
   const userId = req.userId;
 
@@ -88,7 +87,12 @@ export const updatePendingAction = asyncHandler(async (req: Request, res: Respon
     throw new BadRequestError('Unauthorized user');
   }
 
-  const pendingActionId = typeof req.params.id === 'string' ? req.params.id : '';
+  const pendingActionId =
+    typeof req.body.pendingActionId === 'string'
+      ? req.body.pendingActionId
+      : typeof req.params.pendingActionId === 'string'
+        ? req.params.pendingActionId
+        : '';
   const parsed = req.body.parsed;
   const command = typeof req.body.command === 'string' ? req.body.command : undefined;
 

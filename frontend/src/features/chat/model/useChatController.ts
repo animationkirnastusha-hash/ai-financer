@@ -249,6 +249,30 @@ export function useChatController() {
     [refreshFinanceState],
   );
 
+
+  const updatePendingAction = useCallback(
+    async (actionId: string, parsed: Record<string, unknown>, command?: string) => {
+      if (!actionId) return;
+
+      try {
+        await pendingActionsApi.update(actionId, parsed, command);
+        setPendingActions((prev) =>
+          prev.map((item) =>
+            item.id === actionId
+              ? { ...item, parsed, command: command ?? item.command }
+              : item,
+          ),
+        );
+      } catch (error) {
+        console.error('Update pending action failed', error);
+        throw error;
+      } finally {
+        await refreshFinanceState();
+      }
+    },
+    [refreshFinanceState],
+  );
+
   const openPending = useCallback(() => setIsPendingOpen(true), []);
   const closePending = useCallback(() => setIsPendingOpen(false), []);
   const openAudit = useCallback(() => setIsAuditOpen(true), []);
@@ -266,6 +290,7 @@ export function useChatController() {
     confirmAction,
     cancelAction,
     undoMessageAction,
+    updatePendingAction,
 
     openPending,
     closePending,

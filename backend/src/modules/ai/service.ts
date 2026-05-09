@@ -10,21 +10,16 @@ export class AIService {
     return aiTrustService.handleCommand(userId, command, options);
   }
 
-  async confirmCommand(userId: string, pendingActionId: string, parsedOverride?: Record<string, unknown>) {
-    return aiTrustService.confirmCommand(userId, pendingActionId, parsedOverride);
-  }
-
-  async updatePendingAction(
-    userId: string,
-    pendingActionId: string,
-    parsed: Record<string, unknown>,
-    command?: string,
-  ) {
-    return aiTrustService.updatePendingAction(userId, pendingActionId, parsed, command);
+  async confirmCommand(userId: string, pendingActionId: string) {
+    return aiTrustService.confirmCommand(userId, pendingActionId);
   }
 
   async cancelCommand(userId: string, pendingActionId: string) {
     return aiTrustService.cancelCommand(userId, pendingActionId);
+  }
+
+  async updatePendingAction(userId: string, pendingActionId: string, parsed: Record<string, unknown>, command?: string) {
+    return aiTrustService.updatePendingAction(userId, pendingActionId, parsed, command);
   }
 
   async getPendingActions(userId: string, includeExpired = false) {

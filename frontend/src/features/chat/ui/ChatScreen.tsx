@@ -24,6 +24,7 @@ export function ChatScreen() {
     confirmAction,
     cancelAction,
     undoMessageAction,
+    updatePendingAction,
     pendingActions,
     auditLogs,
     isPendingOpen,
@@ -111,6 +112,7 @@ export function ChatScreen() {
         onClose={closePending}
         onConfirm={confirmAction}
         onCancel={cancelAction}
+        onUpdate={updatePendingAction}
       />
 
       <AuditLogDrawer
