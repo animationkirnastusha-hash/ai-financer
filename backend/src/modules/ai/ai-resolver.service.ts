@@ -1,5 +1,4 @@
 import { prisma } from '../../lib/prisma';
-import { AccountService } from '../accounts/service';
 import { CategoryService } from '../categories/service';
 import { BadRequestError, NotFoundError } from '../../shared/core/errors';
 import {
@@ -11,14 +10,58 @@ import {
 } from './catalog';
 import { AIParsedCommand } from './types';
 
-const accountService = new AccountService();
 const categoryService = new CategoryService();
+
+type AccountLike = {
+  id: string;
+  name: string;
+  type: string;
+  currency: string;
+  balance?: number;
+  showInTotalBalance?: boolean;
+  createdAt?: Date;
+};
+
+function normalizeName(value: string) {
+  return value
+    .toLowerCase()
+    .replace(/ё/g, 'е')
+    .replace(/["'«»]/g, '')
+    .replace(/\b(?:счет|счёт|счета|счёта|карта|карту|карты|кошелек|кошелёк|аккаунт|account|wallet)\b/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function currencyHint(value: string): string | null {
+  const raw = value.toLowerCase();
+  if (/(?:\$|usd|доллар|бакс)/.test(raw)) return 'USD';
+  if (/(?:€|eur|евро)/.test(raw)) return 'EUR';
+  if (/(?:₽|rub|руб)/.test(raw)) return 'RUB';
+  if (/(?:₫|vnd|донг)/.test(raw)) return 'VND';
+  return null;
+}
+
+function accountPriority(account: AccountLike) {
+  let score = 0;
+  if (account.showInTotalBalance !== false) score += 10;
+  if (account.type === 'cash') score += 5;
+  if (account.type === 'card') score += 4;
+  if (account.type === 'savings') score += 3;
+  if (String(account.currency).toUpperCase() === 'RUB') score += 2;
+  return score;
+}
+
+function sortAccounts(accounts: AccountLike[]) {
+  return [...accounts].sort((a, b) => {
+    const priorityDiff = accountPriority(b) - accountPriority(a);
+    if (priorityDiff !== 0) return priorityDiff;
+    return new Date(a.createdAt ?? 0).getTime() - new Date(b.createdAt ?? 0).getTime();
+  });
+}
 
 export class AIResolverService {
   async resolveAccountForMoneyFlow(userId: string, accountName: string | undefined) {
-    if (!accountName) {
-      return this.getDefaultAccount(userId);
-    }
+    if (!accountName?.trim()) return this.getDefaultAccount(userId);
 
     const accounts = await prisma.account.findMany({
       where: { userId },
@@ -26,48 +69,39 @@ export class AIResolverService {
     });
 
     const account = this.findAccountByName(accounts, accountName);
-
-    if (!account) {
-      throw new NotFoundError(`Не найден счёт «${accountName}»`);
-    }
-
+    if (!account) throw new NotFoundError(`Не найден счёт «${accountName}»`);
     return account;
   }
 
   async getDefaultAccount(userId: string) {
-    const account = await prisma.account.findFirst({
+    const accounts = await prisma.account.findMany({
       where: { userId },
       orderBy: [{ createdAt: 'asc' }],
     });
 
-    if (!account) {
-      throw new NotFoundError('У пользователя нет ни одного счёта');
-    }
-
+    const account = sortAccounts(accounts)[0];
+    if (!account) throw new NotFoundError('У пользователя нет ни одного счёта');
     return account;
   }
 
   async findCategoryByName(userId: string, rawName: string, type: 'income' | 'expense') {
-    const normalized = normalizeCategoryName(rawName);
-
+    const normalized = normalizeCategoryName(rawName || (type === 'income' ? 'доход' : 'расход'));
     const categories = await prisma.category.findMany({
       where: { userId, type },
       orderBy: [{ createdAt: 'asc' }],
     });
 
+    const normalizedLower = normalized.toLowerCase();
     return categories.find((item) => {
       const lower = item.name.toLowerCase();
-      return lower === normalized.toLowerCase() || lower.includes(normalized.toLowerCase());
+      return lower === normalizedLower || lower.includes(normalizedLower) || normalizedLower.includes(lower);
     });
   }
 
   async findOrCreateCategory(userId: string, rawName: string, type: 'income' | 'expense') {
-    const normalizedName = normalizeCategoryName(rawName);
+    const normalizedName = normalizeCategoryName(rawName || (type === 'income' ? 'доход' : 'расход'));
     const existing = await this.findCategoryByName(userId, normalizedName, type);
-
-    if (existing) {
-      return existing;
-    }
+    if (existing) return existing;
 
     const resolvedName = categoryAliases[normalizedName.toLowerCase()] ?? toTitleCase(normalizedName);
     const icon = categoryIcons[resolvedName] ?? (type === 'income' ? '💰' : '📝');
@@ -86,41 +120,44 @@ export class AIResolverService {
       orderBy: [{ createdAt: 'asc' }],
     });
 
-    if (accounts.length < 2) {
-      throw new BadRequestError('Для перевода нужно минимум два счёта');
-    }
+    if (accounts.length < 2) throw new BadRequestError('Для перевода нужно минимум два счёта');
 
     const toAccount = this.findAccountByName(accounts, parsedCommand.toAccountName);
-
-    if (!toAccount) {
-      throw new NotFoundError(`Не найден счёт «${parsedCommand.toAccountName}»`);
-    }
+    if (!toAccount) throw new NotFoundError(`Не найден счёт «${parsedCommand.toAccountName}»`);
 
     const fromAccount = parsedCommand.fromAccountName
       ? this.findAccountByName(accounts, parsedCommand.fromAccountName)
-      : accounts.find((item) => item.id !== toAccount.id);
+      : sortAccounts(accounts).find((item) => item.id !== toAccount.id);
 
     if (!fromAccount) {
       throw new NotFoundError(
         parsedCommand.fromAccountName
           ? `Не найден счёт «${parsedCommand.fromAccountName}»`
-          : 'Не удалось определить исходный счёт'
+          : 'Не удалось определить исходный счёт',
       );
     }
 
-    if (fromAccount.id === toAccount.id) {
-      throw new BadRequestError('Нельзя перевести на тот же счёт');
-    }
-
+    if (fromAccount.id === toAccount.id) throw new BadRequestError('Нельзя перевести на тот же счёт');
     return { fromAccount, toAccount };
   }
 
-  private findAccountByName(accounts: Array<{ id: string; name: string }>, rawName: string) {
-    const normalized = rawName.trim().toLowerCase();
+  private findAccountByName(accounts: AccountLike[], rawName: string) {
+    const normalized = normalizeName(rawName);
+    const hint = currencyHint(rawName);
 
-    return accounts.find((account) => {
-      const name = account.name.toLowerCase();
-      return name === normalized || name.includes(normalized) || normalized.includes(name);
+    const byExactName = accounts.find((account) => normalizeName(account.name) === normalized);
+    if (byExactName) return byExactName;
+
+    const bySoftName = accounts.find((account) => {
+      const name = normalizeName(account.name);
+      return Boolean(name && normalized && (name.includes(normalized) || normalized.includes(name)));
     });
+    if (bySoftName) return bySoftName;
+
+    if (hint) {
+      return sortAccounts(accounts).find((account) => String(account.currency).toUpperCase() === hint);
+    }
+
+    return undefined;
   }
 }

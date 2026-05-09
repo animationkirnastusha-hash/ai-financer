@@ -80,7 +80,6 @@ const EN_NUMBERS: Record<string, number> = {
   seventy: 70,
   eighty: 80,
   ninety: 90,
-  hundred: 100,
 };
 
 const VI_NUMBERS: Record<string, number> = {
@@ -145,38 +144,32 @@ const SLANG: Record<string, number> = {
   пятерочка: 5_000,
 };
 
-const currencyWords: Array<[CurrencyCode, RegExp]> = [
-  ['USD', /(?:\$|usd|usdt|доллар(?:а|ов)?|бакс(?:а|ов)?|bucks?|dollars?)/i],
+const CURRENCY_PATTERNS: Array<[CurrencyCode, RegExp]> = [
+  ['USD', /(?:\$|usd|usdt|доллар(?:а|ов|ах)?|бакс(?:а|ов|ах)?|dollars?|bucks?)/i],
   ['EUR', /(?:€|eur|евро|euro?s?)/i],
-  ['VND', /(?:vnd|₫|донг(?:ов)?|dong|đồng)/i],
-  ['RUB', /(?:₽|rub|руб(?:ль|ля|лей)?|рубли|рублей|р\.?\b)/i],
+  ['VND', /(?:₫|vnd|донг(?:а|ов|ах)?|dong|đồng)/i],
+  ['RUB', /(?:₽|rub|руб(?:ль|ля|лей|ли|лях)?|рубли|рублей|р\.?\b|ruble?s?|rouble?s?)/i],
 ];
 
-const currencyCleaner = /(?:₽|rub|руб(?:ль|ля|лей)?|рубли|рублей|р\.?\b|\$|usd|usdt|доллар(?:а|ов)?|бакс(?:а|ов)?|bucks?|dollars?|€|eur|евро|euro?s?|vnd|₫|донг(?:ов)?|dong|đồng)/gi;
-const digitAmountPattern = /(\d+(?:[\s.,]\d{3})*(?:[.,]\d+)?|\d+(?:[.,]\d+)?)(?:\s*(кк|kk|к|k|тыс\.?|тысяч|тысячи|млн|миллион(?:а|ов)?|thousand|thousands|million|millions|nghin|nghìn|ngan|ngàn|trieu|triệu))?(?:\s*(₽|руб(?:ль|ля|лей)?|рубли|рублей|р\.?|rub|\$|usd|доллар(?:а|ов)?|бакс(?:а|ов)?|€|eur|евро|vnd|₫|донг(?:ов)?|dong|đồng))?/gi;
-const ruWordAmountPattern = /((?:(?:ноль|один|одна|одно|два|две|три|четыре|пять|шесть|семь|восемь|девять|десять|одиннадцать|двенадцать|тринадцать|четырнадцать|пятнадцать|шестнадцать|семнадцать|восемнадцать|девятнадцать|двадцать|тридцать|сорок|пятьдесят|шестьдесят|семьдесят|восемьдесят|девяносто|сто|двести|триста|четыреста|пятьсот|шестьсот|семьсот|восемьсот|девятьсот)\s*)+(?:тысяч|тысячи|тысяча|тыщ|тыщи|тыща|тыс|миллион|миллиона|миллионов|млн))(?:\s*(?:₽|руб(?:ль|ля|лей)?|рубли|рублей|р\.?|rub|\$|usd|доллар(?:а|ов)?|бакс(?:а|ов)?|€|eur|евро|vnd|₫|донг(?:ов)?|dong|đồng))?/gi;
-const enWordAmountPattern = /((?:(?:zero|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred)\s*)+(?:thousand|thousands|million|millions))(?:\s*(?:\$|usd|dollars?|bucks?|€|eur|euros?|rub|rubles?|vnd|dong))?/gi;
-const viWordAmountPattern = /((?:(?:không|mot|một|hai|ba|bon|bốn|nam|năm|sau|sáu|bay|bảy|tam|tám|chin|chín|muoi|mười)\s*)+(?:nghin|nghìn|ngan|ngàn|trieu|triệu))(?:\s*(?:vnd|₫|dong|đồng|usd|\$|eur|€))?/gi;
+const currencyCleaner = /(?:₽|rub|руб(?:ль|ля|лей|ли|лях)?|рубли|рублей|р\.?\b|ruble?s?|rouble?s?|\$|usd|usdt|доллар(?:а|ов|ах)?|бакс(?:а|ов|ах)?|dollars?|bucks?|€|eur|евро|euro?s?|₫|vnd|донг(?:а|ов|ах)?|dong|đồng)/gi;
+const digitAmountPattern = /(\d+(?:[\s.,]\d{3})*(?:[.,]\d+)?|\d+(?:[.,]\d+)?)(?:\s*(кк|kk|к|k|тыс\.?|тысяч|тысячи|тыща|тыщи|тыщ|млн|миллион(?:а|ов)?|million|millions|thousand|thousands|nghin|nghìn|ngan|ngàn|trieu|triệu))?(?:\s*(₽|руб(?:ль|ля|лей|ли|лях)?|рубли|рублей|р\.?|rub|ruble?s?|\$|usd|доллар(?:а|ов|ах)?|бакс(?:а|ов|ах)?|dollars?|bucks?|€|eur|евро|euro?s?|₫|vnd|донг(?:а|ов|ах)?|dong|đồng))?/gi;
+const wordAmountPattern = /((?:(?:ноль|один|одна|одно|два|две|три|четыре|пять|шесть|семь|восемь|девять|десять|одиннадцать|двенадцать|тринадцать|четырнадцать|пятнадцать|шестнадцать|семнадцать|восемнадцать|девятнадцать|двадцать|тридцать|сорок|пятьдесят|шестьдесят|семьдесят|восемьдесят|девяносто|сто|двести|триста|четыреста|пятьсот|шестьсот|семьсот|восемьсот|девятьсот|zero|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|không|mot|một|hai|ba|bon|bốn|nam|năm|sau|sáu|bay|bảy|tam|tám|chin|chín|muoi|mười)\s*)+(?:тысяча|тысячи|тысяч|тыща|тыщи|тыщ|тыс|миллион|миллиона|миллионов|млн|thousand|thousands|million|millions|nghin|nghìn|ngan|ngàn|trieu|triệu))(?:\s*(?:₽|руб(?:ль|ля|лей|ли|лях)?|рубли|рублей|р\.?|rub|\$|usd|доллар(?:а|ов|ах)?|бакс(?:а|ов|ах)?|€|eur|евро|₫|vnd|донг(?:а|ов|ах)?|dong|đồng))?/gi;
 const slangAmountPattern = /(чирик|десятка|двадцатка|полтос|сотка|пятихатка|косарь|штука|пятак|пятерка|пятерочка)(?:\s*(?:₽|руб(?:ль|ля|лей)?|р\.?))?/gi;
 
 function normalizeText(value: string) {
   return value.toLowerCase().replace(/ё/g, 'е').replace(/,/g, '.').replace(/\s+/g, ' ').trim();
 }
 
-export function detectCurrency(input: unknown, fallback: CurrencyCode = 'RUB'): CurrencyCode {
-  const text = normalizeText(String(input ?? ''));
-  for (const [currency, pattern] of currencyWords) {
-    if (pattern.test(text)) return currency;
+export function extractCurrencyFromText(text: string, fallback?: CurrencyCode): CurrencyCode | undefined {
+  const source = normalizeText(text);
+  for (const [currency, pattern] of CURRENCY_PATTERNS) {
+    if (pattern.test(source)) return currency;
   }
   return fallback;
 }
 
-export function extractCurrencyFromText(text: string, fallback?: CurrencyCode): CurrencyCode | undefined {
-  const source = normalizeText(text);
-  for (const [currency, pattern] of currencyWords) {
-    if (pattern.test(source)) return currency;
-  }
-  return fallback;
+export function detectCurrency(input: unknown, fallback: CurrencyCode = 'RUB'): CurrencyCode {
+  return extractCurrencyFromText(String(input ?? ''), fallback) ?? fallback;
 }
 
 function tokenValue(token: string): number | undefined {
@@ -244,13 +237,11 @@ export function normalizeAmount(raw: unknown): number | null {
   if (!source) return null;
   if (SLANG[source]) return SLANG[source];
 
-  const multiplied = source.match(/^(\d+(?:\.\d+)?)(кк|kk|млн|million|millions|миллион|миллиона|миллионов|trieu|triệu|к|k|тыс\.?|тысяч|тысячи|thousand|thousands|nghin|nghìn|ngan|ngàn)$/i);
+  const multiplied = source.match(/^(\d+(?:\.\d+)?)(кк|kk|млн|million|millions|миллион|миллиона|миллионов|trieu|triệu|к|k|тыс\.?|тысяч|тысячи|тыща|тыщи|тыщ|thousand|thousands|nghin|nghìn|ngan|ngàn)$/i);
   if (multiplied) {
     const number = Number(multiplied[1]);
     const suffix = multiplied[2].toLowerCase();
-    const multiplier = /^(кк|kk|млн|million|millions|миллион|миллиона|миллионов|trieu|triệu)$/.test(suffix)
-      ? 1_000_000
-      : 1_000;
+    const multiplier = /^(кк|kk|млн|million|millions|миллион|миллиона|миллионов|trieu|triệu)$/.test(suffix) ? 1_000_000 : 1_000;
     return Math.round(number * multiplier);
   }
 
@@ -270,13 +261,7 @@ function collectByPattern(text: string, pattern: RegExp, candidates: AmountCandi
     const amount = normalizeAmount(raw);
     if (!amount || amount <= 0) continue;
     const index = match.index ?? text.indexOf(raw);
-    candidates.push({
-      amount,
-      currency: extractCurrencyFromText(raw),
-      raw,
-      index,
-      endIndex: index + raw.length,
-    });
+    candidates.push({ amount, currency: extractCurrencyFromText(raw), raw, index, endIndex: index + raw.length });
   }
 }
 
@@ -284,30 +269,20 @@ export function extractAmountCandidates(text: string): AmountCandidate[] {
   const normalized = normalizeText(text);
   const candidates: AmountCandidate[] = [];
 
-  collectByPattern(normalized, ruWordAmountPattern, candidates);
-  collectByPattern(normalized, enWordAmountPattern, candidates);
-  collectByPattern(normalized, viWordAmountPattern, candidates);
+  collectByPattern(normalized, wordAmountPattern, candidates);
   collectByPattern(normalized, slangAmountPattern, candidates);
 
   digitAmountPattern.lastIndex = 0;
   for (const match of normalized.matchAll(digitAmountPattern)) {
     const raw = match[0]?.trim();
     if (!raw) continue;
-    const hasSuffix = Boolean(match[2]);
-    const hasCurrency = Boolean(match[3]);
     const amount = normalizeAmount(raw);
     if (!amount || amount <= 0) continue;
-
+    const hasSuffix = Boolean(match[2]);
+    const hasCurrency = Boolean(match[3]);
     if (amount < 100 && !hasSuffix && !hasCurrency) continue;
-
     const index = match.index ?? normalized.indexOf(raw);
-    candidates.push({
-      amount,
-      currency: extractCurrencyFromText(raw),
-      raw,
-      index,
-      endIndex: index + raw.length,
-    });
+    candidates.push({ amount, currency: extractCurrencyFromText(raw), raw, index, endIndex: index + raw.length });
   }
 
   return candidates
@@ -315,13 +290,10 @@ export function extractAmountCandidates(text: string): AmountCandidate[] {
       return !all.some((other, otherIndex) => {
         if (index === otherIndex) return false;
         const inside = candidate.index >= other.index && candidate.endIndex <= other.endIndex;
-        const otherLonger = other.raw.length > candidate.raw.length;
-        return inside && otherLonger;
+        return inside && other.raw.length > candidate.raw.length;
       });
     })
-    .filter((candidate, index, all) => {
-      return all.findIndex((other) => other.index === candidate.index && other.amount === candidate.amount) === index;
-    })
+    .filter((candidate, index, all) => all.findIndex((other) => other.index === candidate.index && other.amount === candidate.amount) === index)
     .sort((a, b) => a.index - b.index);
 }
 

@@ -1,25 +1,26 @@
-import { prisma } from '../../lib/prisma';
-import { TransactionService } from '../transactions/service';
-import { AIActionPolicy } from './policy';
-import { LLMCommandInterpreter } from './llm-command-interpreter';
-import { AIHandleOptions, AIParsedCommand, AIResult } from './types';
-import { AIMemoryService } from './ai-memory.service';
-import { AITrainingService } from './ai-training.service';
 import { ProductEventsService } from '../analytics/product-events.service';
-import { AIPreviewBuilder } from './ai-preview.builder';
 import { AIExecutorService } from './ai-executor.service';
-
-const transactionService = new TransactionService();
+import { AIMemoryService } from './ai-memory.service';
+import { AIPreviewBuilder } from './ai-preview.builder';
+import { AITrainingService } from './ai-training.service';
+import { AIContextService } from './ai-context.service';
+import { AIAdviceService } from './ai-advice.service';
+import { AIRepeatService } from './ai-repeat.service';
+import { LLMCommandInterpreter } from './llm-command-interpreter';
+import { AIActionPolicy } from './policy';
+import { AIHandleOptions, AIParsedCommand, AIResult } from './types';
 
 export class AIManager {
-  private readonly parser = new LLMCommandInterpreter();
+  private readonly interpreter = new LLMCommandInterpreter();
   private readonly policy = new AIActionPolicy();
   private readonly memory = new AIMemoryService();
   private readonly training = new AITrainingService();
   private readonly events = new ProductEventsService();
   private readonly preview = new AIPreviewBuilder();
   private readonly executor = new AIExecutorService();
-
+  private readonly context = new AIContextService();
+  private readonly advice = new AIAdviceService();
+  private readonly repeat = new AIRepeatService();
 
   async executeParsed(userId: string, command: string, parsedCommand: AIParsedCommand): Promise<AIResult> {
     const startedAt = Date.now();
@@ -36,59 +37,44 @@ export class AIManager {
       const execute = options?.execute ?? true;
       const confirmed = options?.confirmed ?? false;
 
-      await this.events.track({
-        userId,
-        event: 'ai_command_received',
-        data: {
-          commandLength: command.length,
-        },
-      });
+      await this.trackCommandReceived(userId, command);
+      await this.memory.saveMessage({ userId, role: 'user', content: command });
 
-      await this.memory.saveMessage({
-        userId,
-        role: 'user',
-        content: command,
-      });
-
-      const adviceLikeResult = this.tryBuildAdviceResult(command);
-
+      const adviceLikeResult = this.advice.tryBuildAdviceResult(command);
       if (adviceLikeResult) {
         await this.logSuccess(userId, command, adviceLikeResult, startedAt);
         return adviceLikeResult;
       }
 
-      // Быстрый backend-layer: команды повтора обрабатываем до LLM.
-      // Поддерживает: «ещё», «повтори», «повтор», «повтори 200», «ещё 200».
-      const repeatCommand = this.parseRepeatCommand(command);
-
+      const repeatCommand = this.repeat.parseRepeatCommand(command);
       if (repeatCommand.isRepeat) {
-        const repeatResult = await this.repeatLastTransaction(userId, repeatCommand.amount);
+        const repeatResult = await this.repeat.repeatLastTransaction(userId, repeatCommand.amount);
         await this.logSuccess(userId, command, repeatResult, startedAt);
         return repeatResult;
       }
 
       const history = await this.memory.getRecentMessages(userId, 6);
-      const parsedCommand = await this.parser.parse(command, history);
+      const parsedCommand = await this.interpreter.parse(command, history);
 
       if (parsedCommand.intent === 'advice') {
-        const adviceResult = this.buildAdviceResult(parsedCommand.question || command);
+        const adviceResult = this.advice.buildAdviceResult(parsedCommand.question || command);
         await this.logSuccess(userId, command, adviceResult, startedAt);
         return adviceResult;
       }
 
       if (parsedCommand.intent === 'unknown') {
-        const unknownResult = this.buildClarificationResult(command);
+        const unknownResult = this.advice.buildClarificationResult(command);
         await this.logSuccess(userId, command, unknownResult, startedAt);
         return unknownResult;
       }
 
       if (parsedCommand.intent === 'repeat_last') {
-        const repeatResult = await this.repeatLastTransaction(userId);
+        const repeatResult = await this.repeat.repeatLastTransaction(userId);
         await this.logSuccess(userId, command, repeatResult, startedAt);
         return repeatResult;
       }
 
-      await this.applyContextFallback(parsedCommand, history);
+      await this.context.applyContextFallback(parsedCommand, history);
 
       const policy = this.policy.evaluate(parsedCommand);
 
@@ -102,36 +88,24 @@ export class AIManager {
         );
 
         await this.logSuccess(userId, command, previewResult, startedAt);
-
         return previewResult;
       }
 
       const result = await this.executor.execute(userId, parsedCommand, policy.riskLevel);
-
       await this.logSuccess(userId, command, result, startedAt);
-
       return result;
     } catch (error) {
-      await this.training.save({
-        userId,
-        input: command,
-        success: false,
-        error: error instanceof Error ? error.message : 'Unknown AI error',
-        model: process.env.OLLAMA_MODEL,
-        latencyMs: Date.now() - startedAt,
-      });
-
-      await this.events.track({
-        userId,
-        event: 'ai_command_error',
-        data: {
-          error: error instanceof Error ? error.message : 'Unknown AI error',
-          latencyMs: Date.now() - startedAt,
-        },
-      });
-
+      await this.logFailure(userId, command, error, startedAt);
       throw error;
     }
+  }
+
+  private async trackCommandReceived(userId: string, command: string) {
+    await this.events.track({
+      userId,
+      event: 'ai_command_received',
+      data: { commandLength: command.length },
+    });
   }
 
   private async logSuccess(userId: string, command: string, result: AIResult, startedAt: number) {
@@ -168,249 +142,25 @@ export class AIManager {
     });
   }
 
-  private async applyContextFallback(parsedCommand: AIParsedCommand, history: Array<any>) {
-    if (parsedCommand.intent !== 'expense' && parsedCommand.intent !== 'income') {
-      return;
-    }
+  private async logFailure(userId: string, command: string, error: unknown, startedAt: number) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown AI error';
 
-    const currentCategory = String(parsedCommand.rawCategory ?? '').trim().toLowerCase();
-
-    const shouldUsePreviousCategory =
-      !currentCategory ||
-      this.isRepeatLikeText(currentCategory) ||
-      currentCategory === 'расход' ||
-      currentCategory === 'доход';
-
-    if (!shouldUsePreviousCategory) {
-      return;
-    }
-
-    const previousAssistantMessages = [...history]
-      .reverse()
-      .filter((message) => message.role === 'assistant');
-
-    for (const message of previousAssistantMessages) {
-      const parsed = this.readParsedFromMemory(message);
-
-      if (
-        parsed &&
-        parsed.type === parsedCommand.intent &&
-        typeof parsed.categoryName === 'string' &&
-        parsed.categoryName.trim()
-      ) {
-        parsedCommand.rawCategory = parsed.categoryName;
-
-        if (
-          !parsedCommand.description ||
-          this.isRepeatLikeText(String(parsedCommand.description))
-        ) {
-          parsedCommand.description = parsed.categoryName;
-        }
-
-        return;
-      }
-    }
-  }
-
-  private async repeatLastTransaction(userId: string, amountOverride?: number): Promise<AIResult> {
-    const lastTransaction = await prisma.transaction.findFirst({
-      where: {
-        userId,
-        type: {
-          in: ['expense', 'income'],
-        },
-      },
-      include: {
-        account: true,
-        category: true,
-      },
-      orderBy: [
-        { date: 'desc' },
-        { createdAt: 'desc' },
-      ],
-    });
-
-    if (!lastTransaction) {
-      return {
-        success: false,
-        intent: 'unknown',
-        executed: false,
-        requiresConfirmation: false,
-        riskLevel: 'low',
-        message: '🤔 Не нашёл прошлую операцию, которую можно повторить.',
-        parsed: null,
-      };
-    }
-
-    const type = lastTransaction.type === 'income' ? 'income' : 'expense';
-    const categoryName = lastTransaction.category?.name ?? lastTransaction.description ?? 'операция';
-    const categoryIcon = lastTransaction.category?.icon ?? (type === 'income' ? '💰' : '📝');
-
-    const transaction = await transactionService.createTransaction(userId, {
-      accountId: lastTransaction.accountId,
-      categoryId: lastTransaction.categoryId ?? undefined,
-      amount: amountOverride ?? lastTransaction.amount,
-      type,
-      description: lastTransaction.description ?? categoryName,
-      isAIGenerated: true,
-    });
-
-    return {
-      success: true,
-      intent: type,
-      executed: true,
-      requiresConfirmation: false,
-      riskLevel: 'low',
-      message:
-        type === 'expense'
-          ? `✅ Повторил расход: ${categoryIcon} ${categoryName} — ${amountOverride ?? lastTransaction.amount} ₽.`
-          : `✅ Повторил доход: ${categoryIcon} ${categoryName} — ${amountOverride ?? lastTransaction.amount} ₽.`,
-      parsed: {
-        type,
-        amount: amountOverride ?? lastTransaction.amount,
-        accountId: lastTransaction.accountId,
-        accountName: lastTransaction.account.name,
-        categoryId: lastTransaction.categoryId,
-        categoryName,
-        description: lastTransaction.description ?? categoryName,
-        repeatedFromTransactionId: lastTransaction.id,
-      },
-      data: transaction,
-    };
-  }
-
-
-  private tryBuildAdviceResult(command: string): AIResult | null {
-    const normalized = command.trim().toLowerCase().replace(/ё/g, 'е');
-
-    const looksLikeAdvice =
-      /(^|\s)(как|что|посоветуй|совет|рекомендац|лучше|почему)(\s|$)/.test(normalized) ||
-      normalized.includes('сэконом') ||
-      normalized.includes('экономить') ||
-      normalized.includes('откладывать') ||
-      normalized.includes('отложить') ||
-      normalized.includes('накоплен') ||
-      normalized.includes('напоминай') ||
-      normalized.includes('напомни');
-
-    const looksLikeFinanceCommand =
-      /(^|\s)(кофе|такси|еда|магазин|зарплат|доход|расход|переведи|перевод|создай счет|создай счёт)(\s|$)/.test(normalized) &&
-      /\d/.test(normalized);
-
-    if (!looksLikeAdvice || looksLikeFinanceCommand) {
-      return null;
-    }
-
-    return this.buildAdviceResult(command);
-  }
-
-  private buildAdviceResult(question: string): AIResult {
-    const normalized = question.toLowerCase().replace(/ё/g, 'е');
-
-    const wantsSavingRule =
-      normalized.includes('откладывать') ||
-      normalized.includes('отложить') ||
-      normalized.includes('процент') ||
-      normalized.includes('%');
-
-    return {
-      success: true,
-      intent: 'advice',
-      executed: false,
-      requiresConfirmation: false,
-      riskLevel: 'low',
-      message: wantsSavingRule
-        ? 'Похоже, ты хочешь правило накоплений. Я не буду записывать это как расход. Базово могу помочь создать отдельный накопительный счёт и напоминать про идею. В премиум-логике позже можно сделать автоперевод процента с каждой покупки.'
-        : 'Я понял это как финансовый вопрос, а не как операцию. Можешь описать цель, доходы и расходы — я подскажу базовый план. Например: «доход 100к, расходы 70к, хочу накопить 200к».',
-      parsed: {
-        type: 'advice',
-        question,
-        suggestion: wantsSavingRule ? 'savings_rule' : 'financial_advice',
-      },
-    };
-  }
-
-  private buildClarificationResult(command: string): AIResult {
-    return {
+    await this.training.save({
+      userId,
+      input: command,
       success: false,
-      intent: 'unknown',
-      executed: false,
-      requiresConfirmation: false,
-      riskLevel: 'low',
-      message:
-        'Я не хочу угадывать и записывать деньги неправильно. Уточни команду одним из вариантов: «кофе 300», «зарплата 50к», «переведи 1000 с карты на наличные», «создай счёт Копилка».',
-      parsed: {
-        originalCommand: command,
-        examples: ['кофе 300', 'зарплата 50к', 'повтори', 'переведи 1000 с карты на наличные'],
+      error: errorMessage,
+      model: process.env.OLLAMA_MODEL,
+      latencyMs: Date.now() - startedAt,
+    });
+
+    await this.events.track({
+      userId,
+      event: 'ai_command_error',
+      data: {
+        error: errorMessage,
+        latencyMs: Date.now() - startedAt,
       },
-    };
-  }
-
-  private readParsedFromMemory(message: any): Record<string, any> | null {
-    try {
-      const meta = typeof message.meta === 'string' ? JSON.parse(message.meta) : message.meta;
-      const parsed = meta?.parsed;
-
-      return parsed && typeof parsed === 'object' ? parsed : null;
-    } catch {
-      return null;
-    }
-  }
-
-  private parseRepeatCommand(command: string): { isRepeat: boolean; amount?: number } {
-    const normalized = this.normalizeRepeatText(command);
-
-    if (!normalized || !this.isRepeatLikeText(normalized)) {
-      return { isRepeat: false };
-    }
-
-    const amountMatch = normalized.match(/(?:^|\s)(\d+(?:[.,]\d+)?)(?:\s|$)/);
-
-    if (!amountMatch) {
-      return { isRepeat: true };
-    }
-
-    const amount = Number(amountMatch[1].replace(',', '.'));
-
-    return Number.isFinite(amount) && amount > 0
-      ? { isRepeat: true, amount }
-      : { isRepeat: true };
-  }
-
-  private isRepeatLikeText(value: string) {
-    const normalized = this.normalizeRepeatText(value);
-
-    if (!normalized) {
-      return false;
-    }
-
-    const words = normalized.split(' ').filter(Boolean);
-
-    // Повтор обычно короткий. Длинные фразы отправляем в LLM, чтобы не перехватывать лишнее.
-    if (words.length > 6) {
-      return false;
-    }
-
-    return (
-      /(^|\s)(еще|ещё)(\s|$)/.test(normalized) ||
-      /(^|\s)(повтор\w*|повтори|повторить|повторяй)(\s|$)/.test(normalized) ||
-      /(^|\s)(снова|опять)(\s|$)/.test(normalized) ||
-      /(^|\s)(тоже|также)(\s|$)/.test(normalized) ||
-      /(^|\s)то\s+же(\s|$)/.test(normalized) ||
-      /(^|\s)так\s+же(\s|$)/.test(normalized) ||
-      /(^|\s)такую\s+же(\s|$)/.test(normalized) ||
-      /(^|\s)такой\s+же(\s|$)/.test(normalized) ||
-      /(^|\s)(дублируй|продублируй|дубль|продублировать)(\s|$)/.test(normalized)
-    );
-  }
-
-  private normalizeRepeatText(value: string) {
-    return value
-      .trim()
-      .toLowerCase()
-      .replace(/ё/g, 'е')
-      .replace(/[.,!?;:()\[\]{}"'«»]/g, ' ')
-      .replace(/\s+/g, ' ')
-      .trim();
+    });
   }
 }
