@@ -11,6 +11,44 @@ const accountService = new AccountService();
 const categoryService = new CategoryService();
 const sectionService = new SectionService();
 
+
+type SupportedCurrency = 'RUB' | 'USD' | 'EUR' | 'VND';
+
+const BASE_RUB_RATES: Record<SupportedCurrency, number> = {
+  RUB: 1,
+  USD: 92,
+  EUR: 100,
+  VND: 0.0036,
+};
+
+function normalizeCurrency(value: unknown, fallback: SupportedCurrency = 'RUB'): SupportedCurrency {
+  const raw = String(value ?? '').toUpperCase();
+  if (raw === 'USD' || raw === '$') return 'USD';
+  if (raw === 'EUR' || raw === '€') return 'EUR';
+  if (raw === 'VND' || raw === '₫') return 'VND';
+  if (raw === 'RUB' || raw === '₽') return 'RUB';
+  return fallback;
+}
+
+function convertAmount(amount: number, from: unknown, to: unknown): number {
+  const fromCurrency = normalizeCurrency(from, normalizeCurrency(to));
+  const toCurrency = normalizeCurrency(to, fromCurrency);
+
+  if (fromCurrency === toCurrency) return amount;
+
+  const amountInRub = amount * BASE_RUB_RATES[fromCurrency];
+  const converted = amountInRub / BASE_RUB_RATES[toCurrency];
+  return Math.round(converted * 100) / 100;
+}
+
+function currencySymbol(currency: unknown) {
+  const normalized = normalizeCurrency(currency);
+  if (normalized === 'USD') return '$';
+  if (normalized === 'EUR') return '€';
+  if (normalized === 'VND') return '₫';
+  return '₽';
+}
+
 export class AIExecutorService {
   private readonly resolver = new AIResolverService();
   private readonly preview = new AIPreviewBuilder();
@@ -55,6 +93,7 @@ export class AIExecutorService {
       }
       case 'expense': {
         const account = await this.resolver.resolveAccountForMoneyFlow(userId, parsedCommand.accountName);
+        const accountCurrency = normalizeCurrency((account as any).currency, 'RUB');
         const category = await this.resolver.findOrCreateCategory(userId, parsedCommand.rawCategory, 'expense');
         const section = parsedCommand.sectionName
           ? await sectionService.findOrCreateSection(userId, parsedCommand.sectionName)
@@ -64,7 +103,7 @@ export class AIExecutorService {
           accountId: account.id,
           categoryId: category.id,
           sectionId: section?.id ?? category.sectionId ?? null,
-          amount: parsedCommand.amount,
+          amount: convertAmount(parsedCommand.amount, (parsedCommand as any).currency, accountCurrency),
           type: 'expense',
           description: parsedCommand.description ?? parsedCommand.rawCategory,
           isAIGenerated: true,
@@ -76,10 +115,12 @@ export class AIExecutorService {
           executed: true,
           requiresConfirmation: false,
           riskLevel,
-          message: `✅ Записал расход: ${category.icon ?? '📝'} ${category.name} — ${parsedCommand.amount} ₽.`,
+          message: `✅ Записал расход: ${category.icon ?? '📝'} ${category.name} — ${convertAmount(parsedCommand.amount, (parsedCommand as any).currency, accountCurrency)} ${currencySymbol(accountCurrency)}.`,
           parsed: {
             type: 'expense',
-            amount: parsedCommand.amount,
+            amount: convertAmount(parsedCommand.amount, (parsedCommand as any).currency, accountCurrency),
+            originalAmount: parsedCommand.amount,
+            originalCurrency: (parsedCommand as any).currency ?? accountCurrency,
             accountId: account.id,
             accountName: account.name,
             categoryId: category.id,
@@ -94,6 +135,7 @@ export class AIExecutorService {
 
       case 'income': {
         const account = await this.resolver.resolveAccountForMoneyFlow(userId, parsedCommand.accountName);
+        const accountCurrency = normalizeCurrency((account as any).currency, 'RUB');
         const category = await this.resolver.findOrCreateCategory(userId, parsedCommand.rawCategory, 'income');
         const section = parsedCommand.sectionName
           ? await sectionService.findOrCreateSection(userId, parsedCommand.sectionName)
@@ -103,7 +145,7 @@ export class AIExecutorService {
           accountId: account.id,
           categoryId: category.id,
           sectionId: section?.id ?? category.sectionId ?? null,
-          amount: parsedCommand.amount,
+          amount: convertAmount(parsedCommand.amount, (parsedCommand as any).currency, accountCurrency),
           type: 'income',
           description: parsedCommand.description ?? parsedCommand.rawCategory,
           isAIGenerated: true,
@@ -115,10 +157,12 @@ export class AIExecutorService {
           executed: true,
           requiresConfirmation: false,
           riskLevel,
-          message: `✅ Записал доход: ${category.icon ?? '💰'} ${category.name} — ${parsedCommand.amount} ₽.`,
+          message: `✅ Записал доход: ${category.icon ?? '💰'} ${category.name} — ${convertAmount(parsedCommand.amount, (parsedCommand as any).currency, accountCurrency)} ${currencySymbol(accountCurrency)}.`,
           parsed: {
             type: 'income',
-            amount: parsedCommand.amount,
+            amount: convertAmount(parsedCommand.amount, (parsedCommand as any).currency, accountCurrency),
+            originalAmount: parsedCommand.amount,
+            originalCurrency: (parsedCommand as any).currency ?? accountCurrency,
             accountId: account.id,
             accountName: account.name,
             categoryId: category.id,

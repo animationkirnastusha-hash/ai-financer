@@ -60,9 +60,9 @@ COMPILATION RULES:
 - "создай счет сигареты и добавь туда депозит 10 тысяч рублей" means:
   create_account name="сигареты", currency="RUB", type="cash" unless card/cash/savings was explicit;
   then create_transaction type="income", amount="10 тысяч рублей", accountName="сигареты", description="депозит".
-- Never include words like "и добавь туда", "положи", "депозит", currency words, or amount words inside the account name.
+- Never include words like "с названием", "назови его", "и добавь туда", "положи", "депозит", currency words, or amount words inside the account name. If the user says "с названием парламент", name is exactly "парламент".
 - If the user says "счет доллары" and then "положи 10 тысяч долларов", "доллары" can be the account name and USD is the transaction/account currency from the money phrase.
-- If account type is not explicit, prefer "cash" for generic accounts, not "card".
+- If account type is not explicit, prefer "cash" for generic accounts, not "card". Only use card when the user explicitly says карта/card.
 - Deposits/top-ups/incoming salary are income transactions, not expenses.
 - Purchases/payments/spending are expense transactions.
 - Use the created account name for "туда", "на него", "there", "to it" in the same request.

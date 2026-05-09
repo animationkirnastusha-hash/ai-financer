@@ -26,6 +26,7 @@ export interface AIHandleOptions {
 export interface AIParsedExpense {
   intent: 'expense';
   amount: number;
+  currency?: string;
   rawCategory: string;
   description?: string;
   accountName?: string;
@@ -35,6 +36,7 @@ export interface AIParsedExpense {
 export interface AIParsedIncome {
   intent: 'income';
   amount: number;
+  currency?: string;
   rawCategory: string;
   description?: string;
   accountName?: string;
