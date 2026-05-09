@@ -1,6 +1,19 @@
 import { prisma } from '../../lib/prisma';
 import { BadRequestError, NotFoundError } from '../../shared/core/errors';
-import { AIPendingActionView } from './read-models';
+
+export interface AIPendingActionView {
+  id: string;
+  command: string;
+  intent: string;
+  riskLevel: string;
+  status: string;
+  parsed: Record<string, unknown> | null;
+  expiresAt: string;
+  confirmedAt: string | null;
+  cancelledAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
 
 const PENDING_ACTION_TTL_MINUTES = 15;
 

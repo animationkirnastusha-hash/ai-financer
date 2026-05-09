@@ -2,7 +2,6 @@ import { env } from '../../config/env';
 import { BadRequestError } from '../../shared/core/errors';
 import type { AIParsedCommand } from './types';
 import { OllamaProvider } from './providers/ollama.provider';
-import { fastFinanceParse } from './fast-finance-interpreter';
 import { normalizeAmount } from './utils/amount-normalizer';
 import { compileNaturalBatch, repairParsedCommand } from './utils/command-compiler';
 import { buildToolRegistryPrompt } from './tools/tool-registry';
@@ -206,7 +205,7 @@ export class LLMCommandInterpreter {
     const trimmed = command.trim();
     if (!trimmed) throw new BadRequestError('Command is required');
 
-    const semanticResult = compileNaturalBatch(trimmed) || fastFinanceParse(trimmed);
+    const semanticResult = compileNaturalBatch(trimmed);
     if (semanticResult) return repairParsedCommand(semanticResult, trimmed);
 
     if (env.aiMode !== 'ollama') return { intent: 'unknown' };
@@ -229,7 +228,7 @@ export class LLMCommandInterpreter {
       return normalizeParsed(extractJsonObject(response.content), trimmed);
     } catch (error) {
       console.error('Ollama parse failed. Falling back to semantic compiler:', error);
-      return compileNaturalBatch(trimmed) || fastFinanceParse(trimmed) || { intent: 'unknown' };
+      return compileNaturalBatch(trimmed) || { intent: 'unknown' };
     }
   }
 }

@@ -1,4 +1,4 @@
-import type { AIResult } from './types';
+import { AIResult } from './types';
 
 export class AIAdviceService {
   tryBuildAdviceResult(command: string): AIResult | null {
@@ -18,9 +18,7 @@ export class AIAdviceService {
       /(^|\s)(кофе|такси|еда|магазин|зарплат|доход|расход|переведи|перевод|создай счет|создай счёт)(\s|$)/.test(normalized) &&
       /\d/.test(normalized);
 
-    if (!looksLikeAdvice || looksLikeFinanceCommand) {
-      return null;
-    }
+    if (!looksLikeAdvice || looksLikeFinanceCommand) return null;
 
     return this.buildAdviceResult(command);
   }
@@ -59,7 +57,7 @@ export class AIAdviceService {
       requiresConfirmation: false,
       riskLevel: 'low',
       message:
-        'Я не хочу угадывать и записывать деньги неправильно. Уточни команду одним из вариантов: «кофе 300», «зарплата 50к», «переведи 1000 с карты на наличные», «создай счёт Копилка».',
+        'Я не хочу угадывать и записывать деньги неправильно. Уточни команду одним сообщением: «кофе 300», «зарплата 50к», «переведи 1000 с карты на наличные», «создай счёт Копилка».',
       parsed: {
         originalCommand: command,
         examples: ['кофе 300', 'зарплата 50к', 'повтори', 'переведи 1000 с карты на наличные'],

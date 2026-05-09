@@ -1,13 +1,52 @@
 import { prisma } from '../../lib/prisma';
 import { CategoryService } from '../categories/service';
 import { BadRequestError, NotFoundError } from '../../shared/core/errors';
-import {
-  categoryAliases,
-  categoryColors,
-  categoryIcons,
-  normalizeCategoryName,
-  toTitleCase,
-} from './catalog';
+const categoryAliases: Record<string, string> = {
+  кофе: 'Кафе',
+  кафе: 'Кафе',
+  cappuccino: 'Кафе',
+  капучино: 'Кафе',
+  латте: 'Кафе',
+  еда: 'Еда',
+  продукты: 'Еда',
+  обед: 'Еда',
+  ужин: 'Еда',
+  завтрак: 'Еда',
+  ресторан: 'Еда',
+  такси: 'Такси',
+  taxi: 'Такси',
+  транспорт: 'Транспорт',
+  метро: 'Транспорт',
+  автобус: 'Транспорт',
+  зарплата: 'Зарплата',
+  аванс: 'Зарплата',
+  доход: 'Зарплата',
+  премия: 'Зарплата',
+  фриланс: 'Зарплата',
+};
+
+const categoryIcons: Record<string, string> = {
+  Кафе: '☕',
+  Еда: '🍕',
+  Такси: '🚕',
+  Транспорт: '🚗',
+  Зарплата: '💰',
+};
+
+const categoryColors: Record<'expense' | 'income', string> = {
+  expense: '#ff6b6b',
+  income: '#00ffaa',
+};
+
+function toTitleCase(value: string) {
+  if (!value) return value;
+  return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
+function normalizeCategoryName(raw: string) {
+  const cleaned = raw.trim().toLowerCase();
+  return categoryAliases[cleaned] ?? cleaned;
+}
 import { AIParsedCommand } from './types';
 
 const categoryService = new CategoryService();

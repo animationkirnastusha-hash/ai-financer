@@ -60,6 +60,7 @@ function normalizeStoredParsed(intent: string, parsed: Record<string, unknown> |
     return {
       intent: normalizedIntent,
       amount: asNumber(parsed.amount),
+      currency: asString(parsed.currency) || undefined,
       rawCategory: asString(parsed.rawCategory || parsed.category || parsed.categoryName || parsed.description, normalizedIntent === 'income' ? 'доход' : 'расход'),
       description: asString(parsed.description || parsed.rawCategory || parsed.category || parsed.categoryName, normalizedIntent === 'income' ? 'доход' : 'расход'),
       accountName: asString(parsed.accountName) || undefined,
@@ -94,13 +95,39 @@ function normalizeStoredParsed(intent: string, parsed: Record<string, unknown> |
   return null;
 }
 
-function enrichUndoMeta(result: AIResult): AIResult {
-  const transactionLikeIntent = result.intent === 'expense' || result.intent === 'income' || result.intent === 'transfer';
-  const data = result.data as { id?: string } | undefined;
+function readUndoTargetId(data: unknown): string | undefined {
+  if (!data || typeof data !== 'object' || Array.isArray(data)) return undefined;
+  const record = data as Record<string, unknown>;
+  return typeof record.id === 'string' ? record.id : undefined;
+}
 
-  if (result.executed && transactionLikeIntent && data?.id) {
-    result.meta = { ...(result.meta ?? {}), undo: { available: true, actionType: 'transaction', targetId: data.id } };
-  }
+function resolveUndoActionType(intent: AIResult['intent']): NonNullable<NonNullable<AIResult['meta']>['undo']>['actionType'] | undefined {
+  if (intent === 'expense' || intent === 'income' || intent === 'transfer') return 'transaction';
+  if (intent === 'create_account') return 'account';
+  if (intent === 'create_category') return 'category';
+  if (intent === 'create_section') return 'section';
+  if (intent === 'batch') return 'batch';
+  return undefined;
+}
+
+function enrichUndoMeta(result: AIResult): AIResult {
+  if (!result.executed) return result;
+
+  const actionType = resolveUndoActionType(result.intent);
+  if (!actionType) return result;
+
+  const targetId = actionType === 'batch' ? undefined : readUndoTargetId(result.data);
+
+  if (actionType !== 'batch' && !targetId) return result;
+
+  result.meta = {
+    ...(result.meta ?? {}),
+    undo: {
+      available: true,
+      actionType,
+      targetId,
+    },
+  };
 
   return result;
 }

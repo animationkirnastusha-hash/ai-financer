@@ -158,7 +158,7 @@ export interface AIResultMeta {
   confirmExpiresAt?: string;
   undo?: {
     available: boolean;
-    actionType?: 'transaction';
+    actionType?: 'transaction' | 'account' | 'category' | 'section' | 'batch';
     targetId?: string;
   };
 }

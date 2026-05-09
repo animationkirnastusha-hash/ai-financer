@@ -1,6 +1,20 @@
 import { prisma } from '../../lib/prisma';
 import { AIResult } from './types';
-import { AIAuditLogView } from './read-models';
+
+export interface AIAuditLogView {
+  id: string;
+  command: string;
+  intent: string;
+  riskLevel: string;
+  requiresConfirmation: boolean;
+  executed: boolean;
+  status: string;
+  parsed: Record<string, unknown> | null;
+  result: Record<string, unknown> | null;
+  errorMessage: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
 
 function safeStringify(value: unknown): string | null {
   if (value === undefined || value === null) return null;

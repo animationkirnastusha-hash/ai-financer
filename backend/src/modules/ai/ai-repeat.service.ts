@@ -1,51 +1,38 @@
 import { prisma } from '../../lib/prisma';
 import { TransactionService } from '../transactions/service';
-import type { AIResult } from './types';
+import { AIResult } from './types';
 
 const transactionService = new TransactionService();
 
-export type AIRepeatCommand = {
+export type RepeatCommandParseResult = {
   isRepeat: boolean;
   amount?: number;
 };
 
 export class AIRepeatService {
-  parseRepeatCommand(command: string): AIRepeatCommand {
+  parseRepeatCommand(command: string): RepeatCommandParseResult {
     const normalized = this.normalizeRepeatText(command);
 
-    if (!normalized || !this.isRepeatLikeText(normalized)) {
-      return { isRepeat: false };
-    }
+    if (!normalized || !this.isRepeatLikeText(normalized)) return { isRepeat: false };
 
     const amountMatch = normalized.match(/(?:^|\s)(\d+(?:[.,]\d+)?)(?:\s|$)/);
-
-    if (!amountMatch) {
-      return { isRepeat: true };
-    }
+    if (!amountMatch) return { isRepeat: true };
 
     const amount = Number(amountMatch[1].replace(',', '.'));
-
-    return Number.isFinite(amount) && amount > 0
-      ? { isRepeat: true, amount }
-      : { isRepeat: true };
+    return Number.isFinite(amount) && amount > 0 ? { isRepeat: true, amount } : { isRepeat: true };
   }
 
   async repeatLastTransaction(userId: string, amountOverride?: number): Promise<AIResult> {
     const lastTransaction = await prisma.transaction.findFirst({
       where: {
         userId,
-        type: {
-          in: ['expense', 'income'],
-        },
+        type: { in: ['expense', 'income'] },
       },
       include: {
         account: true,
         category: true,
       },
-      orderBy: [
-        { date: 'desc' },
-        { createdAt: 'desc' },
-      ],
+      orderBy: [{ date: 'desc' }, { createdAt: 'desc' }],
     });
 
     if (!lastTransaction) {
@@ -100,16 +87,10 @@ export class AIRepeatService {
 
   isRepeatLikeText(value: string) {
     const normalized = this.normalizeRepeatText(value);
-
-    if (!normalized) {
-      return false;
-    }
+    if (!normalized) return false;
 
     const words = normalized.split(' ').filter(Boolean);
-
-    if (words.length > 6) {
-      return false;
-    }
+    if (words.length > 6) return false;
 
     return (
       /(^|\s)(еще|ещё)(\s|$)/.test(normalized) ||
@@ -124,12 +105,12 @@ export class AIRepeatService {
     );
   }
 
-  normalizeRepeatText(value: string) {
+  private normalizeRepeatText(value: string) {
     return value
       .trim()
       .toLowerCase()
       .replace(/ё/g, 'е')
-      .replace(/[.,!?;:()\[\]{}"'«»]/g, ' ')
+      .replace(/[.,!?;:()[\]{}"'«»]/g, ' ')
       .replace(/\s+/g, ' ')
       .trim();
   }
