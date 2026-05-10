@@ -1,3 +1,4 @@
+import { prisma } from '../../lib/prisma';
 import { TransactionService } from '../transactions/service';
 import { AccountService } from '../accounts/service';
 import { CategoryService } from '../categories/service';
@@ -103,7 +104,7 @@ export class AIExecutorService {
           accountId: account.id,
           categoryId: category.id,
           sectionId: section?.id ?? category.sectionId ?? null,
-          amount: convertAmount(parsedCommand.amount, (parsedCommand as any).currency, accountCurrency),
+          amount: Math.round(convertAmount(parsedCommand.amount, (parsedCommand as any).currency, accountCurrency)),
           type: 'expense',
           description: parsedCommand.description ?? parsedCommand.rawCategory,
           isAIGenerated: true,
@@ -115,10 +116,10 @@ export class AIExecutorService {
           executed: true,
           requiresConfirmation: false,
           riskLevel,
-          message: `✅ Записал расход: ${category.icon ?? '📝'} ${category.name} — ${convertAmount(parsedCommand.amount, (parsedCommand as any).currency, accountCurrency)} ${currencySymbol(accountCurrency)}.`,
+          message: `✅ Записал расход: ${category.icon ?? '📝'} ${category.name} — ${Math.round(convertAmount(parsedCommand.amount, (parsedCommand as any).currency, accountCurrency))} ${currencySymbol(accountCurrency)}.`,
           parsed: {
             type: 'expense',
-            amount: convertAmount(parsedCommand.amount, (parsedCommand as any).currency, accountCurrency),
+            amount: Math.round(convertAmount(parsedCommand.amount, (parsedCommand as any).currency, accountCurrency)),
             originalAmount: parsedCommand.amount,
             originalCurrency: (parsedCommand as any).currency ?? accountCurrency,
             accountId: account.id,
@@ -145,7 +146,7 @@ export class AIExecutorService {
           accountId: account.id,
           categoryId: category.id,
           sectionId: section?.id ?? category.sectionId ?? null,
-          amount: convertAmount(parsedCommand.amount, (parsedCommand as any).currency, accountCurrency),
+          amount: Math.round(convertAmount(parsedCommand.amount, (parsedCommand as any).currency, accountCurrency)),
           type: 'income',
           description: parsedCommand.description ?? parsedCommand.rawCategory,
           isAIGenerated: true,
@@ -157,10 +158,10 @@ export class AIExecutorService {
           executed: true,
           requiresConfirmation: false,
           riskLevel,
-          message: `✅ Записал доход: ${category.icon ?? '💰'} ${category.name} — ${convertAmount(parsedCommand.amount, (parsedCommand as any).currency, accountCurrency)} ${currencySymbol(accountCurrency)}.`,
+          message: `✅ Записал доход: ${category.icon ?? '💰'} ${category.name} — ${Math.round(convertAmount(parsedCommand.amount, (parsedCommand as any).currency, accountCurrency))} ${currencySymbol(accountCurrency)}.`,
           parsed: {
             type: 'income',
-            amount: convertAmount(parsedCommand.amount, (parsedCommand as any).currency, accountCurrency),
+            amount: Math.round(convertAmount(parsedCommand.amount, (parsedCommand as any).currency, accountCurrency)),
             originalAmount: parsedCommand.amount,
             originalCurrency: (parsedCommand as any).currency ?? accountCurrency,
             accountId: account.id,
@@ -181,7 +182,7 @@ export class AIExecutorService {
         const transaction = await transactionService.createTransaction(userId, {
           accountId: resolved.fromAccount.id,
           toAccountId: resolved.toAccount.id,
-          amount: parsedCommand.amount,
+          amount: Math.round(convertAmount(parsedCommand.amount, (parsedCommand as any).currency, (resolved.fromAccount as any).currency ?? 'RUB')),
           type: 'transfer',
           description: `Перевод на ${resolved.toAccount.name}`,
           isAIGenerated: true,
@@ -193,10 +194,12 @@ export class AIExecutorService {
           executed: true,
           requiresConfirmation: false,
           riskLevel,
-          message: `✅ Перевёл ${parsedCommand.amount} ₽ со счёта «${resolved.fromAccount.name}» на «${resolved.toAccount.name}».`,
+          message: `✅ Перевёл ${Math.round(convertAmount(parsedCommand.amount, (parsedCommand as any).currency, (resolved.fromAccount as any).currency ?? 'RUB'))} ${currencySymbol((resolved.fromAccount as any).currency ?? 'RUB')} со счёта «${resolved.fromAccount.name}» на «${resolved.toAccount.name}».`,
           parsed: {
             type: 'transfer',
-            amount: parsedCommand.amount,
+            amount: Math.round(convertAmount(parsedCommand.amount, (parsedCommand as any).currency, (resolved.fromAccount as any).currency ?? 'RUB')),
+            originalAmount: parsedCommand.amount,
+            originalCurrency: (parsedCommand as any).currency ?? (resolved.fromAccount as any).currency ?? 'RUB',
             accountId: resolved.fromAccount.id,
             accountName: resolved.fromAccount.name,
             toAccountId: resolved.toAccount.id,
@@ -306,6 +309,63 @@ export class AIExecutorService {
             balance: parsedCommand.balance,
           },
           data: account,
+        };
+      }
+
+
+      case 'delete_all_accounts': {
+        const [transactionsCount, accountsCount] = await prisma.$transaction(async (tx) => {
+          const txCount = await tx.transaction.count({ where: { userId } });
+          const accCount = await tx.account.count({ where: { userId } });
+
+          await tx.transaction.deleteMany({ where: { userId } });
+          await tx.recurringPayment.deleteMany({ where: { userId } });
+          await tx.account.deleteMany({ where: { userId } });
+
+          return [txCount, accCount] as const;
+        });
+
+        return {
+          success: true,
+          intent: 'delete_all_accounts',
+          executed: true,
+          requiresConfirmation: false,
+          riskLevel,
+          message: `Удалил все счета (${accountsCount}) и связанные операции (${transactionsCount}).`,
+          parsed: { type: 'delete_all_accounts', accountsCount, transactionsCount },
+          data: { accountsCount, transactionsCount },
+          meta: { undo: { available: false, actionType: 'accounts' } },
+        };
+      }
+
+      case 'clear_history': {
+        const transactions = await prisma.transaction.findMany({
+          where: { userId },
+          select: { id: true },
+          orderBy: [{ date: 'desc' }, { createdAt: 'desc' }],
+        });
+
+        let deletedCount = 0;
+        for (const transaction of transactions) {
+          await transactionService.deleteTransaction(userId, transaction.id);
+          deletedCount += 1;
+        }
+
+        if (parsedCommand.scope === 'all' || parsedCommand.scope === 'audit') {
+          await prisma.aIAuditLog.deleteMany({ where: { userId } });
+          await prisma.aIPendingAction.deleteMany({ where: { userId } });
+        }
+
+        return {
+          success: true,
+          intent: 'clear_history',
+          executed: true,
+          requiresConfirmation: false,
+          riskLevel,
+          message: `Очистил историю операций: удалено ${deletedCount}. Балансы счетов пересчитаны через откат операций.`,
+          parsed: { type: 'clear_history', scope: parsedCommand.scope ?? 'all_transactions', deletedCount },
+          data: { deletedCount },
+          meta: { undo: { available: false, actionType: 'history' } },
         };
       }
 

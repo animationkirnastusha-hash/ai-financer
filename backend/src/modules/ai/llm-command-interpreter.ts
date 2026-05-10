@@ -10,31 +10,18 @@ import { normalizeToolPlanToParsedCommand } from './tools/tool-plan-normalizer';
 const SYSTEM_PROMPT = `
 Ты AI-ядро финансового Telegram Mini App AI-financer.
 
-Главное правило:
-Пользователь не должен подбирать команды. Он может писать разговорно, с ошибками, сленгом, смешивать доходы, расходы, счета, переводы, категории, разделы и настройки в одном сообщении.
+Ты не парсер команд. Ты reasoning layer: понимаешь цель пользователя и собираешь capability plan для backend.
 
-Ты должен понять смысл и вернуть строго JSON для backend.
-Никакого markdown, текста до/после JSON, комментариев, <think> или code block.
+Главное правило:
+Пользователь не должен подбирать формулировки. Он может писать разговорно, с ошибками, сленгом, на русском/английском/вьетнамском, смешивать несколько целей в одном сообщении.
+
+Верни строго JSON. Никакого markdown, текста до/после JSON, комментариев или <think>.
 
 ${buildToolRegistryPrompt()}
 
-Предпочтительный формат — toolCalls.
-Legacy intents можно вернуть только если toolCalls неудобны:
-- batch
-- expense
-- income
-- transfer
-- show_accounts
-- create_category
-- create_section
-- assign_expenses_to_section
-- create_account
-- stats
-- financial_planning
-- advice
-- repeat_last
-- help
-- unknown
+Если действия можно выполнить в базовой версии — верни toolCalls.
+Если опасное действие явно запрошено — тоже верни toolCall, backend сам сделает confirmation.
+Если критически не хватает данных — верни { "toolCalls": [], "userMessage": "короткое уточнение" }.
 `;
 
 function stripThinkingBlocks(value: string) {
@@ -53,11 +40,7 @@ function extractJsonObject(value: string) {
   } catch {
     const firstBrace = cleaned.indexOf('{');
     const lastBrace = cleaned.lastIndexOf('}');
-
-    if (firstBrace === -1 || lastBrace === -1 || lastBrace <= firstBrace) {
-      throw new Error('No JSON object found in AI response');
-    }
-
+    if (firstBrace === -1 || lastBrace === -1 || lastBrace <= firstBrace) throw new Error('No JSON object found in AI response');
     return JSON.parse(cleaned.slice(firstBrace, lastBrace + 1)) as unknown;
   }
 }
@@ -70,49 +53,31 @@ function asString(value: unknown, fallback = '') {
 
 function asPositiveNumber(value: unknown) {
   const normalized = normalizeAmount(value);
-  if (normalized !== null && normalized > 0) return normalized;
-
+  if (normalized !== null && normalized > 0) return Math.round(normalized);
   const amount = Number(value);
   if (!Number.isFinite(amount) || amount <= 0) throw new BadRequestError('Invalid amount from AI');
-  return amount;
+  return Math.round(amount);
 }
 
-function normalizeParsed(input: unknown, originalText = ''): AIParsedCommand {
-  const enrichedInput = input && typeof input === 'object' && !Array.isArray(input) && originalText
-    ? { ...(input as Record<string, unknown>), originalText, userMessage: originalText }
-    : input;
-
-  const toolPlan = normalizeToolPlanToParsedCommand(enrichedInput);
-  if (toolPlan) return repairParsedCommand(toolPlan, originalText);
-
-  if (!input || typeof input !== 'object') return { intent: 'unknown' };
+function normalizeLegacyParsed(input: unknown, originalText = ''): AIParsedCommand {
+  if (!input || typeof input !== 'object' || Array.isArray(input)) return { intent: 'unknown', reason: 'invalid_ai_json' };
 
   const data = input as Record<string, unknown>;
-  const intent = asString(data.intent, 'unknown').toLowerCase();
+  const intent = asString(data.intent || data.type, 'unknown').toLowerCase();
 
   if (intent === 'batch') {
     const sourceText = asString(data.originalText || data.original || data.command, originalText);
     const rawActions = Array.isArray(data.actions) ? data.actions : [];
     const actions = rawActions
       .map((item) => normalizeParsed(item, sourceText))
-      .filter((item): item is Exclude<AIParsedCommand, { intent: 'batch' }> => {
-        return item.intent !== 'batch' && item.intent !== 'unknown' && item.intent !== 'help';
-      });
+      .filter((item): item is Exclude<AIParsedCommand, { intent: 'batch' }> => item.intent !== 'batch' && item.intent !== 'unknown' && item.intent !== 'help');
 
-    if (actions.length === 0) return { intent: 'unknown' };
-    if (actions.length === 1) return actions[0];
-
-    return repairParsedCommand({
-      intent: 'batch',
-      actions,
-      originalText: sourceText,
-      premiumSuggestion: data.premiumSuggestion ? asString(data.premiumSuggestion) : undefined,
-    }, sourceText);
+    if (actions.length === 0) return { intent: 'unknown', reason: 'empty_batch' };
+    return repairParsedCommand(actions.length === 1 ? actions[0] : { intent: 'batch', actions, originalText: sourceText }, sourceText);
   }
 
   if (intent === 'expense' || intent === 'income') {
     const rawCategory = asString(data.rawCategory || data.category || data.description, intent === 'income' ? 'доход' : 'расход');
-
     return repairParsedCommand({
       intent,
       amount: asPositiveNumber(data.amount),
@@ -128,38 +93,41 @@ function normalizeParsed(input: unknown, originalText = ''): AIParsedCommand {
     return repairParsedCommand({
       intent: 'transfer',
       amount: asPositiveNumber(data.amount),
+      currency: data.currency ? asString(data.currency).toUpperCase() : undefined,
       fromAccountName: data.fromAccountName ? asString(data.fromAccountName) : undefined,
-      toAccountName: asString(data.toAccountName || data.accountName),
+      toAccountName: asString(data.toAccountName || data.accountName || data.to),
+      description: data.description ? asString(data.description) : undefined,
     }, originalText);
   }
 
   if (intent === 'show_accounts') return { intent: 'show_accounts' };
   if (intent === 'repeat_last') return { intent: 'repeat_last' };
+  if (intent === 'delete_all_accounts') return { intent: 'delete_all_accounts', scope: 'all' };
+  if (intent === 'clear_history') return { intent: 'clear_history', scope: data.scope === 'audit' ? 'audit' : data.scope === 'all' ? 'all' : 'all_transactions' };
 
   if (intent === 'stats') {
     return { intent: 'stats', type: data.type === 'income' ? 'income' : 'expense', rawCategory: data.rawCategory ? asString(data.rawCategory) : undefined };
   }
 
   if (intent === 'create_category') {
-    return { intent: 'create_category', name: asString(data.name || data.rawCategory, 'Новая категория'), type: data.type === 'income' ? 'income' : 'expense', sectionName: data.sectionName ? asString(data.sectionName) : undefined };
+    return repairParsedCommand({ intent: 'create_category', name: asString(data.name || data.rawCategory, 'Новая категория'), type: data.type === 'income' ? 'income' : 'expense', sectionName: data.sectionName ? asString(data.sectionName) : undefined }, originalText);
   }
 
-  if (intent === 'create_section') return { intent: 'create_section', name: asString(data.name || data.sectionName, 'Новый раздел') };
+  if (intent === 'create_section') return repairParsedCommand({ intent: 'create_section', name: asString(data.name || data.sectionName, 'Новый раздел') }, originalText);
 
   if (intent === 'assign_expenses_to_section') {
-    return { intent: 'assign_expenses_to_section', rawQuery: asString(data.rawQuery || data.category || data.description, ''), sectionName: asString(data.sectionName || data.name, 'Новый раздел') };
+    return repairParsedCommand({ intent: 'assign_expenses_to_section', rawQuery: asString(data.rawQuery || data.category || data.description, ''), sectionName: asString(data.sectionName || data.name, 'Новый раздел') }, originalText);
   }
 
   if (intent === 'create_account') {
     const type = asString(data.type, 'cash').toLowerCase();
     const currency = asString(data.currency, 'RUB').toUpperCase();
-
     return repairParsedCommand({
       intent: 'create_account',
       name: asString(data.name, 'Новый счёт'),
-      type: ['cash', 'card', 'savings', 'investment'].includes(type) ? type : 'cash',
+      type: ['cash', 'card', 'savings', 'investment'].includes(type) ? type as any : 'cash',
       currency: ['RUB', 'USD', 'EUR', 'VND'].includes(currency) ? currency : 'RUB',
-      balance: (normalizeAmount(data.balance) ?? Number(data.balance)) || 0,
+      balance: Math.round((normalizeAmount(data.balance) ?? Number(data.balance)) || 0),
     }, originalText);
   }
 
@@ -177,7 +145,18 @@ function normalizeParsed(input: unknown, originalText = ''): AIParsedCommand {
   }
 
   if (intent === 'help') return { intent: 'help' };
-  return { intent: 'unknown' };
+  return { intent: 'unknown', reason: data.userMessage ? asString(data.userMessage) : 'unknown_intent' };
+}
+
+function normalizeParsed(input: unknown, originalText = ''): AIParsedCommand {
+  const enrichedInput = input && typeof input === 'object' && !Array.isArray(input) && originalText
+    ? { ...(input as Record<string, unknown>), originalText, userMessage: (input as Record<string, unknown>).userMessage ?? originalText }
+    : input;
+
+  const toolPlan = normalizeToolPlanToParsedCommand(enrichedInput);
+  if (toolPlan) return repairParsedCommand(toolPlan, originalText);
+
+  return normalizeLegacyParsed(input, originalText);
 }
 
 export class LLMCommandInterpreter {
@@ -196,7 +175,8 @@ export class LLMCommandInterpreter {
       normalized.includes(' и ') ||
       normalized.includes(' потом ') ||
       normalized.includes(' затем ') ||
-      normalized.includes(';');
+      normalized.includes(';') ||
+      normalized.includes(',');
 
     return isComplex ? env.ollamaFreeReasoningModel : env.ollamaFastModel;
   }
@@ -205,30 +185,30 @@ export class LLMCommandInterpreter {
     const trimmed = command.trim();
     if (!trimmed) throw new BadRequestError('Command is required');
 
-    const semanticResult = compileNaturalBatch(trimmed);
-    if (semanticResult) return repairParsedCommand(semanticResult, trimmed);
-
-    if (env.aiMode !== 'ollama') return { intent: 'unknown' };
+    if (env.aiMode !== 'ollama') return compileNaturalBatch(trimmed) || { intent: 'unknown', reason: 'ai_disabled' };
 
     try {
       const response = await this.ollama.complete({
         model: this.pickModel(trimmed),
-        temperature: 0.08,
+        temperature: 0.05,
         messages: [
           {
             role: 'system',
             content:
               SYSTEM_PROMPT +
-              `\n\nDIALOG MEMORY:\n${history.map((message) => `${message.role === 'user' ? 'Пользователь' : 'AI'}: ${message.content}`).join('\n')}\n\nПравила памяти:\n- если пользователь просит повторить действие: repeat_last\n- если пользователь пишет «ещё 200» после «кофе 350», это новая операция той же категории с новой суммой\n- если пользователь пишет «туда/на него/на неё», используй последний явно созданный/упомянутый счёт из текущего запроса или истории\n- если данных не хватает, верни toolCalls: [] и короткий userMessage с уточнением\n`,
+              `\n\nDIALOG MEMORY:\n${history.map((message) => `${message.role === 'user' ? 'Пользователь' : 'AI'}: ${message.content}`).join('\n')}\n\nContext rules:\n- If user says "туда/there/to it", use the last explicitly mentioned account from the same request or recent dialog.\n- If user says "ещё", infer repeated context only when safe.\n- Return semantic names, not database ids.\n`,
           },
           { role: 'user', content: trimmed },
         ],
       });
 
-      return normalizeParsed(extractJsonObject(response.content), trimmed);
+      const parsed = normalizeParsed(extractJsonObject(response.content), trimmed);
+      if (parsed.intent !== 'unknown') return parsed;
+
+      return compileNaturalBatch(trimmed) || parsed;
     } catch (error) {
-      console.error('Ollama parse failed. Falling back to semantic compiler:', error);
-      return compileNaturalBatch(trimmed) || { intent: 'unknown' };
+      console.error('Ollama reasoning failed. Falling back to safety compiler:', error);
+      return compileNaturalBatch(trimmed) || { intent: 'unknown', reason: 'reasoning_failed' };
     }
   }
 }

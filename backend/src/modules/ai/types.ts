@@ -8,6 +8,8 @@ export type AIIntent =
   | 'create_section'
   | 'assign_expenses_to_section'
   | 'create_account'
+  | 'delete_all_accounts'
+  | 'clear_history'
   | 'update_settings'
   | 'stats'
   | 'financial_planning'
@@ -46,8 +48,10 @@ export interface AIParsedIncome {
 export interface AIParsedTransfer {
   intent: 'transfer';
   amount: number;
+  currency?: string;
   fromAccountName?: string;
   toAccountName: string;
+  description?: string;
 }
 
 export interface AIParsedShowAccounts {
@@ -75,9 +79,19 @@ export interface AIParsedAssignExpensesToSection {
 export interface AIParsedCreateAccount {
   intent: 'create_account';
   name: string;
-  type: string;
+  type: 'cash' | 'card' | 'savings' | 'investment';
   currency: string;
   balance: number;
+}
+
+export interface AIParsedDeleteAllAccounts {
+  intent: 'delete_all_accounts';
+  scope?: 'all';
+}
+
+export interface AIParsedClearHistory {
+  intent: 'clear_history';
+  scope?: 'all_transactions' | 'audit' | 'all';
 }
 
 export interface AIParsedUpdateSettings {
@@ -116,6 +130,8 @@ export interface AIParsedHelp {
 
 export interface AIParsedUnknown {
   intent: 'unknown';
+  reason?: string;
+  missing?: string[];
 }
 
 export type AIParsedAtomicCommand =
@@ -127,6 +143,8 @@ export type AIParsedAtomicCommand =
   | AIParsedCreateSection
   | AIParsedAssignExpensesToSection
   | AIParsedCreateAccount
+  | AIParsedDeleteAllAccounts
+  | AIParsedClearHistory
   | AIParsedUpdateSettings
   | AIParsedStats
   | AIParsedFinancialPlanning
@@ -158,7 +176,7 @@ export interface AIResultMeta {
   confirmExpiresAt?: string;
   undo?: {
     available: boolean;
-    actionType?: 'transaction' | 'account' | 'category' | 'section' | 'batch';
+    actionType?: 'transaction' | 'account' | 'category' | 'section' | 'batch' | 'history' | 'accounts';
     targetId?: string;
   };
 }

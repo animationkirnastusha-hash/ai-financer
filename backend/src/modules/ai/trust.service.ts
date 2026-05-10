@@ -7,6 +7,16 @@ const aiManager = new AIManager();
 const auditService = new AIAuditService();
 const pendingActionService = new AIPendingActionService();
 
+type AccountType = 'cash' | 'card' | 'savings' | 'investment';
+
+function normalizeAccountType(value: unknown): AccountType {
+  const raw = String(value ?? '').toLowerCase();
+  if (raw === 'card' || raw.includes('карт') || raw.includes('банк') || raw.includes('безнал')) return 'card';
+  if (raw === 'savings' || raw.includes('накоп') || raw.includes('сбереж') || raw.includes('копил')) return 'savings';
+  if (raw === 'investment' || raw.includes('инвест') || raw.includes('брокер')) return 'investment';
+  return 'cash';
+}
+
 function parseStoredJson(value: string | null): Record<string, unknown> | null {
   if (!value) return null;
   try {
@@ -50,7 +60,7 @@ function normalizeStoredParsed(intent: string, parsed: Record<string, unknown> |
     return {
       intent: 'create_account',
       name: asString(parsed.name || parsed.accountName, 'Новый счёт'),
-      type: asString(parsed.type, 'cash'),
+      type: normalizeAccountType(parsed.type),
       currency: asString(parsed.currency, 'RUB').toUpperCase(),
       balance: asNumber(parsed.balance, 0),
     };

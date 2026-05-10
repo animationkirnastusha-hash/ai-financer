@@ -67,6 +67,31 @@ export class AIPreviewBuilder {
           },
         };
       }
+
+      case 'delete_all_accounts':
+        return {
+          success: true,
+          intent: 'delete_all_accounts',
+          executed: false,
+          requiresConfirmation: true,
+          riskLevel: 'high',
+          message: 'Подтверди удаление всех счетов. Это удалит счета, операции и регулярные платежи.',
+          parsed: { type: 'delete_all_accounts', scope: parsedCommand.scope ?? 'all', reason: reason ?? null },
+        };
+
+      case 'clear_history':
+        return {
+          success: true,
+          intent: 'clear_history',
+          executed: false,
+          requiresConfirmation: true,
+          riskLevel: 'high',
+          message: parsedCommand.scope === 'all'
+            ? 'Подтверди полную очистку истории. Это удалит операции и AI-журнал.'
+            : 'Подтверди очистку истории операций. Балансы будут пересчитаны через откат операций.',
+          parsed: { type: 'clear_history', scope: parsedCommand.scope ?? 'all_transactions', reason: reason ?? null },
+        };
+
       case 'help':
         return {
           success: true,

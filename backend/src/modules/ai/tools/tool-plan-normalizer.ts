@@ -1,16 +1,15 @@
 import { extractAmountFromText, normalizeAmount } from '../utils/amount-normalizer';
 import {
   cleanAccountName,
+  cleanEntityName,
   compileNaturalBatch,
-  compileNaturalCreateAccount,
-  compileNaturalTopUp,
   inferAccountType,
   inferCurrency,
   inferTransactionType,
   repairParsedCommand,
 } from '../utils/command-compiler';
-import type { AIParsedCommand, AIParsedAtomicCommand } from '../types';
-import type { AIToolCall, AIToolPlan } from './tool-types';
+import type { AIParsedAtomicCommand, AIParsedCommand } from '../types';
+import type { AIToolCall, AIToolName, AIToolPlan } from './tool-types';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
@@ -23,36 +22,48 @@ function asString(value: unknown, fallback = ''): string {
 }
 
 function asOptionalString(value: unknown): string | undefined {
-  const normalized = asString(value);
-  return normalized ? normalized : undefined;
+  const valueAsString = asString(value);
+  return valueAsString ? valueAsString : undefined;
 }
 
-function asAmount(value: unknown, originalText = ''): number | null {
+function asAmount(value: unknown, text = ''): number | null {
   const normalized = normalizeAmount(value);
-  if (normalized !== null && normalized > 0) return normalized;
-  return originalText ? extractAmountFromText(originalText) : null;
+  if (normalized !== null && normalized > 0) return Math.round(normalized);
+  const fromText = text ? extractAmountFromText(text) : null;
+  return fromText && fromText > 0 ? Math.round(fromText) : null;
 }
 
-function normalizeTransactionType(value: unknown, originalText = ''): 'income' | 'expense' {
-  return inferTransactionType(originalText, value);
+function normalizeToolName(tool: AIToolName): AIToolName {
+  const map: Partial<Record<AIToolName, AIToolName>> = {
+    create_account: 'money.create_account',
+    create_transaction: 'money.record_transaction',
+    transfer_money: 'money.transfer',
+    delete_all_accounts: 'money.delete_all_accounts',
+    clear_history: 'history.clear',
+    create_category: 'taxonomy.create_category',
+    create_section: 'taxonomy.create_section',
+    assign_expenses_to_section: 'taxonomy.assign_expenses_to_section',
+    show_accounts: 'report.show_accounts',
+    show_stats: 'report.show_stats',
+    financial_planning: 'planning.financial_plan',
+    answer_advice: 'assistant.answer',
+    repeat_last: 'assistant.repeat_last',
+  };
+
+  return map[tool] ?? tool;
 }
 
 function convertToolCall(call: AIToolCall, originalText = ''): AIParsedAtomicCommand[] {
+  const tool = normalizeToolName(call.tool);
   const args = isRecord(call.args) ? call.args : {};
   const text = asString(args.originalText || args.text || originalText, originalText);
 
-  const natural = text ? compileNaturalBatch(text) : null;
-  if (natural) return natural.intent === 'batch' ? natural.actions : [natural];
-
-  switch (call.tool) {
-    case 'create_account': {
-      const direct = compileNaturalCreateAccount(text);
-      if (direct) return direct.intent === 'batch' ? direct.actions : [direct];
-
-      const name = cleanAccountName(args.name || args.accountName, text);
-      const initialBalance = asAmount(args.initialBalance ?? args.balance, text);
+  switch (tool) {
+    case 'money.create_account': {
+      const name = cleanAccountName(args.name || args.accountName || args.title, text);
       const currency = inferCurrency(text, args.currency);
-      const createAccount: AIParsedAtomicCommand = {
+      const initialBalance = asAmount(args.initialBalance ?? args.balance, text);
+      const account: AIParsedAtomicCommand = {
         intent: 'create_account',
         name,
         type: inferAccountType(text, args.type),
@@ -60,56 +71,40 @@ function convertToolCall(call: AIToolCall, originalText = ''): AIParsedAtomicCom
         balance: 0,
       };
 
-      if (!initialBalance) return [createAccount];
+      if (!initialBalance) return [account];
 
       return [
-        createAccount,
+        account,
         {
           intent: 'income',
           amount: initialBalance,
-          currency,
+          currency: inferCurrency(text, args.currency, currency),
           rawCategory: 'пополнение',
           description: 'пополнение счёта',
           accountName: name,
-        } as AIParsedAtomicCommand,
+        },
       ];
     }
 
-    case 'create_transaction': {
+    case 'money.record_transaction': {
       const amount = asAmount(args.amount, text);
       if (!amount) return [];
 
-      const type = normalizeTransactionType(args.type, text);
-      const category = asString(
-        args.category || args.rawCategory || args.description,
-        type === 'income' ? 'доход' : 'расход',
-      );
-      const accountName = asOptionalString(args.accountName || args.account || args.toAccountName);
+      const type = inferTransactionType(text, args.type);
+      const category = cleanEntityName(args.category || args.rawCategory || args.description, type === 'income' ? 'доход' : 'расход');
+      const base = {
+        amount,
+        currency: args.currency ? inferCurrency(text, args.currency) : inferCurrency(text),
+        rawCategory: category,
+        description: asString(args.description, category),
+        accountName: asOptionalString(args.accountName || args.account),
+        sectionName: asOptionalString(args.sectionName),
+      };
 
-      const parsed: AIParsedAtomicCommand = type === 'income'
-        ? {
-            intent: 'income',
-            amount,
-            currency: inferCurrency(text, args.currency),
-            rawCategory: category,
-            description: asString(args.description, category),
-            accountName,
-            sectionName: asOptionalString(args.sectionName),
-          } as AIParsedAtomicCommand
-        : {
-            intent: 'expense',
-            amount,
-            currency: inferCurrency(text, args.currency),
-            rawCategory: category,
-            description: asString(args.description, category),
-            accountName,
-            sectionName: asOptionalString(args.sectionName),
-          } as AIParsedAtomicCommand;
-
-      return [repairParsedCommand(parsed, text) as AIParsedAtomicCommand];
+      return [repairParsedCommand({ intent: type, ...base } as AIParsedAtomicCommand, text) as AIParsedAtomicCommand];
     }
 
-    case 'transfer_money': {
+    case 'money.transfer': {
       const amount = asAmount(args.amount, text);
       const toAccountName = cleanAccountName(args.toAccountName || args.to || args.targetAccountName, text);
       if (!amount || !toAccountName) return [];
@@ -119,51 +114,46 @@ function convertToolCall(call: AIToolCall, originalText = ''): AIParsedAtomicCom
           {
             intent: 'transfer',
             amount,
+            currency: args.currency ? inferCurrency(text, args.currency) : inferCurrency(text),
             fromAccountName: asOptionalString(args.fromAccountName || args.from || args.sourceAccountName),
             toAccountName,
+            description: asOptionalString(args.description) || 'Перевод между счетами',
           },
           text,
         ) as AIParsedAtomicCommand,
       ];
     }
 
-    case 'create_section': {
-      const name = asString(args.name || args.sectionName);
+    case 'money.delete_all_accounts':
+      return [{ intent: 'delete_all_accounts', scope: 'all' }];
+
+    case 'history.clear':
+      return [{ intent: 'clear_history', scope: asString(args.scope, 'all_transactions') === 'audit' ? 'audit' : asString(args.scope, 'all_transactions') === 'all' ? 'all' : 'all_transactions' }];
+
+    case 'taxonomy.create_section': {
+      const name = cleanEntityName(args.name || args.sectionName);
       return name ? [{ intent: 'create_section', name }] : [];
     }
 
-    case 'create_category': {
-      const name = asString(args.name || args.category || args.rawCategory);
+    case 'taxonomy.create_category': {
+      const name = cleanEntityName(args.name || args.category || args.rawCategory);
       if (!name) return [];
-      return [
-        {
-          intent: 'create_category',
-          name,
-          type: normalizeTransactionType(args.type, text),
-          sectionName: asOptionalString(args.sectionName),
-        },
-      ];
+      return [{ intent: 'create_category', name, type: inferTransactionType(text, args.type), sectionName: asOptionalString(args.sectionName) }];
     }
 
-    case 'assign_expenses_to_section': {
-      const rawQuery = asString(args.rawQuery || args.category || args.query || args.description);
-      const sectionName = asString(args.sectionName || args.name);
+    case 'taxonomy.assign_expenses_to_section': {
+      const rawQuery = cleanEntityName(args.rawQuery || args.category || args.query || args.description);
+      const sectionName = cleanEntityName(args.sectionName || args.name);
       return rawQuery && sectionName ? [{ intent: 'assign_expenses_to_section', rawQuery, sectionName }] : [];
     }
 
-    case 'show_accounts':
+    case 'report.show_accounts':
       return [{ intent: 'show_accounts' }];
 
-    case 'show_stats':
-      return [
-        {
-          intent: 'stats',
-          type: normalizeTransactionType(args.type, text),
-          rawCategory: asOptionalString(args.category || args.rawCategory),
-        },
-      ];
+    case 'report.show_stats':
+      return [{ intent: 'stats', type: inferTransactionType(text, args.type), rawCategory: asOptionalString(args.category || args.rawCategory) }];
 
-    case 'financial_planning':
+    case 'planning.financial_plan':
       return [
         {
           intent: 'financial_planning',
@@ -175,10 +165,10 @@ function convertToolCall(call: AIToolCall, originalText = ''): AIParsedAtomicCom
         },
       ];
 
-    case 'answer_advice':
+    case 'assistant.answer':
       return [{ intent: 'advice', question: asString(args.question || args.description || text, '') }];
 
-    case 'repeat_last':
+    case 'assistant.repeat_last':
       return [{ intent: 'repeat_last' }];
 
     default:
@@ -194,38 +184,26 @@ export function normalizeToolPlanToParsedCommand(value: unknown): AIParsedComman
   if (!looksLikeToolPlan(value)) return null;
 
   const originalText = asString(value.originalText || value.userMessage);
-
-  const natural = compileNaturalBatch(originalText);
-  if (natural) return natural;
-
-  const naturalCreateAccount = compileNaturalCreateAccount(originalText);
-  if (naturalCreateAccount) return naturalCreateAccount;
-
-  const naturalTopUp = compileNaturalTopUp(originalText);
-  if (naturalTopUp) return naturalTopUp;
-
   const actions = value.toolCalls
-    .filter((item: AIToolCall): item is AIToolCall => {
-      return isRecord(item) && typeof item.tool === 'string' && isRecord(item.args ?? {});
-    })
-    .flatMap((item: AIToolCall) => convertToolCall(item, originalText))
-    .filter((item: AIParsedAtomicCommand) => item.intent !== 'unknown' && item.intent !== 'help')
-    .map((item: AIParsedAtomicCommand) => repairParsedCommand(item, originalText) as AIParsedAtomicCommand);
+    .filter((item): item is AIToolCall => isRecord(item) && typeof item.tool === 'string' && isRecord(item.args ?? {}))
+    .flatMap((call) => convertToolCall(call, originalText))
+    .filter((item) => item.intent !== 'unknown' && item.intent !== 'help');
 
   if (actions.length === 0) {
-    const question = asString(value.userMessage || originalText);
-    return question ? { intent: 'advice', question } : { intent: 'unknown' };
+    const fallback = compileNaturalBatch(originalText);
+    if (fallback) return fallback;
+    const message = asString(value.userMessage);
+    return message ? { intent: 'advice', question: message } : { intent: 'unknown', reason: 'empty_tool_plan' };
   }
 
-  if (actions.length === 1 && !value.premiumSuggestion) return actions[0];
+  const parsed: AIParsedCommand = actions.length === 1
+    ? actions[0]
+    : {
+        intent: 'batch',
+        actions,
+        originalText,
+        premiumSuggestion: asOptionalString(value.premiumSuggestion),
+      };
 
-  return repairParsedCommand(
-    {
-      intent: 'batch',
-      actions,
-      originalText,
-      premiumSuggestion: asOptionalString(value.premiumSuggestion),
-    },
-    originalText,
-  );
+  return repairParsedCommand(parsed, originalText);
 }

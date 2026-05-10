@@ -66,7 +66,7 @@ function normalizeName(value: string) {
     .toLowerCase()
     .replace(/ё/g, 'е')
     .replace(/["'«»]/g, '')
-    .replace(/\b(?:счет|счёт|счета|счёта|карта|карту|карты|кошелек|кошелёк|аккаунт|account|wallet)\b/g, ' ')
+    .replace(/\b(?:счет|счёт|счета|счёта|карта|карту|карты|кошелек|кошелёк|аккаунт|account|wallet|безналичный|безналичная|безнал|банковский|банковская)\b/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
 }
@@ -77,6 +77,17 @@ function currencyHint(value: string): string | null {
   if (/(?:€|eur|евро)/.test(raw)) return 'EUR';
   if (/(?:₽|rub|руб)/.test(raw)) return 'RUB';
   if (/(?:₫|vnd|донг)/.test(raw)) return 'VND';
+  return null;
+}
+
+
+
+function accountTypeHint(value: string): string | null {
+  const raw = value.toLowerCase().replace(/ё/g, 'е');
+  if (/(?:безнал|банк|банковск|card|карта|карту)/.test(raw)) return 'card';
+  if (/(?:налич|cash|кэш)/.test(raw)) return 'cash';
+  if (/(?:накоп|сбереж|saving)/.test(raw)) return 'savings';
+  if (/(?:инвест|invest|broker|брокер)/.test(raw)) return 'investment';
   return null;
 }
 
@@ -194,7 +205,14 @@ export class AIResolverService {
     if (bySoftName) return bySoftName;
 
     if (hint) {
-      return sortAccounts(accounts).find((account) => String(account.currency).toUpperCase() === hint);
+      const byCurrency = sortAccounts(accounts).find((account) => String(account.currency).toUpperCase() === hint);
+      if (byCurrency) return byCurrency;
+    }
+
+    const typeHint = accountTypeHint(rawName);
+    if (typeHint) {
+      const byType = sortAccounts(accounts).find((account) => account.type === typeHint);
+      if (byType) return byType;
     }
 
     return undefined;
