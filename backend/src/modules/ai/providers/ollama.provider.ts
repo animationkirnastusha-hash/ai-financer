@@ -21,7 +21,7 @@ function normalizeOllamaBaseUrl(value: string | undefined) {
 }
 
 function getOllamaModel() {
-  return (env.ollamaModel || 'qwen3:14b').trim();
+  return (env.ollamaModel || 'qwen3:8b').trim();
 }
 
 async function readErrorBody(response: Response) {
