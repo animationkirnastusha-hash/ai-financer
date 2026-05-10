@@ -15,7 +15,7 @@ type OllamaChatResponse = {
 export class OllamaProvider implements AIProvider {
   async complete(request: AIProviderRequest): Promise<AIProviderResponse> {
     const controller = new AbortController();
-    const timeoutMs = Math.max(1000, env.aiLlmTimeoutMs || 4500);
+    const timeoutMs = Math.max(1000, env.aiLlmTimeoutMs || 12000);
     const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
     try {
@@ -28,10 +28,10 @@ export class OllamaProvider implements AIProvider {
         body: JSON.stringify({
           model: request.model || env.ollamaModel,
           stream: false,
-          format: 'json',
+          format: request.format ?? 'json',
           options: {
-            temperature: request.temperature ?? 0.05,
-            num_predict: 700,
+            temperature: request.temperature ?? 0.02,
+            num_predict: 1200,
           },
           messages: request.messages,
         }),

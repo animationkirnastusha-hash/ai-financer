@@ -76,7 +76,6 @@ function normalizeStoredParsed(intent: string, parsed: Record<string, unknown> |
       type: parsed.accountType || parsed.type ? normalizeAccountType(parsed.accountType || parsed.type) : undefined,
       currency: parsed.currency ? normalizeCurrency(parsed.currency) : undefined,
       balance: parsed.balance !== undefined ? asNumber(parsed.balance, 0) : undefined,
-      showInTotalBalance: typeof parsed.showInTotalBalance === 'boolean' ? parsed.showInTotalBalance : undefined,
     };
   }
 

@@ -79,63 +79,8 @@ export class AIExecutorService {
 
       case 'transfer': {
         const resolved = await this.resolver.resolveTransfer(userId, parsedCommand);
-        const fromCurrency = normalizeCurrency((resolved.fromAccount as any).currency, 'RUB');
-        const toCurrency = normalizeCurrency((resolved.toAccount as any).currency, fromCurrency);
-        const sourceCurrency = normalizeCurrency(parsedCommand.currency, fromCurrency);
-        const fromAmount = convertAmount(parsedCommand.amount, sourceCurrency, fromCurrency);
-        const toAmount = convertAmount(parsedCommand.amount, sourceCurrency, toCurrency);
-
-        if (fromCurrency === toCurrency) {
-          const transaction = await transactionService.createTransaction(userId, {
-            accountId: resolved.fromAccount.id,
-            toAccountId: resolved.toAccount.id,
-            amount: fromAmount,
-            type: 'transfer',
-            description: parsedCommand.description ?? `Перевод на ${resolved.toAccount.name}`,
-            isAIGenerated: true,
-          });
-
-          return {
-            success: true,
-            intent: 'transfer',
-            executed: true,
-            requiresConfirmation: false,
-            riskLevel,
-            message: `✅ Перевёл ${fromAmount} ${currencySymbol(fromCurrency)} со счёта «${resolved.fromAccount.name}» на «${resolved.toAccount.name}».`,
-            parsed: { type: 'transfer', amount: fromAmount, currency: fromCurrency, accountId: resolved.fromAccount.id, accountName: resolved.fromAccount.name, toAccountId: resolved.toAccount.id, toAccountName: resolved.toAccount.name, description: parsedCommand.description ?? `Перевод на ${resolved.toAccount.name}` },
-            data: transaction,
-          };
-        }
-
-        const conversionCategory = await this.resolver.findOrCreateCategory(userId, 'конвертация', 'expense');
-        const incomeCategory = await this.resolver.findOrCreateCategory(userId, 'конвертация', 'income');
-        const expense = await transactionService.createTransaction(userId, {
-          accountId: resolved.fromAccount.id,
-          categoryId: conversionCategory.id,
-          amount: fromAmount,
-          type: 'expense',
-          description: parsedCommand.description ?? `Конвертация в ${toCurrency}`,
-          isAIGenerated: true,
-        });
-        const income = await transactionService.createTransaction(userId, {
-          accountId: resolved.toAccount.id,
-          categoryId: incomeCategory.id,
-          amount: toAmount,
-          type: 'income',
-          description: parsedCommand.description ?? `Конвертация из ${fromCurrency}`,
-          isAIGenerated: true,
-        });
-
-        return {
-          success: true,
-          intent: 'transfer',
-          executed: true,
-          requiresConfirmation: false,
-          riskLevel,
-          message: `✅ Конвертировал ${fromAmount} ${currencySymbol(fromCurrency)} со счёта «${resolved.fromAccount.name}» в ${toAmount} ${currencySymbol(toCurrency)} на «${resolved.toAccount.name}».`,
-          parsed: { type: 'transfer', amount: parsedCommand.amount, currency: sourceCurrency, fromAmount, fromCurrency, toAmount, toCurrency, accountId: resolved.fromAccount.id, accountName: resolved.fromAccount.name, toAccountId: resolved.toAccount.id, toAccountName: resolved.toAccount.name, description: parsedCommand.description ?? null },
-          data: { expense, income },
-        };
+        const transaction = await transactionService.createTransaction(userId, { accountId: resolved.fromAccount.id, toAccountId: resolved.toAccount.id, amount: parsedCommand.amount, type: 'transfer', description: parsedCommand.description ?? `Перевод на ${resolved.toAccount.name}`, isAIGenerated: true });
+        return { success: true, intent: 'transfer', executed: true, requiresConfirmation: false, riskLevel, message: `✅ Перевёл ${parsedCommand.amount} ₽ со счёта «${resolved.fromAccount.name}» на «${resolved.toAccount.name}».`, parsed: { type: 'transfer', amount: parsedCommand.amount, currency: parsedCommand.currency ?? null, accountId: resolved.fromAccount.id, accountName: resolved.fromAccount.name, toAccountId: resolved.toAccount.id, toAccountName: resolved.toAccount.name, description: parsedCommand.description ?? `Перевод на ${resolved.toAccount.name}` }, data: transaction };
       }
 
       case 'create_category': {
@@ -160,48 +105,20 @@ export class AIExecutorService {
       }
 
       case 'update_account': {
-        const account = await this.resolver.resolveAccountByNameOrHint(userId, parsedCommand.accountName);
-        const currentCurrency = normalizeCurrency((account as any).currency, 'RUB');
-        const nextCurrency = parsedCommand.currency ? normalizeCurrency(parsedCommand.currency, currentCurrency) : undefined;
-        const nextBalance = parsedCommand.balance !== undefined
-          ? parsedCommand.balance
-          : nextCurrency && nextCurrency !== currentCurrency
-            ? convertAmount((account as any).balance ?? 0, currentCurrency, nextCurrency)
-            : undefined;
-
+        const account = await this.resolver.resolveAccountByName(userId, parsedCommand.accountName);
         const updated = await accountService.updateAccount(userId, account.id, {
           name: parsedCommand.name,
           type: parsedCommand.type,
-          currency: nextCurrency,
-          balance: nextBalance,
-          showInTotalBalance: parsedCommand.showInTotalBalance,
+          currency: parsedCommand.currency,
+          balance: parsedCommand.balance,
         });
-
-        return {
-          success: true,
-          intent: 'update_account',
-          executed: true,
-          requiresConfirmation: false,
-          riskLevel,
-          message: `✅ Обновил счёт «${updated.name}».`,
-          parsed: { type: 'update_account', accountId: account.id, accountName: account.name, name: parsedCommand.name ?? null, accountType: parsedCommand.type ?? null, currency: nextCurrency ?? null, balance: nextBalance ?? null },
-          data: updated,
-        };
+        return { success: true, intent: 'update_account', executed: true, requiresConfirmation: false, riskLevel, message: `✅ Счёт «${updated.name}» обновлён.`, parsed: { accountId: account.id, accountName: account.name, name: parsedCommand.name ?? null, type: parsedCommand.type ?? null, currency: parsedCommand.currency ?? null, balance: parsedCommand.balance ?? null }, data: updated };
       }
 
       case 'delete_account': {
-        const account = await this.resolver.resolveAccountByNameOrHint(userId, parsedCommand.accountName);
+        const account = await this.resolver.resolveAccountByName(userId, parsedCommand.accountName);
         const deleted = await accountService.deleteAccount(userId, account.id);
-        return {
-          success: true,
-          intent: 'delete_account',
-          executed: true,
-          requiresConfirmation: false,
-          riskLevel,
-          message: `✅ Удалил счёт «${deleted.name}».`,
-          parsed: { type: 'delete_account', accountId: account.id, accountName: account.name },
-          data: deleted,
-        };
+        return { success: true, intent: 'delete_account', executed: true, requiresConfirmation: false, riskLevel, message: `✅ Счёт «${deleted.name}» удалён.`, parsed: { accountId: account.id, accountName: account.name }, data: deleted };
       }
 
       case 'delete_all_accounts': {

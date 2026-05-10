@@ -164,17 +164,6 @@ export class AIResolverService {
     });
   }
 
-  async resolveAccountByNameOrHint(userId: string, accountName: string) {
-    const accounts = await prisma.account.findMany({
-      where: { userId },
-      orderBy: [{ createdAt: 'asc' }],
-    });
-
-    const account = this.findAccountByName(accounts, accountName);
-    if (!account) throw new NotFoundError(`Не найден счёт «${accountName}»`);
-    return account;
-  }
-
   async resolveTransfer(userId: string, parsedCommand: Extract<AIParsedCommand, { intent: 'transfer' }>) {
     const accounts = await prisma.account.findMany({
       where: { userId },
@@ -200,6 +189,17 @@ export class AIResolverService {
 
     if (fromAccount.id === toAccount.id) throw new BadRequestError('Нельзя перевести на тот же счёт');
     return { fromAccount, toAccount };
+  }
+
+  async resolveAccountByName(userId: string, accountName: string) {
+    const accounts = await prisma.account.findMany({
+      where: { userId },
+      orderBy: [{ createdAt: 'asc' }],
+    });
+
+    const account = this.findAccountByName(accounts, accountName);
+    if (!account) throw new NotFoundError(`Не найден счёт «${accountName}»`);
+    return account;
   }
 
   private findAccountByName(accounts: AccountLike[], rawName: string) {

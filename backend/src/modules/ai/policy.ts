@@ -22,8 +22,8 @@ export class AIActionPolicy {
       };
     }
 
-    if (command.intent === 'delete_account') {
-      return { requiresConfirmation: true, riskLevel: 'high', reason: 'Удаление счёта требует подтверждения' };
+    if (command.intent === 'delete_account' || command.intent === 'update_account') {
+      return { requiresConfirmation: true, riskLevel: 'medium', reason: command.intent === 'delete_account' ? 'Удаление счёта требует подтверждения' : 'Изменение счёта требует подтверждения' };
     }
 
     if (command.intent === 'delete_all_accounts') {
@@ -43,10 +43,6 @@ export class AIActionPolicy {
 
     if (command.intent === 'transfer') {
       return { requiresConfirmation: true, riskLevel: 'medium', reason: 'Перевод между счетами требует подтверждения' };
-    }
-
-    if (command.intent === 'update_account') {
-      return { requiresConfirmation: true, riskLevel: 'medium', reason: 'Изменение счёта требует подтверждения' };
     }
 
     if (command.intent === 'create_account') {

@@ -25,11 +25,11 @@ export class AIPreviewBuilder {
       case 'batch': {
         const actionLabels = parsedCommand.actions.map((action, index) => {
           if (action.intent === 'create_account') return `${index + 1}. Создать счёт «${action.name}» (${action.type}, ${action.currency})`;
-          if (action.intent === 'update_account') return `${index + 1}. Обновить счёт «${action.accountName}»`;
-          if (action.intent === 'delete_account') return `${index + 1}. Удалить счёт «${action.accountName}»`;
           if (action.intent === 'income') return `${index + 1}. Пополнить${action.accountName ? ` «${action.accountName}»` : ''}: ${money(action.amount, action.currency)}`;
           if (action.intent === 'expense') return `${index + 1}. Записать расход ${money(action.amount, action.currency)}: ${action.rawCategory}`;
           if (action.intent === 'transfer') return `${index + 1}. Перевести ${money(action.amount, action.currency)}${action.fromAccountName ? ` с «${action.fromAccountName}»` : ''} на «${action.toAccountName}»`;
+          if (action.intent === 'update_account') return `${index + 1}. Изменить счёт «${action.accountName}»`;
+          if (action.intent === 'delete_account') return `${index + 1}. Удалить счёт «${action.accountName}»`;
           if (action.intent === 'delete_all_accounts') return `${index + 1}. Удалить все счета`;
           if (action.intent === 'clear_history') return `${index + 1}. Очистить историю (${action.scope})`;
           if (action.intent === 'create_section') return `${index + 1}. Создать раздел «${action.name}»`;
@@ -88,10 +88,10 @@ export class AIPreviewBuilder {
         return { success: true, intent: 'create_account', executed: false, requiresConfirmation, riskLevel, message: `Подтверди создание счёта «${parsedCommand.name}» (${parsedCommand.type}, ${parsedCommand.currency}).`, parsed: { type: 'create_account', name: parsedCommand.name, accountType: parsedCommand.type, currency: parsedCommand.currency, balance: parsedCommand.balance, reason: reason ?? null } };
 
       case 'update_account':
-        return { success: true, intent: 'update_account', executed: false, requiresConfirmation: true, riskLevel, message: `Подтверди изменение счёта «${parsedCommand.accountName}».`, parsed: { type: 'update_account', accountName: parsedCommand.accountName, name: parsedCommand.name ?? null, accountType: parsedCommand.type ?? null, currency: parsedCommand.currency ?? null, balance: parsedCommand.balance ?? null, showInTotalBalance: parsedCommand.showInTotalBalance ?? null, reason: reason ?? null } };
+        return { success: true, intent: 'update_account', executed: false, requiresConfirmation, riskLevel, message: `Подтверди изменение счёта «${parsedCommand.accountName}».`, parsed: { type: 'update_account', accountName: parsedCommand.accountName, name: parsedCommand.name ?? null, accountType: parsedCommand.type ?? null, currency: parsedCommand.currency ?? null, balance: parsedCommand.balance ?? null, reason: reason ?? null } };
 
       case 'delete_account':
-        return { success: true, intent: 'delete_account', executed: false, requiresConfirmation: true, riskLevel: 'high', message: `Опасное действие: удалить счёт «${parsedCommand.accountName}». Подтверди только если уверен.`, parsed: { type: 'delete_account', accountName: parsedCommand.accountName, reason: reason ?? null } };
+        return { success: true, intent: 'delete_account', executed: false, requiresConfirmation: true, riskLevel, message: `Подтверди удаление счёта «${parsedCommand.accountName}».`, parsed: { type: 'delete_account', accountName: parsedCommand.accountName, reason: reason ?? null } };
 
       case 'delete_all_accounts':
         return { success: true, intent: 'delete_all_accounts', executed: false, requiresConfirmation: true, riskLevel: 'high', message: 'Опасное действие: удалить все счета и связанные операции. Подтверди только если уверен.', parsed: { type: 'delete_all_accounts', confirmScope: parsedCommand.confirmScope ?? 'accounts', reason: reason ?? null } };

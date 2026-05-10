@@ -7,6 +7,7 @@ export type AIProviderRequest = {
   messages: AIProviderMessage[];
   temperature?: number;
   model?: string;
+  format?: unknown;
 };
 
 export type AIProviderResponse = {

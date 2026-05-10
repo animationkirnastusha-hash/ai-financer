@@ -1,6 +1,5 @@
 import { normalizeAmount } from '../utils/amount-normalizer';
 import {
-  asString,
   cleanAccountName,
   cleanName,
   inferAccountType,
@@ -14,6 +13,12 @@ import type { AIToolCall, AIToolPlan } from './tool-types';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+}
+
+function asString(value: unknown, fallback = ''): string {
+  if (typeof value === 'string') return value.trim();
+  if (typeof value === 'number') return String(value);
+  return fallback;
 }
 
 function asOptionalString(value: unknown): string | undefined {
@@ -47,20 +52,13 @@ function canonicalToolName(tool: unknown): string {
   return map[raw] ?? raw;
 }
 
-function isReference(value: string | undefined): boolean {
-  if (!value) return false;
-  const raw = value.toLowerCase().replace(/ё/g, 'е');
-  return /^(туда|там|на него|на нее|на неё|его|ее|её|этот счет|этот счёт|there|it|that account|vào đó|đó)$/.test(raw);
-}
-
-function convertToolCall(call: AIToolCall, context: { lastAccountName?: string; originalText?: string }): AIParsedAtomicCommand[] {
+function convertToolCall(call: AIToolCall, originalText = '', lastAccountName?: string): { actions: AIParsedAtomicCommand[]; lastAccountName?: string } {
   const args = isRecord(call.args) ? call.args : {};
   const tool = canonicalToolName(call.tool);
-  const originalText = context.originalText ?? '';
 
   switch (tool) {
     case 'money.create_account': {
-      const name = cleanAccountName(args.name || args.accountName || args.title, 'Новый счёт');
+      const name = cleanAccountName(args.name || args.accountName, originalText);
       const initialBalance = asAmount(args.initialBalance ?? args.balance);
       const currency = inferCurrency(originalText, args.currency);
       const createAccount: AIParsedAtomicCommand = {
@@ -70,54 +68,54 @@ function convertToolCall(call: AIToolCall, context: { lastAccountName?: string; 
         currency,
         balance: 0,
       };
-      context.lastAccountName = name;
 
-      if (!initialBalance) return [createAccount];
+      if (!initialBalance) return { actions: [createAccount], lastAccountName: name };
 
-      return [
-        createAccount,
-        {
-          intent: 'income',
-          amount: initialBalance,
-          currency,
-          rawCategory: 'пополнение',
-          description: 'пополнение счёта',
-          accountName: name,
-        },
-      ];
+      return {
+        actions: [
+          createAccount,
+          {
+            intent: 'income',
+            amount: initialBalance,
+            currency: args.currency ? inferCurrency(originalText, args.currency) : currency,
+            rawCategory: 'пополнение',
+            description: 'пополнение счёта',
+            accountName: name,
+          },
+        ],
+        lastAccountName: name,
+      };
     }
 
     case 'money.update_account': {
-      const accountNameRaw = asOptionalString(args.accountName || args.account || args.currentName || args.fromName || args.targetAccountName);
-      const accountName = cleanAccountName(accountNameRaw || context.lastAccountName || '', '');
-      if (!accountName) return [{ intent: 'unknown', reason: 'account_name_required' }];
-
-      const parsed: AIParsedAtomicCommand = {
-        intent: 'update_account',
-        accountName,
-        name: asOptionalString(args.name || args.newName) ? cleanAccountName(args.name || args.newName) : undefined,
-        type: asOptionalString(args.type) ? inferAccountType(originalText, args.type) : undefined,
-        currency: asOptionalString(args.currency) ? inferCurrency(originalText, args.currency) : undefined,
-        balance: args.balance !== undefined ? asAmount(args.balance) ?? undefined : undefined,
-        showInTotalBalance: typeof args.showInTotalBalance === 'boolean' ? args.showInTotalBalance : undefined,
+      const accountName = cleanAccountName(args.accountName || args.account || args.name, originalText);
+      const nextName = args.newName || args.renameTo || args.title;
+      return {
+        actions: [repairParsedCommand({
+          intent: 'update_account',
+          accountName,
+          name: nextName ? cleanAccountName(nextName) : undefined,
+          type: args.type ? inferAccountType(originalText, args.type) : undefined,
+          currency: args.currency ? inferCurrency(originalText, args.currency) : undefined,
+          balance: args.balance !== undefined ? asAmount(args.balance) ?? undefined : undefined,
+        }, originalText) as AIParsedAtomicCommand],
+        lastAccountName: accountName,
       };
-      return [parsed];
     }
 
     case 'money.delete_account': {
-      const accountName = cleanAccountName(args.accountName || args.name || args.account || args.targetAccountName || context.lastAccountName || '', '');
-      return accountName ? [{ intent: 'delete_account', accountName }] : [{ intent: 'unknown', reason: 'account_name_required' }];
+      const accountName = cleanAccountName(args.accountName || args.account || args.name, originalText);
+      return { actions: [{ intent: 'delete_account', accountName }], lastAccountName: accountName };
     }
 
     case 'money.record_transaction': {
       const amount = asAmount(args.amount);
-      if (!amount) return [{ intent: 'unknown', reason: 'amount_required' }];
+      if (!amount) return { actions: [{ intent: 'unknown', reason: 'amount_required' }] };
 
       const type = inferTransactionType(originalText, args.type);
       const category = cleanName(args.category || args.rawCategory || args.description, type === 'income' ? 'доход' : 'расход');
-
-      const rawAccountName = asOptionalString(args.accountName || args.account || args.toAccountName || args.targetAccountName);
-      const accountName = isReference(rawAccountName) ? context.lastAccountName : rawAccountName;
+      const rawAccountName = args.accountName || args.account || args.toAccountName || lastAccountName;
+      const accountName = asOptionalString(rawAccountName) ? cleanAccountName(rawAccountName, originalText) : undefined;
 
       const parsed: AIParsedAtomicCommand = type === 'income'
         ? {
@@ -126,7 +124,7 @@ function convertToolCall(call: AIToolCall, context: { lastAccountName?: string; 
             currency: args.currency ? inferCurrency(originalText, args.currency) : undefined,
             rawCategory: category,
             description: cleanName(args.description, category),
-            accountName: accountName ? cleanAccountName(accountName) : context.lastAccountName,
+            accountName,
             sectionName: asOptionalString(args.sectionName) ? cleanName(args.sectionName) : undefined,
           }
         : {
@@ -135,22 +133,20 @@ function convertToolCall(call: AIToolCall, context: { lastAccountName?: string; 
             currency: args.currency ? inferCurrency(originalText, args.currency) : undefined,
             rawCategory: category,
             description: cleanName(args.description, category),
-            accountName: accountName ? cleanAccountName(accountName) : undefined,
+            accountName,
             sectionName: asOptionalString(args.sectionName) ? cleanName(args.sectionName) : undefined,
           };
 
-      return [repairParsedCommand(parsed) as AIParsedAtomicCommand];
+      return { actions: [repairParsedCommand(parsed, originalText) as AIParsedAtomicCommand], lastAccountName: accountName ?? lastAccountName };
     }
 
     case 'money.transfer': {
       const amount = asAmount(args.amount);
-      const targetRaw = asOptionalString(args.toAccountName || args.to || args.targetAccountName || args.accountName || args.account);
-      const resolvedTarget = isReference(targetRaw) ? context.lastAccountName : targetRaw;
-      const toAccountName = cleanAccountName(resolvedTarget || '', '');
-      if (!amount || !toAccountName) return [{ intent: 'unknown', reason: !amount ? 'amount_required' : 'target_account_required' }];
+      const toAccountName = cleanAccountName(args.toAccountName || args.to || args.targetAccountName || lastAccountName, originalText);
+      if (!amount || !toAccountName) return { actions: [{ intent: 'unknown', reason: !amount ? 'amount_required' : 'target_account_required' }] };
 
-      return [
-        repairParsedCommand({
+      return {
+        actions: [repairParsedCommand({
           intent: 'transfer',
           amount,
           currency: args.currency ? inferCurrency(originalText, args.currency) : undefined,
@@ -159,70 +155,53 @@ function convertToolCall(call: AIToolCall, context: { lastAccountName?: string; 
             : undefined,
           toAccountName,
           description: asOptionalString(args.description),
-        }) as AIParsedAtomicCommand,
-      ];
+        }, originalText) as AIParsedAtomicCommand],
+        lastAccountName: toAccountName,
+      };
     }
 
     case 'money.delete_all_accounts':
-      return [{ intent: 'delete_all_accounts', confirmScope: 'accounts' }];
+      return { actions: [{ intent: 'delete_all_accounts', confirmScope: 'accounts' }] };
 
     case 'history.clear': {
       const scope = asString(args.scope, 'transactions').toLowerCase();
-      return [{ intent: 'clear_history', scope: scope === 'ai' || scope === 'all' ? scope : 'transactions' }];
+      return { actions: [{ intent: 'clear_history', scope: scope === 'ai' || scope === 'all' ? scope : 'transactions' }] };
     }
 
     case 'finance.create_section': {
       const name = cleanName(args.name || args.sectionName);
-      return name ? [{ intent: 'create_section', name }] : [{ intent: 'unknown', reason: 'section_name_required' }];
+      return { actions: name ? [{ intent: 'create_section', name }] : [{ intent: 'unknown', reason: 'section_name_required' }] };
     }
 
     case 'finance.create_category': {
       const name = cleanName(args.name || args.category || args.rawCategory);
-      if (!name) return [{ intent: 'unknown', reason: 'category_name_required' }];
-      return [{
-        intent: 'create_category',
-        name,
-        type: inferTransactionType(originalText, args.type),
-        sectionName: asOptionalString(args.sectionName) ? cleanName(args.sectionName) : undefined,
-      }];
+      if (!name) return { actions: [{ intent: 'unknown', reason: 'category_name_required' }] };
+      return { actions: [{ intent: 'create_category', name, type: inferTransactionType(originalText, args.type), sectionName: asOptionalString(args.sectionName) ? cleanName(args.sectionName) : undefined }] };
     }
 
     case 'finance.assign_expenses_to_section': {
       const rawQuery = cleanName(args.rawQuery || args.category || args.query || args.description);
       const sectionName = cleanName(args.sectionName || args.name);
-      return rawQuery && sectionName
-        ? [{ intent: 'assign_expenses_to_section', rawQuery, sectionName }]
-        : [{ intent: 'unknown', reason: 'query_or_section_required' }];
+      return { actions: rawQuery && sectionName ? [{ intent: 'assign_expenses_to_section', rawQuery, sectionName }] : [{ intent: 'unknown', reason: 'query_or_section_required' }] };
     }
 
     case 'finance.show_accounts':
-      return [{ intent: 'show_accounts' }];
+      return { actions: [{ intent: 'show_accounts' }] };
 
     case 'finance.show_stats':
-      return [{
-        intent: 'stats',
-        type: inferTransactionType(originalText, args.type),
-        rawCategory: asOptionalString(args.category || args.rawCategory) ? cleanName(args.category || args.rawCategory) : undefined,
-      }];
+      return { actions: [{ intent: 'stats', type: inferTransactionType(originalText, args.type), rawCategory: asOptionalString(args.category || args.rawCategory) ? cleanName(args.category || args.rawCategory) : undefined }] };
 
     case 'finance.plan':
-      return [{
-        intent: 'financial_planning',
-        monthlyIncome: asAmount(args.monthlyIncome) ?? undefined,
-        monthlyExpenses: asAmount(args.monthlyExpenses) ?? undefined,
-        targetAmount: asAmount(args.targetAmount) ?? undefined,
-        targetDateText: asOptionalString(args.targetDateText),
-        question: asString(args.question || args.description, ''),
-      }];
+      return { actions: [{ intent: 'financial_planning', monthlyIncome: asAmount(args.monthlyIncome) ?? undefined, monthlyExpenses: asAmount(args.monthlyExpenses) ?? undefined, targetAmount: asAmount(args.targetAmount) ?? undefined, targetDateText: asOptionalString(args.targetDateText), question: asString(args.question || args.description, '') }] };
 
     case 'assistant.answer':
-      return [{ intent: 'advice', question: asString(args.question || args.description, '') }];
+      return { actions: [{ intent: 'advice', question: asString(args.question || args.description, '') }] };
 
     case 'assistant.repeat_last':
-      return [{ intent: 'repeat_last' }];
+      return { actions: [{ intent: 'repeat_last' }] };
 
     default:
-      return [];
+      return { actions: [] };
   }
 }
 
@@ -233,13 +212,18 @@ export function looksLikeToolPlan(value: unknown): value is AIToolPlan {
 export function normalizeToolPlanToParsedCommand(value: unknown): AIParsedCommand | null {
   if (!looksLikeToolPlan(value)) return null;
 
-  const context = { lastAccountName: undefined as string | undefined, originalText: asOptionalString(value.originalText) };
-  const actions = value.toolCalls
-    .filter((item: unknown): item is AIToolCall => isRecord(item) && typeof item.tool === 'string' && isRecord(item.args ?? {}))
-    .flatMap((item: AIToolCall) => convertToolCall(item, context))
-    .filter((item: AIParsedAtomicCommand) => item.intent !== 'help');
+  const originalText = asString(value.originalText);
+  let lastAccountName: string | undefined;
+  const actions: AIParsedAtomicCommand[] = [];
 
-  const executableActions = actions.filter((item) => item.intent !== 'unknown');
+  for (const item of value.toolCalls) {
+    if (!isRecord(item) || typeof item.tool !== 'string' || !isRecord(item.args ?? {})) continue;
+    const converted = convertToolCall(item as AIToolCall, originalText, lastAccountName);
+    actions.push(...converted.actions);
+    if (converted.lastAccountName) lastAccountName = converted.lastAccountName;
+  }
+
+  const executableActions = actions.filter((item) => item.intent !== 'unknown' && item.intent !== 'help');
 
   if (executableActions.length === 0) {
     const question = asString(value.userMessage || 'Нужно уточнение, чтобы выполнить действие.');
@@ -247,13 +231,13 @@ export function normalizeToolPlanToParsedCommand(value: unknown): AIParsedComman
   }
 
   if (executableActions.length === 1 && !value.premiumSuggestion) {
-    return repairParsedCommand(executableActions[0]);
+    return repairParsedCommand(executableActions[0], originalText);
   }
 
   return repairParsedCommand({
     intent: 'batch',
     actions: executableActions,
-    originalText: asOptionalString(value.originalText),
+    originalText,
     premiumSuggestion: asOptionalString(value.premiumSuggestion),
-  });
+  }, originalText);
 }

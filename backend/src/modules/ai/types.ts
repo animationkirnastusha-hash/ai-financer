@@ -95,7 +95,6 @@ export interface AIParsedUpdateAccount {
   type?: AIAccountType;
   currency?: AICurrency;
   balance?: number;
-  showInTotalBalance?: boolean;
 }
 
 export interface AIParsedDeleteAccount {

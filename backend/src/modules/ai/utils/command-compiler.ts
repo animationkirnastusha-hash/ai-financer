@@ -4,7 +4,7 @@ import type {
   AIParsedAtomicCommand,
   AIParsedCommand,
 } from '../types';
-import { detectCurrency, normalizeAmount } from './amount-normalizer';
+import { detectCurrency, extractAmountCandidates, normalizeAmount, stripAmountFromText } from './amount-normalizer';
 
 const ACCOUNT_TYPES: AIAccountType[] = ['cash', 'card', 'savings', 'investment'];
 const CURRENCIES: AICurrency[] = ['RUB', 'USD', 'EUR', 'VND'];
@@ -22,102 +22,70 @@ export function asString(value: unknown, fallback = ''): string {
 function compact(value: string): string {
   return value
     .replace(/[«»“”]/g, '')
-    .replace(/[_*`]/g, '')
     .replace(/\s+/g, ' ')
     .replace(/^[\s:;,\.\-–—]+|[\s:;,\.\-–—]+$/g, '')
     .trim();
 }
 
-const NAME_MARKERS = [
+const nameMarkers = [
   'с названием',
   'под названием',
   'название',
   'назови его',
   'назови ее',
   'назови её',
-  'назови счет',
-  'назови счёт',
+  'назвать',
   'name it',
   'called',
   'named',
-  'with name',
   'tên là',
-  'đặt tên',
+  'gọi là',
 ];
 
-const ACTION_BOUNDARIES = [
-  ' и полож',
-  ' и пополн',
-  ' и добав',
-  ' и закин',
-  ' и внес',
-  ' и присвой',
-  ' потом ',
-  ' затем ',
-  ' следом ',
-  ' and put',
-  ' and add',
-  ' and deposit',
-  ' then ',
-  ' sau đó ',
-  ' rồi ',
-];
-
-function cutAtActionBoundary(value: string): string {
-  const lower = value.toLowerCase();
-  const positions = ACTION_BOUNDARIES
-    .map((marker) => lower.indexOf(marker))
-    .filter((index) => index >= 0);
-
-  if (positions.length === 0) return value;
-  return value.slice(0, Math.min(...positions));
-}
-
-function stripAmountAndCurrencyTail(value: string): string {
-  return value
-    .replace(/(?:^|\s)(?:\+|-)?\d+[\d\s.,]*(?:к|k|тыс\.?|тысяч[аи]?|thousand|nghìn|ngan|ngàn|млн|million|triệu)?(?:\s*(?:руб(?:лей|ля|ль)?|₽|rub|доллар(?:ов|а)?|бакс(?:ов|а)?|usd|\$|евро|eur|€|донг(?:ов)?|vnd|₫))?\s*$/iu, '')
-    .replace(/\b(?:руб(?:лей|ля|ль)?|₽|rub|доллар(?:ов|а)?|бакс(?:ов|а)?|usd|евро|eur|донг(?:ов)?|vnd)\b\s*$/iu, '')
-    .trim();
-}
-
-function stripAccountServiceWords(value: string): string {
-  return value
-    .replace(/\b(?:счет|счёт|счета|счёта|аккаунт|кошелек|кошелёк|wallet|account)\b/giu, ' ')
-    .replace(/\b(?:создай|создать|добавь|добавить|открой|открыть|create|add|open|tạo)\b/giu, ' ')
-    .replace(/\b(?:карту|карта|карты|card|наличка|наличные|cash|безналичный|безнал|bank|банковский)\b/giu, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-
-function extractMarkedName(value: string): string | null {
-  const lower = value.toLowerCase();
-  for (const marker of NAME_MARKERS) {
-    const index = lower.indexOf(marker);
-    if (index < 0) continue;
-    const after = value.slice(index + marker.length);
-    const cleaned = stripAmountAndCurrencyTail(cutAtActionBoundary(after));
-    return compact(cleaned) || null;
-  }
-  return null;
-}
+const actionBoundary = /\b(?:и\s+)?(?:положи|пополн|закинь|закинуть|добавь|добавить|внеси|внести|депозит|присвой|переведи|перевести|запиши|записать|создай|создать|удали|удалить|потрать|расход|доход|top\s*up|deposit|add|put|transfer|send|delete|remove|ghi|chuyển|nạp|thêm)\b/iu;
+const accountWords = /\b(?:счет|счёт|счета|счёта|аккаунт|account|wallet|кошелек|кошелёк)\b/giu;
+const typeWords = /\b(?:cash|наличные|наличка|карта|карту|карты|card|bank|banking|безналичный|безналичная|безнал|банковский|банковская|savings?|накопительный|накопления|копилка|investment|invest|инвестиционный|инвестиции)\b/giu;
+const currencyWords = /(?:₽|rub|руб(?:ль|ля|лей|ли|лях)?|рубли|рублей|р\.?\b|ruble?s?|rouble?s?|\$|usd|usdt|доллар(?:а|ов|ах)?|бакс(?:а|ов|ах)?|dollars?|bucks?|€|eur|евро|euro?s?|₫|vnd|донг(?:а|ов|ах)?|dong|đồng)/giu;
 
 export function cleanName(value: unknown, fallback = ''): string {
   let name = compact(asString(value, fallback));
-  const marked = extractMarkedName(name);
-  if (marked) name = marked;
-  name = stripAmountAndCurrencyTail(cutAtActionBoundary(name));
+  if (!name) return fallback;
+
+  const lower = name.toLowerCase().replace(/ё/g, 'е');
+  const marker = nameMarkers.find((item) => lower.includes(item));
+  if (marker) {
+    const index = lower.indexOf(marker);
+    name = name.slice(index + marker.length).trim();
+  }
+
   return compact(name) || fallback;
 }
 
-export function cleanAccountName(value: unknown, fallback = 'Новый счёт'): string {
-  let name = compact(asString(value, fallback));
-  const marked = extractMarkedName(name);
-  if (marked) return marked;
+export function cleanAccountName(value: unknown, originalText = ''): string {
+  let source = asString(value);
 
-  name = cutAtActionBoundary(name);
-  name = stripAmountAndCurrencyTail(name);
-  name = stripAccountServiceWords(name);
-  return compact(name) || fallback;
+  if ((!source || source.length < 2) && originalText) source = originalText;
+
+  source = compact(source);
+  if (!source) return 'Новый счёт';
+
+  const lowered = source.toLowerCase().replace(/ё/g, 'е');
+  const marker = nameMarkers.find((item) => lowered.includes(item));
+  if (marker) {
+    const index = lowered.indexOf(marker);
+    source = source.slice(index + marker.length).trim();
+  }
+
+  source = stripAmountFromText(source)
+    .replace(accountWords, ' ')
+    .replace(typeWords, ' ')
+    .replace(currencyWords, ' ')
+    .replace(actionBoundary, ' ')
+    .replace(/\b(?:и|а|на|в|во|для|его|ее|её|туда|there|to|with|as|là|vào)\b/giu, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  return compact(source) || 'Новый счёт';
 }
 
 export function normalizeCurrency(value: unknown, fallback: AICurrency = 'RUB'): AICurrency {
@@ -127,8 +95,7 @@ export function normalizeCurrency(value: unknown, fallback: AICurrency = 'RUB'):
 }
 
 export function inferCurrency(text: string, value?: unknown, fallback: AICurrency = 'RUB'): AICurrency {
-  const explicit = asString(value);
-  if (explicit) return normalizeCurrency(explicit, fallback);
+  if (value !== undefined && value !== null && String(value).trim()) return normalizeCurrency(value, fallback);
   return detectCurrency(text, fallback);
 }
 
@@ -138,7 +105,7 @@ export function normalizeAccountType(value: unknown, fallback: AIAccountType = '
 
   const aliases: Record<string, AIAccountType> = {
     bank: 'card', banking: 'card', card: 'card', cashless: 'card', debit: 'card', virtual: 'card',
-    безнал: 'card', безналичный: 'card', банковский: 'card', карта: 'card', карточный: 'card', электронный: 'card',
+    безнал: 'card', безналичный: 'card', безналичная: 'card', банковский: 'card', банковская: 'card', карта: 'card', карточный: 'card', электронный: 'card',
     наличные: 'cash', наличка: 'cash', cash: 'cash', wallet: 'cash', кошелек: 'cash', кошелёк: 'cash',
     savings: 'savings', saving: 'savings', накопительный: 'savings', накопления: 'savings', копилка: 'savings',
     investment: 'investment', invest: 'investment', инвестиционный: 'investment', инвестиции: 'investment',
@@ -148,29 +115,26 @@ export function normalizeAccountType(value: unknown, fallback: AIAccountType = '
 }
 
 export function inferAccountType(text: string, value?: unknown): AIAccountType {
-  const explicit = asString(value);
-  if (explicit) return normalizeAccountType(explicit, 'cash');
-  const normalized = text.toLowerCase().replace(/ё/g, 'е');
-  if (/\b(?:карта|карту|card|банк|банковск|безнал|cashless|debit)\b/.test(normalized)) return 'card';
-  if (/\b(?:накоп|saving|сбереж|копилка)\b/.test(normalized)) return 'savings';
-  if (/\b(?:инвест|invest|broker|брокер)\b/.test(normalized)) return 'investment';
-  if (/\b(?:налич|cash|кэш)\b/.test(normalized)) return 'cash';
-  return 'cash';
+  const raw = `${asString(value)} ${text}`.toLowerCase().replace(/ё/g, 'е');
+  if (/(?:безнал|банк|банковск|card|карта|карту|debit|virtual)/i.test(raw)) return 'card';
+  if (/(?:накоп|сбереж|saving)/i.test(raw)) return 'savings';
+  if (/(?:инвест|invest|broker|брокер)/i.test(raw)) return 'investment';
+  if (/(?:налич|cash|wallet|кошелек|кошелёк)/i.test(raw)) return 'cash';
+  return normalizeAccountType(value, 'cash');
 }
 
 export function normalizeTransactionType(value: unknown, fallback: 'income' | 'expense' = 'expense'): 'income' | 'expense' {
-  const raw = asString(value).toLowerCase();
-  if (raw === 'income' || raw === 'доход' || raw === 'deposit' || raw === 'topup') return 'income';
-  if (raw === 'expense' || raw === 'расход') return 'expense';
+  const raw = asString(value).toLowerCase().replace(/ё/g, 'е');
+  if (/^(income|доход|topup|top_up|deposit|пополнение|депозит)$/.test(raw)) return 'income';
+  if (/^(expense|расход|spend|payment|покупка)$/.test(raw)) return 'expense';
   return fallback;
 }
 
 export function inferTransactionType(text: string, value?: unknown): 'income' | 'expense' {
-  const explicit = asString(value);
-  if (explicit) return normalizeTransactionType(explicit, 'expense');
-  const normalized = text.toLowerCase().replace(/ё/g, 'е');
-  if (/(?:пополн|полож|закин|внес|депозит|присвой|зарплат|доход|deposit|top\s?up|add money|salary|income|nạp|gửi tiền)/.test(normalized)) return 'income';
-  return 'expense';
+  const raw = `${asString(value)} ${text}`.toLowerCase().replace(/ё/g, 'е');
+  if (/(?:полож|пополн|закин|внес|депозит|присвой|зарплат|доход|преми|top\s*up|deposit|add money|put money|salary|income|nạp|thêm tiền)/i.test(raw)) return 'income';
+  if (/(?:потрат|купил|купила|оплат|расход|spend|spent|buy|bought|paid|expense|mua|trả)/i.test(raw)) return 'expense';
+  return normalizeTransactionType(value, 'expense');
 }
 
 export function normalizePositiveAmount(value: unknown): number | null {
@@ -181,58 +145,64 @@ export function normalizePositiveAmount(value: unknown): number | null {
   return null;
 }
 
-function sanitizeAtomic(command: AIParsedAtomicCommand): AIParsedAtomicCommand {
+function firstTextAmount(text: string): number | null {
+  return extractAmountCandidates(text)[0]?.amount ?? null;
+}
+
+function sanitizeAtomic(command: AIParsedAtomicCommand, originalText = ''): AIParsedAtomicCommand {
   switch (command.intent) {
     case 'create_account':
       return {
         intent: 'create_account',
-        name: cleanAccountName(command.name),
-        type: normalizeAccountType(command.type),
-        currency: normalizeCurrency(command.currency),
+        name: cleanAccountName(command.name, originalText),
+        type: inferAccountType(originalText, command.type),
+        currency: inferCurrency(originalText, command.currency, 'RUB'),
         balance: normalizePositiveAmount(command.balance) ?? 0,
       };
 
     case 'update_account':
       return {
         intent: 'update_account',
-        accountName: cleanAccountName(command.accountName),
+        accountName: cleanAccountName(command.accountName, originalText),
         name: command.name ? cleanAccountName(command.name) : undefined,
-        type: command.type ? normalizeAccountType(command.type) : undefined,
-        currency: command.currency ? normalizeCurrency(command.currency) : undefined,
-        balance: command.balance !== undefined ? normalizePositiveAmount(command.balance) ?? 0 : undefined,
-        showInTotalBalance: command.showInTotalBalance,
+        type: command.type ? inferAccountType(originalText, command.type) : undefined,
+        currency: command.currency ? inferCurrency(originalText, command.currency) : undefined,
+        balance: command.balance !== undefined ? normalizePositiveAmount(command.balance) ?? firstTextAmount(originalText) ?? undefined : undefined,
       };
 
     case 'delete_account':
-      return { intent: 'delete_account', accountName: cleanAccountName(command.accountName) };
+      return {
+        intent: 'delete_account',
+        accountName: cleanAccountName(command.accountName, originalText),
+      };
 
     case 'income':
       return {
         ...command,
-        amount: normalizePositiveAmount(command.amount) ?? command.amount,
-        currency: command.currency ? normalizeCurrency(command.currency) : undefined,
-        rawCategory: cleanName(command.rawCategory, 'доход'),
+        amount: normalizePositiveAmount(command.amount) ?? firstTextAmount(originalText) ?? command.amount,
+        currency: command.currency ? inferCurrency(originalText, command.currency) : undefined,
+        rawCategory: cleanName(command.rawCategory, 'пополнение'),
         description: command.description ? cleanName(command.description, command.rawCategory) : command.rawCategory,
-        accountName: command.accountName ? cleanAccountName(command.accountName) : undefined,
+        accountName: command.accountName ? cleanAccountName(command.accountName, originalText) : undefined,
         sectionName: command.sectionName ? cleanName(command.sectionName) : undefined,
       };
 
     case 'expense':
       return {
         ...command,
-        amount: normalizePositiveAmount(command.amount) ?? command.amount,
-        currency: command.currency ? normalizeCurrency(command.currency) : undefined,
+        amount: normalizePositiveAmount(command.amount) ?? firstTextAmount(originalText) ?? command.amount,
+        currency: command.currency ? inferCurrency(originalText, command.currency) : undefined,
         rawCategory: cleanName(command.rawCategory, 'расход'),
         description: command.description ? cleanName(command.description, command.rawCategory) : command.rawCategory,
-        accountName: command.accountName ? cleanAccountName(command.accountName) : undefined,
+        accountName: command.accountName ? cleanAccountName(command.accountName, originalText) : undefined,
         sectionName: command.sectionName ? cleanName(command.sectionName) : undefined,
       };
 
     case 'transfer':
       return {
         ...command,
-        amount: normalizePositiveAmount(command.amount) ?? command.amount,
-        currency: command.currency ? normalizeCurrency(command.currency) : undefined,
+        amount: normalizePositiveAmount(command.amount) ?? firstTextAmount(originalText) ?? command.amount,
+        currency: command.currency ? inferCurrency(originalText, command.currency) : undefined,
         fromAccountName: command.fromAccountName ? cleanAccountName(command.fromAccountName) : undefined,
         toAccountName: cleanAccountName(command.toAccountName),
         description: command.description ? cleanName(command.description) : undefined,
@@ -267,16 +237,21 @@ function sanitizeAtomic(command: AIParsedAtomicCommand): AIParsedAtomicCommand {
   }
 }
 
-export function repairParsedCommand(command: AIParsedCommand, _originalText = ''): AIParsedCommand {
+export function repairParsedCommand(command: AIParsedCommand, originalText = ''): AIParsedCommand {
   if (command.intent === 'batch') {
     const actions = command.actions
       .filter((action) => action.intent !== 'unknown' && action.intent !== 'help')
-      .map((action) => sanitizeAtomic(action));
+      .map((action) => sanitizeAtomic(action, originalText));
 
     if (actions.length === 1) return actions[0];
-    return { ...command, actions };
+
+    return {
+      ...command,
+      actions,
+    };
   }
-  return sanitizeAtomic(command);
+
+  return sanitizeAtomic(command, originalText);
 }
 
 // Compatibility exports. These no longer parse user intent.

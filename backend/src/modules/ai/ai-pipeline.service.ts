@@ -8,7 +8,7 @@ import { AIRepeatService } from './ai-repeat.service';
 import { AIContextService } from './ai-context.service';
 
 export class AIPipelineService {
-  private readonly interpreter = new LLMCommandInterpreter();
+  private readonly parser = new LLMCommandInterpreter();
   private readonly policy = new AIActionPolicy();
   private readonly preview = new AIPreviewBuilder();
   private readonly executor = new AIExecutorService();
@@ -25,40 +25,28 @@ export class AIPipelineService {
     const execute = options?.execute ?? true;
     const confirmed = options?.confirmed ?? false;
 
-    const adviceLikeResult = this.advice.tryBuildAdviceResult(command);
-    if (adviceLikeResult) return adviceLikeResult;
-
-    const repeatCommand = this.repeat.parseRepeatCommand(command);
-    if (repeatCommand.isRepeat) {
-      return this.repeat.repeatLastTransaction(userId, repeatCommand.amount);
-    }
-
-    const parsedCommand = await this.interpreter.parse(command, history);
-
-    if (parsedCommand.intent === 'advice') {
-      return this.advice.buildAdviceResult(parsedCommand.question || command);
-    }
+    // ACTION-FIRST: never classify a user message as "financial question" before trying tools.
+    const parsedCommand = await this.parser.parse(command, history);
 
     if (parsedCommand.intent === 'unknown') {
+      const repeatCommand = this.repeat.parseRepeatCommand(command);
+      if (repeatCommand.isRepeat) return this.repeat.repeatLastTransaction(userId, repeatCommand.amount);
+
+      const adviceLikeResult = this.advice.tryBuildAdviceResult(command);
+      if (adviceLikeResult) return adviceLikeResult;
+
       return this.advice.buildClarificationResult(command);
     }
 
-    if (parsedCommand.intent === 'repeat_last') {
-      return this.repeat.repeatLastTransaction(userId);
-    }
+    if (parsedCommand.intent === 'advice') return this.advice.buildAdviceResult(parsedCommand.question || command);
+    if (parsedCommand.intent === 'repeat_last') return this.repeat.repeatLastTransaction(userId);
 
     await this.context.applyContextFallback(parsedCommand, history);
 
     const policy = this.policy.evaluate(parsedCommand);
 
     if (!execute || (policy.requiresConfirmation && !confirmed)) {
-      return this.preview.buildPreview(
-        userId,
-        parsedCommand,
-        policy.requiresConfirmation,
-        policy.riskLevel,
-        policy.reason,
-      );
+      return this.preview.buildPreview(userId, parsedCommand, policy.requiresConfirmation, policy.riskLevel, policy.reason);
     }
 
     return this.executor.execute(userId, parsedCommand, policy.riskLevel);
