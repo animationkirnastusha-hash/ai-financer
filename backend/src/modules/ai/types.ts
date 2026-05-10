@@ -8,6 +8,8 @@ export type AIIntent =
   | 'create_section'
   | 'assign_expenses_to_section'
   | 'create_account'
+  | 'update_account'
+  | 'delete_account'
   | 'delete_all_accounts'
   | 'clear_history'
   | 'update_settings'
@@ -86,6 +88,21 @@ export interface AIParsedCreateAccount {
   balance: number;
 }
 
+export interface AIParsedUpdateAccount {
+  intent: 'update_account';
+  accountName: string;
+  name?: string;
+  type?: AIAccountType;
+  currency?: AICurrency;
+  balance?: number;
+  showInTotalBalance?: boolean;
+}
+
+export interface AIParsedDeleteAccount {
+  intent: 'delete_account';
+  accountName: string;
+}
+
 export interface AIParsedDeleteAllAccounts {
   intent: 'delete_all_accounts';
   confirmScope?: 'accounts' | 'all_user_finance';
@@ -144,6 +161,8 @@ export type AIParsedAtomicCommand =
   | AIParsedCreateSection
   | AIParsedAssignExpensesToSection
   | AIParsedCreateAccount
+  | AIParsedUpdateAccount
+  | AIParsedDeleteAccount
   | AIParsedDeleteAllAccounts
   | AIParsedClearHistory
   | AIParsedUpdateSettings

@@ -68,6 +68,22 @@ function normalizeStoredParsed(intent: string, parsed: Record<string, unknown> |
     };
   }
 
+  if (normalizedIntent === 'update_account') {
+    return {
+      intent: 'update_account',
+      accountName: asString(parsed.accountName || parsed.name),
+      name: asString(parsed.newName || parsed.targetName) || undefined,
+      type: parsed.accountType || parsed.type ? normalizeAccountType(parsed.accountType || parsed.type) : undefined,
+      currency: parsed.currency ? normalizeCurrency(parsed.currency) : undefined,
+      balance: parsed.balance !== undefined ? asNumber(parsed.balance, 0) : undefined,
+      showInTotalBalance: typeof parsed.showInTotalBalance === 'boolean' ? parsed.showInTotalBalance : undefined,
+    };
+  }
+
+  if (normalizedIntent === 'delete_account') {
+    return { intent: 'delete_account', accountName: asString(parsed.accountName || parsed.name) };
+  }
+
   if (normalizedIntent === 'delete_all_accounts') {
     return { intent: 'delete_all_accounts', confirmScope: 'accounts' };
   }
@@ -118,7 +134,7 @@ function readUndoTargetId(data: unknown): string | undefined {
 
 function resolveUndoActionType(intent: AIResult['intent']): NonNullable<NonNullable<AIResult['meta']>['undo']>['actionType'] | undefined {
   if (intent === 'expense' || intent === 'income' || intent === 'transfer') return 'transaction';
-  if (intent === 'create_account') return 'account';
+  if (intent === 'create_account' || intent === 'update_account' || intent === 'delete_account') return 'account';
   if (intent === 'create_category') return 'category';
   if (intent === 'create_section') return 'section';
   if (intent === 'batch') return 'batch';

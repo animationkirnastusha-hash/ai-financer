@@ -164,6 +164,17 @@ export class AIResolverService {
     });
   }
 
+  async resolveAccountByNameOrHint(userId: string, accountName: string) {
+    const accounts = await prisma.account.findMany({
+      where: { userId },
+      orderBy: [{ createdAt: 'asc' }],
+    });
+
+    const account = this.findAccountByName(accounts, accountName);
+    if (!account) throw new NotFoundError(`Не найден счёт «${accountName}»`);
+    return account;
+  }
+
   async resolveTransfer(userId: string, parsedCommand: Extract<AIParsedCommand, { intent: 'transfer' }>) {
     const accounts = await prisma.account.findMany({
       where: { userId },

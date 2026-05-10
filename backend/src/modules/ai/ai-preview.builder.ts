@@ -25,6 +25,8 @@ export class AIPreviewBuilder {
       case 'batch': {
         const actionLabels = parsedCommand.actions.map((action, index) => {
           if (action.intent === 'create_account') return `${index + 1}. Создать счёт «${action.name}» (${action.type}, ${action.currency})`;
+          if (action.intent === 'update_account') return `${index + 1}. Обновить счёт «${action.accountName}»`;
+          if (action.intent === 'delete_account') return `${index + 1}. Удалить счёт «${action.accountName}»`;
           if (action.intent === 'income') return `${index + 1}. Пополнить${action.accountName ? ` «${action.accountName}»` : ''}: ${money(action.amount, action.currency)}`;
           if (action.intent === 'expense') return `${index + 1}. Записать расход ${money(action.amount, action.currency)}: ${action.rawCategory}`;
           if (action.intent === 'transfer') return `${index + 1}. Перевести ${money(action.amount, action.currency)}${action.fromAccountName ? ` с «${action.fromAccountName}»` : ''} на «${action.toAccountName}»`;
@@ -42,7 +44,7 @@ export class AIPreviewBuilder {
           executed: false,
           requiresConfirmation,
           riskLevel,
-          message: `${requiresConfirmation ? 'Проверь и подтверди:' : 'Я подготовил:'}\n${actionLabels.join('\n')}`,
+          message: `${requiresConfirmation ? 'Проверь и подтверди' : 'Я подготовил'} ${parsedCommand.actions.length} действия:\n${actionLabels.join('\n')}`,
           parsed: { type: 'batch', actions: parsedCommand.actions, premiumSuggestion: parsedCommand.premiumSuggestion ?? null, reason: reason ?? null },
         };
       }
@@ -85,6 +87,12 @@ export class AIPreviewBuilder {
       case 'create_account':
         return { success: true, intent: 'create_account', executed: false, requiresConfirmation, riskLevel, message: `Подтверди создание счёта «${parsedCommand.name}» (${parsedCommand.type}, ${parsedCommand.currency}).`, parsed: { type: 'create_account', name: parsedCommand.name, accountType: parsedCommand.type, currency: parsedCommand.currency, balance: parsedCommand.balance, reason: reason ?? null } };
 
+      case 'update_account':
+        return { success: true, intent: 'update_account', executed: false, requiresConfirmation: true, riskLevel, message: `Подтверди изменение счёта «${parsedCommand.accountName}».`, parsed: { type: 'update_account', accountName: parsedCommand.accountName, name: parsedCommand.name ?? null, accountType: parsedCommand.type ?? null, currency: parsedCommand.currency ?? null, balance: parsedCommand.balance ?? null, showInTotalBalance: parsedCommand.showInTotalBalance ?? null, reason: reason ?? null } };
+
+      case 'delete_account':
+        return { success: true, intent: 'delete_account', executed: false, requiresConfirmation: true, riskLevel: 'high', message: `Опасное действие: удалить счёт «${parsedCommand.accountName}». Подтверди только если уверен.`, parsed: { type: 'delete_account', accountName: parsedCommand.accountName, reason: reason ?? null } };
+
       case 'delete_all_accounts':
         return { success: true, intent: 'delete_all_accounts', executed: false, requiresConfirmation: true, riskLevel: 'high', message: 'Опасное действие: удалить все счета и связанные операции. Подтверди только если уверен.', parsed: { type: 'delete_all_accounts', confirmScope: parsedCommand.confirmScope ?? 'accounts', reason: reason ?? null } };
 
@@ -96,9 +104,6 @@ export class AIPreviewBuilder {
 
       case 'create_section':
         return { success: true, intent: 'create_section', executed: false, requiresConfirmation, riskLevel, message: `Создать раздел «${parsedCommand.name}»?`, parsed: { name: parsedCommand.name } };
-
-      case 'update_settings':
-        return { success: true, intent: 'update_settings', executed: false, requiresConfirmation: true, riskLevel: 'medium', message: `Изменить настройку «${parsedCommand.key}»?`, parsed: { key: parsedCommand.key, value: parsedCommand.value, reason: reason ?? null } };
 
       default:
         return { success: true, intent: parsedCommand.intent, executed: false, requiresConfirmation: false, riskLevel, message: 'Я понял запрос, но для этого действия пока нужен отдельный обработчик.', parsed: parsedCommand as unknown as Record<string, unknown> };
