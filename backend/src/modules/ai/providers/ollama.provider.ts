@@ -1,61 +1,46 @@
 import { env } from '../../../config/env';
-import type {
-  AIProvider,
-  AIProviderRequest,
-  AIProviderResponse,
-} from './ai-provider.types';
+import { AIProvider, AIProviderJsonRequest } from './ai-provider.types';
 
-type OllamaChatResponse = {
-  message?: {
-    content?: string;
-  };
-  error?: string;
-};
+function stripCodeFences(value: string) {
+  return value
+    .trim()
+    .replace(/^```(?:json)?/i, '')
+    .replace(/```$/i, '')
+    .trim();
+}
 
 export class OllamaProvider implements AIProvider {
-  async complete(request: AIProviderRequest): Promise<AIProviderResponse> {
+  async generateJson<T>(request: AIProviderJsonRequest): Promise<T> {
     const controller = new AbortController();
-    const timeoutMs = Math.max(1000, env.aiLlmTimeoutMs || 12000);
-    const timeout = setTimeout(() => controller.abort(), timeoutMs);
+    const timeout = setTimeout(() => controller.abort(), request.timeoutMs ?? env.aiLlmTimeoutMs);
 
     try {
-      const response = await fetch(`${env.ollamaBaseUrl}/api/chat`, {
+      const response = await fetch(`${env.ollamaBaseUrl.replace(/\/$/, '')}/api/generate`, {
         method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         signal: controller.signal,
-        headers: {
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify({
-          model: request.model || env.ollamaModel,
+          model: env.ollamaModel,
+          system: request.system,
+          prompt: request.prompt,
           stream: false,
-          format: request.format ?? 'json',
+          format: request.schema,
           options: {
-            temperature: request.temperature ?? 0.02,
-            num_predict: 1200,
+            temperature: request.temperature ?? 0.1,
+            num_ctx: 8192,
           },
-          messages: request.messages,
         }),
       });
 
-      const payload = (await response.json()) as OllamaChatResponse;
-
       if (!response.ok) {
-        throw new Error(payload.error || 'Ollama request failed');
+        throw new Error(`Ollama request failed: ${response.status} ${response.statusText}`);
       }
 
-      const content = payload.message?.content?.trim();
+      const payload = (await response.json()) as { response?: string };
+      const raw = stripCodeFences(payload.response ?? '');
+      if (!raw) throw new Error('Ollama returned empty response');
 
-      if (!content) {
-        throw new Error('Ollama returned empty message');
-      }
-
-      return { content };
-    } catch (error) {
-      if (error instanceof Error && error.name === 'AbortError') {
-        throw new Error(`Ollama request timed out after ${timeoutMs}ms`);
-      }
-
-      throw error;
+      return JSON.parse(raw) as T;
     } finally {
       clearTimeout(timeout);
     }

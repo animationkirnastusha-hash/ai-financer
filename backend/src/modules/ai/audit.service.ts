@@ -1,49 +1,18 @@
 import { prisma } from '../../lib/prisma';
-import { AIResult } from './types';
-
-export interface AIAuditLogView {
-  id: string;
-  command: string;
-  intent: string;
-  riskLevel: string;
-  requiresConfirmation: boolean;
-  executed: boolean;
-  status: string;
-  parsed: Record<string, unknown> | null;
-  result: Record<string, unknown> | null;
-  errorMessage: string | null;
-  createdAt: string;
-  updatedAt: string;
-}
-
-function safeStringify(value: unknown): string | null {
-  if (value === undefined || value === null) return null;
-  return JSON.stringify(value);
-}
-
-function safeParseObject(value: string | null): Record<string, unknown> | null {
-  if (!value) return null;
-
-  try {
-    const parsed = JSON.parse(value);
-    return parsed && typeof parsed === 'object' ? (parsed as Record<string, unknown>) : null;
-  } catch {
-    return null;
-  }
-}
+import { AIRiskLevel } from './types';
 
 export class AIAuditService {
-  async createLog(params: {
+  async create(params: {
     userId: string;
     command: string;
     intent: string;
-    riskLevel: string;
+    riskLevel: AIRiskLevel;
     requiresConfirmation: boolean;
     executed: boolean;
-    status: 'previewed' | 'pending_confirmation' | 'executed' | 'cancelled' | 'failed' | 'undone';
-    parsed?: Record<string, unknown> | null;
+    status: string;
+    parsed?: unknown;
     result?: unknown;
-    errorMessage?: string;
+    errorMessage?: string | null;
   }) {
     return prisma.aIAuditLog.create({
       data: {
@@ -54,69 +23,29 @@ export class AIAuditService {
         requiresConfirmation: params.requiresConfirmation,
         executed: params.executed,
         status: params.status,
-        parsed: safeStringify(params.parsed),
-        result: safeStringify(params.result),
+        parsed: params.parsed === undefined ? null : JSON.stringify(params.parsed),
+        result: params.result === undefined ? null : JSON.stringify(params.result),
         errorMessage: params.errorMessage ?? null,
       },
     });
   }
 
-  async logSuccess(
-    userId: string,
-    command: string,
-    result: AIResult,
-    status: 'previewed' | 'pending_confirmation' | 'executed'
-  ) {
-    return this.createLog({
-      userId,
-      command,
-      intent: result.intent,
-      riskLevel: result.riskLevel,
-      requiresConfirmation: result.requiresConfirmation,
-      executed: result.executed,
-      status,
-      parsed: result.parsed,
-      result: result.data,
-    });
-  }
-
-  async logFailure(userId: string, command: string, error: unknown) {
-    const message = error instanceof Error ? error.message : 'Unknown AI error';
-
-    return this.createLog({
-      userId,
-      command,
-      intent: 'unknown',
-      riskLevel: 'low',
-      requiresConfirmation: false,
-      executed: false,
-      status: 'failed',
-      parsed: null,
-      result: null,
-      errorMessage: message,
-    });
-  }
-
-  async getAuditLogs(userId: string, limit = 50): Promise<AIAuditLogView[]> {
+  async list(userId: string, limit: number) {
     const rows = await prisma.aIAuditLog.findMany({
       where: { userId },
-      orderBy: [{ createdAt: 'desc' }],
+      orderBy: { createdAt: 'desc' },
       take: Math.min(Math.max(limit, 1), 100),
     });
 
     return rows.map((row) => ({
-      id: row.id,
-      command: row.command,
-      intent: row.intent,
-      riskLevel: row.riskLevel,
-      requiresConfirmation: row.requiresConfirmation,
-      executed: row.executed,
-      status: row.status,
-      parsed: safeParseObject(row.parsed),
-      result: safeParseObject(row.result),
-      errorMessage: row.errorMessage,
-      createdAt: row.createdAt.toISOString(),
-      updatedAt: row.updatedAt.toISOString(),
+      ...row,
+      parsed: this.parse(row.parsed),
+      result: this.parse(row.result),
     }));
+  }
+
+  private parse(value: string | null) {
+    if (!value) return null;
+    try { return JSON.parse(value); } catch { return null; }
   }
 }

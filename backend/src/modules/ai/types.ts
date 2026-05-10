@@ -1,213 +1,115 @@
-export type AIIntent =
-  | 'batch'
-  | 'expense'
-  | 'income'
-  | 'transfer'
-  | 'show_accounts'
-  | 'create_category'
-  | 'create_section'
-  | 'assign_expenses_to_section'
+export type AICurrency = 'RUB' | 'USD' | 'EUR' | 'VND';
+export type AIAccountType = 'cash' | 'card' | 'savings' | 'investment';
+export type AITransactionType = 'income' | 'expense';
+export type AIRiskLevel = 'low' | 'medium' | 'high';
+
+export type AIToolName =
   | 'create_account'
   | 'update_account'
   | 'delete_account'
-  | 'delete_all_accounts'
-  | 'clear_history'
-  | 'update_settings'
-  | 'stats'
-  | 'financial_planning'
-  | 'advice'
-  | 'repeat_last'
-  | 'help'
-  | 'unknown';
+  | 'create_transaction'
+  | 'transfer_money'
+  | 'create_category'
+  | 'update_category'
+  | 'delete_category'
+  | 'create_section'
+  | 'update_section'
+  | 'delete_section'
+  | 'assign_category_to_section'
+  | 'show_accounts'
+  | 'show_transactions';
 
-export type AIRiskLevel = 'low' | 'medium' | 'high';
-export type AIAccountType = 'cash' | 'card' | 'savings' | 'investment';
-export type AICurrency = 'RUB' | 'USD' | 'EUR' | 'VND';
+export interface AIToolCall<TInput extends Record<string, unknown> = Record<string, unknown>> {
+  tool: AIToolName;
+  input: TInput;
+  reason?: string;
+}
+
+export interface AIActionPlan {
+  mode: 'actions';
+  language?: string;
+  summary?: string;
+  actions: AIToolCall[];
+}
+
+export interface AIQuestionPlan {
+  mode: 'question';
+  language?: string;
+  answer: string;
+}
+
+export interface AIClarificationPlan {
+  mode: 'clarification';
+  language?: string;
+  message: string;
+  missing?: string[];
+}
+
+export type AIPlan = AIActionPlan | AIQuestionPlan | AIClarificationPlan;
+
+export interface AIValidationIssue {
+  code: string;
+  message: string;
+  actionIndex?: number;
+  field?: string;
+}
+
+export interface AIValidatedAction extends AIToolCall {
+  riskLevel: AIRiskLevel;
+  requiresConfirmation: boolean;
+  resolved?: Record<string, unknown>;
+}
+
+export interface AIValidatedPlan {
+  ok: boolean;
+  summary: string;
+  actions: AIValidatedAction[];
+  riskLevel: AIRiskLevel;
+  requiresConfirmation: boolean;
+  issues: AIValidationIssue[];
+}
+
+export interface AIParsedCommand {
+  intent: 'batch';
+  summary: string;
+  actions: AIValidatedAction[];
+}
 
 export interface AIHandleOptions {
   execute?: boolean;
-  confirmed?: boolean;
-}
-
-export interface AIParsedExpense {
-  intent: 'expense';
-  amount: number;
-  currency?: AICurrency | string;
-  rawCategory: string;
-  description?: string;
-  accountName?: string;
-  sectionName?: string;
-}
-
-export interface AIParsedIncome {
-  intent: 'income';
-  amount: number;
-  currency?: AICurrency | string;
-  rawCategory: string;
-  description?: string;
-  accountName?: string;
-  sectionName?: string;
-}
-
-export interface AIParsedTransfer {
-  intent: 'transfer';
-  amount: number;
-  currency?: AICurrency | string;
-  fromAccountName?: string;
-  toAccountName: string;
-  description?: string;
-}
-
-export interface AIParsedShowAccounts {
-  intent: 'show_accounts';
-}
-
-export interface AIParsedCreateCategory {
-  intent: 'create_category';
-  name: string;
-  type: 'income' | 'expense';
-  sectionName?: string;
-}
-
-export interface AIParsedCreateSection {
-  intent: 'create_section';
-  name: string;
-}
-
-export interface AIParsedAssignExpensesToSection {
-  intent: 'assign_expenses_to_section';
-  rawQuery: string;
-  sectionName: string;
-}
-
-export interface AIParsedCreateAccount {
-  intent: 'create_account';
-  name: string;
-  type: AIAccountType;
-  currency: AICurrency;
-  balance: number;
-}
-
-export interface AIParsedUpdateAccount {
-  intent: 'update_account';
-  accountName: string;
-  name?: string;
-  type?: AIAccountType;
-  currency?: AICurrency;
-  balance?: number;
-}
-
-export interface AIParsedDeleteAccount {
-  intent: 'delete_account';
-  accountName: string;
-}
-
-export interface AIParsedDeleteAllAccounts {
-  intent: 'delete_all_accounts';
-  confirmScope?: 'accounts' | 'all_user_finance';
-}
-
-export interface AIParsedClearHistory {
-  intent: 'clear_history';
-  scope: 'transactions' | 'ai' | 'all';
-}
-
-export interface AIParsedUpdateSettings {
-  intent: 'update_settings';
-  key: string;
-  value: unknown;
-}
-
-export interface AIParsedStats {
-  intent: 'stats';
-  type: 'income' | 'expense';
-  rawCategory?: string;
-}
-
-export interface AIParsedFinancialPlanning {
-  intent: 'financial_planning';
-  monthlyIncome?: number;
-  monthlyExpenses?: number;
-  targetAmount?: number;
-  targetDateText?: string;
-  question: string;
-}
-
-export interface AIParsedAdvice {
-  intent: 'advice';
-  question: string;
-}
-
-export interface AIParsedRepeatLast {
-  intent: 'repeat_last';
-}
-
-export interface AIParsedHelp {
-  intent: 'help';
-}
-
-export interface AIParsedUnknown {
-  intent: 'unknown';
-  reason?: string;
-}
-
-export type AIParsedAtomicCommand =
-  | AIParsedExpense
-  | AIParsedIncome
-  | AIParsedTransfer
-  | AIParsedShowAccounts
-  | AIParsedCreateCategory
-  | AIParsedCreateSection
-  | AIParsedAssignExpensesToSection
-  | AIParsedCreateAccount
-  | AIParsedUpdateAccount
-  | AIParsedDeleteAccount
-  | AIParsedDeleteAllAccounts
-  | AIParsedClearHistory
-  | AIParsedUpdateSettings
-  | AIParsedStats
-  | AIParsedFinancialPlanning
-  | AIParsedAdvice
-  | AIParsedRepeatLast
-  | AIParsedHelp
-  | AIParsedUnknown;
-
-export interface AIParsedBatchCommand {
-  intent: 'batch';
-  actions: AIParsedAtomicCommand[];
-  originalText?: string;
-  summary?: string;
-  premiumSuggestion?: string;
-}
-
-export type AIParsedCommand = AIParsedAtomicCommand | AIParsedBatchCommand;
-
-export interface AIActionPolicyResult {
-  canExecute: boolean;
-  requiresConfirmation: boolean;
-  riskLevel: AIRiskLevel;
-  reason?: string;
-}
-
-export interface AIResultMeta {
-  pendingActionId?: string;
-  auditLogId?: string;
-  confirmExpiresAt?: string;
-  undo?: {
-    available: boolean;
-    actionType?: 'transaction' | 'account' | 'category' | 'section' | 'batch';
-    targetId?: string;
-  };
 }
 
 export interface AIResult {
   success: boolean;
-  intent: AIIntent;
+  intent: string;
   executed: boolean;
   requiresConfirmation: boolean;
   riskLevel: AIRiskLevel;
   message: string;
   parsed: Record<string, unknown> | null;
-  data?: unknown;
-  meta?: AIResultMeta;
+  result?: unknown;
+  meta?: {
+    auditLogId?: string;
+    pendingActionId?: string;
+    undo?: {
+      available: boolean;
+      actionType?: string;
+      targetId?: string;
+    };
+  };
+}
+
+export interface AIPendingActionDto {
+  id: string;
+  userId?: string;
+  command: string;
+  intent: string;
+  riskLevel: AIRiskLevel | string;
+  parsed: Record<string, unknown> | null;
+  status: string;
+  expiresAt: Date | string;
+  confirmedAt?: Date | string | null;
+  cancelledAt?: Date | string | null;
+  createdAt: Date | string;
+  updatedAt: Date | string;
 }
