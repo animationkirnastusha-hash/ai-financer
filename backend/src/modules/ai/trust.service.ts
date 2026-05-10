@@ -1,21 +1,11 @@
 import { AIManager } from './manager';
 import { AIAuditService } from './audit.service';
 import { AIPendingActionService } from './pending-action.service';
-import { AIHandleOptions, AIParsedCommand, AIResult } from './types';
+import { AIAccountType, AICurrency, AIHandleOptions, AIParsedCommand, AIResult } from './types';
 
 const aiManager = new AIManager();
 const auditService = new AIAuditService();
 const pendingActionService = new AIPendingActionService();
-
-type AccountType = 'cash' | 'card' | 'savings' | 'investment';
-
-function normalizeAccountType(value: unknown): AccountType {
-  const raw = String(value ?? '').toLowerCase();
-  if (raw === 'card' || raw.includes('карт') || raw.includes('банк') || raw.includes('безнал')) return 'card';
-  if (raw === 'savings' || raw.includes('накоп') || raw.includes('сбереж') || raw.includes('копил')) return 'savings';
-  if (raw === 'investment' || raw.includes('инвест') || raw.includes('брокер')) return 'investment';
-  return 'cash';
-}
 
 function parseStoredJson(value: string | null): Record<string, unknown> | null {
   if (!value) return null;
@@ -40,6 +30,18 @@ function asNumber(value: unknown, fallback = 0) {
   return fallback;
 }
 
+function normalizeAccountType(value: unknown): AIAccountType {
+  const raw = asString(value, 'cash').toLowerCase();
+  if (raw === 'card' || raw === 'cash' || raw === 'savings' || raw === 'investment') return raw;
+  return 'cash';
+}
+
+function normalizeCurrency(value: unknown): AICurrency {
+  const raw = asString(value, 'RUB').toUpperCase();
+  if (raw === 'USD' || raw === 'EUR' || raw === 'VND' || raw === 'RUB') return raw;
+  return 'RUB';
+}
+
 function normalizeStoredParsed(intent: string, parsed: Record<string, unknown> | null): AIParsedCommand | null {
   if (!parsed) return null;
 
@@ -60,10 +62,19 @@ function normalizeStoredParsed(intent: string, parsed: Record<string, unknown> |
     return {
       intent: 'create_account',
       name: asString(parsed.name || parsed.accountName, 'Новый счёт'),
-      type: normalizeAccountType(parsed.type),
-      currency: asString(parsed.currency, 'RUB').toUpperCase(),
+      type: normalizeAccountType(parsed.accountType || parsed.type),
+      currency: normalizeCurrency(parsed.currency),
       balance: asNumber(parsed.balance, 0),
     };
+  }
+
+  if (normalizedIntent === 'delete_all_accounts') {
+    return { intent: 'delete_all_accounts', confirmScope: 'accounts' };
+  }
+
+  if (normalizedIntent === 'clear_history') {
+    const scope = asString(parsed.scope, 'transactions').toLowerCase();
+    return { intent: 'clear_history', scope: scope === 'ai' || scope === 'all' ? scope : 'transactions' };
   }
 
   if (normalizedIntent === 'income' || normalizedIntent === 'expense') {
@@ -82,26 +93,20 @@ function normalizeStoredParsed(intent: string, parsed: Record<string, unknown> |
     return {
       intent: 'transfer',
       amount: asNumber(parsed.amount),
+      currency: asString(parsed.currency) || undefined,
       fromAccountName: asString(parsed.fromAccountName) || undefined,
       toAccountName: asString(parsed.toAccountName || parsed.accountName),
+      description: asString(parsed.description) || undefined,
     };
   }
 
   if (normalizedIntent === 'create_section') return { intent: 'create_section', name: asString(parsed.name, 'Новый раздел') };
 
   if (normalizedIntent === 'create_category') {
-    return {
-      intent: 'create_category',
-      name: asString(parsed.name || parsed.categoryName, 'Новая категория'),
-      type: asString(parsed.type, 'expense') === 'income' ? 'income' : 'expense',
-      sectionName: asString(parsed.sectionName) || undefined,
-    };
+    return { intent: 'create_category', name: asString(parsed.name || parsed.categoryName, 'Новая категория'), type: asString(parsed.categoryType || parsed.type, 'expense') === 'income' ? 'income' : 'expense', sectionName: asString(parsed.sectionName) || undefined };
   }
 
-  if (normalizedIntent === 'assign_expenses_to_section') {
-    return { intent: 'assign_expenses_to_section', rawQuery: asString(parsed.rawQuery), sectionName: asString(parsed.sectionName) };
-  }
-
+  if (normalizedIntent === 'assign_expenses_to_section') return { intent: 'assign_expenses_to_section', rawQuery: asString(parsed.rawQuery), sectionName: asString(parsed.sectionName) };
   return null;
 }
 
@@ -127,18 +132,9 @@ function enrichUndoMeta(result: AIResult): AIResult {
   if (!actionType) return result;
 
   const targetId = actionType === 'batch' ? undefined : readUndoTargetId(result.data);
-
   if (actionType !== 'batch' && !targetId) return result;
 
-  result.meta = {
-    ...(result.meta ?? {}),
-    undo: {
-      available: true,
-      actionType,
-      targetId,
-    },
-  };
-
+  result.meta = { ...(result.meta ?? {}), undo: { available: true, actionType, targetId } };
   return result;
 }
 
@@ -148,7 +144,6 @@ export class AITrustService {
       const result = enrichUndoMeta(await aiManager.handle(userId, command, options));
       const status = result.executed ? 'executed' : result.requiresConfirmation ? 'pending_confirmation' : 'previewed';
       const auditLog = await auditService.logSuccess(userId, command, result, status);
-
       result.meta = { ...(result.meta ?? {}), auditLogId: auditLog.id };
 
       if (result.requiresConfirmation && !result.executed) {
@@ -175,30 +170,15 @@ export class AITrustService {
     );
 
     await pendingActionService.confirmPendingAction(pendingAction.id);
-
     const auditLog = await auditService.logSuccess(userId, pendingAction.command, result, result.executed ? 'executed' : 'previewed');
     result.meta = { ...(result.meta ?? {}), auditLogId: auditLog.id, pendingActionId: pendingAction.id };
-
     return result;
   }
 
   async updatePendingAction(userId: string, pendingActionId: string, params: { parsed?: Record<string, unknown> | null; command?: string }) {
     const action = await pendingActionService.updatePendingAction(userId, pendingActionId, params);
     const parsed = parseStoredJson(action.parsed);
-
-    return {
-      id: action.id,
-      command: action.command,
-      intent: action.intent,
-      riskLevel: action.riskLevel,
-      status: action.status,
-      parsed,
-      expiresAt: action.expiresAt.toISOString(),
-      confirmedAt: action.confirmedAt ? action.confirmedAt.toISOString() : null,
-      cancelledAt: action.cancelledAt ? action.cancelledAt.toISOString() : null,
-      createdAt: action.createdAt.toISOString(),
-      updatedAt: action.updatedAt.toISOString(),
-    };
+    return { id: action.id, command: action.command, intent: action.intent, riskLevel: action.riskLevel, status: action.status, parsed, expiresAt: action.expiresAt.toISOString(), confirmedAt: action.confirmedAt ? action.confirmedAt.toISOString() : null, cancelledAt: action.cancelledAt ? action.cancelledAt.toISOString() : null, createdAt: action.createdAt.toISOString(), updatedAt: action.updatedAt.toISOString() };
   }
 
   async cancelCommand(userId: string, pendingActionId: string) {
@@ -206,35 +186,11 @@ export class AITrustService {
     await pendingActionService.cancelPendingAction(pendingAction.id);
     const parsed = parseStoredJson(pendingAction.parsed);
 
-    const auditLog = await auditService.createLog({
-      userId,
-      command: pendingAction.command,
-      intent: pendingAction.intent,
-      riskLevel: pendingAction.riskLevel,
-      requiresConfirmation: true,
-      executed: false,
-      status: 'cancelled',
-      parsed,
-      result: null,
-    });
+    const auditLog = await auditService.createLog({ userId, command: pendingAction.command, intent: pendingAction.intent, riskLevel: pendingAction.riskLevel, requiresConfirmation: true, executed: false, status: 'cancelled', parsed, result: null });
 
-    return {
-      success: true,
-      intent: pendingAction.intent as AIResult['intent'],
-      executed: false,
-      requiresConfirmation: false,
-      riskLevel: pendingAction.riskLevel as AIResult['riskLevel'],
-      message: '❌ AI-действие отменено.',
-      parsed,
-      meta: { auditLogId: auditLog.id, pendingActionId: pendingAction.id },
-    } satisfies AIResult;
+    return { success: true, intent: pendingAction.intent as AIResult['intent'], executed: false, requiresConfirmation: false, riskLevel: pendingAction.riskLevel as AIResult['riskLevel'], message: '❌ AI-действие отменено.', parsed, meta: { auditLogId: auditLog.id, pendingActionId: pendingAction.id } } satisfies AIResult;
   }
 
-  async getPendingActions(userId: string, includeExpired = false) {
-    return pendingActionService.getPendingActions(userId, includeExpired);
-  }
-
-  async getAuditLogs(userId: string, limit = 50) {
-    return auditService.getAuditLogs(userId, limit);
-  }
+  async getPendingActions(userId: string, includeExpired = false) { return pendingActionService.getPendingActions(userId, includeExpired); }
+  async getAuditLogs(userId: string, limit = 50) { return auditService.getAuditLogs(userId, limit); }
 }

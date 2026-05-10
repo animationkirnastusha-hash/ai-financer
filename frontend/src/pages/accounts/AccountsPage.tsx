@@ -96,7 +96,6 @@ export default function AccountsPage() {
   const mainGroup = grouped.find((group) => group.currency === mainCurrency);
   const primaryAccount = items.find((item) => item.id === primaryAccountId);
   const incomeAccount = items.find((item) => item.id === incomeAccountId);
-  const defaultTransferSource = items.find((item) => !item.lockTransfers) ?? items[0] ?? null;
 
   const handleCreateTransfer = async (payload: {
     fromAccountId: string;
@@ -188,11 +187,9 @@ export default function AccountsPage() {
 
               <button
                 type="button"
-                disabled={!defaultTransferSource || items.length < 2}
-                onClick={() => {
-                  if (defaultTransferSource) setTransferFromAccountId(defaultTransferSource.id);
-                }}
-                className="rounded-2xl border border-sky-300/20 bg-sky-300/12 px-4 py-2 text-sm text-white transition hover:bg-sky-300/18 disabled:cursor-not-allowed disabled:opacity-45"
+                disabled={items.length < 2}
+                onClick={() => setTransferFromAccountId(primaryAccount?.id ?? items[0]?.id ?? null)}
+                className="rounded-2xl border border-emerald-400/20 bg-emerald-400/10 px-4 py-2 text-sm text-white transition hover:bg-emerald-400/15 disabled:opacity-40"
               >
                 Перевод между счетами
               </button>

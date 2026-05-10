@@ -19,6 +19,8 @@ export type AIIntent =
   | 'unknown';
 
 export type AIRiskLevel = 'low' | 'medium' | 'high';
+export type AIAccountType = 'cash' | 'card' | 'savings' | 'investment';
+export type AICurrency = 'RUB' | 'USD' | 'EUR' | 'VND';
 
 export interface AIHandleOptions {
   execute?: boolean;
@@ -28,7 +30,7 @@ export interface AIHandleOptions {
 export interface AIParsedExpense {
   intent: 'expense';
   amount: number;
-  currency?: string;
+  currency?: AICurrency | string;
   rawCategory: string;
   description?: string;
   accountName?: string;
@@ -38,7 +40,7 @@ export interface AIParsedExpense {
 export interface AIParsedIncome {
   intent: 'income';
   amount: number;
-  currency?: string;
+  currency?: AICurrency | string;
   rawCategory: string;
   description?: string;
   accountName?: string;
@@ -48,7 +50,7 @@ export interface AIParsedIncome {
 export interface AIParsedTransfer {
   intent: 'transfer';
   amount: number;
-  currency?: string;
+  currency?: AICurrency | string;
   fromAccountName?: string;
   toAccountName: string;
   description?: string;
@@ -79,19 +81,19 @@ export interface AIParsedAssignExpensesToSection {
 export interface AIParsedCreateAccount {
   intent: 'create_account';
   name: string;
-  type: 'cash' | 'card' | 'savings' | 'investment';
-  currency: string;
+  type: AIAccountType;
+  currency: AICurrency;
   balance: number;
 }
 
 export interface AIParsedDeleteAllAccounts {
   intent: 'delete_all_accounts';
-  scope?: 'all';
+  confirmScope?: 'accounts' | 'all_user_finance';
 }
 
 export interface AIParsedClearHistory {
   intent: 'clear_history';
-  scope?: 'all_transactions' | 'audit' | 'all';
+  scope: 'transactions' | 'ai' | 'all';
 }
 
 export interface AIParsedUpdateSettings {
@@ -131,7 +133,6 @@ export interface AIParsedHelp {
 export interface AIParsedUnknown {
   intent: 'unknown';
   reason?: string;
-  missing?: string[];
 }
 
 export type AIParsedAtomicCommand =
@@ -176,7 +177,7 @@ export interface AIResultMeta {
   confirmExpiresAt?: string;
   undo?: {
     available: boolean;
-    actionType?: 'transaction' | 'account' | 'category' | 'section' | 'batch' | 'history' | 'accounts';
+    actionType?: 'transaction' | 'account' | 'category' | 'section' | 'batch';
     targetId?: string;
   };
 }

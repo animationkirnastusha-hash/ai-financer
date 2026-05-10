@@ -1,55 +1,62 @@
-import { AIActionPolicyResult, AIParsedCommand } from './types';
+import { AIParsedCommand } from './types';
 
 export class AIActionPolicy {
-  evaluate(command: AIParsedCommand): AIActionPolicyResult {
+  evaluate(command: AIParsedCommand): {
+    requiresConfirmation: boolean;
+    riskLevel: 'low' | 'medium' | 'high';
+    reason?: string;
+  } {
     if (command.intent === 'batch') {
-      const results = command.actions.map((action) => this.evaluate(action));
-      const high = results.some((item) => item.riskLevel === 'high');
-      const medium = results.some((item) => item.riskLevel === 'medium');
-      const requiresConfirmation = results.some((item) => item.requiresConfirmation);
+      const childPolicies = command.actions.map((action) => this.evaluate(action));
+      const requiresConfirmation = childPolicies.some((item) => item.requiresConfirmation);
+      const riskLevel = childPolicies.some((item) => item.riskLevel === 'high')
+        ? 'high'
+        : childPolicies.some((item) => item.riskLevel === 'medium')
+          ? 'medium'
+          : 'low';
 
       return {
-        canExecute: true,
         requiresConfirmation,
-        riskLevel: high ? 'high' : medium ? 'medium' : 'low',
-        reason: requiresConfirmation ? 'Пакет содержит действия, требующие подтверждения.' : undefined,
+        riskLevel,
+        reason: requiresConfirmation ? 'В запросе есть действия, которые требуют подтверждения' : undefined,
       };
     }
 
-    switch (command.intent) {
-      case 'delete_all_accounts':
-        return { canExecute: true, requiresConfirmation: true, riskLevel: 'high', reason: 'Удаление всех счетов — необратимое массовое действие.' };
-
-      case 'clear_history':
-        return { canExecute: true, requiresConfirmation: true, riskLevel: 'high', reason: 'Очистка истории удаляет финансовые операции и влияет на балансы.' };
-
-      case 'transfer':
-        return { canExecute: true, requiresConfirmation: true, riskLevel: command.amount >= 10000 ? 'high' : 'medium', reason: 'Перевод между счетами требует проверки.' };
-
-      case 'expense':
-        return { canExecute: true, requiresConfirmation: command.amount >= 10000, riskLevel: command.amount >= 10000 ? 'medium' : 'low', reason: command.amount >= 10000 ? 'Крупный расход.' : undefined };
-
-      case 'income':
-        return { canExecute: true, requiresConfirmation: false, riskLevel: 'low' };
-
-      case 'create_account':
-        return { canExecute: true, requiresConfirmation: true, riskLevel: 'medium', reason: 'Создание счёта меняет структуру финансов.' };
-
-      case 'create_category':
-      case 'create_section':
-      case 'assign_expenses_to_section':
-      case 'update_settings':
-        return { canExecute: true, requiresConfirmation: true, riskLevel: 'medium' };
-
-      case 'show_accounts':
-      case 'stats':
-      case 'financial_planning':
-      case 'advice':
-      case 'repeat_last':
-      case 'help':
-      case 'unknown':
-      default:
-        return { canExecute: true, requiresConfirmation: false, riskLevel: 'low' };
+    if (command.intent === 'delete_all_accounts') {
+      return { requiresConfirmation: true, riskLevel: 'high', reason: 'Удаление всех счетов требует подтверждения' };
     }
+
+    if (command.intent === 'clear_history') {
+      return { requiresConfirmation: true, riskLevel: 'high', reason: 'Очистка истории требует подтверждения' };
+    }
+
+    if (command.intent === 'expense') {
+      if (command.amount >= 10_000) {
+        return { requiresConfirmation: true, riskLevel: 'medium', reason: 'Крупный расход требует подтверждения' };
+      }
+      return { requiresConfirmation: false, riskLevel: 'low' };
+    }
+
+    if (command.intent === 'update_settings') {
+      return { requiresConfirmation: true, riskLevel: 'medium', reason: 'Изменение настроек требует подтверждения' };
+    }
+
+    if (command.intent === 'transfer') {
+      return { requiresConfirmation: true, riskLevel: 'medium', reason: 'Перевод между счетами требует подтверждения' };
+    }
+
+    if (command.intent === 'create_account') {
+      return { requiresConfirmation: true, riskLevel: 'medium', reason: 'Создание счёта требует подтверждения' };
+    }
+
+    if (command.intent === 'income' || command.intent === 'advice' || command.intent === 'repeat_last') {
+      return { requiresConfirmation: false, riskLevel: 'low' };
+    }
+
+    if (command.intent === 'create_category' || command.intent === 'create_section' || command.intent === 'assign_expenses_to_section') {
+      return { requiresConfirmation: false, riskLevel: 'low' };
+    }
+
+    return { requiresConfirmation: false, riskLevel: 'low' };
   }
 }
