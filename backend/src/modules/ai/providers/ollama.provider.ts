@@ -47,7 +47,7 @@ function getOllamaModel() {
 }
 
 function getTimeoutMs(request: AIProviderJsonRequest) {
-  return Math.max(30_000, request.timeoutMs ?? env.aiLlmTimeoutMs ?? 120_000);
+  return Math.max(45_000, request.timeoutMs ?? env.aiLlmTimeoutMs ?? 90_000);
 }
 
 async function readErrorBody(response: Response) {
@@ -76,8 +76,25 @@ export class OllamaProvider implements AIProvider {
     const model = getOllamaModel();
     const url = `${baseUrl}/api/generate`;
 
+    const system = [
+      '/no_think',
+      request.system,
+      '',
+      'Return ONLY valid compact JSON.',
+      'Do not include markdown.',
+      'Do not include explanations.',
+      'Do not include <think> blocks.',
+      'Do not include comments.',
+    ].filter(Boolean).join('\n');
+
     try {
       const startedAt = Date.now();
+
+      console.log('[OLLAMA] request:start', {
+        model,
+        timeoutMs,
+        baseUrl,
+      });
 
       const response = await fetch(url, {
         method: 'POST',
@@ -85,23 +102,18 @@ export class OllamaProvider implements AIProvider {
         signal: controller.signal,
         body: JSON.stringify({
           model,
-          system: [
-            request.system,
-            '',
-            'Return ONLY valid JSON.',
-            'Do not include markdown.',
-            'Do not include explanations.',
-            'Do not include <think> blocks.',
-          ].filter(Boolean).join('\n'),
-          prompt: request.prompt,
+          system,
+          prompt: `/no_think\n${request.prompt}`,
           stream: false,
+          think: false,
           format: request.schema || 'json',
+          keep_alive: '10m',
           options: {
             temperature: request.temperature ?? 0,
-            top_p: 0.8,
-            repeat_penalty: 1.05,
+            top_p: 0.7,
+            repeat_penalty: 1.08,
             num_ctx: 4096,
-            num_predict: 700,
+            num_predict: 450,
           },
         }),
       });
@@ -126,20 +138,28 @@ export class OllamaProvider implements AIProvider {
       const rawText = payload.response ?? '';
       const rawJson = extractJsonObject(rawText);
 
+      console.log('[OLLAMA] request:done', {
+        model,
+        elapsedMs: Date.now() - startedAt,
+        hasResponse: Boolean(rawText),
+        hasJson: Boolean(rawJson),
+      });
+
       if (!rawJson) {
-        console.error('[OLLAMA] Empty JSON response', {
+        console.error('[OLLAMA] empty json response', {
           model,
           elapsedMs: Date.now() - startedAt,
-          responsePreview: rawText.slice(0, 500),
+          responsePreview: rawText.slice(0, 800),
+          thinkingPreview: payload.thinking?.slice(0, 300),
         });
 
-        throw new Error('Ollama returned empty response');
+        throw new Error('Ollama returned empty JSON response');
       }
 
       try {
         return JSON.parse(rawJson) as T;
       } catch (parseError) {
-        console.error('[OLLAMA] JSON parse failed', {
+        console.error('[OLLAMA] json parse failed', {
           model,
           elapsedMs: Date.now() - startedAt,
           responsePreview: rawText.slice(0, 1200),
@@ -151,7 +171,7 @@ export class OllamaProvider implements AIProvider {
     } catch (error) {
       if (error instanceof Error && error.name === 'AbortError') {
         throw new Error(
-          `Ollama request timeout after ${timeoutMs}ms. Проверь модель ${model}: curl ${baseUrl}/api/tags`,
+          `Ollama request timeout after ${timeoutMs}ms. Model=${model}. Base=${baseUrl}`,
         );
       }
 
