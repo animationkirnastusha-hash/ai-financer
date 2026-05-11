@@ -37,15 +37,11 @@ export class AIAuditService {
       take: Math.min(Math.max(limit, 1), 100),
     });
 
-    return rows.map((row) => ({
-      ...row,
-      parsed: this.parse(row.parsed),
-      result: this.parse(row.result),
-    }));
+    return rows.map((row) => ({ ...row, parsed: this.parse(row.parsed), result: this.parse(row.result) }));
   }
 
   private parse(value: string | null) {
     if (!value) return null;
-    try { return JSON.parse(value); } catch { return null; }
+    try { return JSON.parse(value) as unknown; } catch { return null; }
   }
 }

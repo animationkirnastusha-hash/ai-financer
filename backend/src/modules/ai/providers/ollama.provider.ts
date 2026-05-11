@@ -5,27 +5,19 @@ type OllamaGenerateResponse = {
   response?: string;
   thinking?: string;
   error?: string;
+  done_reason?: string;
 };
 
 function normalizeBaseUrl(value: string | undefined) {
   const fallback = 'http://127.0.0.1:11434';
   const raw = (value || fallback).trim() || fallback;
-
   return raw.replace(/\/+$/, '').replace(/\/api$/i, '');
-}
-
-function getModel() {
-  return (env.ollamaModel).trim();
-}
-
-function getTimeoutMs(request: AIProviderJsonRequest) {
-  return Math.max(60_000, request.timeoutMs ?? env.aiLlmTimeoutMs ?? 180_000);
 }
 
 function stripThinking(value: string) {
   return value
     .replace(/<think>[\s\S]*?<\/think>/gi, '')
-    .replace(/<think>[\s\S]*/gi, '')
+    .replace(/^[\s\S]*?<\/think>/gi, '')
     .trim();
 }
 
@@ -39,15 +31,21 @@ function stripCodeFences(value: string) {
 
 function extractJson(value: string) {
   const cleaned = stripCodeFences(stripThinking(value));
-
   if (!cleaned) return '';
-  if (cleaned.startsWith('{') && cleaned.endsWith('}')) return cleaned;
 
-  const first = cleaned.indexOf('{');
-  const last = cleaned.lastIndexOf('}');
+  if ((cleaned.startsWith('{') && cleaned.endsWith('}')) || (cleaned.startsWith('[') && cleaned.endsWith(']'))) {
+    return cleaned;
+  }
 
-  if (first >= 0 && last > first) return cleaned.slice(first, last + 1);
-  return cleaned;
+  const objectStart = cleaned.indexOf('{');
+  const objectEnd = cleaned.lastIndexOf('}');
+  if (objectStart >= 0 && objectEnd > objectStart) return cleaned.slice(objectStart, objectEnd + 1);
+
+  const arrayStart = cleaned.indexOf('[');
+  const arrayEnd = cleaned.lastIndexOf(']');
+  if (arrayStart >= 0 && arrayEnd > arrayStart) return cleaned.slice(arrayStart, arrayEnd + 1);
+
+  return '';
 }
 
 async function readError(response: Response) {
@@ -68,77 +66,45 @@ async function readError(response: Response) {
 
 export class OllamaProvider implements AIProvider {
   async generateJson<T>(request: AIProviderJsonRequest): Promise<T> {
-    const model = getModel();
-    const timeoutMs = getTimeoutMs(request);
-
-    const errors: unknown[] = [];
-
-    for (const format of [request.schema || 'json', 'json']) {
-      try {
-        return await this.generateJsonOnce<T>(request, {
-          model,
-          timeoutMs,
-          format,
-        });
-      } catch (error) {
-        errors.push(error);
-        console.error('[OLLAMA] generateJson attempt failed', {
-          model,
-          message: error instanceof Error ? error.message : String(error),
-        });
-      }
-    }
-
-    const last = errors[errors.length - 1];
-    if (last instanceof Error) throw last;
-    throw new Error('Ollama JSON generation failed');
-  }
-
-  private async generateJsonOnce<T>(
-    request: AIProviderJsonRequest,
-    params: { model: string; timeoutMs: number; format: Record<string, unknown> | string },
-  ): Promise<T> {
     const baseUrl = normalizeBaseUrl(env.ollamaBaseUrl);
+    const model = env.ollamaModel.trim() || 'qwen2.5:3b';
+    const timeoutMs = Math.max(15_000, request.timeoutMs ?? env.aiLlmTimeoutMs);
+    const numCtx = Math.max(512, request.numCtx ?? env.ollamaNumCtx);
+    const numPredict = Math.max(128, request.numPredict ?? env.ollamaNumPredict);
+
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), params.timeoutMs);
+    const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
     const system = [
-      '/no_think',
       request.system,
       '',
-      'Return ONLY compact valid JSON.',
-      'No markdown. No prose. No explanations. No <think>.',
-      'If a field is unknown, use null or an empty array according to the schema.',
+      'Return only one compact valid JSON object.',
+      'Do not use markdown.',
+      'Do not add explanations.',
+      'Do not include comments.',
     ].filter(Boolean).join('\n');
 
     try {
       const startedAt = Date.now();
-
-      console.log('[OLLAMA] generateJson:start', {
-        model: params.model,
-        timeoutMs: params.timeoutMs,
-        baseUrl,
-        strictFormat: typeof params.format === 'object',
-      });
+      console.log('[OLLAMA] generateJson:start', { model, timeoutMs, baseUrl, numCtx, numPredict, format: 'json' });
 
       const response = await fetch(`${baseUrl}/api/generate`, {
         method: 'POST',
         signal: controller.signal,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          model: params.model,
+          model,
           system,
-          prompt: `/no_think\n${request.prompt}`,
+          prompt: request.prompt,
           stream: false,
-          think: false,
-          format: params.format,
+          format: 'json',
           keep_alive: '10m',
           options: {
             temperature: request.temperature ?? 0,
             top_p: 0.8,
             repeat_penalty: 1.05,
-            num_ctx: 8192,
-            num_predict: 1800,
+            num_ctx: numCtx,
+            num_predict: numPredict,
           },
         }),
       });
@@ -153,15 +119,16 @@ export class OllamaProvider implements AIProvider {
       const json = extractJson(raw);
 
       console.log('[OLLAMA] generateJson:done', {
-        model: params.model,
+        model,
         elapsedMs: Date.now() - startedAt,
+        doneReason: payload.done_reason,
         hasRaw: Boolean(raw),
         hasJson: Boolean(json),
       });
 
       if (!json) {
         console.error('[OLLAMA] no json response', {
-          rawPreview: raw.slice(0, 1500),
+          rawPreview: raw.slice(0, 1000),
           thinkingPreview: payload.thinking?.slice(0, 500),
         });
         throw new Error('Ollama returned no JSON');
@@ -171,14 +138,14 @@ export class OllamaProvider implements AIProvider {
         return JSON.parse(json) as T;
       } catch (error) {
         console.error('[OLLAMA] json parse failed', {
-          rawPreview: raw.slice(0, 1500),
-          extractedPreview: json.slice(0, 1500),
+          rawPreview: raw.slice(0, 1000),
+          extractedPreview: json.slice(0, 1000),
         });
         throw error;
       }
     } catch (error) {
       if (error instanceof Error && error.name === 'AbortError') {
-        throw new Error(`Ollama request timed out after ${params.timeoutMs}ms`);
+        throw new Error(`Ollama request timed out after ${timeoutMs}ms`);
       }
       throw error;
     } finally {

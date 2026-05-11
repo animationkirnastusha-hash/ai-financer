@@ -2,13 +2,32 @@ import { prisma } from '../../lib/prisma';
 import { NotFoundError } from '../../shared/core/errors';
 import { AIParsedCommand, AIRiskLevel } from './types';
 
+type PrismaPendingActionRow = {
+  id: string;
+  userId: string;
+  command: string;
+  intent: string;
+  riskLevel: string;
+  parsed: string | null;
+  status: string;
+  expiresAt: Date;
+  confirmedAt?: Date | null;
+  cancelledAt?: Date | null;
+  createdAt?: Date;
+  updatedAt?: Date;
+};
+
+export type AIPendingActionView = Omit<PrismaPendingActionRow, 'parsed'> & {
+  parsed: Record<string, unknown> | null;
+};
+
 export class AIPendingActionService {
   async create(params: {
     userId: string;
     command: string;
     parsed: AIParsedCommand;
     riskLevel: AIRiskLevel;
-  }) {
+  }): Promise<AIPendingActionView> {
     const pending = await prisma.aIPendingAction.create({
       data: {
         userId: params.userId,
@@ -21,46 +40,57 @@ export class AIPendingActionService {
       },
     });
 
-    return this.serialize(pending);
+    return this.serialize(pending as PrismaPendingActionRow);
   }
 
-  async update(userId: string, pendingActionId: string, parsed: Record<string, unknown>, command?: string) {
-    await this.ensurePending(userId, pendingActionId);
+  async update(
+    userId: string,
+    pendingActionId: string,
+    parsed: Record<string, unknown>,
+    command?: string,
+  ): Promise<AIPendingActionView> {
+    const current = await this.ensurePending(userId, pendingActionId);
+
     const updated = await prisma.aIPendingAction.update({
-      where: { id: pendingActionId },
+      where: { id: current.id },
       data: {
         parsed: JSON.stringify(parsed),
+        intent: this.resolveIntent(parsed, current.intent),
         ...(command ? { command } : {}),
       },
     });
 
-    return this.serialize(updated);
+    return this.serialize(updated as PrismaPendingActionRow);
   }
 
-  async getForConfirm(userId: string, pendingActionId: string) {
+  async getForConfirm(userId: string, pendingActionId: string): Promise<AIPendingActionView> {
     const pending = await this.ensurePending(userId, pendingActionId);
     return this.serialize(pending);
   }
 
-  async markConfirmed(userId: string, pendingActionId: string) {
-    await this.ensurePending(userId, pendingActionId);
+  async markConfirmed(userId: string, pendingActionId: string): Promise<AIPendingActionView> {
+    const pending = await this.ensurePending(userId, pendingActionId);
+
     const updated = await prisma.aIPendingAction.update({
-      where: { id: pendingActionId },
+      where: { id: pending.id },
       data: { status: 'confirmed', confirmedAt: new Date() },
     });
-    return this.serialize(updated);
+
+    return this.serialize(updated as PrismaPendingActionRow);
   }
 
-  async cancel(userId: string, pendingActionId: string) {
-    await this.ensurePending(userId, pendingActionId);
+  async cancel(userId: string, pendingActionId: string): Promise<AIPendingActionView> {
+    const pending = await this.ensurePending(userId, pendingActionId);
+
     const updated = await prisma.aIPendingAction.update({
-      where: { id: pendingActionId },
+      where: { id: pending.id },
       data: { status: 'cancelled', cancelledAt: new Date() },
     });
-    return this.serialize(updated);
+
+    return this.serialize(updated as PrismaPendingActionRow);
   }
 
-  async list(userId: string, includeExpired = false) {
+  async list(userId: string, includeExpired = false): Promise<AIPendingActionView[]> {
     const rows = await prisma.aIPendingAction.findMany({
       where: {
         userId,
@@ -70,27 +100,42 @@ export class AIPendingActionService {
       orderBy: { createdAt: 'desc' },
     });
 
-    return rows.map((row) => this.serialize(row));
+    return rows.map((row) => this.serialize(row as PrismaPendingActionRow));
   }
 
-  private async ensurePending(userId: string, pendingActionId: string) {
+  private async ensurePending(userId: string, pendingActionId: string): Promise<PrismaPendingActionRow> {
     const pending = await prisma.aIPendingAction.findFirst({
-      where: { id: pendingActionId, userId },
+      where: { id: pendingActionId, userId, status: 'pending' },
     });
 
     if (!pending) throw new NotFoundError('Pending action not found');
-    return pending;
+    if (pending.expiresAt < new Date()) throw new NotFoundError('Pending action expired');
+
+    return pending as PrismaPendingActionRow;
   }
 
-  private serialize(row: any) {
+  private serialize(row: PrismaPendingActionRow): AIPendingActionView {
     return {
       ...row,
       parsed: this.parse(row.parsed),
     };
   }
 
-  private parse(value: string | null) {
+  private parse(value: string | null): Record<string, unknown> | null {
     if (!value) return null;
-    try { return JSON.parse(value); } catch { return null; }
+
+    try {
+      const parsed = JSON.parse(value) as unknown;
+      return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+        ? (parsed as Record<string, unknown>)
+        : null;
+    } catch {
+      return null;
+    }
+  }
+
+  private resolveIntent(parsed: Record<string, unknown>, fallback: string): string {
+    const intent = parsed.intent;
+    return typeof intent === 'string' && intent.trim() ? intent : fallback;
   }
 }

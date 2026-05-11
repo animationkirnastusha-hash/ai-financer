@@ -19,11 +19,7 @@ const TOOL_LABELS: Record<string, string> = {
 
 export class AIPreviewService {
   buildParsed(summary: string, actions: AIValidatedAction[]): AIParsedCommand {
-    return {
-      intent: 'batch',
-      summary,
-      actions,
-    };
+    return { intent: 'batch', summary, actions };
   }
 
   buildMessage(parsed: AIParsedCommand) {

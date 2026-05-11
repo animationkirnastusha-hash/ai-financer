@@ -2,40 +2,31 @@ import { AIToolDefinition } from './tool-types';
 
 const stringOrNull = { type: ['string', 'null'] } as const;
 const numberOrNull = { type: ['number', 'null'] } as const;
+const currencyOrNull = { enum: ['RUB', 'USD', 'EUR', 'VND', null] } as const;
+const accountTypeOrNull = { enum: ['cash', 'card', 'savings', 'investment', null] } as const;
 
 export const AI_TOOL_REGISTRY: AIToolDefinition[] = [
   {
     name: 'create_account',
-    description: 'Create a money account/wallet/card/savings account. Use when the user wants a new place to store money.',
+    description: 'Create a money account, wallet, card, savings account or investment account. Name must be only the user-facing label, not command words.',
     risk: 'medium',
     requiresConfirmation: true,
     input: {
       type: 'object',
       additionalProperties: false,
-      properties: {
-        name: { type: 'string' },
-        type: { enum: ['cash', 'card', 'savings', 'investment', null] },
-        currency: { enum: ['RUB', 'USD', 'EUR', 'VND', null] },
-        initialBalance: numberOrNull,
-      },
+      properties: { name: { type: 'string' }, type: accountTypeOrNull, currency: currencyOrNull, initialBalance: numberOrNull },
       required: ['name', 'type', 'currency', 'initialBalance'],
     },
   },
   {
     name: 'update_account',
-    description: 'Rename account, change account type, currency, visibility, or balance.',
+    description: 'Rename account, change account type, currency, visibility or balance.',
     risk: 'medium',
     requiresConfirmation: true,
     input: {
       type: 'object',
       additionalProperties: false,
-      properties: {
-        account: { type: 'string' },
-        name: stringOrNull,
-        type: { enum: ['cash', 'card', 'savings', 'investment', null] },
-        currency: { enum: ['RUB', 'USD', 'EUR', 'VND', null] },
-        balance: numberOrNull,
-      },
+      properties: { account: { type: 'string' }, name: stringOrNull, type: accountTypeOrNull, currency: currencyOrNull, balance: numberOrNull },
       required: ['account', 'name', 'type', 'currency', 'balance'],
     },
   },
@@ -44,16 +35,11 @@ export const AI_TOOL_REGISTRY: AIToolDefinition[] = [
     description: 'Delete a specific account. Dangerous action.',
     risk: 'high',
     requiresConfirmation: true,
-    input: {
-      type: 'object',
-      additionalProperties: false,
-      properties: { account: { type: 'string' } },
-      required: ['account'],
-    },
+    input: { type: 'object', additionalProperties: false, properties: { account: { type: 'string' } }, required: ['account'] },
   },
   {
     name: 'create_transaction',
-    description: 'Create income or expense. Adding/depositing/putting money onto an account is income. Spending/buying/paying is expense.',
+    description: 'Create income or expense. Depositing, adding, topping up, assigning balance to account is income. Buying, spending or paying is expense.',
     risk: 'medium',
     requiresConfirmation: true,
     input: {
@@ -61,8 +47,8 @@ export const AI_TOOL_REGISTRY: AIToolDefinition[] = [
       additionalProperties: false,
       properties: {
         kind: { enum: ['income', 'expense'] },
-        amount: { type: 'number' },
-        currency: { enum: ['RUB', 'USD', 'EUR', 'VND', null] },
+        amount: { type: ['number', 'string'] },
+        currency: currencyOrNull,
         account: stringOrNull,
         category: stringOrNull,
         section: stringOrNull,
@@ -79,13 +65,7 @@ export const AI_TOOL_REGISTRY: AIToolDefinition[] = [
     input: {
       type: 'object',
       additionalProperties: false,
-      properties: {
-        fromAccount: { type: 'string' },
-        toAccount: { type: 'string' },
-        amount: { type: 'number' },
-        currency: { enum: ['RUB', 'USD', 'EUR', 'VND', null] },
-        description: stringOrNull,
-      },
+      properties: { fromAccount: { type: 'string' }, toAccount: { type: 'string' }, amount: { type: ['number', 'string'] }, currency: currencyOrNull, description: stringOrNull },
       required: ['fromAccount', 'toAccount', 'amount', 'currency', 'description'],
     },
   },
@@ -94,28 +74,14 @@ export const AI_TOOL_REGISTRY: AIToolDefinition[] = [
     description: 'Create income or expense category.',
     risk: 'medium',
     requiresConfirmation: true,
-    input: {
-      type: 'object',
-      additionalProperties: false,
-      properties: {
-        name: { type: 'string' },
-        type: { enum: ['income', 'expense'] },
-        section: stringOrNull,
-      },
-      required: ['name', 'type', 'section'],
-    },
+    input: { type: 'object', additionalProperties: false, properties: { name: { type: 'string' }, type: { enum: ['income', 'expense'] }, section: stringOrNull }, required: ['name', 'type', 'section'] },
   },
   {
     name: 'update_category',
     description: 'Rename category or move category to section.',
     risk: 'medium',
     requiresConfirmation: true,
-    input: {
-      type: 'object',
-      additionalProperties: false,
-      properties: { category: { type: 'string' }, name: stringOrNull, section: stringOrNull },
-      required: ['category', 'name', 'section'],
-    },
+    input: { type: 'object', additionalProperties: false, properties: { category: { type: 'string' }, name: stringOrNull, section: stringOrNull }, required: ['category', 'name', 'section'] },
   },
   {
     name: 'delete_category',
@@ -147,7 +113,7 @@ export const AI_TOOL_REGISTRY: AIToolDefinition[] = [
   },
   {
     name: 'assign_category_to_section',
-    description: 'Assign/move a category to a section.',
+    description: 'Assign or move a category to a section.',
     risk: 'medium',
     requiresConfirmation: true,
     input: { type: 'object', additionalProperties: false, properties: { category: { type: 'string' }, section: { type: 'string' } }, required: ['category', 'section'] },

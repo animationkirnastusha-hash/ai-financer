@@ -1,9 +1,9 @@
+import { prisma } from '../../lib/prisma';
 import { AccountService } from '../accounts/service';
 import { CategoryService } from '../categories/service';
 import { SectionService } from '../sections/service';
 import { TransactionService } from '../transactions/service';
 import { AIParsedCommand, AIValidatedAction } from './types';
-import { prisma } from '../../lib/prisma';
 
 const accountService = new AccountService();
 const transactionService = new TransactionService();
@@ -59,17 +59,7 @@ export class AIExecutorService {
     }
 
     if (action.tool === 'create_transaction') {
-      const pendingAccountName = typeof resolved.pendingAccountName === 'string' ? resolved.pendingAccountName.toLowerCase() : '';
-      const accountId = typeof resolved.accountId === 'string'
-        ? resolved.accountId
-        : pendingAccountName
-          ? createdAccountNames.get(pendingAccountName)
-          : undefined;
-
-      if (!accountId) {
-        throw new Error('AI action is missing resolved account');
-      }
-
+      const accountId = this.resolveRuntimeAccountId(input, resolved, createdAccountNames);
       const amount = Number(resolved.amountInAccountCurrency ?? input.amount);
       const categoryId = await this.findOrCreateCategoryId(userId, {
         name: typeof input.category === 'string' ? input.category : '',
@@ -114,9 +104,37 @@ export class AIExecutorService {
       return { tool: action.tool, category };
     }
 
+    if (action.tool === 'update_category') {
+      const category = await categoryService.updateCategory(userId, String(resolved.categoryId), {
+        ...(input.name ? { name: String(input.name) } : {}),
+        ...(resolved.sectionId ? { sectionId: String(resolved.sectionId) } : {}),
+      });
+      return { tool: action.tool, category };
+    }
+
+    if (action.tool === 'delete_category') {
+      const category = await categoryService.deleteCategory(userId, String(resolved.categoryId));
+      return { tool: action.tool, category };
+    }
+
     if (action.tool === 'create_section') {
       const section = await sectionService.createSection(userId, { name: String(input.name) });
       return { tool: action.tool, section };
+    }
+
+    if (action.tool === 'update_section') {
+      const section = await sectionService.updateSection(userId, String(resolved.sectionId), { name: String(input.name) });
+      return { tool: action.tool, section };
+    }
+
+    if (action.tool === 'delete_section') {
+      const section = await sectionService.deleteSection(userId, String(resolved.sectionId));
+      return { tool: action.tool, section };
+    }
+
+    if (action.tool === 'assign_category_to_section') {
+      const category = await categoryService.updateCategory(userId, String(resolved.categoryId), { sectionId: String(resolved.sectionId) });
+      return { tool: action.tool, category };
     }
 
     if (action.tool === 'show_accounts') {
@@ -132,14 +150,25 @@ export class AIExecutorService {
     return { tool: action.tool, skipped: true };
   }
 
+  private resolveRuntimeAccountId(input: Record<string, unknown>, resolved: Record<string, unknown>, createdAccountNames: Map<string, string>) {
+    if (typeof resolved.accountId === 'string') return resolved.accountId;
+
+    const pendingName = typeof resolved.pendingAccountName === 'string'
+      ? resolved.pendingAccountName
+      : typeof input.account === 'string'
+        ? input.account
+        : '';
+
+    const id = createdAccountNames.get(pendingName.toLowerCase());
+    if (!id) throw new Error(`Runtime account not found: ${pendingName}`);
+    return id;
+  }
+
   private async findOrCreateCategoryId(userId: string, params: { name: string; type: 'income' | 'expense'; sectionId?: string | null }) {
     const name = params.name.trim();
     if (!name) return null;
 
-    const existing = await prisma.category.findFirst({
-      where: { userId, name },
-    });
-
+    const existing = await prisma.category.findFirst({ where: { userId, name } });
     if (existing) return existing.id;
 
     const created = await categoryService.createCategory(userId, {
