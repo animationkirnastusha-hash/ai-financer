@@ -15,7 +15,7 @@ function normalizeBaseUrl(value: string | undefined) {
 }
 
 function getModel() {
-  return (env.ollamaModel || 'qwen3:14b').trim();
+  return (env.ollamaModel).trim();
 }
 
 function getTimeoutMs(request: AIProviderJsonRequest) {

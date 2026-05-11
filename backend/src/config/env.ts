@@ -42,10 +42,7 @@ export const env = {
 
   aiMode: getEnv('AI_MODE', 'mock'),
   ollamaBaseUrl: getEnv('OLLAMA_BASE_URL', 'http://localhost:11434'),
-  ollamaModel: getEnv('OLLAMA_MODEL', 'qwen3:14b'),
-  ollamaFastModel: getEnv('OLLAMA_FAST_MODEL', 'qwen3:14b'),
-  ollamaFreeReasoningModel: getEnv('OLLAMA_FREE_REASONING_MODEL', 'qwen3:14b'),
-  ollamaPremiumModel: getEnv('OLLAMA_PREMIUM_MODEL', 'qwen3:14b'),
+  ollamaModel: getEnv('OLLAMA_MODEL'),
   aiLlmTimeoutMs: getNumberEnv('AI_LLM_TIMEOUT_MS', 180000),
 
   frontendUrl: getEnv('FRONTEND_URL', 'http://localhost:5173'),
