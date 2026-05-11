@@ -22,6 +22,11 @@ interface AccountLite {
   balance: number;
 }
 
+type CreatedAccountRef = {
+  name: string;
+  currency: AICurrency;
+};
+
 export class AIValidatorService {
   async validate(userId: string, plan: AIActionPlan): Promise<AIValidatedPlan> {
     const [accounts, categories, sections] = await Promise.all([
@@ -32,7 +37,7 @@ export class AIValidatorService {
 
     const issues: AIValidatedPlan['issues'] = [];
     const actions: AIValidatedAction[] = [];
-    let lastCreatedAccountName: string | null = null;
+    let lastCreatedAccount: CreatedAccountRef | null = null;
 
     plan.actions.forEach((action, index) => {
       const definition = getToolDefinition(action.tool);
@@ -45,14 +50,19 @@ export class AIValidatorService {
       const resolved: Record<string, unknown> = {};
 
       if (action.tool === 'create_account') {
-        const name = this.requiredString(input.name);
+        const name = this.cleanEntityName(this.requiredString(input.name));
         if (!name) issues.push({ code: 'missing_account_name', message: 'Не хватает названия счёта.', actionIndex: index, field: 'name' });
 
+        const type = ACCOUNT_TYPES.includes(input.type as AIAccountType) ? input.type as AIAccountType : 'cash';
+        const currency = this.resolveCurrency(input.currency, this.requiredString(input.name), 'RUB');
+        const initialBalance = normalizeMoneyAmount(input.initialBalance) ?? 0;
+
         input.name = name;
-        input.type = ACCOUNT_TYPES.includes(input.type as AIAccountType) ? input.type : 'cash';
-        input.currency = CURRENCIES.includes(input.currency as AICurrency) ? input.currency : 'RUB';
-        input.initialBalance = normalizeMoneyAmount(input.initialBalance) ?? 0;
-        lastCreatedAccountName = name || null;
+        input.type = type;
+        input.currency = currency;
+        input.initialBalance = initialBalance;
+
+        if (name) lastCreatedAccount = { name, currency };
       }
 
       if (action.tool === 'update_account' || action.tool === 'delete_account') {
@@ -61,6 +71,10 @@ export class AIValidatorService {
         else resolved.accountId = account.id;
 
         if (action.tool === 'update_account') {
+          const newName = this.cleanEntityName(this.requiredString(input.name));
+          if (newName) input.name = newName;
+          else delete input.name;
+
           if (input.type !== null && input.type !== undefined && !ACCOUNT_TYPES.includes(input.type as AIAccountType)) delete input.type;
           if (input.currency !== null && input.currency !== undefined && !CURRENCIES.includes(input.currency as AICurrency)) delete input.currency;
           if (input.balance !== null && input.balance !== undefined) input.balance = normalizeMoneyAmount(input.balance);
@@ -70,24 +84,48 @@ export class AIValidatorService {
       if (action.tool === 'create_transaction') {
         const kind = input.kind === 'income' || input.kind === 'expense' ? input.kind : null;
         const amount = normalizeMoneyAmount(input.amount);
-        const accountRef = this.requiredString(input.account) || lastCreatedAccountName || (accounts.length === 1 ? accounts[0].name : '');
+        const explicitAccountRef = this.requiredString(input.account);
+        const accountRef = explicitAccountRef || lastCreatedAccount?.name || (accounts.length === 1 ? accounts[0].name : '');
         const account = this.resolveAccount(accounts, accountRef);
+        const pointsToJustCreatedAccount = !account && lastCreatedAccount && this.isSameRef(accountRef, lastCreatedAccount.name);
+        const fallbackCurrency = account
+          ? account.currency as AICurrency
+          : lastCreatedAccount?.currency ?? 'RUB';
+        const currency = this.resolveCurrency(input.currency, `${input.amount ?? ''} ${input.description ?? ''}`, fallbackCurrency);
 
         if (!kind) issues.push({ code: 'missing_transaction_kind', message: 'Не понял: это доход или расход.', actionIndex: index, field: 'kind' });
         if (!amount) issues.push({ code: 'missing_amount', message: 'Не хватает суммы операции.', actionIndex: index, field: 'amount' });
-        if (!account) issues.push({ code: 'account_not_found', message: accountRef ? `Не нашёл счёт: ${accountRef}` : 'Не хватает счёта.', actionIndex: index, field: 'account' });
+        if (!account && !pointsToJustCreatedAccount) {
+          issues.push({
+            code: 'account_not_found',
+            message: accountRef ? `Не нашёл счёт: ${accountRef}` : 'Не хватает счёта.',
+            actionIndex: index,
+            field: 'account',
+          });
+        }
 
         input.kind = kind;
         input.amount = amount ?? 0;
-        input.currency = normalizeCurrency(input.currency, account ? account.currency as AICurrency : 'RUB');
+        input.currency = currency;
+
         if (account && amount) {
           resolved.accountId = account.id;
           resolved.accountCurrency = account.currency;
-          resolved.amountInAccountCurrency = convertMoney(amount, input.currency as AICurrency, account.currency as AICurrency);
+          resolved.amountInAccountCurrency = convertMoney(amount, currency, account.currency as AICurrency);
         }
 
-        const categoryName = this.requiredString(input.category);
-        const sectionName = this.requiredString(input.section);
+        if (pointsToJustCreatedAccount && lastCreatedAccount && amount) {
+          input.account = lastCreatedAccount.name;
+          resolved.pendingAccountName = lastCreatedAccount.name;
+          resolved.accountCurrency = lastCreatedAccount.currency;
+          resolved.amountInAccountCurrency = convertMoney(amount, currency, lastCreatedAccount.currency);
+        }
+
+        const categoryName = this.cleanEntityName(this.requiredString(input.category));
+        const sectionName = this.cleanEntityName(this.requiredString(input.section));
+        input.category = categoryName || null;
+        input.section = sectionName || null;
+
         const category = categoryName ? this.findByName(categories, categoryName) : null;
         const section = sectionName ? this.findByName(sections, sectionName) : null;
         if (category) resolved.categoryId = category.id;
@@ -98,6 +136,7 @@ export class AIValidatorService {
         const amount = normalizeMoneyAmount(input.amount);
         const from = this.resolveAccount(accounts, this.requiredString(input.fromAccount));
         const to = this.resolveAccount(accounts, this.requiredString(input.toAccount));
+        const currency = this.resolveCurrency(input.currency, String(input.amount ?? ''), from ? from.currency as AICurrency : 'RUB');
 
         if (!amount) issues.push({ code: 'missing_amount', message: 'Не хватает суммы перевода.', actionIndex: index, field: 'amount' });
         if (!from) issues.push({ code: 'from_account_not_found', message: 'Не нашёл счёт списания.', actionIndex: index, field: 'fromAccount' });
@@ -105,24 +144,25 @@ export class AIValidatorService {
         if (from && to && from.id === to.id) issues.push({ code: 'same_account_transfer', message: 'Нельзя перевести на тот же счёт.', actionIndex: index });
 
         input.amount = amount ?? 0;
-        input.currency = normalizeCurrency(input.currency, from ? from.currency as AICurrency : 'RUB');
+        input.currency = currency;
         if (from) resolved.fromAccountId = from.id;
         if (to) resolved.toAccountId = to.id;
-        if (from && amount) resolved.amountInFromCurrency = convertMoney(amount, input.currency as AICurrency, from.currency as AICurrency);
+        if (from && amount) resolved.amountInFromCurrency = convertMoney(amount, currency, from.currency as AICurrency);
       }
 
       if (action.tool === 'create_category') {
-        const name = this.requiredString(input.name);
+        const name = this.cleanEntityName(this.requiredString(input.name));
         if (!name) issues.push({ code: 'missing_category_name', message: 'Не хватает названия категории.', actionIndex: index, field: 'name' });
         input.name = name;
         input.type = input.type === 'income' ? 'income' : 'expense';
-        const sectionName = this.requiredString(input.section);
+        const sectionName = this.cleanEntityName(this.requiredString(input.section));
+        input.section = sectionName || null;
         const section = sectionName ? this.findByName(sections, sectionName) : null;
         if (section) resolved.sectionId = section.id;
       }
 
       if (action.tool === 'create_section') {
-        const name = this.requiredString(input.name);
+        const name = this.cleanEntityName(this.requiredString(input.name));
         if (!name) issues.push({ code: 'missing_section_name', message: 'Не хватает названия раздела.', actionIndex: index, field: 'name' });
         input.name = name;
       }
@@ -147,19 +187,44 @@ export class AIValidatorService {
     return typeof value === 'string' ? value.trim().replace(/[«»"]/g, '').replace(/\s+/g, ' ') : '';
   }
 
+  private cleanEntityName(value: string) {
+    return value
+      .replace(/[«»"]/g, '')
+      .replace(/^(сч[её]т|account|кошел[её]к|wallet|карта|card)\s+/i, '')
+      .replace(/^(с\s+названием|названи[еем]|назови\s+(его|её|это)?|named|name\s+it|called)\s+/i, '')
+      .replace(/\s+(и|and)\s+(добавь|положи|закинь|пополни|присвой|add|put|top\s*up|deposit)\b.*$/i, '')
+      .replace(/\s+(руб|рубл[ьяей]*|₽|usd|доллар[аов]*|dollars?|eur|евро|vnd|dong|đồng)\.?$/i, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  private resolveCurrency(value: unknown, text: string, fallback: AICurrency): AICurrency {
+    const direct = normalizeCurrency(value, fallback);
+    if (typeof value === 'string' && direct !== fallback) return direct;
+    return normalizeCurrency(text, fallback);
+  }
+
+  private isSameRef(left: string, right: string) {
+    return this.normalizeRef(left) === this.normalizeRef(right);
+  }
+
+  private normalizeRef(value: string) {
+    return value.trim().toLowerCase().replace(/[«»"]/g, '').replace(/\s+/g, ' ');
+  }
+
   private resolveAccount(accounts: AccountLite[], raw: string) {
-    const ref = raw.trim().toLowerCase();
+    const ref = this.normalizeRef(raw);
     if (!ref) return null;
     return accounts.find((account) => account.id === raw)
-      ?? accounts.find((account) => account.name.toLowerCase() === ref)
-      ?? accounts.find((account) => account.name.toLowerCase().includes(ref) || ref.includes(account.name.toLowerCase()))
+      ?? accounts.find((account) => this.normalizeRef(account.name) === ref)
+      ?? accounts.find((account) => this.normalizeRef(account.name).includes(ref) || ref.includes(this.normalizeRef(account.name)))
       ?? null;
   }
 
   private findByName<T extends { name: string }>(items: T[], raw: string) {
-    const ref = raw.trim().toLowerCase();
-    return items.find((item) => item.name.toLowerCase() === ref)
-      ?? items.find((item) => item.name.toLowerCase().includes(ref) || ref.includes(item.name.toLowerCase()))
+    const ref = this.normalizeRef(raw);
+    return items.find((item) => this.normalizeRef(item.name) === ref)
+      ?? items.find((item) => this.normalizeRef(item.name).includes(ref) || ref.includes(this.normalizeRef(item.name)))
       ?? null;
   }
 

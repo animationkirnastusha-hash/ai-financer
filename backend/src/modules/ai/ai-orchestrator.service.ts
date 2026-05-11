@@ -151,7 +151,9 @@ export class AIOrchestratorService {
         executed: false,
         requiresConfirmation: false,
         riskLevel: 'low',
-        message: `AI Core не смог обработать запрос: ${message}`,
+        message: message.includes('Ollama') || message.includes('JSON') || message.includes('timed out')
+          ? 'Локальная AI-модель не вернула корректный план. Проверь, что Ollama запущена и модель qwen3:14b доступна.'
+          : `Не получилось подготовить действие: ${message}`,
         parsed: null,
         meta: { auditLogId: audit.id },
       };

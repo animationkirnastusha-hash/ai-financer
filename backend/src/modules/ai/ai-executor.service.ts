@@ -59,7 +59,17 @@ export class AIExecutorService {
     }
 
     if (action.tool === 'create_transaction') {
-      const accountId = String(resolved.accountId);
+      const pendingAccountName = typeof resolved.pendingAccountName === 'string' ? resolved.pendingAccountName.toLowerCase() : '';
+      const accountId = typeof resolved.accountId === 'string'
+        ? resolved.accountId
+        : pendingAccountName
+          ? createdAccountNames.get(pendingAccountName)
+          : undefined;
+
+      if (!accountId) {
+        throw new Error('AI action is missing resolved account');
+      }
+
       const amount = Number(resolved.amountInAccountCurrency ?? input.amount);
       const categoryId = await this.findOrCreateCategoryId(userId, {
         name: typeof input.category === 'string' ? input.category : '',
