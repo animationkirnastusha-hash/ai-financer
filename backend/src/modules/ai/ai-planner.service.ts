@@ -15,48 +15,39 @@ export class AIPlannerService {
 
   async plan(command: string, context: unknown): Promise<AIPlan> {
     const system = [
-      'You are the semantic planner for an AI finance app.',
-      'The user may speak Russian, English, Vietnamese, slang, or mixed language.',
-      'Understand meaning like a human assistant, then return tool actions.',
-      'Do not execute anything. Do not answer with prose outside JSON.',
-      'Use clarification only if an app action cannot be safely planned.',
-      'For Base plan: do all normal finance/account/category/section/settings actions that app can do.',
+      'You are the semantic planner of a finance app.',
+      'Return compact valid JSON only.',
+      'Do not execute actions.',
+      'Understand the user meaning, then select app tools.',
+      'Support Russian, English, Vietnamese, and mixed text.',
+      'Never copy instruction fragments into entity names.',
+      'If required data is missing or unsafe, return clarification.',
     ].join(' ');
 
-    const prompt = [
-      'Return JSON only:',
-      '{"mode":"actions|question|clarification","language":"ru|en|vi|null","summary":"short|null","answer":"short|null","message":"short|null","missing":[],"actions":[{"tool":"tool_name","reason":"short|null","input":{}}]}',
-      '',
-      'Rules:',
-      '- Split one user message into multiple actions when needed.',
-      '- If user creates an account and then says put/add/top up/deposit/присвой/положи/пополни there, create_account then create_transaction kind=income.',
-      '- If user says buy/pay/spent/купил/оплатил/потратил, create_transaction kind=expense.',
-      '- Account name must be only the human label. Never include money commands inside name.',
-      '- If user says "с названием X", "назови его X", "called X", account name is X.',
-      '- If user says account in dollars/rubles/euros/dong, set account currency accordingly.',
-      '- If amount is "10 тысяч", "10k", "десять тысяч", keep amount context in input.amount or input.rawAmountText; do not reduce it to 10.',
-      '- If a transaction refers to the account just created, set account to the created account name.',
-      '- If currency is omitted for money added to a newly created account, use that account currency.',
-      '',
-      'Tools:',
-      getPlannerToolContract(),
-      '',
-      'Current user data:',
-      JSON.stringify(this.compactContext(context)),
-      '',
-      'User text:',
-      command,
-    ].join('\n');
+    const prompt = JSON.stringify({
+      output: {
+        mode: 'actions|question|clarification',
+        language: 'ru|en|vi|null',
+        summary: 'string|null',
+        answer: 'string|null',
+        message: 'string|null',
+        missing: ['string'],
+        actions: [{ tool: 'tool_name', reason: 'string|null', input: {} }],
+      },
+      tools: getPlannerToolContract(),
+      current: this.compactContext(context),
+      user: command,
+    });
 
     const raw = await this.provider.generateJson<Record<string, unknown>>({
       system,
       prompt,
       temperature: 0,
-      numCtx: 2048,
-      numPredict: 256,
+      numCtx: 1024,
+      numPredict: 140,
     });
 
-    const plan = this.normalizePlan(raw, command);
+    const plan = this.normalizePlan(raw);
 
     console.log('[AI] planner normalized', {
       mode: plan.mode,
@@ -82,7 +73,7 @@ export class AIPlannerService {
     };
   }
 
-  private normalizePlan(raw: Record<string, unknown>, command: string): AIPlan {
+  private normalizePlan(raw: Record<string, unknown>): AIPlan {
     const mode = typeof raw.mode === 'string' ? raw.mode : 'clarification';
 
     if (mode === 'actions') {
@@ -97,18 +88,12 @@ export class AIPlannerService {
         .map((item): AIToolCall | null => {
           const rawTool = typeof item.tool === 'string' ? item.tool : typeof item.name === 'string' ? item.name : '';
 
-          if (!this.isToolName(rawTool)) {
-            return null;
-          }
+          if (!this.isToolName(rawTool)) return null;
 
           const input = this.asRecord(item.input ?? item.args ?? item.arguments);
-          input.__userText = command;
-
           const reason = typeof item.reason === 'string' && item.reason.trim() ? item.reason.trim() : undefined;
 
-          return reason
-            ? { tool: rawTool, input, reason }
-            : { tool: rawTool, input };
+          return reason ? { tool: rawTool, input, reason } : { tool: rawTool, input };
         })
         .filter((action): action is AIToolCall => action !== null);
 
@@ -116,7 +101,7 @@ export class AIPlannerService {
         return {
           mode: 'clarification',
           language: this.asOptionalString(raw.language),
-          message: 'Я понял запрос, но не смог безопасно собрать действие. Сформулируй чуть точнее.',
+          message: 'Я понял смысл, но не смог безопасно собрать действие. Уточни, что нужно сделать.',
           missing: ['action'],
         };
       }
