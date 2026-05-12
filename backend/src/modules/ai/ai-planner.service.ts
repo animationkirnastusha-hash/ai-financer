@@ -15,23 +15,36 @@ export class AIPlannerService {
 
   async plan(command: string, context: unknown): Promise<AIPlan> {
     const system = [
-      'You are a finance app planner.',
-      'Understand the user meaning and return JSON only.',
-      'Never execute. Only plan app actions.',
-      'Use actions for app changes, question for advice/info, clarification only when truly required.',
-      'Support Russian, English, Vietnamese, mixed language.',
-      'Money put/deposit/topup/add to account is income transaction.',
-      'Account name is only the human label, not the whole sentence.',
+      'You are the semantic planner for an AI finance app.',
+      'The user may speak Russian, English, Vietnamese, slang, or mixed language.',
+      'Understand meaning like a human assistant, then return tool actions.',
+      'Do not execute anything. Do not answer with prose outside JSON.',
+      'Use clarification only if an app action cannot be safely planned.',
+      'For Base plan: do all normal finance/account/category/section/settings actions that app can do.',
     ].join(' ');
 
     const prompt = [
-      'Return this shape:',
+      'Return JSON only:',
       '{"mode":"actions|question|clarification","language":"ru|en|vi|null","summary":"short|null","answer":"short|null","message":"short|null","missing":[],"actions":[{"tool":"tool_name","reason":"short|null","input":{}}]}',
+      '',
+      'Rules:',
+      '- Split one user message into multiple actions when needed.',
+      '- If user creates an account and then says put/add/top up/deposit/присвой/положи/пополни there, create_account then create_transaction kind=income.',
+      '- If user says buy/pay/spent/купил/оплатил/потратил, create_transaction kind=expense.',
+      '- Account name must be only the human label. Never include money commands inside name.',
+      '- If user says "с названием X", "назови его X", "called X", account name is X.',
+      '- If user says account in dollars/rubles/euros/dong, set account currency accordingly.',
+      '- If amount is "10 тысяч", "10k", "десять тысяч", keep amount context in input.amount or input.rawAmountText; do not reduce it to 10.',
+      '- If a transaction refers to the account just created, set account to the created account name.',
+      '- If currency is omitted for money added to a newly created account, use that account currency.',
+      '',
       'Tools:',
       getPlannerToolContract(),
-      'Current:',
+      '',
+      'Current user data:',
       JSON.stringify(this.compactContext(context)),
-      'User:',
+      '',
+      'User text:',
       command,
     ].join('\n');
 
@@ -39,11 +52,11 @@ export class AIPlannerService {
       system,
       prompt,
       temperature: 0,
-      numCtx: 1024,
-      numPredict: 160,
+      numCtx: 2048,
+      numPredict: 256,
     });
 
-    const plan = this.normalizePlan(raw);
+    const plan = this.normalizePlan(raw, command);
 
     console.log('[AI] planner normalized', {
       mode: plan.mode,
@@ -58,18 +71,18 @@ export class AIPlannerService {
     const value = this.asRecord(context) as UserContext;
     return {
       accounts: Array.isArray(value.accounts)
-        ? value.accounts.slice(0, 12).map((account) => ({ n: account.name, t: account.type, c: account.currency }))
+        ? value.accounts.slice(0, 16).map((account) => ({ n: account.name, t: account.type, c: account.currency }))
         : [],
       categories: Array.isArray(value.categories)
-        ? value.categories.slice(0, 20).map((category) => ({ n: category.name, t: category.type }))
+        ? value.categories.slice(0, 24).map((category) => ({ n: category.name, t: category.type }))
         : [],
       sections: Array.isArray(value.sections)
-        ? value.sections.slice(0, 12).map((section) => section.name).filter(Boolean)
+        ? value.sections.slice(0, 16).map((section) => section.name).filter(Boolean)
         : [],
     };
   }
 
-  private normalizePlan(raw: Record<string, unknown>): AIPlan {
+  private normalizePlan(raw: Record<string, unknown>, command: string): AIPlan {
     const mode = typeof raw.mode === 'string' ? raw.mode : 'clarification';
 
     if (mode === 'actions') {
@@ -89,6 +102,8 @@ export class AIPlannerService {
           }
 
           const input = this.asRecord(item.input ?? item.args ?? item.arguments);
+          input.__userText = command;
+
           const reason = typeof item.reason === 'string' && item.reason.trim() ? item.reason.trim() : undefined;
 
           return reason

@@ -10,11 +10,11 @@ const CURRENCY_RATES_TO_RUB: Record<AICurrency, number> = {
 };
 
 const SCALE_WORDS: Array<[RegExp, number]> = [
-  [/(тыс(?:яч[аи])?|тысяч|тыщ|к|k|nghìn|ngan)/i, 1_000],
+  [/(тыс(?:\.|яч[аи]?|яч|ячи|ячами)?|тысяч|тыщи|тыщ|к|k|nghìn|ngan|thousand)/i, 1_000],
   [/(млн|миллион(?:а|ов)?|million|triệu)/i, 1_000_000],
 ];
 
-const RU_SMALL: Record<string, number> = {
+const RU_NUMBER_WORDS: Record<string, number> = {
   ноль: 0,
   один: 1,
   одна: 1,
@@ -63,35 +63,53 @@ export function normalizeCurrency(value: unknown, fallback: AICurrency = 'RUB'):
   const upper = raw.toUpperCase();
 
   if (SUPPORTED_CURRENCIES.includes(upper as AICurrency)) return upper as AICurrency;
-  if (/₽|руб|rur|rub|rouble|ruble/.test(raw)) return 'RUB';
-  if (/\$|usd|доллар|бакс|dollar/.test(raw)) return 'USD';
+  if (/₽|руб|rur|rub|rouble|ruble|рубл/.test(raw)) return 'RUB';
+  if (/\$|usd|доллар|долларов|доллары|бакс|баксов|dollar/.test(raw)) return 'USD';
   if (/€|eur|евро|euro/.test(raw)) return 'EUR';
-  if (/vnd|донг|dong|đ|₫/.test(raw)) return 'VND';
+  if (/vnd|донг|донгов|dong|đ|₫/.test(raw)) return 'VND';
 
   return fallback;
 }
 
-export function normalizeMoneyAmount(value: unknown): number | null {
-  if (typeof value === 'number' && Number.isFinite(value) && value > 0) return Math.round(value);
-  if (typeof value !== 'string') return null;
+export function detectCurrencyInText(text: unknown, fallback?: AICurrency): AICurrency | undefined {
+  if (typeof text !== 'string' || !text.trim()) return fallback;
+  const raw = text.toLowerCase();
 
-  const raw = value.trim().toLowerCase();
-  if (!raw) return null;
+  if (/₽|руб|rur|rub|rouble|ruble|рубл/.test(raw)) return 'RUB';
+  if (/\$|usd|доллар|долларов|доллары|бакс|баксов|dollar/.test(raw)) return 'USD';
+  if (/€|eur|евро|euro/.test(raw)) return 'EUR';
+  if (/vnd|донг|донгов|dong|đ|₫/.test(raw)) return 'VND';
 
+  return fallback;
+}
+
+export function normalizeMoneyAmount(value: unknown, contextText?: string): number | null {
+  if (typeof value === 'number' && Number.isFinite(value) && value > 0) {
+    const contextScale = contextText ? detectScale(contextText) : 1;
+    if (value < 1000 && contextScale > 1) return Math.round(value * contextScale);
+    return Math.round(value);
+  }
+
+  const parts = [typeof value === 'string' ? value : '', contextText ?? '']
+    .filter(Boolean)
+    .join(' ')
+    .trim();
+
+  if (!parts) return null;
+
+  const raw = parts.toLowerCase();
   const compact = raw.replace(/[,]/g, '.').replace(/\s+/g, '');
   const numeric = compact.match(/\d+(?:\.\d+)?/);
 
   if (numeric) {
     const parsed = Number(numeric[0]);
     if (!Number.isFinite(parsed) || parsed <= 0) return null;
-    const scale = SCALE_WORDS.find(([pattern]) => pattern.test(raw))?.[1] ?? 1;
-    return Math.round(parsed * scale);
+    return Math.round(parsed * detectScale(raw));
   }
 
   const wordsValue = parseRussianNumberWords(raw);
   if (wordsValue > 0) {
-    const scale = SCALE_WORDS.find(([pattern]) => pattern.test(raw))?.[1] ?? 1;
-    return Math.round(wordsValue * scale);
+    return Math.round(wordsValue * detectScale(raw));
   }
 
   return null;
@@ -103,6 +121,10 @@ export function convertMoney(amount: number, from: AICurrency, to: AICurrency) {
   return Math.round(amountInRub / CURRENCY_RATES_TO_RUB[to]);
 }
 
+function detectScale(raw: string) {
+  return SCALE_WORDS.find(([pattern]) => pattern.test(raw))?.[1] ?? 1;
+}
+
 function parseRussianNumberWords(raw: string) {
   const words = raw
     .replace(/[^а-яё\s-]/gi, ' ')
@@ -110,5 +132,5 @@ function parseRussianNumberWords(raw: string) {
     .map((word) => word.trim())
     .filter(Boolean);
 
-  return words.reduce((sum, word) => sum + (RU_SMALL[word] ?? 0), 0);
+  return words.reduce((sum, word) => sum + (RU_NUMBER_WORDS[word] ?? 0), 0);
 }

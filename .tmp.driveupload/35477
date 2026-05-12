@@ -1,0 +1,133 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.AIPlannerService = void 0;
+const ollama_provider_1 = require("./providers/ollama.provider");
+const tool_registry_1 = require("./tools/tool-registry");
+const TOOL_NAMES = new Set(tool_registry_1.AI_TOOL_REGISTRY.map((tool) => tool.name));
+class AIPlannerService {
+    provider = new ollama_provider_1.OllamaProvider();
+    async plan(command, context) {
+        const system = [
+            'You are the semantic planner for an AI finance app.',
+            'The user may speak Russian, English, Vietnamese, slang, or mixed language.',
+            'Understand meaning like a human assistant, then return tool actions.',
+            'Do not execute anything. Do not answer with prose outside JSON.',
+            'Use clarification only if an app action cannot be safely planned.',
+            'For Base plan: do all normal finance/account/category/section/settings actions that app can do.',
+        ].join(' ');
+        const prompt = [
+            'Return JSON only:',
+            '{"mode":"actions|question|clarification","language":"ru|en|vi|null","summary":"short|null","answer":"short|null","message":"short|null","missing":[],"actions":[{"tool":"tool_name","reason":"short|null","input":{}}]}',
+            '',
+            'Rules:',
+            '- Split one user message into multiple actions when needed.',
+            '- If user creates an account and then says put/add/top up/deposit/присвой/положи/пополни there, create_account then create_transaction kind=income.',
+            '- If user says buy/pay/spent/купил/оплатил/потратил, create_transaction kind=expense.',
+            '- Account name must be only the human label. Never include money commands inside name.',
+            '- If user says "с названием X", "назови его X", "called X", account name is X.',
+            '- If user says account in dollars/rubles/euros/dong, set account currency accordingly.',
+            '- If amount is "10 тысяч", "10k", "десять тысяч", keep amount context in input.amount or input.rawAmountText; do not reduce it to 10.',
+            '- If a transaction refers to the account just created, set account to the created account name.',
+            '- If currency is omitted for money added to a newly created account, use that account currency.',
+            '',
+            'Tools:',
+            (0, tool_registry_1.getPlannerToolContract)(),
+            '',
+            'Current user data:',
+            JSON.stringify(this.compactContext(context)),
+            '',
+            'User text:',
+            command,
+        ].join('\n');
+        const raw = await this.provider.generateJson({
+            system,
+            prompt,
+            temperature: 0,
+            numCtx: 2048,
+            numPredict: 256,
+        });
+        const plan = this.normalizePlan(raw, command);
+        console.log('[AI] planner normalized', {
+            mode: plan.mode,
+            actions: plan.mode === 'actions' ? plan.actions.map((action) => action.tool) : [],
+            missing: plan.mode === 'clarification' ? plan.missing ?? [] : [],
+        });
+        return plan;
+    }
+    compactContext(context) {
+        const value = this.asRecord(context);
+        return {
+            accounts: Array.isArray(value.accounts)
+                ? value.accounts.slice(0, 16).map((account) => ({ n: account.name, t: account.type, c: account.currency }))
+                : [],
+            categories: Array.isArray(value.categories)
+                ? value.categories.slice(0, 24).map((category) => ({ n: category.name, t: category.type }))
+                : [],
+            sections: Array.isArray(value.sections)
+                ? value.sections.slice(0, 16).map((section) => section.name).filter(Boolean)
+                : [],
+        };
+    }
+    normalizePlan(raw, command) {
+        const mode = typeof raw.mode === 'string' ? raw.mode : 'clarification';
+        if (mode === 'actions') {
+            const rawActions = Array.isArray(raw.actions)
+                ? raw.actions
+                : Array.isArray(raw.toolCalls)
+                    ? raw.toolCalls
+                    : [];
+            const actions = rawActions
+                .filter((item) => Boolean(item) && typeof item === 'object' && !Array.isArray(item))
+                .map((item) => {
+                const rawTool = typeof item.tool === 'string' ? item.tool : typeof item.name === 'string' ? item.name : '';
+                if (!this.isToolName(rawTool)) {
+                    return null;
+                }
+                const input = this.asRecord(item.input ?? item.args ?? item.arguments);
+                input.__userText = command;
+                const reason = typeof item.reason === 'string' && item.reason.trim() ? item.reason.trim() : undefined;
+                return reason
+                    ? { tool: rawTool, input, reason }
+                    : { tool: rawTool, input };
+            })
+                .filter((action) => action !== null);
+            if (actions.length === 0) {
+                return {
+                    mode: 'clarification',
+                    language: this.asOptionalString(raw.language),
+                    message: 'Я понял запрос, но не смог безопасно собрать действие. Сформулируй чуть точнее.',
+                    missing: ['action'],
+                };
+            }
+            return {
+                mode: 'actions',
+                language: this.asOptionalString(raw.language),
+                summary: this.asOptionalString(raw.summary) ?? 'Проверь действие перед выполнением.',
+                actions,
+            };
+        }
+        if (mode === 'question') {
+            return {
+                mode: 'question',
+                language: this.asOptionalString(raw.language),
+                answer: this.asOptionalString(raw.answer) ?? 'Я могу помочь с финансами или выполнить действие в приложении.',
+            };
+        }
+        return {
+            mode: 'clarification',
+            language: this.asOptionalString(raw.language),
+            message: this.asOptionalString(raw.message) ?? 'Нужно уточнение.',
+            missing: Array.isArray(raw.missing) ? raw.missing.filter((item) => typeof item === 'string') : [],
+        };
+    }
+    isToolName(value) {
+        return TOOL_NAMES.has(value);
+    }
+    asOptionalString(value) {
+        return typeof value === 'string' && value.trim() ? value.trim() : undefined;
+    }
+    asRecord(value) {
+        return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+    }
+}
+exports.AIPlannerService = AIPlannerService;

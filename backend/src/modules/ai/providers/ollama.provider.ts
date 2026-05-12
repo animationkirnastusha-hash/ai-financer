@@ -15,20 +15,16 @@ function normalizeBaseUrl(value: string | undefined) {
   return raw.replace(/\/+$/, '').replace(/\/api$/i, '');
 }
 
-function getModel() {
-  return (env.ollamaModel || 'qwen2.5:3b').trim();
-}
-
 function getTimeoutMs(request: AIProviderJsonRequest) {
-  return Math.max(10_000, request.timeoutMs ?? env.ollamaTimeoutMs ?? env.aiLlmTimeoutMs ?? 45_000);
+  return Math.max(10_000, request.timeoutMs ?? env.ollamaTimeoutMs ?? env.aiLlmTimeoutMs ?? 90_000);
 }
 
 function getNumCtx(request: AIProviderJsonRequest) {
-  return Math.max(512, Math.min(4096, request.numCtx ?? env.ollamaNumCtx ?? 1024));
+  return Math.max(512, Math.min(8192, request.numCtx ?? env.ollamaNumCtx ?? 2048));
 }
 
 function getNumPredict(request: AIProviderJsonRequest) {
-  return Math.max(64, Math.min(512, request.numPredict ?? env.ollamaNumPredict ?? 160));
+  return Math.max(64, Math.min(1024, request.numPredict ?? env.ollamaNumPredict ?? 256));
 }
 
 function stripThinking(value: string) {
@@ -48,10 +44,15 @@ function extractJson(value: string) {
   if (!cleaned) return '';
 
   if (cleaned.startsWith('{') && cleaned.endsWith('}')) return cleaned;
+  if (cleaned.startsWith('[') && cleaned.endsWith(']')) return cleaned;
 
-  const first = cleaned.indexOf('{');
-  const last = cleaned.lastIndexOf('}');
-  if (first >= 0 && last > first) return cleaned.slice(first, last + 1);
+  const firstObject = cleaned.indexOf('{');
+  const lastObject = cleaned.lastIndexOf('}');
+  if (firstObject >= 0 && lastObject > firstObject) return cleaned.slice(firstObject, lastObject + 1);
+
+  const firstArray = cleaned.indexOf('[');
+  const lastArray = cleaned.lastIndexOf(']');
+  if (firstArray >= 0 && lastArray > firstArray) return cleaned.slice(firstArray, lastArray + 1);
 
   return '';
 }
@@ -75,7 +76,7 @@ async function readError(response: Response) {
 export class OllamaProvider implements AIProvider {
   async generateJson<T>(request: AIProviderJsonRequest): Promise<T> {
     const baseUrl = normalizeBaseUrl(env.ollamaBaseUrl);
-    const model = getModel();
+    const model = (env.ollamaModel || 'qwen3:14b').trim();
     const timeoutMs = getTimeoutMs(request);
     const numCtx = getNumCtx(request);
     const numPredict = getNumPredict(request);
@@ -85,14 +86,13 @@ export class OllamaProvider implements AIProvider {
 
     const system = [
       request.system,
-      'Return compact valid JSON only. No markdown. No explanations.',
+      'Return compact valid JSON only.',
+      'No markdown, no natural language outside JSON, no reasoning text.',
     ].filter(Boolean).join('\n');
 
-    const fullPrompt = request.prompt;
+    const startedAt = Date.now();
 
     try {
-      const startedAt = Date.now();
-
       console.log('[OLLAMA] generateJson:start', {
         model,
         timeoutMs,
@@ -100,7 +100,7 @@ export class OllamaProvider implements AIProvider {
         numCtx,
         numPredict,
         format: 'json',
-        promptChars: system.length + fullPrompt.length,
+        promptChars: system.length + request.prompt.length,
       });
 
       const response = await fetch(`${baseUrl}/api/generate`, {
@@ -110,14 +110,15 @@ export class OllamaProvider implements AIProvider {
         body: JSON.stringify({
           model,
           system,
-          prompt: fullPrompt,
+          prompt: request.prompt,
           stream: false,
           format: 'json',
-          keep_alive: '10m',
+          think: false,
+          keep_alive: '15m',
           options: {
             temperature: request.temperature ?? 0,
-            top_p: 0.7,
-            repeat_penalty: 1.05,
+            top_p: 0.65,
+            repeat_penalty: 1.08,
             num_ctx: numCtx,
             num_predict: numPredict,
           },
@@ -142,7 +143,8 @@ export class OllamaProvider implements AIProvider {
       });
 
       if (env.aiDebug) {
-        console.log('[OLLAMA] raw preview', raw.slice(0, 1600));
+        console.log('[OLLAMA] raw preview', raw.slice(0, 2000));
+        if (payload.thinking) console.log('[OLLAMA] thinking preview', payload.thinking.slice(0, 800));
       }
 
       if (!json) {

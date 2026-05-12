@@ -31,6 +31,8 @@ function getBooleanEnv(name: string, fallback: boolean): boolean {
   return ['1', 'true', 'yes', 'on'].includes(raw.toLowerCase());
 }
 
+const defaultOllamaModel = getEnv('OLLAMA_MODEL', 'qwen3:14b');
+
 export const env = {
   nodeEnv: getEnv('NODE_ENV', 'development'),
   port: getNumberEnv('PORT', 3000),
@@ -44,15 +46,15 @@ export const env = {
   aiDebug: getBooleanEnv('AI_DEBUG', false),
 
   ollamaBaseUrl: getEnv('OLLAMA_BASE_URL', 'http://127.0.0.1:11434'),
-  ollamaModel: getEnv('OLLAMA_MODEL', 'qwen2.5:3b'),
-  ollamaFastModel: getEnv('OLLAMA_FAST_MODEL', getEnv('OLLAMA_MODEL', 'qwen2.5:3b')),
-  ollamaFreeReasoningModel: getEnv('OLLAMA_FREE_REASONING_MODEL', getEnv('OLLAMA_MODEL', 'qwen2.5:3b')),
-  ollamaPremiumModel: getEnv('OLLAMA_PREMIUM_MODEL', getEnv('OLLAMA_MODEL', 'qwen2.5:7b')),
+  ollamaModel: defaultOllamaModel,
+  ollamaFastModel: getEnv('OLLAMA_FAST_MODEL', defaultOllamaModel),
+  ollamaFreeReasoningModel: getEnv('OLLAMA_FREE_REASONING_MODEL', defaultOllamaModel),
+  ollamaPremiumModel: getEnv('OLLAMA_PREMIUM_MODEL', 'qwen3:14b'),
 
-  aiLlmTimeoutMs: getNumberEnv('AI_LLM_TIMEOUT_MS', getNumberEnv('OLLAMA_TIMEOUT_MS', 45_000)),
-  ollamaTimeoutMs: getNumberEnv('OLLAMA_TIMEOUT_MS', getNumberEnv('AI_LLM_TIMEOUT_MS', 45_000)),
-  ollamaNumCtx: getNumberEnv('OLLAMA_NUM_CTX', 1024),
-  ollamaNumPredict: getNumberEnv('OLLAMA_NUM_PREDICT', 160),
+  aiLlmTimeoutMs: getNumberEnv('AI_LLM_TIMEOUT_MS', getNumberEnv('OLLAMA_TIMEOUT_MS', 90_000)),
+  ollamaTimeoutMs: getNumberEnv('OLLAMA_TIMEOUT_MS', getNumberEnv('AI_LLM_TIMEOUT_MS', 90_000)),
+  ollamaNumCtx: getNumberEnv('OLLAMA_NUM_CTX', 2048),
+  ollamaNumPredict: getNumberEnv('OLLAMA_NUM_PREDICT', 256),
 
   frontendUrl: getEnv('FRONTEND_URL', 'http://localhost:5173'),
   enableCron: getBooleanEnv('ENABLE_CRON', true),

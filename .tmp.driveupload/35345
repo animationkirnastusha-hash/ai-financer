@@ -1,0 +1,56 @@
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.env = void 0;
+const dotenv_1 = __importDefault(require("dotenv"));
+dotenv_1.default.config();
+function getEnv(name, fallback) {
+    const value = process.env[name] ?? fallback;
+    if (value === undefined || value === '') {
+        throw new Error(`Missing required environment variable: ${name}`);
+    }
+    return value;
+}
+function getNumberEnv(name, fallback) {
+    const raw = process.env[name];
+    if (!raw)
+        return fallback;
+    const parsed = Number(raw);
+    if (!Number.isFinite(parsed)) {
+        throw new Error(`Environment variable ${name} must be a number`);
+    }
+    return parsed;
+}
+function getBooleanEnv(name, fallback) {
+    const raw = process.env[name];
+    if (raw === undefined)
+        return fallback;
+    return ['1', 'true', 'yes', 'on'].includes(raw.toLowerCase());
+}
+const defaultOllamaModel = getEnv('OLLAMA_MODEL', 'qwen3:14b');
+exports.env = {
+    nodeEnv: getEnv('NODE_ENV', 'development'),
+    port: getNumberEnv('PORT', 3000),
+    databaseUrl: getEnv('DATABASE_URL'),
+    jwtSecret: getEnv('JWT_SECRET', 'dev-secret'),
+    telegramBotToken: process.env.TELEGRAM_BOT_TOKEN ?? '',
+    adminTelegramId: process.env.ADMIN_TELEGRAM_ID ?? '',
+    deepseekApiKey: process.env.DEEPSEEK_API_KEY ?? '',
+    aiMode: getEnv('AI_MODE', 'ollama'),
+    aiDebug: getBooleanEnv('AI_DEBUG', false),
+    ollamaBaseUrl: getEnv('OLLAMA_BASE_URL', 'http://127.0.0.1:11434'),
+    ollamaModel: defaultOllamaModel,
+    ollamaFastModel: getEnv('OLLAMA_FAST_MODEL', defaultOllamaModel),
+    ollamaFreeReasoningModel: getEnv('OLLAMA_FREE_REASONING_MODEL', defaultOllamaModel),
+    ollamaPremiumModel: getEnv('OLLAMA_PREMIUM_MODEL', 'qwen3:14b'),
+    aiLlmTimeoutMs: getNumberEnv('AI_LLM_TIMEOUT_MS', getNumberEnv('OLLAMA_TIMEOUT_MS', 90_000)),
+    ollamaTimeoutMs: getNumberEnv('OLLAMA_TIMEOUT_MS', getNumberEnv('AI_LLM_TIMEOUT_MS', 90_000)),
+    ollamaNumCtx: getNumberEnv('OLLAMA_NUM_CTX', 2048),
+    ollamaNumPredict: getNumberEnv('OLLAMA_NUM_PREDICT', 256),
+    frontendUrl: getEnv('FRONTEND_URL', 'http://localhost:5173'),
+    enableCron: getBooleanEnv('ENABLE_CRON', true),
+    isDevelopment: (process.env.NODE_ENV ?? 'development') === 'development',
+    isProduction: (process.env.NODE_ENV ?? 'development') === 'production',
+};

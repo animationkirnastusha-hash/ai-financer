@@ -1,0 +1,136 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.SUPPORTED_CURRENCIES = void 0;
+exports.normalizeCurrency = normalizeCurrency;
+exports.detectCurrencyInText = detectCurrencyInText;
+exports.normalizeMoneyAmount = normalizeMoneyAmount;
+exports.convertMoney = convertMoney;
+exports.SUPPORTED_CURRENCIES = ['RUB', 'USD', 'EUR', 'VND'];
+const CURRENCY_RATES_TO_RUB = {
+    RUB: 1,
+    USD: 100,
+    EUR: 110,
+    VND: 0.004,
+};
+const SCALE_WORDS = [
+    [/(тыс(?:\.|яч[аи]?|яч|ячи|ячами)?|тысяч|тыщи|тыщ|к|k|nghìn|ngan|thousand)/i, 1_000],
+    [/(млн|миллион(?:а|ов)?|million|triệu)/i, 1_000_000],
+];
+const RU_NUMBER_WORDS = {
+    ноль: 0,
+    один: 1,
+    одна: 1,
+    одно: 1,
+    два: 2,
+    две: 2,
+    три: 3,
+    четыре: 4,
+    пять: 5,
+    шесть: 6,
+    семь: 7,
+    восемь: 8,
+    девять: 9,
+    десять: 10,
+    одиннадцать: 11,
+    двенадцать: 12,
+    тринадцать: 13,
+    четырнадцать: 14,
+    пятнадцать: 15,
+    шестнадцать: 16,
+    семнадцать: 17,
+    восемнадцать: 18,
+    девятнадцать: 19,
+    двадцать: 20,
+    тридцать: 30,
+    сорок: 40,
+    пятьдесят: 50,
+    шестьдесят: 60,
+    семьдесят: 70,
+    восемьдесят: 80,
+    девяносто: 90,
+    сто: 100,
+    двести: 200,
+    триста: 300,
+    четыреста: 400,
+    пятьсот: 500,
+    шестьсот: 600,
+    семьсот: 700,
+    восемьсот: 800,
+    девятьсот: 900,
+};
+function normalizeCurrency(value, fallback = 'RUB') {
+    if (typeof value !== 'string')
+        return fallback;
+    const raw = value.trim().toLowerCase();
+    const upper = raw.toUpperCase();
+    if (exports.SUPPORTED_CURRENCIES.includes(upper))
+        return upper;
+    if (/₽|руб|rur|rub|rouble|ruble|рубл/.test(raw))
+        return 'RUB';
+    if (/\$|usd|доллар|долларов|доллары|бакс|баксов|dollar/.test(raw))
+        return 'USD';
+    if (/€|eur|евро|euro/.test(raw))
+        return 'EUR';
+    if (/vnd|донг|донгов|dong|đ|₫/.test(raw))
+        return 'VND';
+    return fallback;
+}
+function detectCurrencyInText(text, fallback) {
+    if (typeof text !== 'string' || !text.trim())
+        return fallback;
+    const raw = text.toLowerCase();
+    if (/₽|руб|rur|rub|rouble|ruble|рубл/.test(raw))
+        return 'RUB';
+    if (/\$|usd|доллар|долларов|доллары|бакс|баксов|dollar/.test(raw))
+        return 'USD';
+    if (/€|eur|евро|euro/.test(raw))
+        return 'EUR';
+    if (/vnd|донг|донгов|dong|đ|₫/.test(raw))
+        return 'VND';
+    return fallback;
+}
+function normalizeMoneyAmount(value, contextText) {
+    if (typeof value === 'number' && Number.isFinite(value) && value > 0) {
+        const contextScale = contextText ? detectScale(contextText) : 1;
+        if (value < 1000 && contextScale > 1)
+            return Math.round(value * contextScale);
+        return Math.round(value);
+    }
+    const parts = [typeof value === 'string' ? value : '', contextText ?? '']
+        .filter(Boolean)
+        .join(' ')
+        .trim();
+    if (!parts)
+        return null;
+    const raw = parts.toLowerCase();
+    const compact = raw.replace(/[,]/g, '.').replace(/\s+/g, '');
+    const numeric = compact.match(/\d+(?:\.\d+)?/);
+    if (numeric) {
+        const parsed = Number(numeric[0]);
+        if (!Number.isFinite(parsed) || parsed <= 0)
+            return null;
+        return Math.round(parsed * detectScale(raw));
+    }
+    const wordsValue = parseRussianNumberWords(raw);
+    if (wordsValue > 0) {
+        return Math.round(wordsValue * detectScale(raw));
+    }
+    return null;
+}
+function convertMoney(amount, from, to) {
+    if (from === to)
+        return Math.round(amount);
+    const amountInRub = amount * CURRENCY_RATES_TO_RUB[from];
+    return Math.round(amountInRub / CURRENCY_RATES_TO_RUB[to]);
+}
+function detectScale(raw) {
+    return SCALE_WORDS.find(([pattern]) => pattern.test(raw))?.[1] ?? 1;
+}
+function parseRussianNumberWords(raw) {
+    const words = raw
+        .replace(/[^а-яё\s-]/gi, ' ')
+        .split(/[\s-]+/)
+        .map((word) => word.trim())
+        .filter(Boolean);
+    return words.reduce((sum, word) => sum + (RU_NUMBER_WORDS[word] ?? 0), 0);
+}

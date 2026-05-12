@@ -3,17 +3,27 @@ import { AIToolDefinition } from './tool-types';
 export const AI_TOOL_REGISTRY: AIToolDefinition[] = [
   {
     name: 'create_account',
-    description: 'Create a new account/wallet/card/savings place for money.',
+    description: [
+      'Create a new money account, wallet, card, cash account, savings account or investment account.',
+      'Use this when the user wants a place where money is stored.',
+      'If the user says "with name", "called", "назови", "с названием", the name is the phrase after that marker.',
+      'Do not include command fragments like "add deposit", "put money there", "положи туда" in account name.',
+    ].join(' '),
     risk: 'medium',
     requiresConfirmation: true,
-    input: { name: 'string', type: 'cash|card|savings|investment|null', currency: 'RUB|USD|EUR|VND|null', initialBalance: 'number|null' },
+    input: {
+      name: 'human account label only',
+      type: 'cash|card|savings|investment|null',
+      currency: 'RUB|USD|EUR|VND|null',
+      initialBalance: 'number|string|null',
+    },
   },
   {
     name: 'update_account',
     description: 'Rename or change an existing account.',
     risk: 'medium',
     requiresConfirmation: true,
-    input: { account: 'string', name: 'string|null', type: 'cash|card|savings|investment|null', currency: 'RUB|USD|EUR|VND|null', balance: 'number|null' },
+    input: { account: 'string', name: 'string|null', type: 'cash|card|savings|investment|null', currency: 'RUB|USD|EUR|VND|null', balance: 'number|string|null' },
   },
   {
     name: 'delete_account',
@@ -24,17 +34,22 @@ export const AI_TOOL_REGISTRY: AIToolDefinition[] = [
   },
   {
     name: 'create_transaction',
-    description: 'Create income or expense. Deposit/top up/add money to account = income. Buy/pay/spend = expense.',
+    description: [
+      'Create income or expense.',
+      'Deposit, top up, put money to account, пополни, положи, закинь, присвой баланс = income unless it is explicitly a purchase/payment/spending.',
+      'Buy, paid, spent, bought, оплатил, купил, потратил = expense.',
+      'If this transaction follows create_account and user says there/туда/ему/на него, use that account name.',
+    ].join(' '),
     risk: 'medium',
     requiresConfirmation: true,
-    input: { kind: 'income|expense', amount: 'number', currency: 'RUB|USD|EUR|VND|null', account: 'string|null', category: 'string|null', section: 'string|null', description: 'string|null' },
+    input: { kind: 'income|expense', amount: 'number|string', currency: 'RUB|USD|EUR|VND|null', account: 'string|null', category: 'string|null', section: 'string|null', description: 'string|null' },
   },
   {
     name: 'transfer_money',
-    description: 'Move money from one account to another.',
+    description: 'Move money from one existing account to another existing account.',
     risk: 'high',
     requiresConfirmation: true,
-    input: { fromAccount: 'string', toAccount: 'string', amount: 'number', currency: 'RUB|USD|EUR|VND|null', description: 'string|null' },
+    input: { fromAccount: 'string', toAccount: 'string', amount: 'number|string', currency: 'RUB|USD|EUR|VND|null', description: 'string|null' },
   },
   {
     name: 'create_category',
@@ -106,5 +121,13 @@ export function getToolDefinition(name: string) {
 }
 
 export function getPlannerToolContract() {
-  return AI_TOOL_REGISTRY.map((tool) => `${tool.name}: ${JSON.stringify(tool.input)}`).join('\n');
+  return AI_TOOL_REGISTRY
+    .map((tool) => {
+      return [
+        `- ${tool.name}`,
+        `  meaning: ${tool.description}`,
+        `  input: ${JSON.stringify(tool.input)}`,
+      ].join('\n');
+    })
+    .join('\n');
 }
