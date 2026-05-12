@@ -59,7 +59,17 @@ export class AIExecutorService {
     }
 
     if (action.tool === 'create_transaction') {
-      const accountId = this.resolveExecutionAccountId(resolved, createdAccountNames);
+      const pendingAccountName = typeof resolved.pendingAccountName === 'string' ? resolved.pendingAccountName : '';
+      const accountId = typeof resolved.accountId === 'string'
+        ? resolved.accountId
+        : pendingAccountName
+          ? createdAccountNames.get(pendingAccountName.toLowerCase())
+          : undefined;
+
+      if (!accountId) {
+        throw new Error('Cannot execute transaction: account was not resolved');
+      }
+
       const amount = Number(resolved.amountInAccountCurrency ?? input.amount);
       const categoryId = await this.findOrCreateCategoryId(userId, {
         name: typeof input.category === 'string' ? input.category : '',
@@ -120,19 +130,6 @@ export class AIExecutorService {
     }
 
     return { tool: action.tool, skipped: true };
-  }
-
-
-  private resolveExecutionAccountId(resolved: Record<string, unknown>, createdAccountNames: Map<string, string>) {
-    if (typeof resolved.accountId === 'string' && resolved.accountId) return resolved.accountId;
-
-    const pendingName = typeof resolved.pendingAccountName === 'string' ? resolved.pendingAccountName.trim().toLowerCase() : '';
-    if (pendingName) {
-      const accountId = createdAccountNames.get(pendingName);
-      if (accountId) return accountId;
-    }
-
-    throw new Error('Account was not resolved before execution');
   }
 
   private async findOrCreateCategoryId(userId: string, params: { name: string; type: 'income' | 'expense'; sectionId?: string | null }) {

@@ -9,11 +9,7 @@ import {
   AIValidatedPlan,
 } from './types';
 import { getToolDefinition } from './tools/tool-registry';
-import {
-  convertMoney,
-  normalizeCurrency,
-  normalizeMoneyAmountFromCandidates,
-} from './utils/amount-normalizer';
+import { convertMoney, normalizeCurrency, normalizeMoneyAmount } from './utils/amount-normalizer';
 
 const ACCOUNT_TYPES: AIAccountType[] = ['cash', 'card', 'savings', 'investment'];
 const CURRENCIES: AICurrency[] = ['RUB', 'USD', 'EUR', 'VND'];
@@ -36,7 +32,7 @@ export class AIValidatorService {
 
     const issues: AIValidatedPlan['issues'] = [];
     const actions: AIValidatedAction[] = [];
-    let lastCreatedAccountName: string | null = null;
+    const plannedAccounts = new Map<string, { name: string; currency: AICurrency }>();
 
     plan.actions.forEach((action, index) => {
       const definition = getToolDefinition(action.tool);
@@ -49,55 +45,45 @@ export class AIValidatorService {
       const resolved: Record<string, unknown> = {};
 
       if (action.tool === 'create_account') {
-        const name = this.cleanName(input.name);
+        const name = this.requiredString(input.name);
         if (!name) issues.push({ code: 'missing_account_name', message: 'Не хватает названия счёта.', actionIndex: index, field: 'name' });
 
         input.name = name;
         input.type = ACCOUNT_TYPES.includes(input.type as AIAccountType) ? input.type : 'cash';
-        input.currency = CURRENCIES.includes(input.currency as AICurrency) ? input.currency : normalizeCurrency(input.currency, 'RUB');
-        input.initialBalance = normalizeMoneyAmountFromCandidates(input.initialBalance, input.amountText, input.balance) ?? 0;
-        lastCreatedAccountName = name || null;
+        input.currency = CURRENCIES.includes(input.currency as AICurrency) ? input.currency : 'RUB';
+        input.initialBalance = normalizeMoneyAmount(input.initialBalance) ?? 0;
+
+        if (name) plannedAccounts.set(this.key(name), { name, currency: input.currency as AICurrency });
       }
 
       if (action.tool === 'update_account' || action.tool === 'delete_account') {
-        const account = this.resolveAccount(accounts, this.cleanName(input.account));
+        const account = this.resolveAccount(accounts, this.requiredString(input.account));
         if (!account) issues.push({ code: 'account_not_found', message: `Не нашёл счёт: ${String(input.account ?? '')}`, actionIndex: index, field: 'account' });
         else resolved.accountId = account.id;
 
         if (action.tool === 'update_account') {
-          if (input.name !== null && input.name !== undefined) input.name = this.cleanName(input.name);
           if (input.type !== null && input.type !== undefined && !ACCOUNT_TYPES.includes(input.type as AIAccountType)) delete input.type;
-          if (input.currency !== null && input.currency !== undefined && !CURRENCIES.includes(input.currency as AICurrency)) {
-            input.currency = normalizeCurrency(input.currency, account ? account.currency as AICurrency : 'RUB');
-          }
-          if (input.balance !== null && input.balance !== undefined) {
-            input.balance = normalizeMoneyAmountFromCandidates(input.balance, input.amountText) ?? undefined;
-          }
+          if (input.currency !== null && input.currency !== undefined && !CURRENCIES.includes(input.currency as AICurrency)) delete input.currency;
+          if (input.balance !== null && input.balance !== undefined) input.balance = normalizeMoneyAmount(input.balance);
         }
       }
 
       if (action.tool === 'create_transaction') {
         const kind = input.kind === 'income' || input.kind === 'expense' ? input.kind : null;
-        const amount = normalizeMoneyAmountFromCandidates(input.amount, input.amountText, input.sum, input.value);
-        const accountRef = this.cleanName(input.account) || lastCreatedAccountName || (accounts.length === 1 ? accounts[0].name : '');
+        const amount = normalizeMoneyAmount(input.amount);
+        const accountRef = this.requiredString(input.account) || this.lastPlannedAccountName(plannedAccounts) || (accounts.length === 1 ? accounts[0].name : '');
         const account = this.resolveAccount(accounts, accountRef);
-        const usesPendingAccount = !account && lastCreatedAccountName && this.sameName(accountRef, lastCreatedAccountName);
+        const plannedAccount = plannedAccounts.get(this.key(accountRef));
+        const targetCurrency = account ? account.currency as AICurrency : plannedAccount?.currency ?? 'RUB';
 
         if (!kind) issues.push({ code: 'missing_transaction_kind', message: 'Не понял: это доход или расход.', actionIndex: index, field: 'kind' });
         if (!amount) issues.push({ code: 'missing_amount', message: 'Не хватает суммы операции.', actionIndex: index, field: 'amount' });
-        if (!account && !usesPendingAccount) {
-          issues.push({ code: 'account_not_found', message: accountRef ? `Не нашёл счёт: ${accountRef}` : 'Не хватает счёта.', actionIndex: index, field: 'account' });
-        }
+        if (!account && !plannedAccount) issues.push({ code: 'account_not_found', message: accountRef ? `Не нашёл счёт: ${accountRef}` : 'Не хватает счёта.', actionIndex: index, field: 'account' });
 
         input.kind = kind;
         input.amount = amount ?? 0;
-        input.account = accountRef;
-        input.category = this.cleanName(input.category);
-        input.section = this.cleanName(input.section);
-        input.description = this.cleanDescription(input.description, kind === 'income' ? 'Пополнение счёта' : 'Расход');
-
-        const accountCurrency = account ? account.currency as AICurrency : normalizeCurrency(input.currency, 'RUB');
-        input.currency = normalizeCurrency(input.currency, accountCurrency);
+        input.account = accountRef || input.account;
+        input.currency = normalizeCurrency(input.currency, targetCurrency);
 
         if (account && amount) {
           resolved.accountId = account.id;
@@ -105,22 +91,24 @@ export class AIValidatorService {
           resolved.amountInAccountCurrency = convertMoney(amount, input.currency as AICurrency, account.currency as AICurrency);
         }
 
-        if (usesPendingAccount && amount) {
-          resolved.pendingAccountName = lastCreatedAccountName;
-          resolved.accountCurrency = input.currency;
-          resolved.amountInAccountCurrency = amount;
+        if (!account && plannedAccount && amount) {
+          resolved.pendingAccountName = plannedAccount.name;
+          resolved.accountCurrency = plannedAccount.currency;
+          resolved.amountInAccountCurrency = convertMoney(amount, input.currency as AICurrency, plannedAccount.currency);
         }
 
-        const category = input.category ? this.findByName(categories, String(input.category)) : null;
-        const section = input.section ? this.findByName(sections, String(input.section)) : null;
+        const categoryName = this.requiredString(input.category);
+        const sectionName = this.requiredString(input.section);
+        const category = categoryName ? this.findByName(categories, categoryName) : null;
+        const section = sectionName ? this.findByName(sections, sectionName) : null;
         if (category) resolved.categoryId = category.id;
         if (section) resolved.sectionId = section.id;
       }
 
       if (action.tool === 'transfer_money') {
-        const amount = normalizeMoneyAmountFromCandidates(input.amount, input.amountText, input.sum, input.value);
-        const from = this.resolveAccount(accounts, this.cleanName(input.fromAccount));
-        const to = this.resolveAccount(accounts, this.cleanName(input.toAccount));
+        const amount = normalizeMoneyAmount(input.amount);
+        const from = this.resolveAccount(accounts, this.requiredString(input.fromAccount));
+        const to = this.resolveAccount(accounts, this.requiredString(input.toAccount));
 
         if (!amount) issues.push({ code: 'missing_amount', message: 'Не хватает суммы перевода.', actionIndex: index, field: 'amount' });
         if (!from) issues.push({ code: 'from_account_not_found', message: 'Не нашёл счёт списания.', actionIndex: index, field: 'fromAccount' });
@@ -129,24 +117,23 @@ export class AIValidatorService {
 
         input.amount = amount ?? 0;
         input.currency = normalizeCurrency(input.currency, from ? from.currency as AICurrency : 'RUB');
-        input.description = this.cleanDescription(input.description, 'Перевод между счетами');
         if (from) resolved.fromAccountId = from.id;
         if (to) resolved.toAccountId = to.id;
         if (from && amount) resolved.amountInFromCurrency = convertMoney(amount, input.currency as AICurrency, from.currency as AICurrency);
       }
 
       if (action.tool === 'create_category') {
-        const name = this.cleanName(input.name);
+        const name = this.requiredString(input.name);
         if (!name) issues.push({ code: 'missing_category_name', message: 'Не хватает названия категории.', actionIndex: index, field: 'name' });
         input.name = name;
         input.type = input.type === 'income' ? 'income' : 'expense';
-        input.section = this.cleanName(input.section);
-        const section = input.section ? this.findByName(sections, String(input.section)) : null;
+        const sectionName = this.requiredString(input.section);
+        const section = sectionName ? this.findByName(sections, sectionName) : null;
         if (section) resolved.sectionId = section.id;
       }
 
       if (action.tool === 'create_section') {
-        const name = this.cleanName(input.name);
+        const name = this.requiredString(input.name);
         if (!name) issues.push({ code: 'missing_section_name', message: 'Не хватает названия раздела.', actionIndex: index, field: 'name' });
         input.name = name;
       }
@@ -167,24 +154,17 @@ export class AIValidatorService {
     };
   }
 
-  private cleanName(value: unknown) {
-    if (typeof value !== 'string') return '';
-    return value
-      .trim()
-      .replace(/[«»"]/g, '')
-      .replace(/\s+/g, ' ')
-      .replace(/^(счет|счёт|account|wallet|card|карта|название|name)\s+/i, '')
-      .trim();
+  private requiredString(value: unknown) {
+    return typeof value === 'string' ? value.trim().replace(/[«»"]/g, '').replace(/\s+/g, ' ') : '';
   }
 
-  private cleanDescription(value: unknown, fallback: string) {
-    return typeof value === 'string' && value.trim()
-      ? value.trim().replace(/\s+/g, ' ')
-      : fallback;
+  private key(value: string) {
+    return value.trim().toLowerCase();
   }
 
-  private sameName(a: string, b: string) {
-    return a.trim().toLowerCase() === b.trim().toLowerCase();
+  private lastPlannedAccountName(plannedAccounts: Map<string, { name: string; currency: AICurrency }>) {
+    const values = Array.from(plannedAccounts.values());
+    return values.length ? values[values.length - 1].name : '';
   }
 
   private resolveAccount(accounts: AccountLite[], raw: string) {

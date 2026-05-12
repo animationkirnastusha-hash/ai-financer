@@ -1,24 +1,13 @@
-import { AIPlan, AIToolName } from './types';
+import { AIPlan, AIToolCall, AIToolName } from './types';
 import { OllamaProvider } from './providers/ollama.provider';
-import { AI_TOOL_REGISTRY, buildToolCatalogPrompt, getToolDefinition } from './tools/tool-registry';
+import { AI_TOOL_REGISTRY, getPlannerToolContract } from './tools/tool-registry';
 
 const TOOL_NAMES = new Set(AI_TOOL_REGISTRY.map((tool) => tool.name));
-const DEBUG_AI = process.env.AI_DEBUG === '1' || process.env.AI_DEBUG === 'true';
 
-type PlannerRawAction = {
-  tool?: unknown;
-  input?: unknown;
-  reason?: unknown;
-};
-
-type PlannerRaw = {
-  mode?: unknown;
-  language?: unknown;
-  summary?: unknown;
-  answer?: unknown;
-  message?: unknown;
-  missing?: unknown;
-  actions?: unknown;
+type UserContext = {
+  accounts?: Array<{ name?: string; type?: string; currency?: string }>;
+  categories?: Array<{ name?: string; type?: string }>;
+  sections?: Array<{ name?: string }>;
 };
 
 export class AIPlannerService {
@@ -26,191 +15,130 @@ export class AIPlannerService {
 
   async plan(command: string, context: unknown): Promise<AIPlan> {
     const system = [
-      'You are the planning brain of a finance app.',
-      'Return ONLY one minified JSON object. No markdown. No prose.',
-      'Every user request must become either actions, question, or clarification.',
-      'Use actions when the user asks to create/edit/delete/show money data.',
-      'Do not ask for optional fields. Defaults: currency=RUB, account type=null unless obvious.',
-      'If user says cash/наличка/наличные => account type cash.',
-      'If user says card/карта/bank/банк => account type card.',
-      'If user says savings/копилка/накопления => account type savings.',
-      'Account name is the label only. Remove command words: create, account, add, deposit, named, с названием, назови, положи, добавь.',
-      'Top up/deposit/put/add money/положи/добавь/закинь/пополнить => create_transaction kind=income.',
-      'Spend/buy/pay/купил/потратил/оплатил => create_transaction kind=expense.',
-      'Use "there/туда/на него" as the account created in the previous action.',
-      'Amounts: 10 тысяч/десять тысяч/10k/10к/10 thousand => 10000. Preserve currency if mentioned.',
-      'Shape: {"mode":"actions","language":"ru","summary":"...","actions":[{"tool":"create_account","input":{"name":"наличка","type":"cash","currency":"RUB"},"reason":"..."}]}',
-    ].join('\n');
+      'You are a finance app planner.',
+      'Understand the user meaning and return JSON only.',
+      'Never execute. Only plan app actions.',
+      'Use actions for app changes, question for advice/info, clarification only when truly required.',
+      'Support Russian, English, Vietnamese, mixed language.',
+      'Money put/deposit/topup/add to account is income transaction.',
+      'Account name is only the human label, not the whole sentence.',
+    ].join(' ');
 
     const prompt = [
-      `TOOLS:\n${buildToolCatalogPrompt()}`,
-      `CURRENT_DATA:\n${JSON.stringify(this.compactContext(context))}`,
-      `USER_TEXT:\n${command}`,
-      'Return JSON only now.',
-    ].join('\n\n');
+      'Return this shape:',
+      '{"mode":"actions|question|clarification","language":"ru|en|vi|null","summary":"short|null","answer":"short|null","message":"short|null","missing":[],"actions":[{"tool":"tool_name","reason":"short|null","input":{}}]}',
+      'Tools:',
+      getPlannerToolContract(),
+      'Current:',
+      JSON.stringify(this.compactContext(context)),
+      'User:',
+      command,
+    ].join('\n');
 
-    const raw = await this.provider.generateJson<PlannerRaw>({
+    const raw = await this.provider.generateJson<Record<string, unknown>>({
       system,
       prompt,
       temperature: 0,
-      timeoutMs: Number(process.env.AI_LLM_TIMEOUT_MS || process.env.OLLAMA_TIMEOUT_MS || 60_000),
-      numCtx: Number(process.env.OLLAMA_NUM_CTX || 1024),
-      numPredict: Number(process.env.OLLAMA_NUM_PREDICT || 160),
+      numCtx: 1024,
+      numPredict: 160,
     });
-
-    if (DEBUG_AI) {
-      console.log('[AI] planner raw', JSON.stringify(raw).slice(0, 4000));
-    }
 
     const plan = this.normalizePlan(raw);
 
     console.log('[AI] planner normalized', {
       mode: plan.mode,
       actions: plan.mode === 'actions' ? plan.actions.map((action) => action.tool) : [],
-      missing: plan.mode === 'clarification' ? plan.missing : [],
+      missing: plan.mode === 'clarification' ? plan.missing ?? [] : [],
     });
 
     return plan;
   }
 
-  private normalizePlan(raw: PlannerRaw): AIPlan {
-    const mode = raw.mode;
+  private compactContext(context: unknown) {
+    const value = this.asRecord(context) as UserContext;
+    return {
+      accounts: Array.isArray(value.accounts)
+        ? value.accounts.slice(0, 12).map((account) => ({ n: account.name, t: account.type, c: account.currency }))
+        : [],
+      categories: Array.isArray(value.categories)
+        ? value.categories.slice(0, 20).map((category) => ({ n: category.name, t: category.type }))
+        : [],
+      sections: Array.isArray(value.sections)
+        ? value.sections.slice(0, 12).map((section) => section.name).filter(Boolean)
+        : [],
+    };
+  }
+
+  private normalizePlan(raw: Record<string, unknown>): AIPlan {
+    const mode = typeof raw.mode === 'string' ? raw.mode : 'clarification';
 
     if (mode === 'actions') {
-      const rawActions = Array.isArray(raw.actions) ? raw.actions : [];
-      const actions = rawActions
-        .filter((item): item is PlannerRawAction => Boolean(item) && typeof item === 'object' && !Array.isArray(item))
-        .map((item) => {
-          const tool = typeof item.tool === 'string' ? item.tool : '';
-          if (!TOOL_NAMES.has(tool as AIToolName) || !getToolDefinition(tool)) return null;
+      const rawActions = Array.isArray(raw.actions)
+        ? raw.actions
+        : Array.isArray(raw.toolCalls)
+          ? raw.toolCalls
+          : [];
 
-          return {
-            tool: tool as AIToolName,
-            input: this.normalizeActionInput(tool as AIToolName, this.asRecord(item.input)),
-            reason: typeof item.reason === 'string' ? item.reason : undefined,
-          };
+      const actions: AIToolCall[] = rawActions
+        .filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === 'object' && !Array.isArray(item))
+        .map((item): AIToolCall | null => {
+          const rawTool = typeof item.tool === 'string' ? item.tool : typeof item.name === 'string' ? item.name : '';
+
+          if (!this.isToolName(rawTool)) {
+            return null;
+          }
+
+          const input = this.asRecord(item.input ?? item.args ?? item.arguments);
+          const reason = typeof item.reason === 'string' && item.reason.trim() ? item.reason.trim() : undefined;
+
+          return reason
+            ? { tool: rawTool, input, reason }
+            : { tool: rawTool, input };
         })
-        .filter((item): item is NonNullable<typeof item> => Boolean(item));
+        .filter((action): action is AIToolCall => action !== null);
 
       if (actions.length === 0) {
         return {
           mode: 'clarification',
-          language: typeof raw.language === 'string' ? raw.language : undefined,
-          message: 'Я понял запрос, но не смог безопасно собрать действие. Скажи, что нужно изменить в финансах.',
+          language: this.asOptionalString(raw.language),
+          message: 'Я понял запрос, но не смог безопасно собрать действие. Сформулируй чуть точнее.',
           missing: ['action'],
         };
       }
 
       return {
         mode: 'actions',
-        language: typeof raw.language === 'string' ? raw.language : undefined,
-        summary: typeof raw.summary === 'string' ? raw.summary : undefined,
+        language: this.asOptionalString(raw.language),
+        summary: this.asOptionalString(raw.summary) ?? 'Проверь действие перед выполнением.',
         actions,
       };
     }
 
-    if (mode === 'clarification') {
+    if (mode === 'question') {
       return {
-        mode: 'clarification',
-        language: typeof raw.language === 'string' ? raw.language : undefined,
-        message: typeof raw.message === 'string' && raw.message.trim() ? raw.message : 'Нужно уточнение.',
-        missing: Array.isArray(raw.missing) ? raw.missing.filter((item): item is string => typeof item === 'string') : [],
+        mode: 'question',
+        language: this.asOptionalString(raw.language),
+        answer: this.asOptionalString(raw.answer) ?? 'Я могу помочь с финансами или выполнить действие в приложении.',
       };
     }
 
     return {
-      mode: 'question',
-      language: typeof raw.language === 'string' ? raw.language : undefined,
-      answer: typeof raw.answer === 'string' && raw.answer.trim()
-        ? raw.answer
-        : 'Я могу ответить по финансам или подготовить действие в приложении.',
+      mode: 'clarification',
+      language: this.asOptionalString(raw.language),
+      message: this.asOptionalString(raw.message) ?? 'Нужно уточнение.',
+      missing: Array.isArray(raw.missing) ? raw.missing.filter((item): item is string => typeof item === 'string') : [],
     };
   }
 
-  private normalizeActionInput(tool: AIToolName, input: Record<string, unknown>): Record<string, unknown> {
-    const result: Record<string, unknown> = { ...input };
-
-    if (tool === 'create_account') {
-      const rawName = this.asText(result.name);
-      result.name = this.cleanAccountName(rawName);
-      result.currency = this.normalizeCurrency(result.currency) || 'RUB';
-
-      const type = this.asText(result.type).toLowerCase();
-      if (!type) result.type = this.inferAccountType(String(result.name));
-    }
-
-    if (tool === 'create_transaction') {
-      result.currency = this.normalizeCurrency(result.currency) || undefined;
-      const kind = this.asText(result.kind).toLowerCase();
-      if (kind !== 'income' && kind !== 'expense') result.kind = 'expense';
-    }
-
-    return result;
+  private isToolName(value: string): value is AIToolName {
+    return TOOL_NAMES.has(value as AIToolName);
   }
 
-  private cleanAccountName(value: string) {
-    return value
-      .replace(/^(создай|создать|добавь|добавить|открой|открыть|create|add|open)\s+/i, '')
-      .replace(/^(сч[её]т|account|wallet|кошел[её]к)\s+/i, '')
-      .replace(/\s+(и\s+)?(положи|добавь|закинь|пополнить|пополнение|депозит|deposit|top\s*up|add)\b[\s\S]*$/i, '')
-      .replace(/^(с\s+названием|назови\s+его|назови|named|called)\s+/i, '')
-      .replace(/\b(рубл[ьяей]*|руб|доллар[аов]*|доллар|евро|usd|rub|eur|vnd)\b/gi, '')
-      .replace(/\s+/g, ' ')
-      .trim() || 'Новый счёт';
-  }
-
-  private inferAccountType(name: string) {
-    const normalized = name.toLowerCase();
-    if (/нал|cash/.test(normalized)) return 'cash';
-    if (/карт|card|банк|bank/.test(normalized)) return 'card';
-    if (/накоп|копил|saving/.test(normalized)) return 'savings';
-    return null;
-  }
-
-  private normalizeCurrency(value: unknown) {
-    const raw = this.asText(value).toUpperCase();
-    if (['RUB', 'USD', 'EUR', 'VND'].includes(raw)) return raw;
-    if (/РУБ|RUBLE|₽/.test(raw)) return 'RUB';
-    if (/ДОЛ|DOLLAR|\$/.test(raw)) return 'USD';
-    if (/ЕВРО|EURO|€/.test(raw)) return 'EUR';
-    if (/DONG|VND|₫/.test(raw)) return 'VND';
-    return '';
-  }
-
-  private compactContext(context: unknown) {
-    const source = this.asRecord(context);
-    const accounts = Array.isArray(source.accounts) ? source.accounts : [];
-    const categories = Array.isArray(source.categories) ? source.categories : [];
-    const sections = Array.isArray(source.sections) ? source.sections : [];
-
-    return {
-      accounts: accounts.slice(0, 8).map((item) => {
-        const account = this.asRecord(item);
-        return {
-          name: typeof account.name === 'string' ? account.name : '',
-          type: typeof account.type === 'string' ? account.type : '',
-          currency: typeof account.currency === 'string' ? account.currency : '',
-        };
-      }),
-      categories: categories.slice(0, 10).map((item) => {
-        const category = this.asRecord(item);
-        return {
-          name: typeof category.name === 'string' ? category.name : '',
-          type: typeof category.type === 'string' ? category.type : '',
-        };
-      }),
-      sections: sections.slice(0, 8).map((item) => {
-        const section = this.asRecord(item);
-        return { name: typeof section.name === 'string' ? section.name : '' };
-      }),
-    };
+  private asOptionalString(value: unknown) {
+    return typeof value === 'string' && value.trim() ? value.trim() : undefined;
   }
 
   private asRecord(value: unknown): Record<string, unknown> {
     return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {};
-  }
-
-  private asText(value: unknown): string {
-    return typeof value === 'string' ? value.trim() : '';
   }
 }

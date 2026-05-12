@@ -11,6 +11,7 @@ type OllamaGenerateResponse = {
 function normalizeBaseUrl(value: string | undefined) {
   const fallback = 'http://127.0.0.1:11434';
   const raw = (value || fallback).trim() || fallback;
+
   return raw.replace(/\/+$/, '').replace(/\/api$/i, '');
 }
 
@@ -19,15 +20,15 @@ function getModel() {
 }
 
 function getTimeoutMs(request: AIProviderJsonRequest) {
-  return Math.max(15_000, request.timeoutMs ?? env.aiLlmTimeoutMs ?? 45_000);
+  return Math.max(10_000, request.timeoutMs ?? env.ollamaTimeoutMs ?? env.aiLlmTimeoutMs ?? 45_000);
 }
 
 function getNumCtx(request: AIProviderJsonRequest) {
-  return Math.max(512, Math.min(request.numCtx ?? env.ollamaNumCtx ?? 1024, 2048));
+  return Math.max(512, Math.min(4096, request.numCtx ?? env.ollamaNumCtx ?? 1024));
 }
 
 function getNumPredict(request: AIProviderJsonRequest) {
-  return Math.max(64, Math.min(request.numPredict ?? env.ollamaNumPredict ?? 160, 256));
+  return Math.max(64, Math.min(512, request.numPredict ?? env.ollamaNumPredict ?? 160));
 }
 
 function stripThinking(value: string) {
@@ -35,25 +36,31 @@ function stripThinking(value: string) {
 }
 
 function stripCodeFences(value: string) {
-  return value.trim().replace(/^```(?:json)?/i, '').replace(/```$/i, '').trim();
+  return value
+    .trim()
+    .replace(/^```(?:json)?/i, '')
+    .replace(/```$/i, '')
+    .trim();
 }
 
 function extractJson(value: string) {
   const cleaned = stripCodeFences(stripThinking(value));
   if (!cleaned) return '';
+
   if (cleaned.startsWith('{') && cleaned.endsWith('}')) return cleaned;
 
   const first = cleaned.indexOf('{');
   const last = cleaned.lastIndexOf('}');
   if (first >= 0 && last > first) return cleaned.slice(first, last + 1);
 
-  return cleaned;
+  return '';
 }
 
 async function readError(response: Response) {
   try {
     const text = await response.text();
     if (!text) return response.statusText;
+
     try {
       const parsed = JSON.parse(text) as { error?: string; message?: string };
       return parsed.error || parsed.message || text;
@@ -77,12 +84,15 @@ export class OllamaProvider implements AIProvider {
     const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
     const system = [
-      request.system.trim(),
-      'Return valid minified JSON only.',
+      request.system,
+      'Return compact valid JSON only. No markdown. No explanations.',
     ].filter(Boolean).join('\n');
+
+    const fullPrompt = request.prompt;
 
     try {
       const startedAt = Date.now();
+
       console.log('[OLLAMA] generateJson:start', {
         model,
         timeoutMs,
@@ -90,7 +100,7 @@ export class OllamaProvider implements AIProvider {
         numCtx,
         numPredict,
         format: 'json',
-        promptChars: request.prompt.length,
+        promptChars: system.length + fullPrompt.length,
       });
 
       const response = await fetch(`${baseUrl}/api/generate`, {
@@ -100,13 +110,13 @@ export class OllamaProvider implements AIProvider {
         body: JSON.stringify({
           model,
           system,
-          prompt: request.prompt,
+          prompt: fullPrompt,
           stream: false,
           format: 'json',
-          keep_alive: '2m',
+          keep_alive: '10m',
           options: {
             temperature: request.temperature ?? 0,
-            top_p: 0.4,
+            top_p: 0.7,
             repeat_penalty: 1.05,
             num_ctx: numCtx,
             num_predict: numPredict,
@@ -130,6 +140,10 @@ export class OllamaProvider implements AIProvider {
         hasRaw: Boolean(raw),
         hasJson: Boolean(json),
       });
+
+      if (env.aiDebug) {
+        console.log('[OLLAMA] raw preview', raw.slice(0, 1600));
+      }
 
       if (!json) {
         console.error('[OLLAMA] no json response', {
