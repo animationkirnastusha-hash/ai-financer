@@ -25,47 +25,31 @@ export class AIPlannerService {
 
   async plan(command: string, context: unknown): Promise<AIPlan> {
     const system = [
-      'You are the AI planner inside a personal finance app.',
-      'Understand natural user text and return a JSON plan for backend tools.',
-      'Never execute actions. Only plan.',
-      'Use tools only from TOOL_CATALOG.',
-      'One message can contain multiple actions. Preserve order.',
-      'If the user changes app data, use mode "actions".',
-      'If the user only asks a question, use mode "question".',
-      'If essential data is missing, use mode "clarification".',
-      'Do not invent existing account ids. Use visible account/category/section names from CONTEXT when possible.',
-      'Deposits/top-ups/put money onto account = create_transaction with kind "income".',
-      'Spending/buying/paying = create_transaction with kind "expense".',
-      'Moving money between accounts = transfer_money.',
-      'Account name is only the human label. Do not include command words like "create", "deposit", "called", "назови", "положи" in name.',
-      'If user says "create card account named X", account type is card and name is X.',
-      'If user says "cash / наличка", type is cash unless they clearly mean account name.',
-      'If currency is named as account currency, set currency. If currency is part of the explicit account name, keep it in name.',
-      'Amounts must be full numeric values: "10 тысяч", "10k", "10 thousand" => 10000.',
-      'If unsure, also include original amount text in input.amountText.',
-      'Supported languages: Russian, English, Vietnamese, mixed language.',
+      'You are a finance app planner. Return ONLY compact JSON.',
+      'Plan backend tool calls from natural text. Do not execute.',
+      'Use only listed tools. Preserve action order.',
+      'Deposits/top-ups/put/add money to account => create_transaction kind income.',
+      'Spending/buying/payments => create_transaction kind expense.',
+      'Transfers/move money between accounts => transfer_money.',
+      'Account name is only the label, not command words.',
+      'Support RU/EN/VI/mixed. Amounts: 10 тысяч, 10k, 10 thousand => 10000.',
+      'JSON shape: {"mode":"actions|question|clarification","language":null,"summary":null,"answer":null,"message":null,"missing":[],"actions":[{"tool":"create_account","input":{"name":"Наличка","type":"cash","currency":"RUB","initialBalance":0},"reason":"short"}]}',
     ].join('\n');
 
     const prompt = [
-      'Return exactly one JSON object with this shape:',
-      '{"mode":"actions|question|clarification","language":"ru|en|vi|mixed|null","summary":"short|null","answer":"short|null","message":"short|null","missing":[],"actions":[{"tool":"tool_name","input":{},"reason":"short"}]}',
-      '',
-      'TOOL_CATALOG:',
-      buildToolCatalogPrompt(),
-      '',
-      'CONTEXT:',
-      JSON.stringify(this.compactContext(context)),
-      '',
-      'USER_TEXT:',
-      command,
-    ].join('\n');
+      `TOOLS:\n${buildToolCatalogPrompt()}`,
+      `CONTEXT:\n${JSON.stringify(this.compactContext(context))}`,
+      `USER:\n${command}`,
+      'Return JSON only. No markdown. No extra keys outside the shape.',
+    ].join('\n\n');
 
     const raw = await this.provider.generateJson<PlannerRaw>({
       system,
       prompt,
       temperature: 0,
-      numCtx: 2048,
-      numPredict: 256,
+      timeoutMs: 45_000,
+      numCtx: 1024,
+      numPredict: 160,
     });
 
     return this.normalizePlan(raw);
@@ -94,7 +78,7 @@ export class AIPlannerService {
         return {
           mode: 'clarification',
           language: typeof raw.language === 'string' ? raw.language : undefined,
-          message: 'Я понял запрос, но не смог безопасно собрать действие. Сформулируй, что именно нужно изменить в финансах.',
+          message: 'Я понял запрос, но не смог безопасно собрать действие. Сформулируй, что нужно изменить в финансах.',
           missing: ['action'],
         };
       }
@@ -132,7 +116,7 @@ export class AIPlannerService {
     const sections = Array.isArray(source.sections) ? source.sections : [];
 
     return {
-      accounts: accounts.slice(0, 30).map((item) => {
+      accounts: accounts.slice(0, 12).map((item) => {
         const account = this.asRecord(item);
         return {
           name: typeof account.name === 'string' ? account.name : '',
@@ -140,14 +124,14 @@ export class AIPlannerService {
           currency: typeof account.currency === 'string' ? account.currency : '',
         };
       }),
-      categories: categories.slice(0, 40).map((item) => {
+      categories: categories.slice(0, 16).map((item) => {
         const category = this.asRecord(item);
         return {
           name: typeof category.name === 'string' ? category.name : '',
           type: typeof category.type === 'string' ? category.type : '',
         };
       }),
-      sections: sections.slice(0, 30).map((item) => {
+      sections: sections.slice(0, 10).map((item) => {
         const section = this.asRecord(item);
         return { name: typeof section.name === 'string' ? section.name : '' };
       }),

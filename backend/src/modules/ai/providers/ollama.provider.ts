@@ -11,7 +11,6 @@ type OllamaGenerateResponse = {
 function normalizeBaseUrl(value: string | undefined) {
   const fallback = 'http://127.0.0.1:11434';
   const raw = (value || fallback).trim() || fallback;
-
   return raw.replace(/\/+$/, '').replace(/\/api$/i, '');
 }
 
@@ -20,15 +19,15 @@ function getModel() {
 }
 
 function getTimeoutMs(request: AIProviderJsonRequest) {
-  return Math.max(30_000, request.timeoutMs ?? env.aiLlmTimeoutMs ?? 90_000);
+  return Math.max(15_000, request.timeoutMs ?? env.aiLlmTimeoutMs ?? 45_000);
 }
 
 function getNumCtx(request: AIProviderJsonRequest) {
-  return Math.max(512, Math.min(request.numCtx ?? env.ollamaNumCtx ?? 2048, 4096));
+  return Math.max(512, Math.min(request.numCtx ?? env.ollamaNumCtx ?? 1024, 2048));
 }
 
 function getNumPredict(request: AIProviderJsonRequest) {
-  return Math.max(64, Math.min(request.numPredict ?? env.ollamaNumPredict ?? 256, 768));
+  return Math.max(64, Math.min(request.numPredict ?? env.ollamaNumPredict ?? 160, 256));
 }
 
 function stripThinking(value: string) {
@@ -36,17 +35,12 @@ function stripThinking(value: string) {
 }
 
 function stripCodeFences(value: string) {
-  return value
-    .trim()
-    .replace(/^```(?:json)?/i, '')
-    .replace(/```$/i, '')
-    .trim();
+  return value.trim().replace(/^```(?:json)?/i, '').replace(/```$/i, '').trim();
 }
 
 function extractJson(value: string) {
   const cleaned = stripCodeFences(stripThinking(value));
   if (!cleaned) return '';
-
   if (cleaned.startsWith('{') && cleaned.endsWith('}')) return cleaned;
 
   const first = cleaned.indexOf('{');
@@ -60,7 +54,6 @@ async function readError(response: Response) {
   try {
     const text = await response.text();
     if (!text) return response.statusText;
-
     try {
       const parsed = JSON.parse(text) as { error?: string; message?: string };
       return parsed.error || parsed.message || text;
@@ -85,20 +78,19 @@ export class OllamaProvider implements AIProvider {
 
     const system = [
       request.system.trim(),
-      'Return one compact valid JSON object only.',
-      'No markdown. No explanations. No comments.',
+      'Return valid minified JSON only.',
     ].filter(Boolean).join('\n');
 
     try {
       const startedAt = Date.now();
-
       console.log('[OLLAMA] generateJson:start', {
         model,
         timeoutMs,
         baseUrl,
         numCtx,
         numPredict,
-        format: request.schema ? 'schema' : 'json',
+        format: 'json',
+        promptChars: request.prompt.length,
       });
 
       const response = await fetch(`${baseUrl}/api/generate`, {
@@ -110,11 +102,11 @@ export class OllamaProvider implements AIProvider {
           system,
           prompt: request.prompt,
           stream: false,
-          format: request.schema || 'json',
-          keep_alive: '10m',
+          format: 'json',
+          keep_alive: '2m',
           options: {
             temperature: request.temperature ?? 0,
-            top_p: 0.7,
+            top_p: 0.4,
             repeat_penalty: 1.05,
             num_ctx: numCtx,
             num_predict: numPredict,
