@@ -11,14 +11,28 @@ type OllamaGenerateResponse = {
 function normalizeBaseUrl(value: string | undefined) {
   const fallback = 'http://127.0.0.1:11434';
   const raw = (value || fallback).trim() || fallback;
+
   return raw.replace(/\/+$/, '').replace(/\/api$/i, '');
 }
 
+function getModel() {
+  return (env.ollamaModel || 'qwen2.5:3b').trim();
+}
+
+function getTimeoutMs(request: AIProviderJsonRequest) {
+  return Math.max(30_000, request.timeoutMs ?? env.aiLlmTimeoutMs ?? 90_000);
+}
+
+function getNumCtx(request: AIProviderJsonRequest) {
+  return Math.max(512, Math.min(request.numCtx ?? env.ollamaNumCtx ?? 2048, 4096));
+}
+
+function getNumPredict(request: AIProviderJsonRequest) {
+  return Math.max(64, Math.min(request.numPredict ?? env.ollamaNumPredict ?? 256, 768));
+}
+
 function stripThinking(value: string) {
-  return value
-    .replace(/<think>[\s\S]*?<\/think>/gi, '')
-    .replace(/^[\s\S]*?<\/think>/gi, '')
-    .trim();
+  return value.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
 }
 
 function stripCodeFences(value: string) {
@@ -33,19 +47,13 @@ function extractJson(value: string) {
   const cleaned = stripCodeFences(stripThinking(value));
   if (!cleaned) return '';
 
-  if ((cleaned.startsWith('{') && cleaned.endsWith('}')) || (cleaned.startsWith('[') && cleaned.endsWith(']'))) {
-    return cleaned;
-  }
+  if (cleaned.startsWith('{') && cleaned.endsWith('}')) return cleaned;
 
-  const objectStart = cleaned.indexOf('{');
-  const objectEnd = cleaned.lastIndexOf('}');
-  if (objectStart >= 0 && objectEnd > objectStart) return cleaned.slice(objectStart, objectEnd + 1);
+  const first = cleaned.indexOf('{');
+  const last = cleaned.lastIndexOf('}');
+  if (first >= 0 && last > first) return cleaned.slice(first, last + 1);
 
-  const arrayStart = cleaned.indexOf('[');
-  const arrayEnd = cleaned.lastIndexOf(']');
-  if (arrayStart >= 0 && arrayEnd > arrayStart) return cleaned.slice(arrayStart, arrayEnd + 1);
-
-  return '';
+  return cleaned;
 }
 
 async function readError(response: Response) {
@@ -67,26 +75,31 @@ async function readError(response: Response) {
 export class OllamaProvider implements AIProvider {
   async generateJson<T>(request: AIProviderJsonRequest): Promise<T> {
     const baseUrl = normalizeBaseUrl(env.ollamaBaseUrl);
-    const model = env.ollamaModel.trim() || 'qwen2.5:3b';
-    const timeoutMs = Math.max(15_000, request.timeoutMs ?? env.aiLlmTimeoutMs);
-    const numCtx = Math.max(512, request.numCtx ?? env.ollamaNumCtx);
-    const numPredict = Math.max(128, request.numPredict ?? env.ollamaNumPredict);
+    const model = getModel();
+    const timeoutMs = getTimeoutMs(request);
+    const numCtx = getNumCtx(request);
+    const numPredict = getNumPredict(request);
 
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
     const system = [
-      request.system,
-      '',
-      'Return only one compact valid JSON object.',
-      'Do not use markdown.',
-      'Do not add explanations.',
-      'Do not include comments.',
+      request.system.trim(),
+      'Return one compact valid JSON object only.',
+      'No markdown. No explanations. No comments.',
     ].filter(Boolean).join('\n');
 
     try {
       const startedAt = Date.now();
-      console.log('[OLLAMA] generateJson:start', { model, timeoutMs, baseUrl, numCtx, numPredict, format: 'json' });
+
+      console.log('[OLLAMA] generateJson:start', {
+        model,
+        timeoutMs,
+        baseUrl,
+        numCtx,
+        numPredict,
+        format: request.schema ? 'schema' : 'json',
+      });
 
       const response = await fetch(`${baseUrl}/api/generate`, {
         method: 'POST',
@@ -97,11 +110,11 @@ export class OllamaProvider implements AIProvider {
           system,
           prompt: request.prompt,
           stream: false,
-          format: 'json',
+          format: request.schema || 'json',
           keep_alive: '10m',
           options: {
             temperature: request.temperature ?? 0,
-            top_p: 0.8,
+            top_p: 0.7,
             repeat_penalty: 1.05,
             num_ctx: numCtx,
             num_predict: numPredict,
@@ -128,7 +141,7 @@ export class OllamaProvider implements AIProvider {
 
       if (!json) {
         console.error('[OLLAMA] no json response', {
-          rawPreview: raw.slice(0, 1000),
+          rawPreview: raw.slice(0, 1200),
           thinkingPreview: payload.thinking?.slice(0, 500),
         });
         throw new Error('Ollama returned no JSON');
@@ -138,8 +151,8 @@ export class OllamaProvider implements AIProvider {
         return JSON.parse(json) as T;
       } catch (error) {
         console.error('[OLLAMA] json parse failed', {
-          rawPreview: raw.slice(0, 1000),
-          extractedPreview: json.slice(0, 1000),
+          rawPreview: raw.slice(0, 1200),
+          extractedPreview: json.slice(0, 1200),
         });
         throw error;
       }
