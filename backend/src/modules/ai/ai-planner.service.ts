@@ -16,35 +16,35 @@ export class AIPlannerService {
   async plan(command: string, context: unknown): Promise<AIPlan> {
     const system = [
       'You are the semantic planner of a finance app.',
-      'Return compact valid JSON only.',
-      'Do not execute actions.',
-      'Understand the user meaning, then select app tools.',
-      'Support Russian, English, Vietnamese, and mixed text.',
-      'Never copy instruction fragments into entity names.',
-      'If required data is missing or unsafe, return clarification.',
+      'Your job is to understand user meaning and convert it into app tool actions.',
+      'Do not execute anything. Do not chat inside actions. Return JSON only.',
+      'Use actions when the user asks to create, change, delete, move, record, assign, show, or manage app data.',
+      'Use question only for pure financial advice or information without changing app data.',
+      'Use clarification only when required data is truly missing or ambiguous after reading the full user text.',
+      'Do not require exact commands. Users may speak naturally in Russian, English, Vietnamese, or mixed language.',
+      'Preserve user-provided names as clean human labels. Never include instruction fragments inside names.',
+      'Keep explicit currencies and amounts. If amount is written as text, keep that text in amount; backend will normalize it.',
+      'If one request contains several actions, return all actions in the correct order.',
     ].join(' ');
 
-    const prompt = JSON.stringify({
-      output: {
-        mode: 'actions|question|clarification',
-        language: 'ru|en|vi|null',
-        summary: 'string|null',
-        answer: 'string|null',
-        message: 'string|null',
-        missing: ['string'],
-        actions: [{ tool: 'tool_name', reason: 'string|null', input: {} }],
-      },
-      tools: getPlannerToolContract(),
-      current: this.compactContext(context),
-      user: command,
-    });
+    const prompt = [
+      'JSON shape:',
+      '{"mode":"actions|question|clarification","language":"ru|en|vi|null","summary":"short|null","answer":"short|null","message":"short|null","missing":[],"actions":[{"tool":"tool_name","reason":"short|null","input":{}}]}',
+      'Available tools:',
+      getPlannerToolContract(),
+      'Current app context:',
+      JSON.stringify(this.compactContext(context)),
+      'User text:',
+      command,
+    ].join('\n');
 
     const raw = await this.provider.generateJson<Record<string, unknown>>({
       system,
       prompt,
       temperature: 0,
-      numCtx: 1024,
-      numPredict: 140,
+      timeoutMs: 120_000,
+      numCtx: 2048,
+      numPredict: 220,
     });
 
     const plan = this.normalizePlan(raw);
@@ -101,7 +101,7 @@ export class AIPlannerService {
         return {
           mode: 'clarification',
           language: this.asOptionalString(raw.language),
-          message: 'Я понял смысл, но не смог безопасно собрать действие. Уточни, что нужно сделать.',
+          message: 'Я понял запрос, но не смог безопасно собрать действие. Сформулируй чуть точнее.',
           missing: ['action'],
         };
       }

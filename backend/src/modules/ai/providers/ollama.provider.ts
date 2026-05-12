@@ -1,12 +1,19 @@
 import { env } from '../../../config/env';
 import { AIProvider, AIProviderJsonRequest } from './ai-provider.types';
 
-type OllamaGenerateResponse = {
+type OllamaChatResponse = {
+  message?: {
+    role?: string;
+    content?: string;
+    thinking?: string;
+  };
   response?: string;
   thinking?: string;
   error?: string;
   done_reason?: string;
 };
+
+const QWEN3_MAIN_MODEL = 'qwen3:14b-q4_K_M';
 
 function normalizeBaseUrl(value: string | undefined) {
   const fallback = 'http://127.0.0.1:11434';
@@ -15,16 +22,20 @@ function normalizeBaseUrl(value: string | undefined) {
   return raw.replace(/\/+$/, '').replace(/\/api$/i, '');
 }
 
+function getModel() {
+  return (env.ollamaModel || QWEN3_MAIN_MODEL).trim();
+}
+
 function getTimeoutMs(request: AIProviderJsonRequest) {
-  return Math.max(10_000, request.timeoutMs ?? env.ollamaTimeoutMs ?? env.aiLlmTimeoutMs ?? 90_000);
+  return Math.max(30_000, request.timeoutMs ?? env.ollamaTimeoutMs ?? env.aiLlmTimeoutMs ?? 120_000);
 }
 
 function getNumCtx(request: AIProviderJsonRequest) {
-  return Math.max(512, Math.min(8192, request.numCtx ?? env.ollamaNumCtx ?? 2048));
+  return Math.max(1024, Math.min(4096, request.numCtx ?? env.ollamaNumCtx ?? 2048));
 }
 
 function getNumPredict(request: AIProviderJsonRequest) {
-  return Math.max(64, Math.min(1024, request.numPredict ?? env.ollamaNumPredict ?? 256));
+  return Math.max(96, Math.min(512, request.numPredict ?? env.ollamaNumPredict ?? 220));
 }
 
 function stripThinking(value: string) {
@@ -44,15 +55,10 @@ function extractJson(value: string) {
   if (!cleaned) return '';
 
   if (cleaned.startsWith('{') && cleaned.endsWith('}')) return cleaned;
-  if (cleaned.startsWith('[') && cleaned.endsWith(']')) return cleaned;
 
-  const firstObject = cleaned.indexOf('{');
-  const lastObject = cleaned.lastIndexOf('}');
-  if (firstObject >= 0 && lastObject > firstObject) return cleaned.slice(firstObject, lastObject + 1);
-
-  const firstArray = cleaned.indexOf('[');
-  const lastArray = cleaned.lastIndexOf(']');
-  if (firstArray >= 0 && lastArray > firstArray) return cleaned.slice(firstArray, lastArray + 1);
+  const first = cleaned.indexOf('{');
+  const last = cleaned.lastIndexOf('}');
+  if (first >= 0 && last > first) return cleaned.slice(first, last + 1);
 
   return '';
 }
@@ -76,7 +82,7 @@ async function readError(response: Response) {
 export class OllamaProvider implements AIProvider {
   async generateJson<T>(request: AIProviderJsonRequest): Promise<T> {
     const baseUrl = normalizeBaseUrl(env.ollamaBaseUrl);
-    const model = (env.ollamaModel || 'qwen3:14b').trim();
+    const model = getModel();
     const timeoutMs = getTimeoutMs(request);
     const numCtx = getNumCtx(request);
     const numPredict = getNumPredict(request);
@@ -86,39 +92,42 @@ export class OllamaProvider implements AIProvider {
 
     const system = [
       request.system,
-      'Return compact valid JSON only.',
-      'No markdown, no natural language outside JSON, no reasoning text.',
+      'Return one compact valid JSON object only. No markdown. No prose outside JSON.',
     ].filter(Boolean).join('\n');
 
-    const startedAt = Date.now();
-
     try {
+      const startedAt = Date.now();
+
       console.log('[OLLAMA] generateJson:start', {
         model,
         timeoutMs,
         baseUrl,
+        endpoint: '/api/chat',
+        think: false,
         numCtx,
         numPredict,
         format: 'json',
         promptChars: system.length + request.prompt.length,
       });
 
-      const response = await fetch(`${baseUrl}/api/generate`, {
+      const response = await fetch(`${baseUrl}/api/chat`, {
         method: 'POST',
         signal: controller.signal,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           model,
-          system,
-          prompt: request.prompt,
+          messages: [
+            { role: 'system', content: system },
+            { role: 'user', content: request.prompt },
+          ],
+          think: false,
           stream: false,
           format: 'json',
-          think: false,
-          keep_alive: '15m',
+          keep_alive: '20m',
           options: {
             temperature: request.temperature ?? 0,
             top_p: 0.65,
-            repeat_penalty: 1.08,
+            repeat_penalty: 1.04,
             num_ctx: numCtx,
             num_predict: numPredict,
           },
@@ -130,8 +139,8 @@ export class OllamaProvider implements AIProvider {
         throw new Error(`Ollama request failed: ${response.status} ${error}`);
       }
 
-      const payload = (await response.json()) as OllamaGenerateResponse;
-      const raw = payload.response ?? '';
+      const payload = (await response.json()) as OllamaChatResponse;
+      const raw = payload.message?.content ?? payload.response ?? '';
       const json = extractJson(raw);
 
       console.log('[OLLAMA] generateJson:done', {
@@ -140,30 +149,20 @@ export class OllamaProvider implements AIProvider {
         doneReason: payload.done_reason,
         hasRaw: Boolean(raw),
         hasJson: Boolean(json),
+        hasThinking: Boolean(payload.message?.thinking || payload.thinking),
       });
 
       if (env.aiDebug) {
-        console.log('[OLLAMA] raw preview', raw.slice(0, 2000));
-        if (payload.thinking) console.log('[OLLAMA] thinking preview', payload.thinking.slice(0, 800));
+        console.log('[OLLAMA] raw preview', raw.slice(0, 1600));
+        const thinking = payload.message?.thinking ?? payload.thinking ?? '';
+        if (thinking) console.log('[OLLAMA] thinking preview', thinking.slice(0, 800));
       }
 
       if (!json) {
-        console.error('[OLLAMA] no json response', {
-          rawPreview: raw.slice(0, 1200),
-          thinkingPreview: payload.thinking?.slice(0, 500),
-        });
         throw new Error('Ollama returned no JSON');
       }
 
-      try {
-        return JSON.parse(json) as T;
-      } catch (error) {
-        console.error('[OLLAMA] json parse failed', {
-          rawPreview: raw.slice(0, 1200),
-          extractedPreview: json.slice(0, 1200),
-        });
-        throw error;
-      }
+      return JSON.parse(json) as T;
     } catch (error) {
       if (error instanceof Error && error.name === 'AbortError') {
         throw new Error(`Ollama request timed out after ${timeoutMs}ms`);
