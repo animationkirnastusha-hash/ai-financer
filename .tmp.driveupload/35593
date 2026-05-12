@@ -1,0 +1,67 @@
+0000000000000000000000000000000000000000 b5efe3a720e2decf8af26d0c312d907563f766e0 kira <animationkirnastusha@gmail.com> 1777836366 +0300	commit (initial): Initial commit
+b5efe3a720e2decf8af26d0c312d907563f766e0 6c31ab7e830a08423bbcc743a73db1747f01c91b kira <animationkirnastusha@gmail.com> 1777924673 +0300	commit: Add AI memory training analytics
+6c31ab7e830a08423bbcc743a73db1747f01c91b dbb7805dc013502c150548ee4f6c2aac21897aaf kira <animationkirnastusha@gmail.com> 1777925239 +0300	commit: Inject AI memory into parser prompt
+dbb7805dc013502c150548ee4f6c2aac21897aaf ed0d559d6f1f3938111bbf8144ae287544284af6 kira <animationkirnastusha@gmail.com> 1777926193 +0300	commit: Add context fallback for category
+ed0d559d6f1f3938111bbf8144ae287544284af6 72d7e1ce1187f1b5b4af62e9fb54d325feaa7968 kira <animationkirnastusha@gmail.com> 1777926499 +0300	commit: Store parsed AI result in memory meta
+72d7e1ce1187f1b5b4af62e9fb54d325feaa7968 71183e5794de3f2a9819f4e5cb2afac9fa2e94d6 kira <animationkirnastusha@gmail.com> 1777926983 +0300	commit: Support repeat command without amount
+71183e5794de3f2a9819f4e5cb2afac9fa2e94d6 3557987f509c12760c7136ae051d6e5e41ad4dd7 kira <animationkirnastusha@gmail.com> 1777927337 +0300	commit: Fix AI repeat command handling
+3557987f509c12760c7136ae051d6e5e41ad4dd7 a66d3c4ce14b1eff37de2b1967b5953b8e77a257 kira <animationkirnastusha@gmail.com> 1777928382 +0300	commit: Add repeat_last AI intent
+a66d3c4ce14b1eff37de2b1967b5953b8e77a257 a278752b16d5089aa859b43de4c07f1513b8937f kira <animationkirnastusha@gmail.com> 1777928919 +0300	commit: Fix repeat command with optional amount
+a278752b16d5089aa859b43de4c07f1513b8937f 304472f4a6768835dbd20a23ab05db0aebdbd2ca kira <animationkirnastusha@gmail.com> 1777929205 +0300	commit: Fix repeat command before LLM
+304472f4a6768835dbd20a23ab05db0aebdbd2ca 1d1884a7442bfd9501f8defc447a9f90ef0f800c kira <animationkirnastusha@gmail.com> 1777997826 +0300	commit: Add auto deploy
+1d1884a7442bfd9501f8defc447a9f90ef0f800c 4187051837ef4e49e0de360a7d6e3e82e4efc074 kira <animationkirnastusha@gmail.com> 1777997977 +0300	commit: Add auto deploy
+4187051837ef4e49e0de360a7d6e3e82e4efc074 33cdd6de4176c86080e0cdfbb9e63f7c70a298dc kira <animationkirnastusha@gmail.com> 1778000354 +0300	commit: Add day1 AI hardening
+33cdd6de4176c86080e0cdfbb9e63f7c70a298dc 740a95cf26c6c0b8082052b7fbc3e512822ae9dc kira <animationkirnastusha@gmail.com> 1778002949 +0300	commit: Fix pending action service schema fields
+740a95cf26c6c0b8082052b7fbc3e512822ae9dc 43e413704df00f0665729c60d9becb93ca47fb82 kira <animationkirnastusha@gmail.com> 1778003489 +0300	commit: Fix pending action service schema fields
+43e413704df00f0665729c60d9becb93ca47fb82 2e94221ba4e5ca7929517d38fecd747117fbe502 kira <animationkirnastusha@gmail.com> 1778005602 +0300	commit: Fix AI core transaction UI
+2e94221ba4e5ca7929517d38fecd747117fbe502 f79492f5364ca67484d5bc9e1579a4404073646d kira <animationkirnastusha@gmail.com> 1778013375 +0300	commit: Trigger redeploy
+f79492f5364ca67484d5bc9e1579a4404073646d 59bb071eb98cb9c46246d218489f313b73f41da3 kira <animationkirnastusha@gmail.com> 1778013465 +0300	commit: Trigger redeploy
+59bb071eb98cb9c46246d218489f313b73f41da3 617d877caac26a8e7fd852bde4699c11b735ca10 kira <animationkirnastusha@gmail.com> 1778087630 +0300	commit: Fix pack3 build issues
+617d877caac26a8e7fd852bde4699c11b735ca10 09540a22cab2e4928691ef4a9fc711fc9ff9f24a kira <animationkirnastusha@gmail.com> 1778089080 +0300	commit: Fix pack3 build issues
+09540a22cab2e4928691ef4a9fc711fc9ff9f24a 63da116b4751231be99c2ec72bf1c4b95bdd35ef kira <animationkirnastusha@gmail.com> 1778094096 +0300	commit: Apply pack3 fix real integration
+63da116b4751231be99c2ec72bf1c4b95bdd35ef 705f8c2604f980090d323e8085b9b79d6b5bf4d4 kira <animationkirnastusha@gmail.com> 1778165011 +0300	commit: Add base polish launch pack
+705f8c2604f980090d323e8085b9b79d6b5bf4d4 efaebf99c47e28009f2eb6fc66179e29d28b5dfd kira <animationkirnastusha@gmail.com> 1778174125 +0300	commit: Add base polish launch pack v2
+efaebf99c47e28009f2eb6fc66179e29d28b5dfd d94384e07e529889fb4c2ed59b41e4edbf34fd37 kira <animationkirnastusha@gmail.com> 1778174832 +0300	commit: Add base
+d94384e07e529889fb4c2ed59b41e4edbf34fd37 279232a2050082cda946152d2e5c1e4ec3aa1e15 kira <animationkirnastusha@gmail.com> 1778179950 +0300	commit: Add base
+279232a2050082cda946152d2e5c1e4ec3aa1e15 89f3d230e89ce852305564b556e7527f10b681dc kira <animationkirnastusha@gmail.com> 1778181324 +0300	commit: Add base2
+89f3d230e89ce852305564b556e7527f10b681dc aa2acce90b6e07b6580f79ba170f99e7463391ae kira <animationkirnastusha@gmail.com> 1778183284 +0300	commit: Add base3
+aa2acce90b6e07b6580f79ba170f99e7463391ae 89f308d9ca1732bf6678054b5951bc57d6bf5ef8 kira <animationkirnastusha@gmail.com> 1778184142 +0300	commit: Add base4
+89f308d9ca1732bf6678054b5951bc57d6bf5ef8 022bde7aadb228c97558eebd6f78f9f8404cebf2 kira <animationkirnastusha@gmail.com> 1778185762 +0300	commit: Add base5
+022bde7aadb228c97558eebd6f78f9f8404cebf2 06b7db80e946ea34272d8173c99691d416c4c772 kira <animationkirnastusha@gmail.com> 1778247739 +0300	commit: Add base6
+06b7db80e946ea34272d8173c99691d416c4c772 6fd230c230c424999d4a5b58204afe5f1707b6cb kira <animationkirnastusha@gmail.com> 1778250219 +0300	commit: Add base7
+6fd230c230c424999d4a5b58204afe5f1707b6cb ed1afb1ca99e88b64b315ac1d8486d9e3370e051 kira <animationkirnastusha@gmail.com> 1778256320 +0300	commit: Add base8
+ed1afb1ca99e88b64b315ac1d8486d9e3370e051 c7d71c6bb29b095eb7cdb3544d0549600445f69e kira <animationkirnastusha@gmail.com> 1778260042 +0300	commit: Add base9
+c7d71c6bb29b095eb7cdb3544d0549600445f69e d5d47d2f1a15ddde6cc584b90c04e5d393234e94 kira <animationkirnastusha@gmail.com> 1778262589 +0300	commit: Add base10
+d5d47d2f1a15ddde6cc584b90c04e5d393234e94 613fdc6eb5fac3591878618fd1166e2a7b24bd3e kira <animationkirnastusha@gmail.com> 1778264802 +0300	commit: Add base11
+613fdc6eb5fac3591878618fd1166e2a7b24bd3e 5c1d3972e1c7a3c3827c5d217474b0a1666511dc kira <animationkirnastusha@gmail.com> 1778265507 +0300	commit: Add base12
+5c1d3972e1c7a3c3827c5d217474b0a1666511dc c944573b6a20bd0e47b354bdf0a7c7174b6f1218 kira <animationkirnastusha@gmail.com> 1778268371 +0300	commit: Add base13
+c944573b6a20bd0e47b354bdf0a7c7174b6f1218 bf02da82b4e4de1411762a44f94b6a33bbd0db4f kira <animationkirnastusha@gmail.com> 1778270144 +0300	commit: Add base14
+bf02da82b4e4de1411762a44f94b6a33bbd0db4f 940ce5b8104c3643306e0263319a88905ea87e98 kira <animationkirnastusha@gmail.com> 1778273187 +0300	commit: Add base15global
+940ce5b8104c3643306e0263319a88905ea87e98 ae96aa05b7d25475c64006053a17ae3937b60311 kira <animationkirnastusha@gmail.com> 1778276910 +0300	commit: Add base15global1
+ae96aa05b7d25475c64006053a17ae3937b60311 838bf33d1f16949953691bc7df4ea275c28bf2bd kira <animationkirnastusha@gmail.com> 1778341537 +0300	commit: Add base15global2
+838bf33d1f16949953691bc7df4ea275c28bf2bd 032454b80767c1ad667f770e12d3c3165a76f3ba kira <animationkirnastusha@gmail.com> 1778345058 +0300	commit: Add base15global3
+032454b80767c1ad667f770e12d3c3165a76f3ba c9b3c147e370ab1f263e92d692ce053c72429c43 kira <animationkirnastusha@gmail.com> 1778349481 +0300	commit: Add base15global4
+c9b3c147e370ab1f263e92d692ce053c72429c43 5dd4d2bf106566c363a0d94d599d7d077dd792b3 kira <animationkirnastusha@gmail.com> 1778356607 +0300	commit: Add base15global5
+5dd4d2bf106566c363a0d94d599d7d077dd792b3 965c70270c946105289b39273944b7b31629913f kira <animationkirnastusha@gmail.com> 1778359415 +0300	commit: Add base15global5
+965c70270c946105289b39273944b7b31629913f 937e27f627a84230fe2247264813a146509b801f kira <animationkirnastusha@gmail.com> 1778424102 +0300	commit: Add base15global5
+937e27f627a84230fe2247264813a146509b801f 34fb7d7c3725dc41e051a8c39302f8ee30703945 kira <animationkirnastusha@gmail.com> 1778436286 +0300	commit: Add base15global5
+34fb7d7c3725dc41e051a8c39302f8ee30703945 65b850d237afbb52462071c90720d3e05f7d151c kira <animationkirnastusha@gmail.com> 1778437141 +0300	commit: Add base15global5
+65b850d237afbb52462071c90720d3e05f7d151c 221a07d1518a4cd7084928c462d666fbdafe1727 kira <animationkirnastusha@gmail.com> 1778438623 +0300	commit: Add base15global5
+221a07d1518a4cd7084928c462d666fbdafe1727 4537f51d56cce911ec6c4ef2cc569d2839ec1579 kira <animationkirnastusha@gmail.com> 1778439529 +0300	commit: Add base15global5
+4537f51d56cce911ec6c4ef2cc569d2839ec1579 670e3cd5daf52e88f5e795a367b7409c43f2619e kira <animationkirnastusha@gmail.com> 1778440013 +0300	commit: Add base15global5
+670e3cd5daf52e88f5e795a367b7409c43f2619e fd61e1ed3996f80dfb4aa9bc6e801b75c5d69fa9 kira <animationkirnastusha@gmail.com> 1778442879 +0300	commit: Add base15global5
+fd61e1ed3996f80dfb4aa9bc6e801b75c5d69fa9 6c605fcbac243acb13bb3ca348a2834400c965d3 kira <animationkirnastusha@gmail.com> 1778523215 +0300	commit: Add base15global5
+6c605fcbac243acb13bb3ca348a2834400c965d3 4ca09e7690309c24ba6fd0f9c84c8f6dbdb61b87 kira <animationkirnastusha@gmail.com> 1778524185 +0300	commit: Add base15global5
+4ca09e7690309c24ba6fd0f9c84c8f6dbdb61b87 b667ad7c69eebdb9e32e1e2dd56a3523c75001f0 kira <animationkirnastusha@gmail.com> 1778524523 +0300	commit: Add base15global5
+b667ad7c69eebdb9e32e1e2dd56a3523c75001f0 ff9fea02eff457429f0ff27f40f2b97d9a1dc208 kira <animationkirnastusha@gmail.com> 1778528442 +0300	commit: Add base15global5
+ff9fea02eff457429f0ff27f40f2b97d9a1dc208 b122a1dea44c54ccc9473777fa1866314d119421 kira <animationkirnastusha@gmail.com> 1778528897 +0300	commit: Add base15global5
+b122a1dea44c54ccc9473777fa1866314d119421 f6b7635c6224ccb7d0f5be6564fcacaf4dae2802 kira <animationkirnastusha@gmail.com> 1778537921 +0300	commit: Add base15global5
+f6b7635c6224ccb7d0f5be6564fcacaf4dae2802 bae546ca359da62dbbd9b04ae06991d00a38fac8 kira <animationkirnastusha@gmail.com> 1778539235 +0300	commit: Add base15global5
+bae546ca359da62dbbd9b04ae06991d00a38fac8 cf8b925582afe7d4fb1ccc1a5c60c73462bfaa94 kira <animationkirnastusha@gmail.com> 1778540561 +0300	commit: Add base15global5
+cf8b925582afe7d4fb1ccc1a5c60c73462bfaa94 0f87aa457415312fcb53a4b5d6a0b5e98a9b96bd kira <animationkirnastusha@gmail.com> 1778540820 +0300	commit: Add base15global5
+0f87aa457415312fcb53a4b5d6a0b5e98a9b96bd 0cb235bb4592e7c8b462ce0d9968ac62defdd762 kira <animationkirnastusha@gmail.com> 1778541783 +0300	commit: Add base15global5
+0cb235bb4592e7c8b462ce0d9968ac62defdd762 c0a9fdde3bc91256753c79ae467482159c1e6c58 kira <animationkirnastusha@gmail.com> 1778611204 +0300	commit: Add base15global5
+c0a9fdde3bc91256753c79ae467482159c1e6c58 93d2acf360ad865d8d6c07673887ea9231697783 kira <animationkirnastusha@gmail.com> 1778611595 +0300	commit: Add base1
+93d2acf360ad865d8d6c07673887ea9231697783 541879d9c92b0099949b285184b0db6cd9a8e435 kira <animationkirnastusha@gmail.com> 1778612137 +0300	commit: Add base1
+541879d9c92b0099949b285184b0db6cd9a8e435 54c425f61f9df611563d883058b9031c3a17ff95 kira <animationkirnastusha@gmail.com> 1778613442 +0300	commit: Add base1
+54c425f61f9df611563d883058b9031c3a17ff95 b47871b32e8d8f6dc7ef49638eba11ef78e46a87 kira <animationkirnastusha@gmail.com> 1778622295 +0300	commit: Add base1
