@@ -24,7 +24,7 @@ export const AI_TOOL_REGISTRY: AIToolDefinition[] = [
   },
   {
     name: 'create_transaction',
-    description: 'Record expense or income. Bare item + amount is expense. Salary/deposit/top-up is income.',
+    description: 'Record expense or income. Bare item + amount is expense. Small expenses may be executed without confirmation by backend policy.',
     risk: 'medium',
     requiresConfirmation: true,
     input: { kind: 'income|expense', amount: 'number|string', currency: 'RUB|USD|EUR|VND|null', account: 'string|null', category: 'string|null', section: 'string|null', description: 'string|null' },

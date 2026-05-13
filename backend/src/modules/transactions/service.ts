@@ -443,6 +443,22 @@ export class TransactionService {
     return category;
   }
 
+
+  private async ensureEnoughBalance(tx: Prisma.TransactionClient, accountId: string, amount: number) {
+    const account = await tx.account.findUnique({
+      where: { id: accountId },
+      select: { balance: true, name: true },
+    });
+
+    if (!account) {
+      throw new NotFoundError('Account not found');
+    }
+
+    if (account.balance < amount) {
+      throw new BadRequestError(`Insufficient funds on account ${account.name}: balance ${account.balance}, required ${amount}`);
+    }
+  }
+
   private async applyBalanceEffect(
     tx: Prisma.TransactionClient,
     params: {
@@ -468,6 +484,10 @@ export class TransactionService {
     }
 
     if (params.type === 'expense') {
+      if (params.direction === 'apply') {
+        await this.ensureEnoughBalance(tx, params.accountId, params.amount);
+      }
+
       await tx.account.update({
         where: { id: params.accountId },
         data: {
@@ -481,6 +501,10 @@ export class TransactionService {
 
     if (!params.toAccountId) {
       throw new BadRequestError('Transfer requires destination account');
+    }
+
+    if (params.direction === 'apply') {
+      await this.ensureEnoughBalance(tx, params.accountId, params.amount);
     }
 
     await tx.account.update({

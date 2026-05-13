@@ -51,32 +51,16 @@ export class AIPlannerService {
   }
 
   private systemPrompt() {
-    return [
-      'You are AI-financer planner core.',
-      'Return ONLY one compact JSON object.',
-      'No markdown. No prose. No thinking.',
-      'Your job is to convert user text into backend tool calls.',
-      'Never ask clarification for simple money operations.',
-      'Bare item/service + amount means expense transaction.',
-      'Example: кофе 300 => create_transaction expense amount 300 category Кофе description Кофе.',
-      'If operation type is not explicit but amount exists, default to expense.',
-      'If account is missing, set account to null.',
-      'Return question only for real advice/explanation/chat requests.',
-    ].join(' ');
+    return 'Return ONLY JSON. No markdown. Convert text to app tool calls. Bare item + amount = expense. Missing account=null. Questions/advice => mode question.';
   }
 
   private buildPrompt(command: string, context: unknown) {
     return [
-      'JSON:',
-      '{"mode":"actions","summary":"short","actions":[{"tool":"create_transaction","input":{"kind":"expense","amount":300,"account":null,"category":"Кофе","description":"Кофе"}}]}',
-      'or:',
-      '{"mode":"question","answer":"short answer"}',
-      'TOOLS:',
-      getPlannerToolContract(),
-      'CONTEXT:',
-      JSON.stringify(context),
-      'USER:',
-      command,
+      'Schema actions: {"mode":"actions","summary":"...","actions":[{"tool":"create_transaction","input":{"kind":"expense","amount":300,"account":null,"category":"Кофе","description":"Кофе"}}]}',
+      'Schema question: {"mode":"question","answer":"..."}',
+      'Tools:', getPlannerToolContract(),
+      'Ctx:', JSON.stringify(context),
+      'User:', command,
     ].join('\n');
   }
 
@@ -99,14 +83,12 @@ export class AIPlannerService {
     const value = this.asRecord(context) as UserContext;
     return {
       accounts: Array.isArray(value.accounts)
-        ? value.accounts.slice(0, 5).map((account) => ({ n: account.name, t: account.type, c: account.currency }))
+        ? value.accounts.slice(0, 3).map((account) => account.name).filter(Boolean)
         : [],
       categories: Array.isArray(value.categories)
-        ? value.categories.slice(0, 8).map((category) => ({ n: category.name, t: category.type }))
+        ? value.categories.slice(0, 5).map((category) => category.name).filter(Boolean)
         : [],
-      sections: Array.isArray(value.sections)
-        ? value.sections.slice(0, 5).map((section) => section.name).filter(Boolean)
-        : [],
+      sections: [],
     };
   }
 

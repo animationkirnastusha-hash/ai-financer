@@ -79,6 +79,33 @@ export class AIOrchestratorService {
         };
       }
 
+      if (!validated.requiresConfirmation) {
+        const result = await this.executor.execute(userId, parsed);
+        const audit = await this.audit.create({
+          userId,
+          command: trimmed,
+          intent: parsed.intent,
+          riskLevel: validated.riskLevel,
+          requiresConfirmation: false,
+          executed: true,
+          status: 'executed',
+          parsed,
+          result,
+        });
+
+        return {
+          success: true,
+          intent: parsed.intent,
+          executed: true,
+          requiresConfirmation: false,
+          riskLevel: validated.riskLevel,
+          message: this.preview.buildExecutedMessage(parsed),
+          parsed: parsed as unknown as Record<string, unknown>,
+          result,
+          meta: { auditLogId: audit.id, undo: { available: false } },
+        };
+      }
+
       const pending = await this.pending.create({ userId, command: trimmed, parsed, riskLevel: validated.riskLevel });
 
       const audit = await this.audit.create({
