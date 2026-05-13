@@ -15,28 +15,25 @@ export class AIPlannerService {
 
   async plan(command: string, context: unknown): Promise<AIPlan> {
     const system = [
-      'You are AI-financer action planner.',
-      'Return ONLY compact JSON. No markdown. No prose. No thinking.',
-      'Allowed modes: actions, question.',
-      'Never use clarification. Never return unknown.',
-      'If user asks to change app data, return actions.',
-      'If user asks only for advice/explanation, return question.',
-      'Bare product/service + amount means expense. Example: "кофе 300" => create_transaction expense.',
-      'Income words like salary, зарплата, доход, пополнение, положи, закинь mean income.',
-      'If account is not specified for a transaction, set account to null. Backend will choose default account.',
-      'If category is not explicit, infer a clean category from the item. Example: кофе 300 => category Кофе, description Кофе.',
-      'For multiple user requests, return multiple actions in order.',
-      'Preserve human names exactly and cleanly.',
+      'You are AI-financer planning core.',
+      'Return ONLY JSON.',
+      'No prose. No markdown. No thinking.',
+      'Output shape: {"mode":"actions","summary":"...","actions":[{"tool":"...","input":{}}]} OR {"mode":"question","answer":"...","actions":[]}.',
+      'Never ask clarification for simple finance records.',
+      'Bare item/service + amount is always expense.',
+      'Examples: "кофе 300" -> create_transaction expense amount 300 category "Кофе" description "Кофе" account null.',
+      'Examples: "кофе 300 наличные" -> create_transaction expense amount 300 category "Кофе" description "Кофе" account "наличные".',
+      'Income words: зарплата, доход, получил, поступило, пополнение.',
+      'Create/update/delete/transfer/stat requests must be actions.',
+      'Advice/explanation only must be question.',
     ].join(' ');
 
     const prompt = [
-      'JSON shape:',
-      '{"mode":"actions|question","summary":"short|null","answer":"short|null","actions":[{"tool":"tool_name","input":{}}]}',
-      'Tools:',
+      'TOOLS:',
       getPlannerToolContract(),
-      'Context:',
+      'USER_CONTEXT:',
       JSON.stringify(this.compactContext(context)),
-      'User:',
+      'USER_TEXT:',
       command,
     ].join('\n');
 
@@ -45,7 +42,7 @@ export class AIPlannerService {
       prompt,
       temperature: 0,
       modelRole: 'fast',
-      timeoutMs: 15_000,
+      timeoutMs: 25_000,
       numCtx: 768,
       numPredict: 64,
     });
@@ -64,13 +61,13 @@ export class AIPlannerService {
     const value = this.asRecord(context) as UserContext;
     return {
       accounts: Array.isArray(value.accounts)
-        ? value.accounts.slice(0, 8).map((account) => ({ n: account.name, t: account.type, c: account.currency }))
+        ? value.accounts.slice(0, 6).map((account) => account.name).filter(Boolean)
         : [],
       categories: Array.isArray(value.categories)
-        ? value.categories.slice(0, 12).map((category) => ({ n: category.name, t: category.type }))
+        ? value.categories.slice(0, 8).map((category) => category.name).filter(Boolean)
         : [],
       sections: Array.isArray(value.sections)
-        ? value.sections.slice(0, 8).map((section) => section.name).filter(Boolean)
+        ? value.sections.slice(0, 6).map((section) => section.name).filter(Boolean)
         : [],
     };
   }
@@ -109,7 +106,7 @@ export class AIPlannerService {
       return {
         mode: 'question',
         language: this.asOptionalString(raw.language),
-        answer: 'Я понял запрос, но не получил безопасный план действий. Переформулируй одной фразой: что сделать и с какой суммой.',
+        answer: 'Не получил безопасный план действий. Напиши одной фразой действие и сумму, например: "кофе 300".',
       };
     }
 

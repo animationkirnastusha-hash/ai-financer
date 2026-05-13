@@ -27,10 +27,10 @@ export class AIOrchestratorService {
 
     try {
       const context = await this.context.buildUserContext(userId);
-      const tier = await this.modelRouter.getUserTier(userId);
       const plan = await this.planner.plan(trimmed, context);
 
       if (plan.mode === 'question') {
+        const tier = await this.modelRouter.getUserTier(userId);
         const answer = await this.answer.answer(trimmed, context, this.modelRouter.roleForAnswer(tier), plan.answer);
         const audit = await this.audit.create({
           userId,
@@ -109,6 +109,32 @@ export class AIOrchestratorService {
       };
     } catch (error) {
       const message = error instanceof Error ? error.message : 'AI Core failed';
+
+      // Critical: parse/action requests must not fall through to BASE model.
+      // BASE is slow and can block simple commands such as "кофе 300".
+      if (this.looksLikeActionRequest(trimmed)) {
+        const audit = await this.audit.create({
+          userId,
+          command: trimmed,
+          intent: 'planner_error',
+          riskLevel: 'low',
+          requiresConfirmation: false,
+          executed: false,
+          status: 'planner_error',
+          errorMessage: message,
+        });
+
+        return {
+          success: false,
+          intent: 'planner_error',
+          executed: false,
+          requiresConfirmation: false,
+          riskLevel: 'low',
+          message: 'Не удалось подготовить безопасное действие. Повтори коротко: действие, сумма, счёт. Например: кофе 300 наличные.',
+          parsed: null,
+          meta: { auditLogId: audit.id },
+        };
+      }
 
       try {
         const context = await this.context.buildUserContext(userId);
@@ -222,6 +248,21 @@ export class AIOrchestratorService {
 
   async getAuditLogs(userId: string, limit = 50) {
     return this.audit.list(userId, limit);
+  }
+
+  private looksLikeActionRequest(command: string): boolean {
+    const text = command.trim().toLowerCase();
+    if (!text) return false;
+
+    if (/\d/.test(text)) return true;
+
+    const actionWords = [
+      'создай', 'создать', 'добавь', 'добавить', 'запиши', 'записать', 'потратил', 'расход', 'трата',
+      'доход', 'зарплата', 'получил', 'поступило', 'пополнение', 'положи', 'закинь', 'переведи',
+      'перевести', 'счет', 'счёт', 'категория', 'раздел', 'удали', 'удалить', 'переименуй', 'измени',
+    ];
+
+    return actionWords.some((word) => text.includes(word));
   }
 
   private normalizeRisk(value: unknown): AIRiskLevel {

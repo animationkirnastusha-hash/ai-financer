@@ -106,7 +106,20 @@ export function getToolDefinition(name: string) {
 }
 
 export function getPlannerToolContract() {
-  return AI_TOOL_REGISTRY
-    .map((tool) => `${tool.name}: ${JSON.stringify(tool.input)} // ${tool.description}`)
-    .join('\n');
+  return [
+    'create_transaction input {kind:"expense|income",amount:number|string,currency:null|string,account:null|string,category:null|string,section:null|string,description:null|string}',
+    'create_account input {name:string,type:null|string,currency:null|string,initialBalance:null|number|string}',
+    'transfer_money input {fromAccount:string,toAccount:string,amount:number|string,currency:null|string,description:null|string}',
+    'create_category input {name:string,type:"expense|income",section:null|string}',
+    'create_section input {name:string}',
+    'show_accounts input {}',
+    'show_transactions input {limit:null|number}',
+    'update_account input {account:string,name:null|string,type:null|string,currency:null|string,balance:null|number|string}',
+    'delete_account input {account:string}',
+    'update_category input {category:string,name:null|string,section:null|string}',
+    'delete_category input {category:string}',
+    'update_section input {section:string,name:string}',
+    'delete_section input {section:string}',
+    'assign_category_to_section input {category:string,section:string}',
+  ].join('\n');
 }
