@@ -37,12 +37,12 @@ function getTimeoutMs(request: AIProviderJsonRequest, role: AIModelRole) {
 }
 
 function getNumCtx(request: AIProviderJsonRequest, role: AIModelRole) {
-  const fallback = role === 'fast' ? 768 : env.ollamaNumCtx ?? 1536;
+  const fallback = role === 'fast' ? 640 : env.ollamaNumCtx ?? 1536;
   return Math.max(256, Math.min(4096, request.numCtx ?? fallback));
 }
 
 function getNumPredict(request: AIProviderJsonRequest, role: AIModelRole) {
-  const fallback = role === 'fast' ? 64 : env.ollamaNumPredict ?? 128;
+  const fallback = role === 'fast' ? 48 : env.ollamaNumPredict ?? 128;
   return Math.max(16, Math.min(512, request.numPredict ?? fallback));
 }
 
@@ -124,7 +124,7 @@ export class OllamaProvider implements AIProvider {
 
     const system = [
       request.system,
-      'Return one compact valid JSON object only. No markdown. No prose outside JSON. No <think>.',
+      'JSON only.',
     ].filter(Boolean).join('\n');
 
     try {
@@ -159,8 +159,8 @@ export class OllamaProvider implements AIProvider {
           keep_alive: keepAliveForRole(role),
           options: {
             temperature: request.temperature ?? 0,
-            top_p: role === 'fast' ? 0.25 : 0.65,
-            repeat_penalty: 1.04,
+            top_p: role === 'fast' ? 0.1 : 0.65,
+            repeat_penalty: role === 'fast' ? 1.0 : 1.04,
             num_ctx: numCtx,
             num_predict: numPredict,
           },

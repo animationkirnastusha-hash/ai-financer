@@ -101,6 +101,11 @@ export function extractMoneyAmountFromText(text: unknown): number | null {
   const normalized = normalizeText(text);
   if (!normalized) return null;
 
+  const groupedNumeric = normalized.match(/(?:^|[^\p{L}\p{N}])([0-9]{1,3}(?:\s+[0-9]{3})+)(?=$|[^\p{L}\p{N}])/iu);
+  if (groupedNumeric) {
+    return toSafeInteger(Number(groupedNumeric[1].replace(/\s+/g, '')));
+  }
+
   const numericWithScale = normalized.match(/(?:^|[^\p{L}\p{N}])([0-9]+(?:[.,][0-9]+)?)\s*(к|k|тыс\.?|тысяч(?:а|и)?|тыщ|nghìn|ngan|thousand|млн\.?|миллион(?:а|ов)?|million|triệu)(?=$|[^\p{L}\p{N}])/iu);
   if (numericWithScale) {
     return toSafeInteger(Number(numericWithScale[1].replace(',', '.')) * scaleFromToken(numericWithScale[2]));
@@ -120,6 +125,11 @@ function extractMoneyAmountFromValue(value: unknown): number | null {
 
   const normalized = normalizeText(value);
   if (!normalized) return null;
+
+  const groupedNumeric = normalized.match(/(?:^|[^\p{L}\p{N}])([0-9]{1,3}(?:\s+[0-9]{3})+)(?=$|[^\p{L}\p{N}])/iu);
+  if (groupedNumeric) {
+    return toSafeInteger(Number(groupedNumeric[1].replace(/\s+/g, '')));
+  }
 
   const numericWithScale = normalized.match(/(?:^|[^\p{L}\p{N}])([0-9]+(?:[.,][0-9]+)?)\s*(к|k|тыс\.?|тысяч(?:а|и)?|тыщ|nghìn|ngan|thousand|млн\.?|миллион(?:а|ов)?|million|triệu)(?=$|[^\p{L}\p{N}])/iu);
   if (numericWithScale) {

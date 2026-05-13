@@ -13,14 +13,16 @@ export class AIPlannerService {
   private readonly provider = new OllamaProvider();
 
   async plan(command: string, context: unknown): Promise<AIPlan> {
+    const compactContext = this.compactContext(context);
+
     const raw = await this.provider.generateJson<Record<string, unknown>>({
       system: this.systemPrompt(),
-      prompt: this.buildPrompt(command, this.compactContext(context)),
+      prompt: this.buildPrompt(command, compactContext),
       temperature: 0,
       modelRole: 'fast',
-      timeoutMs: 18_000,
-      numCtx: 768,
-      numPredict: 64,
+      timeoutMs: 22_000,
+      numCtx: 640,
+      numPredict: 48,
     });
 
     const plan = this.normalizePlan(raw, command);
@@ -34,14 +36,7 @@ export class AIPlannerService {
   }
 
   private systemPrompt() {
-    return [
-      'You are AI-financer planner.',
-      'Return ONLY JSON.',
-      'No markdown. No prose. No questions.',
-      'Shape: {"actions":[{"tool":"create_transaction|create_account|transfer_money|show_accounts|show_transactions","input":{}}]}',
-      'For money amounts copy the exact user amount phrase into input.amount, e.g. "30 тысяч рублей", "5к", "300".',
-      'If it is an app command, actions MUST NOT be empty.',
-    ].join(' ');
+    return 'Return ONLY JSON: {"mode":"actions","actions":[{"tool":"create_transaction","input":{"kind":"income|expense","amount":"string|number","account":"string|null","category":"string|null","description":"string|null","currency":"RUB"}}]}. No prose. No markdown. Never ask questions.';
   }
 
   private buildPrompt(command: string, context: unknown) {
@@ -49,17 +44,12 @@ export class AIPlannerService {
       'TOOLS:',
       getPlannerToolContract(),
       'RULES:',
-      '- expense/purchase/payment: create_transaction kind expense.',
-      '- income/salary/top-up/deposit/put money to account: create_transaction kind income.',
-      '- create account: create_account.',
-      '- create account and put money there: create_account then create_transaction kind income to same account.',
-      '- transfer between accounts: transfer_money.',
-      'EXAMPLES:',
-      'кофе 300 -> {"actions":[{"tool":"create_transaction","input":{"kind":"expense","amount":"300","currency":"RUB","account":null,"category":"Кофе","description":"Кофе"}}]}',
-      'доход 30 тысяч рублей -> {"actions":[{"tool":"create_transaction","input":{"kind":"income","amount":"30 тысяч рублей","currency":"RUB","account":null,"category":"Доход","description":"Доход"}}]}',
-      'положи на счет наличка 35 тысяч рублей -> {"actions":[{"tool":"create_transaction","input":{"kind":"income","amount":"35 тысяч рублей","currency":"RUB","account":"наличка","category":"Пополнение","description":"Пополнение наличка"}}]}',
-      'создай счет наличка -> {"actions":[{"tool":"create_account","input":{"name":"наличка","type":"cash","currency":"RUB","initialBalance":0}}]}',
-      'создай счет наличка и положи туда 5к -> {"actions":[{"tool":"create_account","input":{"name":"наличка","type":"cash","currency":"RUB","initialBalance":0}},{"tool":"create_transaction","input":{"kind":"income","amount":"5к","currency":"RUB","account":"наличка","category":"Пополнение","description":"Пополнение наличка"}}]}',
+      'income/deposit/top-up/salary => create_transaction kind income.',
+      'expense/payment/purchase/item+amount => create_transaction kind expense.',
+      'create account => create_account initialBalance 0 unless user explicitly says initial balance.',
+      'create account and put/add money => create_account initialBalance 0 + create_transaction income to that account.',
+      'Preserve spoken amounts exactly: "30 тысяч рублей", "30 000 руб", "5к".',
+      'Use account names from CTX when present.',
       'CTX:', JSON.stringify(context),
       'USER:', command,
     ].join('\n');
@@ -69,10 +59,10 @@ export class AIPlannerService {
     const value = this.asRecord(context) as UserContext;
     return {
       accounts: Array.isArray(value.accounts)
-        ? value.accounts.slice(0, 8).map((account) => account.name).filter(Boolean)
+        ? value.accounts.slice(0, 4).map((account) => account.name).filter(Boolean)
         : [],
       categories: Array.isArray(value.categories)
-        ? value.categories.slice(0, 8).map((category) => category.name).filter(Boolean)
+        ? value.categories.slice(0, 4).map((category) => category.name).filter(Boolean)
         : [],
     };
   }
@@ -91,7 +81,8 @@ export class AIPlannerService {
 
     return {
       mode: 'actions',
-      summary: actions.length ? 'Действие подготовлено.' : 'Нет действий',
+      language: this.asOptionalString(raw.language),
+      summary: this.asOptionalString(raw.summary) ?? (actions.length ? 'Действие подготовлено.' : 'Нет действий'),
       actions,
     };
   }
@@ -99,27 +90,47 @@ export class AIPlannerService {
   private normalizeAction(item: Record<string, unknown>, command: string): AIToolCall | null {
     const rawTool = typeof item.tool === 'string' ? item.tool : typeof item.name === 'string' ? item.name : '';
     const input = this.asRecord(item.input ?? item.params ?? item.args ?? item.arguments);
+
     const alias = this.normalizeToolAlias(rawTool);
     if (!alias) return null;
 
-    const nextInput = { ...input, ...alias.extraInput, __userText: command };
+    const nextInput = { ...input, ...alias.extraInput };
+    nextInput.__userText = command;
+
     const reason = typeof item.reason === 'string' && item.reason.trim() ? item.reason.trim() : undefined;
     return reason ? { tool: alias.tool, input: nextInput, reason } : { tool: alias.tool, input: nextInput };
   }
 
   private normalizeToolAlias(rawTool: string): { tool: AIToolName; extraInput: Record<string, unknown> } | null {
     const clean = rawTool.trim();
-    if (this.isToolName(clean)) return { tool: clean, extraInput: {} };
+
+    if (this.isToolName(clean)) {
+      return { tool: clean, extraInput: {} };
+    }
 
     const lower = clean.toLowerCase();
-    if (lower === 'create_expense' || lower === 'add_expense' || lower === 'expense') return { tool: 'create_transaction', extraInput: { kind: 'expense' } };
-    if (lower === 'create_income' || lower === 'add_income' || lower === 'income' || lower === 'deposit' || lower === 'top_up') return { tool: 'create_transaction', extraInput: { kind: 'income' } };
-    if (lower === 'transfer_between_accounts' || lower === 'transfer') return { tool: 'transfer_money', extraInput: {} };
+
+    if (lower === 'create_expense' || lower === 'add_expense' || lower === 'expense') {
+      return { tool: 'create_transaction', extraInput: { kind: 'expense' } };
+    }
+
+    if (lower === 'create_income' || lower === 'add_income' || lower === 'income' || lower === 'deposit' || lower === 'top_up') {
+      return { tool: 'create_transaction', extraInput: { kind: 'income' } };
+    }
+
+    if (lower === 'transfer_between_accounts' || lower === 'transfer') {
+      return { tool: 'transfer_money', extraInput: {} };
+    }
+
     return null;
   }
 
   private isToolName(value: string): value is AIToolName {
     return TOOL_NAMES.has(value as AIToolName);
+  }
+
+  private asOptionalString(value: unknown) {
+    return typeof value === 'string' && value.trim() ? value.trim() : undefined;
   }
 
   private asRecord(value: unknown): Record<string, unknown> {
