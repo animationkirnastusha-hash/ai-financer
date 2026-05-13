@@ -23,7 +23,9 @@ export class AIPreviewService {
       const description = this.describeAction(action);
       return {
         ...action,
-        reason: action.reason || description,
+        reason: description,
+        title: description,
+        description,
         input: {
           ...action.input,
           previewTitle: description,

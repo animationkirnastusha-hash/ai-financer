@@ -130,6 +130,7 @@ export class AIOrchestratorService {
       };
     } catch (error) {
       const message = error instanceof Error ? error.message : 'AI Core failed';
+      console.error('[AI] handleCommand failed', { message, command: trimmed });
       const audit = await this.audit.create({
         userId,
         command: trimmed,

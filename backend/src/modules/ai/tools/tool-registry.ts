@@ -107,15 +107,11 @@ export function getToolDefinition(name: string) {
 
 export function getPlannerToolContract() {
   return [
-    'create_transaction{kind,amount,account,category,description,currency}',
-    'create_account{name,type,currency,initialBalance}',
-    'transfer_money{fromAccount,toAccount,amount,currency,description}',
+    'create_transaction{kind:income|expense,amount:string,account:string|null,category:string|null,description:string|null,currency:RUB|USD|EUR|VND|null}',
+    'create_account{name:string,type:cash|card|savings|investment,currency:RUB|USD|EUR|VND,initialBalance:number|string}',
+    'transfer_money{fromAccount:string,toAccount:string,amount:string,currency:RUB|USD|EUR|VND|null,description:string|null}',
     'show_accounts{}',
-    'show_transactions{limit}',
-    'create_category{name,type,section}',
-    'create_section{name}',
-    'update_account{account,name,type,currency,balance}',
-    'delete_account{account}',
+    'show_transactions{limit:number|null}',
   ].join('\n');
 }
 

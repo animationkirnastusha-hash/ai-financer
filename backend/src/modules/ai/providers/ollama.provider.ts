@@ -42,7 +42,7 @@ function getNumCtx(request: AIProviderJsonRequest, role: AIModelRole) {
 }
 
 function getNumPredict(request: AIProviderJsonRequest, role: AIModelRole) {
-  const fallback = role === 'fast' ? 96 : env.ollamaNumPredict ?? 128;
+  const fallback = role === 'fast' ? 64 : env.ollamaNumPredict ?? 128;
   return Math.max(16, Math.min(512, request.numPredict ?? fallback));
 }
 

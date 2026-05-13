@@ -52,7 +52,7 @@ export class AIValidatorService {
         const name = this.cleanEntityName(input.name) || fallbackName;
         const type = this.coerceAccountType(input.type, 'cash');
         const currency: AICurrency = this.coerceCurrency(input.currency, userText, 'RUB') ?? 'RUB';
-        const initialBalance = normalizeMoneyAmount(input.initialBalance, userText) ?? 0;
+        const initialBalance = normalizeMoneyAmount(input.initialBalance) ?? 0;
         const existingAccount = this.resolveAccount(accounts, name);
 
         input.name = existingAccount?.name ?? name;
@@ -87,7 +87,7 @@ export class AIValidatorService {
         if (action.tool === 'update_account') {
           const type = this.coerceAccountType(input.type, null);
           const currency = this.coerceCurrency(input.currency, userText, null);
-          const balance = normalizeMoneyAmount(input.balance, userText);
+          const balance = normalizeMoneyAmount(input.balance);
 
           if (input.name !== null && input.name !== undefined) input.name = this.cleanEntityName(input.name);
           if (type) input.type = type;
@@ -101,7 +101,8 @@ export class AIValidatorService {
 
       if (action.tool === 'create_transaction') {
         const kind = input.kind === 'income' || input.kind === 'expense' ? input.kind : null;
-        const amount = normalizeMoneyAmount(input.amount, userText);
+        const amountSource = input.amountText ?? input.rawAmount ?? input.amount;
+        const amount = normalizeMoneyAmount(amountSource, userText);
         const accountRef = this.cleanString(input.account)
           || this.lastPlannedAccountName(plannedAccounts)
           || accounts[0]?.name
