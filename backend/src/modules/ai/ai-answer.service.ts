@@ -15,19 +15,22 @@ type AnswerResponse = {
 export class AIAnswerService {
   private readonly provider = new OllamaProvider();
 
-  async answer(command: string, context: unknown, modelRole: AIModelRole): Promise<string> {
+  async answer(command: string, context: unknown, modelRole: AIModelRole, preplannedAnswer?: string): Promise<string> {
+    if (preplannedAnswer && preplannedAnswer.trim().length > 8) {
+      return preplannedAnswer.trim();
+    }
+
     const system = [
       'You are a concise financial assistant inside a personal finance app.',
-      'Answer the user directly when no app action is required or when the user asks for explanation, analysis, advice, or help.',
-      'If the request requires changing app data, do not pretend it was done. Say that the action must be prepared and confirmed.',
-      'Use the user language. Prefer Russian unless the user clearly uses another language.',
+      'Answer directly. No chain-of-thought. Use the user language.',
+      'If the request requires changing app data, say that the action must be prepared and confirmed.',
       'Return JSON only: {"answer":"..."}.',
     ].join(' ');
 
     const prompt = [
-      'Current app context:',
+      'Context:',
       JSON.stringify(this.compactContext(context)),
-      'User text:',
+      'User:',
       command,
     ].join('\n');
 
@@ -49,21 +52,16 @@ export class AIAnswerService {
     const value = this.asRecord(context) as UserContext;
     return {
       accounts: Array.isArray(value.accounts)
-        ? value.accounts.slice(0, 12).map((account) => ({
-          name: account.name,
-          type: account.type,
-          currency: account.currency,
-          balance: account.balance,
-        }))
+        ? value.accounts.slice(0, 8).map((account) => ({ name: account.name, currency: account.currency, balance: account.balance }))
         : [],
       categories: Array.isArray(value.categories)
-        ? value.categories.slice(0, 20).map((category) => ({ name: category.name, type: category.type }))
+        ? value.categories.slice(0, 12).map((category) => ({ name: category.name, type: category.type }))
         : [],
       sections: Array.isArray(value.sections)
-        ? value.sections.slice(0, 12).map((section) => section.name).filter(Boolean)
+        ? value.sections.slice(0, 8).map((section) => section.name).filter(Boolean)
         : [],
       recentTransactions: Array.isArray(value.recentTransactions)
-        ? value.recentTransactions.slice(0, 8).map((transaction) => ({
+        ? value.recentTransactions.slice(0, 5).map((transaction) => ({
           type: transaction.type,
           amount: transaction.amount,
           description: transaction.description,

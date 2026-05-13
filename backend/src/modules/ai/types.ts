@@ -38,14 +38,7 @@ export interface AIQuestionPlan {
   answer: string;
 }
 
-export interface AIClarificationPlan {
-  mode: 'clarification';
-  language?: string;
-  message: string;
-  missing?: string[];
-}
-
-export type AIPlan = AIActionPlan | AIQuestionPlan | AIClarificationPlan;
+export type AIPlan = AIActionPlan | AIQuestionPlan;
 
 export interface AIValidationIssue {
   code: string;

@@ -31,7 +31,7 @@ export class AIOrchestratorService {
       const plan = await this.planner.plan(trimmed, context);
 
       if (plan.mode === 'question') {
-        const answer = await this.answer.answer(trimmed, context, this.modelRouter.roleForAnswer(tier));
+        const answer = await this.answer.answer(trimmed, context, this.modelRouter.roleForAnswer(tier), plan.answer);
         const audit = await this.audit.create({
           userId,
           command: trimmed,
@@ -55,35 +55,11 @@ export class AIOrchestratorService {
         };
       }
 
-      if (plan.mode === 'clarification') {
-        const audit = await this.audit.create({
-          userId,
-          command: trimmed,
-          intent: 'clarification',
-          riskLevel: 'low',
-          requiresConfirmation: false,
-          executed: false,
-          status: 'needs_clarification',
-          result: { message: plan.message, missing: plan.missing ?? [] },
-        });
-
-        return {
-          success: false,
-          intent: 'clarification',
-          executed: false,
-          requiresConfirmation: false,
-          riskLevel: 'low',
-          message: plan.message,
-          parsed: null,
-          meta: { auditLogId: audit.id },
-        };
-      }
-
       const validated = await this.validator.validate(userId, plan);
       const parsed = this.preview.buildParsed(validated.summary, validated.actions);
 
       if (!validated.ok) {
-        const message = validated.issues.map((issue) => issue.message).join('\n') || 'Нужно уточнение.';
+        const message = validated.issues.map((issue) => issue.message).join('\n') || 'Не удалось безопасно подготовить действие.';
         const audit = await this.audit.create({
           userId,
           command: trimmed,

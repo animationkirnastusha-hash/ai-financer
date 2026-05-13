@@ -102,15 +102,13 @@ export function normalizeMoneyAmount(value: unknown, contextText?: string): numb
   const numeric = compact.match(/\d+(?:\.\d+)?/);
 
   if (numeric) {
-    const parsed = Number(numeric[0]);
-    if (!Number.isFinite(parsed) || parsed <= 0) return null;
-    return Math.round(parsed * detectScale(raw));
+    const parsedNumber = Number(numeric[0]);
+    if (!Number.isFinite(parsedNumber) || parsedNumber <= 0) return null;
+    return Math.round(parsedNumber * detectScale(raw));
   }
 
-  const wordsValue = parseRussianNumberWords(raw);
-  if (wordsValue > 0) {
-    return Math.round(wordsValue * detectScale(raw));
-  }
+  const wordsValue = russianNumberWordsToNumber(raw);
+  if (wordsValue > 0) return Math.round(wordsValue * detectScale(raw));
 
   return null;
 }
@@ -125,7 +123,7 @@ function detectScale(raw: string) {
   return SCALE_WORDS.find(([pattern]) => pattern.test(raw))?.[1] ?? 1;
 }
 
-function parseRussianNumberWords(raw: string) {
+function russianNumberWordsToNumber(raw: string) {
   const words = raw
     .replace(/[^а-яё\s-]/gi, ' ')
     .split(/[\s-]+/)

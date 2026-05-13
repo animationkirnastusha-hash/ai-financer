@@ -4,36 +4,27 @@ dotenv.config();
 
 function getEnv(name: string, fallback?: string): string {
   const value = process.env[name] ?? fallback;
-
-  if (value === undefined || value === '') {
-    throw new Error(`Missing required environment variable: ${name}`);
-  }
-
+  if (value === undefined || value === '') throw new Error(`Missing required environment variable: ${name}`);
   return value;
 }
 
 function getNumberEnv(name: string, fallback: number): number {
   const raw = process.env[name];
   if (!raw) return fallback;
-
   const parsed = Number(raw);
-  if (!Number.isFinite(parsed)) {
-    throw new Error(`Environment variable ${name} must be a number`);
-  }
-
+  if (!Number.isFinite(parsed)) throw new Error(`Environment variable ${name} must be a number`);
   return parsed;
 }
 
 function getBooleanEnv(name: string, fallback: boolean): boolean {
   const raw = process.env[name];
   if (raw === undefined) return fallback;
-
   return ['1', 'true', 'yes', 'on'].includes(raw.toLowerCase());
 }
 
-const QWEN3_FAST_MODEL = 'qwen3:4b';
-const QWEN3_BASE_MODEL = 'qwen3:8b';
-const QWEN3_PREMIUM_MODEL = 'qwen3:14b-q4_K_M';
+const FAST_MODEL = 'qwen2.5:3b';
+const BASE_MODEL = 'qwen3:8b';
+const PREMIUM_MODEL = 'qwen3:14b-q4_K_M';
 
 export const env = {
   nodeEnv: getEnv('NODE_ENV', 'development'),
@@ -48,15 +39,15 @@ export const env = {
   aiDebug: getBooleanEnv('AI_DEBUG', false),
 
   ollamaBaseUrl: getEnv('OLLAMA_BASE_URL', 'http://127.0.0.1:11434'),
-  ollamaModel: getEnv('OLLAMA_MODEL', QWEN3_BASE_MODEL),
-  ollamaFastModel: getEnv('OLLAMA_FAST_MODEL', QWEN3_FAST_MODEL),
-  ollamaFreeReasoningModel: getEnv('OLLAMA_FREE_REASONING_MODEL', getEnv('OLLAMA_MODEL', QWEN3_BASE_MODEL)),
-  ollamaPremiumModel: getEnv('OLLAMA_PREMIUM_MODEL', QWEN3_PREMIUM_MODEL),
+  ollamaModel: getEnv('OLLAMA_MODEL', BASE_MODEL),
+  ollamaFastModel: getEnv('OLLAMA_FAST_MODEL', FAST_MODEL),
+  ollamaFreeReasoningModel: getEnv('OLLAMA_FREE_REASONING_MODEL', getEnv('OLLAMA_MODEL', BASE_MODEL)),
+  ollamaPremiumModel: getEnv('OLLAMA_PREMIUM_MODEL', PREMIUM_MODEL),
 
   aiLlmTimeoutMs: getNumberEnv('AI_LLM_TIMEOUT_MS', getNumberEnv('OLLAMA_TIMEOUT_MS', 60_000)),
   ollamaTimeoutMs: getNumberEnv('OLLAMA_TIMEOUT_MS', getNumberEnv('AI_LLM_TIMEOUT_MS', 60_000)),
-  ollamaNumCtx: getNumberEnv('OLLAMA_NUM_CTX', 1536),
-  ollamaNumPredict: getNumberEnv('OLLAMA_NUM_PREDICT', 128),
+  ollamaNumCtx: getNumberEnv('OLLAMA_NUM_CTX', 768),
+  ollamaNumPredict: getNumberEnv('OLLAMA_NUM_PREDICT', 64),
 
   frontendUrl: getEnv('FRONTEND_URL', 'http://localhost:5173'),
   enableCron: getBooleanEnv('ENABLE_CRON', true),

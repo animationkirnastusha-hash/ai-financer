@@ -16,7 +16,6 @@ type OllamaChatResponse = {
 function normalizeBaseUrl(value: string | undefined) {
   const fallback = 'http://127.0.0.1:11434';
   const raw = (value || fallback).trim() || fallback;
-
   return raw.replace(/\/+$/, '').replace(/\/api$/i, '');
 }
 
@@ -32,16 +31,25 @@ function fallbackRole(role: AIModelRole): AIModelRole | null {
   return null;
 }
 
-function getTimeoutMs(request: AIProviderJsonRequest) {
-  return Math.max(20_000, request.timeoutMs ?? env.ollamaTimeoutMs ?? env.aiLlmTimeoutMs ?? 60_000);
+function getTimeoutMs(request: AIProviderJsonRequest, role: AIModelRole) {
+  const fallback = role === 'fast' ? 15_000 : env.ollamaTimeoutMs ?? env.aiLlmTimeoutMs ?? 60_000;
+  return Math.max(5_000, request.timeoutMs ?? fallback);
 }
 
-function getNumCtx(request: AIProviderJsonRequest) {
-  return Math.max(768, Math.min(4096, request.numCtx ?? env.ollamaNumCtx ?? 1536));
+function getNumCtx(request: AIProviderJsonRequest, role: AIModelRole) {
+  const fallback = role === 'fast' ? 768 : env.ollamaNumCtx ?? 1536;
+  return Math.max(256, Math.min(4096, request.numCtx ?? fallback));
 }
 
-function getNumPredict(request: AIProviderJsonRequest) {
-  return Math.max(64, Math.min(512, request.numPredict ?? env.ollamaNumPredict ?? 128));
+function getNumPredict(request: AIProviderJsonRequest, role: AIModelRole) {
+  const fallback = role === 'fast' ? 64 : env.ollamaNumPredict ?? 128;
+  return Math.max(16, Math.min(512, request.numPredict ?? fallback));
+}
+
+function keepAliveForRole(role: AIModelRole) {
+  if (role === 'fast') return '1h';
+  if (role === 'premium') return '2m';
+  return '20m';
 }
 
 function stripThinking(value: string) {
@@ -59,7 +67,6 @@ function stripCodeFences(value: string) {
 function extractJson(value: string) {
   const cleaned = stripCodeFences(stripThinking(value));
   if (!cleaned) return '';
-
   if (cleaned.startsWith('{') && cleaned.endsWith('}')) return cleaned;
 
   const first = cleaned.indexOf('{');
@@ -108,16 +115,16 @@ export class OllamaProvider implements AIProvider {
   private async generateJsonWithRole<T>(request: AIProviderJsonRequest, role: AIModelRole): Promise<T> {
     const baseUrl = normalizeBaseUrl(env.ollamaBaseUrl);
     const model = modelForRole(role).trim();
-    const timeoutMs = getTimeoutMs(request);
-    const numCtx = getNumCtx(request);
-    const numPredict = getNumPredict(request);
+    const timeoutMs = getTimeoutMs(request, role);
+    const numCtx = getNumCtx(request, role);
+    const numPredict = getNumPredict(request, role);
 
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
     const system = [
       request.system,
-      'Return one compact valid JSON object only. No markdown. No prose outside JSON. Do not include <think>.',
+      'Return one compact valid JSON object only. No markdown. No prose outside JSON. No <think>.',
     ].filter(Boolean).join('\n');
 
     try {
@@ -149,10 +156,10 @@ export class OllamaProvider implements AIProvider {
           think: false,
           stream: false,
           format: 'json',
-          keep_alive: role === 'premium' ? '5m' : '10m',
+          keep_alive: keepAliveForRole(role),
           options: {
             temperature: request.temperature ?? 0,
-            top_p: role === 'fast' ? 0.35 : 0.65,
+            top_p: role === 'fast' ? 0.25 : 0.65,
             repeat_penalty: 1.04,
             num_ctx: numCtx,
             num_predict: numPredict,
@@ -185,10 +192,7 @@ export class OllamaProvider implements AIProvider {
         if (thinking) console.log('[OLLAMA] thinking preview', thinking.slice(0, 800));
       }
 
-      if (!json) {
-        throw new Error('Ollama returned no JSON');
-      }
-
+      if (!json) throw new Error('Ollama returned no JSON');
       return JSON.parse(json) as T;
     } catch (error) {
       if (error instanceof Error && error.name === 'AbortError') {
