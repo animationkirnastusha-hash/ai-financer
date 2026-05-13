@@ -19,23 +19,41 @@ const TOOL_LABELS: Record<string, string> = {
 
 export class AIPreviewService {
   buildParsed(summary: string, actions: AIValidatedAction[]): AIParsedCommand {
-    return { intent: 'batch', summary, actions };
+    const enriched = actions.map((action) => {
+      const description = this.describeAction(action);
+      return {
+        ...action,
+        reason: action.reason || description,
+        input: {
+          ...action.input,
+          previewTitle: description,
+          previewDescription: description,
+        },
+      };
+    });
+
+    return { intent: 'batch', summary: this.normalizeSummary(summary, enriched), actions: enriched };
   }
 
   buildMessage(parsed: AIParsedCommand) {
     if (parsed.actions.length === 0) return 'Я не нашёл действий для выполнения.';
-    if (parsed.summary && !/^проверь действие/i.test(parsed.summary)) return `Проверь: ${parsed.summary}`;
-
-    if (parsed.actions.length === 1) {
-      return `Проверь: ${this.describeAction(parsed.actions[0])}`;
-    }
-
-    return `Проверь ${parsed.actions.length} действия перед выполнением.`;
+    if (parsed.actions.length === 1) return `Проверь: ${this.describeAction(parsed.actions[0])}`;
+    return `Проверь ${parsed.actions.length} действия: ${parsed.actions.map((action) => this.describeAction(action)).join('; ')}`;
   }
 
   buildExecutedMessage(parsed: AIParsedCommand) {
     if (parsed.actions.length === 1) return `Готово: ${this.describeAction(parsed.actions[0])}`;
-    return `Готово. Выполнено действий: ${parsed.actions.length}.`;
+    return `Готово. Выполнено: ${parsed.actions.map((action) => this.describeAction(action)).join('; ')}`;
+  }
+
+  private normalizeSummary(summary: string, actions: AIValidatedAction[]) {
+    const clean = this.clean(summary);
+    if (!clean || /^проверь действие/i.test(clean) || /^проверь \d+/i.test(clean)) {
+      if (actions.length === 1) return this.describeAction(actions[0]);
+      return actions.map((action) => this.describeAction(action)).join('; ');
+    }
+
+    return clean;
   }
 
   private describeAction(action: AIValidatedAction) {
@@ -44,13 +62,15 @@ export class AIPreviewService {
     if (action.tool === 'create_transaction') {
       const kind = input.kind === 'income' ? 'доход' : 'расход';
       const amount = this.formatAmount(input.amount, input.currency);
-      const name = this.clean(input.description || input.category) || 'операция';
+      const name = this.clean(input.description || input.category) || (input.kind === 'income' ? 'Доход' : 'Расход');
       const account = this.clean(input.account);
       return `${kind} ${amount}: ${name}${account ? `, счёт ${account}` : ''}`;
     }
 
     if (action.tool === 'create_account') {
-      return `создать счёт "${this.clean(input.name) || 'без названия'}"`;
+      if (input.__skipCreate) return `счёт "${this.clean(input.name) || 'без названия'}" уже существует`;
+      const initialBalance = Number(input.initialBalance ?? 0);
+      return `создать счёт "${this.clean(input.name) || 'без названия'}"${initialBalance > 0 ? ` с балансом ${this.formatAmount(initialBalance, input.currency)}` : ''}`;
     }
 
     if (action.tool === 'transfer_money') {

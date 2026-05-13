@@ -1,4 +1,4 @@
-import { AIActionPlan, AIToolCall, AIToolName } from './types';
+import { AIPlan, AIToolCall, AIToolName } from './types';
 import { OllamaProvider } from './providers/ollama.provider';
 import { AI_TOOL_REGISTRY, getPlannerToolContract } from './tools/tool-registry';
 
@@ -7,12 +7,13 @@ const TOOL_NAMES = new Set(AI_TOOL_REGISTRY.map((tool) => tool.name));
 type UserContext = {
   accounts?: Array<{ name?: string; type?: string; currency?: string }>;
   categories?: Array<{ name?: string; type?: string }>;
+  sections?: Array<{ name?: string }>;
 };
 
 export class AIPlannerService {
   private readonly provider = new OllamaProvider();
 
-  async plan(command: string, context: unknown): Promise<AIActionPlan> {
+  async plan(command: string, context: unknown): Promise<AIPlan> {
     const compactContext = this.compactContext(context);
 
     const raw = await this.provider.generateJson<Record<string, unknown>>({
@@ -22,7 +23,7 @@ export class AIPlannerService {
       modelRole: 'fast',
       timeoutMs: 20_000,
       numCtx: 768,
-      numPredict: 80,
+      numPredict: 96,
     });
 
     const plan = this.normalizePlan(raw, command);
@@ -37,50 +38,51 @@ export class AIPlannerService {
 
   private systemPrompt() {
     return [
-      'You are a backend tool planner.',
-      'Return ONLY valid compact JSON.',
-      'Never answer with text, questions, markdown, explanations, or null.',
-      'Always return {"mode":"actions","summary":"...","actions":[]}.',
-      'Use actions:[] only when the user request is not related to the app.',
-      'Do not invent tools. Use only listed tools.',
-      'For money operations always choose create_transaction or transfer_money.',
-      'For income/top-up/salary choose kind income.',
-      'For purchases/spending choose kind expense.',
-      'For item plus amount choose expense.',
-      'For create account plus add money, return create_account then create_transaction income to that account.',
+      'You are AI-financer action planner.',
+      'Return ONLY compact JSON.',
+      'Never ask questions.',
+      'Never explain.',
+      'Never use markdown.',
+      'Output shape: {"mode":"actions","summary":"short human summary","actions":[{"tool":"tool_name","input":{}}]}',
+      'If the user request is not an app action, return {"mode":"actions","summary":"Нет действий","actions":[]}.',
     ].join(' ');
   }
 
   private buildPrompt(command: string, context: unknown) {
     return [
-      'OUTPUT SHAPE:',
-      '{"mode":"actions","summary":"short human summary","actions":[{"tool":"create_transaction","input":{"kind":"expense","amount":300,"account":null,"category":"Кофе","description":"Кофе"}}]}',
       'TOOLS:',
       getPlannerToolContract(),
+      'RULES:',
+      '- Use create_transaction for income, expense, deposit/top-up, salary, purchase, payment.',
+      '- "положи/пополни/закинь/внеси на счет" means create_transaction kind income.',
+      '- Bare item + amount means create_transaction kind expense.',
+      '- For "создай счет X и положи туда Y" return TWO actions: create_account, then create_transaction income with account X.',
+      '- Preserve amount words in input.amount when user says "тысяч", "к", "млн".',
+      '- Use existing account names from context when possible.',
       'EXAMPLES:',
-      'User: Кофе 300 => {"mode":"actions","summary":"Добавить расход 300 RUB: Кофе","actions":[{"tool":"create_transaction","input":{"kind":"expense","amount":300,"account":null,"category":"Кофе","description":"Кофе"}}]}',
-      'User: Доход 50 тысяч рублей => {"mode":"actions","summary":"Добавить доход 50000 RUB","actions":[{"tool":"create_transaction","input":{"kind":"income","amount":"50 тысяч","account":null,"category":"Доход","description":"Доход"}}]}',
-      'User: создай счет наличка и положи туда 5к => {"mode":"actions","summary":"Создать счёт Наличка и добавить 5000 RUB","actions":[{"tool":"create_account","input":{"name":"Наличка","type":"cash","currency":"RUB","initialBalance":0}},{"tool":"create_transaction","input":{"kind":"income","amount":"5к","account":"Наличка","category":"Пополнение","description":"Пополнение счёта"}}]}',
-      'CONTEXT:',
-      JSON.stringify(context),
-      'USER:',
-      command,
-    ].join('');
+      'User: кофе 300 => {"mode":"actions","summary":"Расход 300 RUB: Кофе","actions":[{"tool":"create_transaction","input":{"kind":"expense","amount":300,"currency":"RUB","account":null,"category":"Кофе","description":"Кофе"}}]}',
+      'User: доход 30 тысяч рублей => {"mode":"actions","summary":"Доход 30 тысяч рублей","actions":[{"tool":"create_transaction","input":{"kind":"income","amount":"30 тысяч рублей","currency":"RUB","account":null,"category":"Доход","description":"Доход"}}]}',
+      'User: положи на счет наличка 35 тысяч рублей => {"mode":"actions","summary":"Пополнить наличка на 35 тысяч рублей","actions":[{"tool":"create_transaction","input":{"kind":"income","amount":"35 тысяч рублей","currency":"RUB","account":"наличка","category":"Пополнение","description":"Пополнение наличка"}}]}',
+      'User: создай счет наличка => {"mode":"actions","summary":"Создать счёт наличка","actions":[{"tool":"create_account","input":{"name":"наличка","type":"cash","currency":"RUB","initialBalance":0}}]}',
+      'User: создай счет наличка и положи туда 5к => {"mode":"actions","summary":"Создать счёт наличка и пополнить на 5к","actions":[{"tool":"create_account","input":{"name":"наличка","type":"cash","currency":"RUB","initialBalance":0}},{"tool":"create_transaction","input":{"kind":"income","amount":"5к","currency":"RUB","account":"наличка","category":"Пополнение","description":"Пополнение наличка"}}]}',
+      'CTX:', JSON.stringify(context),
+      'USER:', command,
+    ].join('\n');
   }
 
   private compactContext(context: unknown) {
     const value = this.asRecord(context) as UserContext;
     return {
       accounts: Array.isArray(value.accounts)
-        ? value.accounts.slice(0, 6).map((account) => account.name).filter(Boolean)
+        ? value.accounts.slice(0, 5).map((account) => account.name).filter(Boolean)
         : [],
       categories: Array.isArray(value.categories)
-        ? value.categories.slice(0, 8).map((category) => category.name).filter(Boolean)
+        ? value.categories.slice(0, 6).map((category) => category.name).filter(Boolean)
         : [],
     };
   }
 
-  private normalizePlan(raw: Record<string, unknown>, command: string): AIActionPlan {
+  private normalizePlan(raw: Record<string, unknown>, command: string): AIPlan {
     const rawActions = Array.isArray(raw.actions)
       ? raw.actions
       : Array.isArray(raw.toolCalls)
@@ -95,7 +97,7 @@ export class AIPlannerService {
     return {
       mode: 'actions',
       language: this.asOptionalString(raw.language),
-      summary: this.asOptionalString(raw.summary) ?? this.buildDefaultSummary(actions),
+      summary: this.asOptionalString(raw.summary) ?? (actions.length ? 'Проверь действие перед выполнением.' : 'Нет действий'),
       actions,
     };
   }
@@ -127,7 +129,7 @@ export class AIPlannerService {
       return { tool: 'create_transaction', extraInput: { kind: 'expense' } };
     }
 
-    if (lower === 'create_income' || lower === 'add_income' || lower === 'income') {
+    if (lower === 'create_income' || lower === 'add_income' || lower === 'income' || lower === 'deposit' || lower === 'top_up') {
       return { tool: 'create_transaction', extraInput: { kind: 'income' } };
     }
 
@@ -135,21 +137,11 @@ export class AIPlannerService {
       return { tool: 'transfer_money', extraInput: {} };
     }
 
-    if (!clean && (input.amount !== undefined || input.category !== undefined || input.description !== undefined)) {
-      return { tool: 'create_transaction', extraInput: {} };
-    }
-
     return null;
   }
 
   private isToolName(value: string): value is AIToolName {
     return TOOL_NAMES.has(value as AIToolName);
-  }
-
-  private buildDefaultSummary(actions: AIToolCall[]) {
-    if (actions.length === 0) return 'Не найдено действий для выполнения.';
-    if (actions.length === 1) return 'Подготовлено действие.';
-    return `Подготовлено действий: ${actions.length}.`;
   }
 
   private asOptionalString(value: unknown) {

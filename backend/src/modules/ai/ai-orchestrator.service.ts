@@ -24,11 +24,36 @@ export class AIOrchestratorService {
     try {
       const context = await this.context.buildUserContext(userId);
       const plan = await this.planner.plan(trimmed, context);
+
+      if (!plan.actions.length) {
+        const audit = await this.audit.create({
+          userId,
+          command: trimmed,
+          intent: 'no_action',
+          riskLevel: 'low',
+          requiresConfirmation: false,
+          executed: false,
+          status: 'no_action',
+          result: { plan },
+        });
+
+        return {
+          success: false,
+          intent: 'no_action',
+          executed: false,
+          requiresConfirmation: false,
+          riskLevel: 'low',
+          message: 'Не нашёл действие для выполнения. Сформулируй как действие: сумма, счёт, тип операции.',
+          parsed: null,
+          meta: { auditLogId: audit.id },
+        };
+      }
+
       const validated = await this.validator.validate(userId, plan);
       const parsed = this.preview.buildParsed(validated.summary, validated.actions);
 
       if (!validated.ok) {
-        const message = validated.issues.map((issue) => issue.message).join('') || 'Не удалось безопасно подготовить действие.';
+        const message = validated.issues.map((issue) => issue.message).join('\n') || 'Не удалось безопасно подготовить действие.';
         const audit = await this.audit.create({
           userId,
           command: trimmed,
@@ -159,7 +184,7 @@ export class AIOrchestratorService {
       executed: true,
       requiresConfirmation: false,
       riskLevel,
-      message: parsed.actions.length === 1 ? 'Готово. Действие выполнено.' : `Готово. Выполнено действий: ${parsed.actions.length}.`,
+      message: this.preview.buildExecutedMessage(parsed),
       parsed: parsed as unknown as Record<string, unknown>,
       result,
       meta: { auditLogId: audit.id, undo: { available: false } },

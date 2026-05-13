@@ -19,11 +19,9 @@ interface AccountLite {
   balance: number;
 }
 
-type PlannedAccount = { name: string; currency: AICurrency; existingId?: string };
-
 const ACCOUNT_TYPES: AIAccountType[] = ['cash', 'card', 'savings', 'investment'];
 const CURRENCIES: AICurrency[] = ['RUB', 'USD', 'EUR', 'VND'];
-const AUTO_EXECUTE_EXPENSE_LIMIT = Number(process.env.AI_AUTO_EXECUTE_EXPENSE_LIMIT ?? 5000);
+const DEFAULT_AUTO_TRANSACTION_LIMIT = 100000;
 
 export class AIValidatorService {
   async validate(userId: string, plan: AIActionPlan): Promise<AIValidatedPlan> {
@@ -35,11 +33,7 @@ export class AIValidatorService {
 
     const issues: AIValidatedPlan['issues'] = [];
     const actions: AIValidatedAction[] = [];
-    const plannedAccounts = new Map<string, PlannedAccount>();
-
-    if (!plan.actions.length) {
-      issues.push({ code: 'no_actions', message: 'Не удалось определить действие. Напиши короче: действие, сумма, счёт.' });
-    }
+    const plannedAccounts = new Map<string, { name: string; currency: AICurrency }>();
 
     for (const [index, action] of plan.actions.entries()) {
       const definition = getToolDefinition(action.tool);
@@ -56,20 +50,21 @@ export class AIValidatorService {
       if (action.tool === 'create_account') {
         const fallbackName = `Счёт ${plannedAccounts.size + accounts.length + 1}`;
         const name = this.cleanEntityName(input.name) || fallbackName;
-        const type = this.coerceAccountType(input.type, 'cash') ?? 'cash';
-        const currency = this.coerceCurrency(input.currency, userText, 'RUB') ?? 'RUB';
+        const type = this.coerceAccountType(input.type, 'cash');
+        const currency: AICurrency = this.coerceCurrency(input.currency, userText, 'RUB') ?? 'RUB';
         const initialBalance = normalizeMoneyAmount(input.initialBalance, userText) ?? 0;
-        const existing = this.resolveAccount(accounts, name);
+        const existingAccount = this.resolveAccount(accounts, name);
 
-        input.name = name;
+        input.name = existingAccount?.name ?? name;
         input.type = type;
-        input.currency = currency;
+        input.currency = existingAccount ? this.ensureCurrency(existingAccount.currency, currency) : currency;
         input.initialBalance = initialBalance;
 
-        if (existing) {
-          resolved.existingAccountId = existing.id;
-          resolved.noop = true;
-          plannedAccounts.set(this.key(name), { name: existing.name, currency: this.ensureCurrency(existing.currency, currency), existingId: existing.id });
+        if (existingAccount) {
+          resolved.existingAccountId = existingAccount.id;
+          resolved.accountId = existingAccount.id;
+          input.__skipCreate = true;
+          plannedAccounts.set(this.key(name), { name: existingAccount.name, currency: this.ensureCurrency(existingAccount.currency, currency) });
         } else {
           plannedAccounts.set(this.key(name), { name, currency });
         }
@@ -114,14 +109,14 @@ export class AIValidatorService {
 
         const account = this.resolveAccount(accounts, accountRef);
         const plannedAccount = plannedAccounts.get(this.key(accountRef));
-        const targetCurrency = account ? this.ensureCurrency(account.currency, 'RUB') : plannedAccount?.currency ?? 'RUB';
+        const targetCurrency: AICurrency = account ? this.ensureCurrency(account.currency, 'RUB') : plannedAccount?.currency ?? 'RUB';
         const moneyCurrency = this.coerceCurrency(input.currency, userText, targetCurrency) ?? targetCurrency;
 
-        if (!kind) issues.push({ code: 'missing_transaction_kind', message: 'Не указан тип операции: income или expense.', actionIndex: index, field: 'kind' });
+        if (!kind) issues.push({ code: 'missing_transaction_kind', message: 'AI не указал тип операции: income или expense.', actionIndex: index, field: 'kind' });
         if (!amount) issues.push({ code: 'missing_amount', message: 'Не хватает суммы операции.', actionIndex: index, field: 'amount' });
         if (!account && !plannedAccount) issues.push({ code: 'account_not_found', message: 'Не найден счёт для операции.', actionIndex: index, field: 'account' });
 
-        const category = this.cleanEntityName(input.category) || (kind === 'income' ? 'Доход' : 'Расход');
+        const category = this.cleanEntityName(input.category) || this.cleanEntityName(input.description) || (kind === 'income' ? 'Доход' : 'Расход');
         const section = this.cleanEntityName(input.section);
         const description = this.cleanEntityName(input.description) || category;
 
@@ -133,14 +128,20 @@ export class AIValidatorService {
         input.section = section;
         input.description = description;
 
+        const amountInAccountCurrency = amount ? convertMoney(amount, moneyCurrency, targetCurrency) : 0;
+
         if (account && amount) {
-          const amountInAccountCurrency = convertMoney(amount, moneyCurrency, targetCurrency);
           resolved.accountId = account.id;
           resolved.accountCurrency = targetCurrency;
           resolved.amountInAccountCurrency = amountInAccountCurrency;
 
           if (kind === 'expense' && account.balance < amountInAccountCurrency) {
-            issues.push({ code: 'insufficient_funds', message: `Недостаточно средств на счёте ${account.name}: баланс ${account.balance}, нужно ${amountInAccountCurrency}.`, actionIndex: index, field: 'amount' });
+            issues.push({
+              code: 'insufficient_funds',
+              message: `Недостаточно средств на счёте "${account.name}": баланс ${account.balance}, расход ${amountInAccountCurrency}.`,
+              actionIndex: index,
+              field: 'amount',
+            });
           }
         }
 
@@ -148,7 +149,6 @@ export class AIValidatorService {
           resolved.pendingAccountName = plannedAccount.name;
           resolved.accountCurrency = plannedAccount.currency;
           resolved.amountInAccountCurrency = convertMoney(amount, moneyCurrency, plannedAccount.currency);
-          if (plannedAccount.existingId) resolved.accountId = plannedAccount.existingId;
         }
 
         const existingCategory = category ? this.findByName(categories, category) : null;
@@ -163,13 +163,16 @@ export class AIValidatorService {
         const toName = this.cleanString(input.toAccount);
         const from = this.resolveAccount(accounts, fromName);
         const to = this.resolveAccount(accounts, toName);
-        const fromCurrency = from ? this.ensureCurrency(from.currency, 'RUB') : 'RUB';
+        const fromCurrency: AICurrency = from ? this.ensureCurrency(from.currency, 'RUB') : 'RUB';
         const moneyCurrency = this.coerceCurrency(input.currency, userText, fromCurrency) ?? fromCurrency;
 
         if (!amount) issues.push({ code: 'missing_amount', message: 'Не хватает суммы перевода.', actionIndex: index, field: 'amount' });
         if (!from) issues.push({ code: 'from_account_not_found', message: fromName ? `Не нашёл счёт списания: ${fromName}` : 'Не хватает счёта списания.', actionIndex: index, field: 'fromAccount' });
         if (!to) issues.push({ code: 'to_account_not_found', message: toName ? `Не нашёл счёт пополнения: ${toName}` : 'Не хватает счёта пополнения.', actionIndex: index, field: 'toAccount' });
         if (from && to && from.id === to.id) issues.push({ code: 'same_account_transfer', message: 'Нельзя перевести на тот же счёт.', actionIndex: index });
+        if (from && amount && from.balance < convertMoney(amount, moneyCurrency, fromCurrency)) {
+          issues.push({ code: 'insufficient_funds', message: `Недостаточно средств на счёте ${from.name}. Баланс: ${from.balance}, нужно: ${convertMoney(amount, moneyCurrency, fromCurrency)}.`, actionIndex: index, field: 'amount' });
+        }
 
         input.amount = amount ?? 0;
         input.currency = moneyCurrency;
@@ -178,8 +181,14 @@ export class AIValidatorService {
         if (from && amount) {
           const amountInFromCurrency = convertMoney(amount, moneyCurrency, fromCurrency);
           resolved.amountInFromCurrency = amountInFromCurrency;
+
           if (from.balance < amountInFromCurrency) {
-            issues.push({ code: 'insufficient_funds', message: `Недостаточно средств на счёте ${from.name}: баланс ${from.balance}, нужно ${amountInFromCurrency}.`, actionIndex: index, field: 'amount' });
+            issues.push({
+              code: 'insufficient_funds',
+              message: `Недостаточно средств на счёте "${from.name}": баланс ${from.balance}, перевод ${amountInFromCurrency}.`,
+              actionIndex: index,
+              field: 'amount',
+            });
           }
         }
       }
@@ -201,7 +210,7 @@ export class AIValidatorService {
       }
 
       const riskLevel = definition.risk as AIRiskLevel;
-      const requiresConfirmation = this.requiresConfirmation(action.tool, input, riskLevel, Boolean(resolved.noop));
+      const requiresConfirmation = this.resolveRequiresConfirmation(action.tool, input, resolved, definition.requiresConfirmation);
       actions.push({ ...action, input, resolved, riskLevel, requiresConfirmation });
     }
 
@@ -209,7 +218,7 @@ export class AIValidatorService {
 
     return {
       ok: issues.length === 0,
-      summary: plan.summary || this.buildSummary(actions),
+      summary: this.buildSummary(actions),
       actions,
       issues,
       riskLevel: maxRisk,
@@ -217,14 +226,25 @@ export class AIValidatorService {
     };
   }
 
-  private requiresConfirmation(tool: string, input: Record<string, unknown>, riskLevel: AIRiskLevel, noop: boolean) {
-    if (noop) return false;
+  private resolveRequiresConfirmation(tool: string, input: Record<string, unknown>, resolved: Record<string, unknown>, defaultValue: boolean) {
     if (tool === 'show_accounts' || tool === 'show_transactions') return false;
+
     if (tool === 'create_transaction') {
-      const amount = Number(input.amount ?? 0);
-      if (input.kind === 'expense' && Number.isFinite(amount) && amount > 0 && amount <= AUTO_EXECUTE_EXPENSE_LIMIT) return false;
+      const amount = Number(resolved.amountInAccountCurrency ?? input.amount ?? 0);
+      const limit = Number(process.env.AI_AUTO_EXECUTE_TRANSACTION_LIMIT ?? DEFAULT_AUTO_TRANSACTION_LIMIT);
+      return !(Number.isFinite(amount) && amount > 0 && amount <= limit);
     }
-    return riskLevel !== 'low';
+
+    return defaultValue;
+  }
+
+  private ensureCurrency(value: unknown, fallback: AICurrency): AICurrency {
+    if (typeof value === 'string') {
+      const upper = value.trim().toUpperCase();
+      if (CURRENCIES.includes(upper as AICurrency)) return upper as AICurrency;
+    }
+
+    return fallback;
   }
 
   private coerceAccountType(value: unknown, fallback: AIAccountType | null): AIAccountType | null {
@@ -245,14 +265,6 @@ export class AIValidatorService {
     return fallback ? normalizeCurrency(value, fallback) : null;
   }
 
-  private ensureCurrency(value: unknown, fallback: AICurrency): AICurrency {
-    if (typeof value === 'string') {
-      const upper = value.trim().toUpperCase();
-      if (CURRENCIES.includes(upper as AICurrency)) return upper as AICurrency;
-    }
-    return fallback;
-  }
-
   private cleanString(value: unknown) {
     return typeof value === 'string' ? value.trim().replace(/\s+/g, ' ') : '';
   }
@@ -260,14 +272,17 @@ export class AIValidatorService {
   private cleanEntityName(value: unknown) {
     const raw = this.cleanString(value);
     if (!raw) return '';
-    return raw.replace(/["'`«»]/g, '').replace(/\s+/g, ' ').trim();
+    return raw
+      .replace(/["'`«»]/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
   }
 
   private key(value: string) {
     return value.trim().toLowerCase();
   }
 
-  private lastPlannedAccountName(plannedAccounts: Map<string, PlannedAccount>) {
+  private lastPlannedAccountName(plannedAccounts: Map<string, { name: string; currency: AICurrency }>) {
     const values = Array.from(plannedAccounts.values());
     return values.length ? values[values.length - 1].name : '';
   }
@@ -281,7 +296,7 @@ export class AIValidatorService {
       ?? null;
   }
 
-  private findByName<T extends { name: string }>(items: T[], raw: string) {
+  private findByName<T extends { id?: string | null; name: string }>(items: T[], raw: string) {
     const ref = raw.trim().toLowerCase();
     return items.find((item) => item.name.toLowerCase() === ref)
       ?? items.find((item) => item.name.toLowerCase().includes(ref) || ref.includes(item.name.toLowerCase()))
@@ -295,8 +310,29 @@ export class AIValidatorService {
   }
 
   private buildSummary(actions: AIToolCall[]) {
-    if (actions.length === 0) return 'Не найдено действий для выполнения.';
-    if (actions.length === 1) return 'Проверь действие перед выполнением.';
-    return `Проверь ${actions.length} действия перед выполнением.`;
+    if (actions.length === 0) return 'Нет действий для выполнения.';
+    if (actions.length > 1) return `Подготовлено действий: ${actions.length}.`;
+
+    const action = actions[0];
+    const input = action.input ?? {};
+
+    if (action.tool === 'create_transaction') {
+      const kind = input.kind === 'income' ? 'Доход' : 'Расход';
+      const amount = Number(input.amount ?? 0);
+      const currency = typeof input.currency === 'string' ? input.currency : 'RUB';
+      const description = this.cleanString(input.description || input.category) || 'операция';
+      const account = this.cleanString(input.account);
+      return `${kind}: ${description} — ${amount} ${currency}${account ? `, счёт: ${account}` : ''}.`;
+    }
+
+    if (action.tool === 'create_account') {
+      return `Создать счёт: ${this.cleanString(input.name) || 'без названия'}.`;
+    }
+
+    if (action.tool === 'transfer_money') {
+      return `Перевод: ${input.amount ?? ''} ${input.currency ?? 'RUB'} со счёта ${input.fromAccount ?? '?'} на ${input.toAccount ?? '?'}.`;
+    }
+
+    return 'Проверь действие перед выполнением.';
   }
 }

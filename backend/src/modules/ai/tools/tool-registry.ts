@@ -3,7 +3,7 @@ import { AIToolDefinition } from './tool-types';
 export const AI_TOOL_REGISTRY: AIToolDefinition[] = [
   {
     name: 'create_account',
-    description: 'Create account. If account already exists, executor must treat it as no-op.',
+    description: 'Create account/wallet/card/cash/savings/investment. Use with initialBalance when user says to create account and put/add money there.',
     risk: 'medium',
     requiresConfirmation: true,
     input: { name: 'string', type: 'cash|card|savings|investment|null', currency: 'RUB|USD|EUR|VND|null', initialBalance: 'number|string|null' },
@@ -24,9 +24,9 @@ export const AI_TOOL_REGISTRY: AIToolDefinition[] = [
   },
   {
     name: 'create_transaction',
-    description: 'Record one income or expense transaction.',
-    risk: 'medium',
-    requiresConfirmation: true,
+    description: 'Record expense/income/top-up/deposit/salary. Backend validates amount, balance and auto-execute policy.',
+    risk: 'low',
+    requiresConfirmation: false,
     input: { kind: 'income|expense', amount: 'number|string', currency: 'RUB|USD|EUR|VND|null', account: 'string|null', category: 'string|null', section: 'string|null', description: 'string|null' },
   },
   {
@@ -59,7 +59,7 @@ export const AI_TOOL_REGISTRY: AIToolDefinition[] = [
   },
   {
     name: 'create_section',
-    description: 'Create section.',
+    description: 'Create section for grouping categories/transactions.',
     risk: 'medium',
     requiresConfirmation: true,
     input: { name: 'string' },
@@ -107,19 +107,15 @@ export function getToolDefinition(name: string) {
 
 export function getPlannerToolContract() {
   return [
-    'create_transaction{kind:income|expense,amount,account?,category?,description?,currency?}',
-    'create_account{name,type?,currency?,initialBalance?}',
-    'transfer_money{fromAccount,toAccount,amount,currency?,description?}',
+    'create_transaction{kind,amount,account,category,description,currency}',
+    'create_account{name,type,currency,initialBalance}',
+    'transfer_money{fromAccount,toAccount,amount,currency,description}',
     'show_accounts{}',
-    'show_transactions{limit?}',
-    'create_category{name,type,section?}',
+    'show_transactions{limit}',
+    'create_category{name,type,section}',
     'create_section{name}',
-    'update_account{account,name?,type?,currency?,balance?}',
+    'update_account{account,name,type,currency,balance}',
     'delete_account{account}',
-    'update_category{category,name?,section?}',
-    'delete_category{category}',
-    'update_section{section,name}',
-    'delete_section{section}',
-    'assign_category_to_section{category,section}',
-  ].join('');
+  ].join('\n');
 }
+

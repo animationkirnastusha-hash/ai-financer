@@ -33,8 +33,9 @@ export class AIExecutorService {
 
     if (action.tool === 'create_account') {
       if (typeof resolved.existingAccountId === 'string') {
-        createdAccountNames.set(String(input.name).toLowerCase(), resolved.existingAccountId);
-        return { tool: action.tool, skipped: true, reason: 'account_exists', accountId: resolved.existingAccountId };
+        const account = await accountService.getAccountById(userId, resolved.existingAccountId);
+        createdAccountNames.set(String(input.name).toLowerCase(), account.id);
+        return { tool: action.tool, account, skipped: true, reason: 'account_already_exists' };
       }
 
       const account = await accountService.createAccount(userId, {
