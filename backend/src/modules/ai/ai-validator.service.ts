@@ -90,7 +90,7 @@ export class AIValidatorService {
       }
 
       if (action.tool === 'create_transaction') {
-        const kind = input.kind === 'income' || input.kind === 'expense' ? input.kind : null;
+        const kind = input.kind === 'income' || input.kind === 'expense' ? input.kind : 'expense';
         const amount = normalizeMoneyAmount(input.amount, userText);
         const accountRef = this.cleanString(input.account)
           || this.lastPlannedAccountName(plannedAccounts)
@@ -102,7 +102,6 @@ export class AIValidatorService {
         const targetCurrency: AICurrency = account ? this.ensureCurrency(account.currency, 'RUB') : plannedAccount?.currency ?? 'RUB';
         const moneyCurrency = this.coerceCurrency(input.currency, userText, targetCurrency) ?? targetCurrency;
 
-        if (!kind) issues.push({ code: 'missing_transaction_kind', message: 'Модель не указала тип операции: income или expense.', actionIndex: index, field: 'kind' });
         if (!amount) issues.push({ code: 'missing_amount', message: 'Не хватает суммы операции.', actionIndex: index, field: 'amount' });
         if (!account && !plannedAccount) issues.push({ code: 'account_not_found', message: 'Не найден счёт для операции.', actionIndex: index, field: 'account' });
 

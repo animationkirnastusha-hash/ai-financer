@@ -14,32 +14,11 @@ export class AIPlannerService {
   private readonly provider = new OllamaProvider();
 
   async plan(command: string, context: unknown): Promise<AIPlan> {
-    const system = [
-      'You are AI-financer planning core.',
-      'Return ONLY JSON.',
-      'No prose. No markdown. No thinking.',
-      'Output shape: {"mode":"actions","summary":"...","actions":[{"tool":"...","input":{}}]} OR {"mode":"question","answer":"...","actions":[]}.',
-      'Never ask clarification for simple finance records.',
-      'Bare item/service + amount is always expense.',
-      'Examples: "кофе 300" -> create_transaction expense amount 300 category "Кофе" description "Кофе" account null.',
-      'Examples: "кофе 300 наличные" -> create_transaction expense amount 300 category "Кофе" description "Кофе" account "наличные".',
-      'Income words: зарплата, доход, получил, поступило, пополнение.',
-      'Create/update/delete/transfer/stat requests must be actions.',
-      'Advice/explanation only must be question.',
-    ].join(' ');
-
-    const prompt = [
-      'TOOLS:',
-      getPlannerToolContract(),
-      'USER_CONTEXT:',
-      JSON.stringify(this.compactContext(context)),
-      'USER_TEXT:',
-      command,
-    ].join('\n');
+    const compactContext = this.compactContext(context);
 
     const raw = await this.provider.generateJson<Record<string, unknown>>({
-      system,
-      prompt,
+      system: this.systemPrompt(),
+      prompt: this.buildPrompt(command, compactContext),
       temperature: 0,
       modelRole: 'fast',
       timeoutMs: 25_000,
@@ -47,7 +26,21 @@ export class AIPlannerService {
       numPredict: 64,
     });
 
-    const plan = this.normalizePlan(raw, command);
+    let plan = this.normalizePlan(raw, command, false);
+
+    if (plan.mode === 'question' && this.shouldRepairAsAction(command, plan.answer)) {
+      const repaired = await this.provider.generateJson<Record<string, unknown>>({
+        system: this.systemPrompt(),
+        prompt: this.buildRepairPrompt(command, compactContext),
+        temperature: 0,
+        modelRole: 'fast',
+        timeoutMs: 25_000,
+        numCtx: 768,
+        numPredict: 64,
+      });
+
+      plan = this.normalizePlan(repaired, command, true);
+    }
 
     console.log('[AI] planner normalized', {
       mode: plan.mode,
@@ -57,32 +50,67 @@ export class AIPlannerService {
     return plan;
   }
 
+  private systemPrompt() {
+    return [
+      'You are AI-financer planner core.',
+      'Return ONLY one compact JSON object.',
+      'No markdown. No prose. No thinking.',
+      'Your job is to convert user text into backend tool calls.',
+      'Never ask clarification for simple money operations.',
+      'Bare item/service + amount means expense transaction.',
+      'Example: кофе 300 => create_transaction expense amount 300 category Кофе description Кофе.',
+      'If operation type is not explicit but amount exists, default to expense.',
+      'If account is missing, set account to null.',
+      'Return question only for real advice/explanation/chat requests.',
+    ].join(' ');
+  }
+
+  private buildPrompt(command: string, context: unknown) {
+    return [
+      'JSON:',
+      '{"mode":"actions","summary":"short","actions":[{"tool":"create_transaction","input":{"kind":"expense","amount":300,"account":null,"category":"Кофе","description":"Кофе"}}]}',
+      'or:',
+      '{"mode":"question","answer":"short answer"}',
+      'TOOLS:',
+      getPlannerToolContract(),
+      'CONTEXT:',
+      JSON.stringify(context),
+      'USER:',
+      command,
+    ].join('\n');
+  }
+
+  private buildRepairPrompt(command: string, context: unknown) {
+    return [
+      'Previous result was not executable. Build ACTIONS only if the user mentions an app action or money amount.',
+      'For bare item + amount, output create_transaction expense.',
+      'Use this exact shape:',
+      '{"mode":"actions","summary":"Проверь действие перед выполнением.","actions":[{"tool":"create_transaction","input":{"kind":"expense","amount":300,"account":null,"category":"Кофе","description":"Кофе"}}]}',
+      'TOOLS:',
+      getPlannerToolContract(),
+      'CONTEXT:',
+      JSON.stringify(context),
+      'USER:',
+      command,
+    ].join('\n');
+  }
+
   private compactContext(context: unknown) {
     const value = this.asRecord(context) as UserContext;
     return {
       accounts: Array.isArray(value.accounts)
-        ? value.accounts.slice(0, 6).map((account) => account.name).filter(Boolean)
+        ? value.accounts.slice(0, 5).map((account) => ({ n: account.name, t: account.type, c: account.currency }))
         : [],
       categories: Array.isArray(value.categories)
-        ? value.categories.slice(0, 8).map((category) => category.name).filter(Boolean)
+        ? value.categories.slice(0, 8).map((category) => ({ n: category.name, t: category.type }))
         : [],
       sections: Array.isArray(value.sections)
-        ? value.sections.slice(0, 6).map((section) => section.name).filter(Boolean)
+        ? value.sections.slice(0, 5).map((section) => section.name).filter(Boolean)
         : [],
     };
   }
 
-  private normalizePlan(raw: Record<string, unknown>, command: string): AIPlan {
-    const mode = raw.mode === 'question' ? 'question' : 'actions';
-
-    if (mode === 'question') {
-      return {
-        mode: 'question',
-        language: this.asOptionalString(raw.language),
-        answer: this.asOptionalString(raw.answer) ?? 'Я могу ответить на финансовый вопрос или подготовить действие в приложении.',
-      };
-    }
-
+  private normalizePlan(raw: Record<string, unknown>, command: string, repaired: boolean): AIPlan {
     const rawActions = Array.isArray(raw.actions)
       ? raw.actions
       : Array.isArray(raw.toolCalls)
@@ -91,31 +119,75 @@ export class AIPlannerService {
 
     const actions: AIToolCall[] = rawActions
       .filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === 'object' && !Array.isArray(item))
-      .map((item): AIToolCall | null => {
-        const rawTool = typeof item.tool === 'string' ? item.tool : typeof item.name === 'string' ? item.name : '';
-        if (!this.isToolName(rawTool)) return null;
-
-        const input = this.asRecord(item.input ?? item.params ?? item.args ?? item.arguments);
-        input.__userText = command;
-        const reason = typeof item.reason === 'string' && item.reason.trim() ? item.reason.trim() : undefined;
-        return reason ? { tool: rawTool, input, reason } : { tool: rawTool, input };
-      })
+      .map((item): AIToolCall | null => this.normalizeAction(item, command))
       .filter((action): action is AIToolCall => action !== null);
 
-    if (actions.length === 0) {
+    if (actions.length > 0) {
       return {
-        mode: 'question',
+        mode: 'actions',
         language: this.asOptionalString(raw.language),
-        answer: 'Не получил безопасный план действий. Напиши одной фразой действие и сумму, например: "кофе 300".',
+        summary: this.asOptionalString(raw.summary) ?? 'Проверь действие перед выполнением.',
+        actions,
       };
     }
 
     return {
-      mode: 'actions',
+      mode: 'question',
       language: this.asOptionalString(raw.language),
-      summary: this.asOptionalString(raw.summary) ?? 'Проверь действие перед выполнением.',
-      actions,
+      answer: this.asOptionalString(raw.answer)
+        ?? (repaired
+          ? 'Не удалось подготовить безопасное действие. Напиши коротко: действие, сумма, счёт.'
+          : 'Не удалось распознать действие.'),
     };
+  }
+
+  private normalizeAction(item: Record<string, unknown>, command: string): AIToolCall | null {
+    const rawTool = typeof item.tool === 'string' ? item.tool : typeof item.name === 'string' ? item.name : '';
+    const input = this.asRecord(item.input ?? item.params ?? item.args ?? item.arguments);
+
+    const alias = this.normalizeToolAlias(rawTool, input);
+    if (!alias) return null;
+
+    const nextInput = { ...input, ...alias.extraInput };
+    nextInput.__userText = command;
+
+    const reason = typeof item.reason === 'string' && item.reason.trim() ? item.reason.trim() : undefined;
+    return reason ? { tool: alias.tool, input: nextInput, reason } : { tool: alias.tool, input: nextInput };
+  }
+
+  private normalizeToolAlias(rawTool: string, input: Record<string, unknown>): { tool: AIToolName; extraInput: Record<string, unknown> } | null {
+    const clean = rawTool.trim();
+
+    if (this.isToolName(clean)) {
+      return { tool: clean, extraInput: {} };
+    }
+
+    const lower = clean.toLowerCase();
+
+    if (lower === 'create_expense' || lower === 'add_expense' || lower === 'expense') {
+      return { tool: 'create_transaction', extraInput: { kind: 'expense' } };
+    }
+
+    if (lower === 'create_income' || lower === 'add_income' || lower === 'income') {
+      return { tool: 'create_transaction', extraInput: { kind: 'income' } };
+    }
+
+    if (lower === 'transfer_between_accounts' || lower === 'transfer') {
+      return { tool: 'transfer_money', extraInput: {} };
+    }
+
+    if (!clean && (input.amount !== undefined || input.category !== undefined || input.description !== undefined)) {
+      return { tool: 'create_transaction', extraInput: { kind: 'expense' } };
+    }
+
+    return null;
+  }
+
+  private shouldRepairAsAction(command: string, answer: string) {
+    const text = `${command} ${answer}`.toLowerCase();
+    const hasDigit = /\d/.test(text);
+    const hasMoneyWord = /руб|₽|usd|eur|vnd|доллар|евро|к\b|тыс|тыщ|доход|зарплат|расход|трата|потрат|кофе|еда|такси|магазин|продукт|бензин|создай|переведи|положи|закинь/.test(text);
+    return hasDigit || hasMoneyWord;
   }
 
   private isToolName(value: string): value is AIToolName {
