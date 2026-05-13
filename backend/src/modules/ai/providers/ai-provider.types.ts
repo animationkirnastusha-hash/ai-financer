@@ -1,3 +1,5 @@
+export type AIModelRole = 'fast' | 'base' | 'premium';
+
 export interface AIProviderJsonRequest {
   system: string;
   prompt: string;
@@ -6,6 +8,7 @@ export interface AIProviderJsonRequest {
   timeoutMs?: number;
   numCtx?: number;
   numPredict?: number;
+  modelRole?: AIModelRole;
 }
 
 export interface AIProvider {

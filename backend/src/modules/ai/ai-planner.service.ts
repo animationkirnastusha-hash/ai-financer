@@ -25,6 +25,8 @@ export class AIPlannerService {
       'Preserve user-provided names as clean human labels. Never include instruction fragments inside names.',
       'Keep explicit currencies and amounts. If amount is written as text, keep that text in amount; backend will normalize it.',
       'If one request contains several actions, return all actions in the correct order.',
+      'If the user asks something that is not an app mutation, return mode question with a useful short answer.',
+      'Never return unknown. Use clarification only when a required field for an action is missing and cannot be inferred.',
     ].join(' ');
 
     const prompt = [
@@ -42,9 +44,10 @@ export class AIPlannerService {
       system,
       prompt,
       temperature: 0,
-      timeoutMs: 120_000,
-      numCtx: 2048,
-      numPredict: 220,
+      modelRole: 'fast',
+      timeoutMs: 45_000,
+      numCtx: 1024,
+      numPredict: 96,
     });
 
     const plan = this.normalizePlan(raw);

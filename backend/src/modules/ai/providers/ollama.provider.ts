@@ -1,5 +1,5 @@
 import { env } from '../../../config/env';
-import { AIProvider, AIProviderJsonRequest } from './ai-provider.types';
+import { AIModelRole, AIProvider, AIProviderJsonRequest } from './ai-provider.types';
 
 type OllamaChatResponse = {
   message?: {
@@ -13,8 +13,6 @@ type OllamaChatResponse = {
   done_reason?: string;
 };
 
-const QWEN3_MAIN_MODEL = 'qwen3:14b-q4_K_M';
-
 function normalizeBaseUrl(value: string | undefined) {
   const fallback = 'http://127.0.0.1:11434';
   const raw = (value || fallback).trim() || fallback;
@@ -22,20 +20,28 @@ function normalizeBaseUrl(value: string | undefined) {
   return raw.replace(/\/+$/, '').replace(/\/api$/i, '');
 }
 
-function getModel() {
-  return (env.ollamaModel || QWEN3_MAIN_MODEL).trim();
+function modelForRole(role: AIModelRole) {
+  if (role === 'fast') return env.ollamaFastModel || env.ollamaModel;
+  if (role === 'premium') return env.ollamaPremiumModel || env.ollamaFreeReasoningModel || env.ollamaModel;
+  return env.ollamaFreeReasoningModel || env.ollamaModel;
+}
+
+function fallbackRole(role: AIModelRole): AIModelRole | null {
+  if (role === 'premium') return 'base';
+  if (role === 'base') return 'fast';
+  return null;
 }
 
 function getTimeoutMs(request: AIProviderJsonRequest) {
-  return Math.max(30_000, request.timeoutMs ?? env.ollamaTimeoutMs ?? env.aiLlmTimeoutMs ?? 120_000);
+  return Math.max(20_000, request.timeoutMs ?? env.ollamaTimeoutMs ?? env.aiLlmTimeoutMs ?? 60_000);
 }
 
 function getNumCtx(request: AIProviderJsonRequest) {
-  return Math.max(1024, Math.min(4096, request.numCtx ?? env.ollamaNumCtx ?? 2048));
+  return Math.max(768, Math.min(4096, request.numCtx ?? env.ollamaNumCtx ?? 1536));
 }
 
 function getNumPredict(request: AIProviderJsonRequest) {
-  return Math.max(96, Math.min(512, request.numPredict ?? env.ollamaNumPredict ?? 220));
+  return Math.max(64, Math.min(512, request.numPredict ?? env.ollamaNumPredict ?? 128));
 }
 
 function stripThinking(value: string) {
@@ -81,8 +87,27 @@ async function readError(response: Response) {
 
 export class OllamaProvider implements AIProvider {
   async generateJson<T>(request: AIProviderJsonRequest): Promise<T> {
+    const role = request.modelRole ?? 'base';
+
+    try {
+      return await this.generateJsonWithRole<T>(request, role);
+    } catch (error) {
+      const fallback = fallbackRole(role);
+      if (!fallback) throw error;
+
+      console.warn('[OLLAMA] generateJson:fallback', {
+        fromRole: role,
+        toRole: fallback,
+        reason: error instanceof Error ? error.message : String(error),
+      });
+
+      return this.generateJsonWithRole<T>(request, fallback);
+    }
+  }
+
+  private async generateJsonWithRole<T>(request: AIProviderJsonRequest, role: AIModelRole): Promise<T> {
     const baseUrl = normalizeBaseUrl(env.ollamaBaseUrl);
-    const model = getModel();
+    const model = modelForRole(role).trim();
     const timeoutMs = getTimeoutMs(request);
     const numCtx = getNumCtx(request);
     const numPredict = getNumPredict(request);
@@ -92,13 +117,14 @@ export class OllamaProvider implements AIProvider {
 
     const system = [
       request.system,
-      'Return one compact valid JSON object only. No markdown. No prose outside JSON.',
+      'Return one compact valid JSON object only. No markdown. No prose outside JSON. Do not include <think>.',
     ].filter(Boolean).join('\n');
 
     try {
       const startedAt = Date.now();
 
       console.log('[OLLAMA] generateJson:start', {
+        role,
         model,
         timeoutMs,
         baseUrl,
@@ -123,10 +149,10 @@ export class OllamaProvider implements AIProvider {
           think: false,
           stream: false,
           format: 'json',
-          keep_alive: '20m',
+          keep_alive: role === 'premium' ? '5m' : '10m',
           options: {
             temperature: request.temperature ?? 0,
-            top_p: 0.65,
+            top_p: role === 'fast' ? 0.35 : 0.65,
             repeat_penalty: 1.04,
             num_ctx: numCtx,
             num_predict: numPredict,
@@ -144,12 +170,13 @@ export class OllamaProvider implements AIProvider {
       const json = extractJson(raw);
 
       console.log('[OLLAMA] generateJson:done', {
+        role,
         model,
         elapsedMs: Date.now() - startedAt,
         doneReason: payload.done_reason,
         hasRaw: Boolean(raw),
         hasJson: Boolean(json),
-        hasThinking: Boolean(payload.message?.thinking || payload.thinking),
+        hasThinking: Boolean(payload.message?.thinking || payload.thinking || /<think>/i.test(raw)),
       });
 
       if (env.aiDebug) {

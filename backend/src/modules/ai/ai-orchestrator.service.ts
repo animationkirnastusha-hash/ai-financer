@@ -1,7 +1,9 @@
 import { BadRequestError } from '../../shared/core/errors';
+import { AIAnswerService } from './ai-answer.service';
 import { AIContextService } from './ai-context.service';
 import { AIExecutorService } from './ai-executor.service';
 import { AIPlannerService } from './ai-planner.service';
+import { AIModelRouter } from './ai-model-router';
 import { AIPreviewService } from './ai-preview.service';
 import { AIValidatorService } from './ai-validator.service';
 import { AIAuditService } from './audit.service';
@@ -9,7 +11,9 @@ import { AIPendingActionService } from './pending-action.service';
 import { AIHandleOptions, AIParsedCommand, AIResult, AIRiskLevel } from './types';
 
 export class AIOrchestratorService {
+  private readonly answer = new AIAnswerService();
   private readonly context = new AIContextService();
+  private readonly modelRouter = new AIModelRouter();
   private readonly planner = new AIPlannerService();
   private readonly validator = new AIValidatorService();
   private readonly preview = new AIPreviewService();
@@ -23,9 +27,11 @@ export class AIOrchestratorService {
 
     try {
       const context = await this.context.buildUserContext(userId);
+      const tier = await this.modelRouter.getUserTier(userId);
       const plan = await this.planner.plan(trimmed, context);
 
       if (plan.mode === 'question') {
+        const answer = await this.answer.answer(trimmed, context, this.modelRouter.roleForAnswer(tier));
         const audit = await this.audit.create({
           userId,
           command: trimmed,
@@ -34,7 +40,7 @@ export class AIOrchestratorService {
           requiresConfirmation: false,
           executed: false,
           status: 'answered',
-          result: { answer: plan.answer },
+          result: { answer },
         });
 
         return {
@@ -43,7 +49,7 @@ export class AIOrchestratorService {
           executed: false,
           requiresConfirmation: false,
           riskLevel: 'low',
-          message: plan.answer,
+          message: answer,
           parsed: null,
           meta: { auditLogId: audit.id },
         };
@@ -127,27 +133,56 @@ export class AIOrchestratorService {
       };
     } catch (error) {
       const message = error instanceof Error ? error.message : 'AI Core failed';
-      const audit = await this.audit.create({
-        userId,
-        command: trimmed,
-        intent: 'error',
-        riskLevel: 'low',
-        requiresConfirmation: false,
-        executed: false,
-        status: 'error',
-        errorMessage: message,
-      });
 
-      return {
-        success: false,
-        intent: 'error',
-        executed: false,
-        requiresConfirmation: false,
-        riskLevel: 'low',
-        message: 'AI Core временно не смог обработать запрос. Попробуй ещё раз или сформулируй короче.',
-        parsed: null,
-        meta: { auditLogId: audit.id },
-      };
+      try {
+        const context = await this.context.buildUserContext(userId);
+        const tier = await this.modelRouter.getUserTier(userId);
+        const answer = await this.answer.answer(trimmed, context, this.modelRouter.roleForAnswer(tier));
+        const audit = await this.audit.create({
+          userId,
+          command: trimmed,
+          intent: 'question_fallback',
+          riskLevel: 'low',
+          requiresConfirmation: false,
+          executed: false,
+          status: 'answered_after_planner_error',
+          result: { answer },
+          errorMessage: message,
+        });
+
+        return {
+          success: true,
+          intent: 'question_fallback',
+          executed: false,
+          requiresConfirmation: false,
+          riskLevel: 'low',
+          message: answer,
+          parsed: null,
+          meta: { auditLogId: audit.id },
+        };
+      } catch {
+        const audit = await this.audit.create({
+          userId,
+          command: trimmed,
+          intent: 'error',
+          riskLevel: 'low',
+          requiresConfirmation: false,
+          executed: false,
+          status: 'error',
+          errorMessage: message,
+        });
+
+        return {
+          success: false,
+          intent: 'error',
+          executed: false,
+          requiresConfirmation: false,
+          riskLevel: 'low',
+          message: 'AI Core не смог обработать запрос: локальная модель не ответила или вернула некорректный JSON.',
+          parsed: null,
+          meta: { auditLogId: audit.id },
+        };
+      }
     }
   }
 
