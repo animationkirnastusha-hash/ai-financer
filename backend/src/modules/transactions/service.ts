@@ -485,17 +485,21 @@ export class TransactionService {
 
     if (params.type === 'expense') {
       if (params.direction === 'apply') {
-        await this.ensureEnoughBalance(tx, params.accountId, params.amount);
-      }
+        const updated = await tx.account.updateMany({
+          where: { id: params.accountId, balance: { gte: params.amount } },
+          data: { balance: { decrement: params.amount } },
+        });
 
-      await tx.account.update({
-        where: { id: params.accountId },
-        data: {
-          balance: {
-            decrement: params.amount * multiplier,
-          },
-        },
-      });
+        if (updated.count !== 1) {
+          await this.ensureEnoughBalance(tx, params.accountId, params.amount);
+          throw new BadRequestError('Insufficient funds');
+        }
+      } else {
+        await tx.account.update({
+          where: { id: params.accountId },
+          data: { balance: { increment: params.amount } },
+        });
+      }
       return;
     }
 
@@ -504,25 +508,31 @@ export class TransactionService {
     }
 
     if (params.direction === 'apply') {
-      await this.ensureEnoughBalance(tx, params.accountId, params.amount);
+      const updated = await tx.account.updateMany({
+        where: { id: params.accountId, balance: { gte: params.amount } },
+        data: { balance: { decrement: params.amount } },
+      });
+
+      if (updated.count !== 1) {
+        await this.ensureEnoughBalance(tx, params.accountId, params.amount);
+        throw new BadRequestError('Insufficient funds');
+      }
+
+      await tx.account.update({
+        where: { id: params.toAccountId },
+        data: { balance: { increment: params.amount } },
+      });
+      return;
     }
 
     await tx.account.update({
       where: { id: params.accountId },
-      data: {
-        balance: {
-          decrement: params.amount * multiplier,
-        },
-      },
+      data: { balance: { increment: params.amount } },
     });
 
     await tx.account.update({
       where: { id: params.toAccountId },
-      data: {
-        balance: {
-          increment: params.amount * multiplier,
-        },
-      },
+      data: { balance: { decrement: params.amount } },
     });
   }
 }

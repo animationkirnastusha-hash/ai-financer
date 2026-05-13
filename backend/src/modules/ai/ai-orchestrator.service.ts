@@ -24,37 +24,11 @@ export class AIOrchestratorService {
     try {
       const context = await this.context.buildUserContext(userId);
       const plan = await this.planner.plan(trimmed, context);
-
-      if (plan.mode === 'question') {
-        const answer = plan.answer || 'Я могу подготовить действие в приложении или ответить на финансовый вопрос.';
-        const audit = await this.audit.create({
-          userId,
-          command: trimmed,
-          intent: 'question',
-          riskLevel: 'low',
-          requiresConfirmation: false,
-          executed: false,
-          status: 'answered',
-          result: { answer },
-        });
-
-        return {
-          success: true,
-          intent: 'question',
-          executed: false,
-          requiresConfirmation: false,
-          riskLevel: 'low',
-          message: answer,
-          parsed: null,
-          meta: { auditLogId: audit.id },
-        };
-      }
-
       const validated = await this.validator.validate(userId, plan);
       const parsed = this.preview.buildParsed(validated.summary, validated.actions);
 
       if (!validated.ok) {
-        const message = validated.issues.map((issue) => issue.message).join('\n') || 'Не удалось безопасно подготовить действие.';
+        const message = validated.issues.map((issue) => issue.message).join('') || 'Не удалось безопасно подготовить действие.';
         const audit = await this.audit.create({
           userId,
           command: trimmed,

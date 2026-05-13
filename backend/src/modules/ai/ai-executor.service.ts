@@ -32,6 +32,11 @@ export class AIExecutorService {
     const resolved = action.resolved ?? {};
 
     if (action.tool === 'create_account') {
+      if (typeof resolved.existingAccountId === 'string') {
+        createdAccountNames.set(String(input.name).toLowerCase(), resolved.existingAccountId);
+        return { tool: action.tool, skipped: true, reason: 'account_exists', accountId: resolved.existingAccountId };
+      }
+
       const account = await accountService.createAccount(userId, {
         name: String(input.name),
         type: String(input.type ?? 'cash'),

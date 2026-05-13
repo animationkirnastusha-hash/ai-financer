@@ -32,13 +32,7 @@ export interface AIActionPlan {
   actions: AIToolCall[];
 }
 
-export interface AIQuestionPlan {
-  mode: 'question';
-  language?: string;
-  answer: string;
-}
-
-export type AIPlan = AIActionPlan | AIQuestionPlan;
+export type AIPlan = AIActionPlan;
 
 export interface AIValidationIssue {
   code: string;

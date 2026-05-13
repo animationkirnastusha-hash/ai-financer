@@ -88,6 +88,15 @@ export class AccountService {
   async createAccount(userId: string, input: CreateAccountInput) {
     const data = this.validateCreateInput(input);
 
+    const existing = await prisma.account.findFirst({
+      where: { userId, name: { equals: data.name } },
+      select: accountSelect,
+    });
+
+    if (existing) {
+      return this.serializeAccount(existing);
+    }
+
     const account = await prisma.account.create({
       data: {
         userId,

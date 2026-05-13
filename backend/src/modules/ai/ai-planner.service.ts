@@ -1,4 +1,4 @@
-import { AIPlan, AIToolCall, AIToolName } from './types';
+import { AIActionPlan, AIToolCall, AIToolName } from './types';
 import { OllamaProvider } from './providers/ollama.provider';
 import { AI_TOOL_REGISTRY, getPlannerToolContract } from './tools/tool-registry';
 
@@ -7,13 +7,12 @@ const TOOL_NAMES = new Set(AI_TOOL_REGISTRY.map((tool) => tool.name));
 type UserContext = {
   accounts?: Array<{ name?: string; type?: string; currency?: string }>;
   categories?: Array<{ name?: string; type?: string }>;
-  sections?: Array<{ name?: string }>;
 };
 
 export class AIPlannerService {
   private readonly provider = new OllamaProvider();
 
-  async plan(command: string, context: unknown): Promise<AIPlan> {
+  async plan(command: string, context: unknown): Promise<AIActionPlan> {
     const compactContext = this.compactContext(context);
 
     const raw = await this.provider.generateJson<Record<string, unknown>>({
@@ -21,78 +20,67 @@ export class AIPlannerService {
       prompt: this.buildPrompt(command, compactContext),
       temperature: 0,
       modelRole: 'fast',
-      timeoutMs: 25_000,
+      timeoutMs: 20_000,
       numCtx: 768,
-      numPredict: 64,
+      numPredict: 80,
     });
 
-    let plan = this.normalizePlan(raw, command, false);
-
-    if (plan.mode === 'question' && this.shouldRepairAsAction(command, plan.answer)) {
-      const repaired = await this.provider.generateJson<Record<string, unknown>>({
-        system: this.systemPrompt(),
-        prompt: this.buildRepairPrompt(command, compactContext),
-        temperature: 0,
-        modelRole: 'fast',
-        timeoutMs: 25_000,
-        numCtx: 768,
-        numPredict: 64,
-      });
-
-      plan = this.normalizePlan(repaired, command, true);
-    }
+    const plan = this.normalizePlan(raw, command);
 
     console.log('[AI] planner normalized', {
       mode: plan.mode,
-      actions: plan.mode === 'actions' ? plan.actions.map((action) => action.tool) : [],
+      actions: plan.actions.map((action) => action.tool),
     });
 
     return plan;
   }
 
   private systemPrompt() {
-    return 'Return ONLY JSON. No markdown. Convert text to app tool calls. Bare item + amount = expense. Missing account=null. Questions/advice => mode question.';
+    return [
+      'You are a backend tool planner.',
+      'Return ONLY valid compact JSON.',
+      'Never answer with text, questions, markdown, explanations, or null.',
+      'Always return {"mode":"actions","summary":"...","actions":[]}.',
+      'Use actions:[] only when the user request is not related to the app.',
+      'Do not invent tools. Use only listed tools.',
+      'For money operations always choose create_transaction or transfer_money.',
+      'For income/top-up/salary choose kind income.',
+      'For purchases/spending choose kind expense.',
+      'For item plus amount choose expense.',
+      'For create account plus add money, return create_account then create_transaction income to that account.',
+    ].join(' ');
   }
 
   private buildPrompt(command: string, context: unknown) {
     return [
-      'Schema actions: {"mode":"actions","summary":"...","actions":[{"tool":"create_transaction","input":{"kind":"expense","amount":300,"account":null,"category":"Кофе","description":"Кофе"}}]}',
-      'Schema question: {"mode":"question","answer":"..."}',
-      'Tools:', getPlannerToolContract(),
-      'Ctx:', JSON.stringify(context),
-      'User:', command,
-    ].join('\n');
-  }
-
-  private buildRepairPrompt(command: string, context: unknown) {
-    return [
-      'Previous result was not executable. Build ACTIONS only if the user mentions an app action or money amount.',
-      'For bare item + amount, output create_transaction expense.',
-      'Use this exact shape:',
-      '{"mode":"actions","summary":"Проверь действие перед выполнением.","actions":[{"tool":"create_transaction","input":{"kind":"expense","amount":300,"account":null,"category":"Кофе","description":"Кофе"}}]}',
+      'OUTPUT SHAPE:',
+      '{"mode":"actions","summary":"short human summary","actions":[{"tool":"create_transaction","input":{"kind":"expense","amount":300,"account":null,"category":"Кофе","description":"Кофе"}}]}',
       'TOOLS:',
       getPlannerToolContract(),
+      'EXAMPLES:',
+      'User: Кофе 300 => {"mode":"actions","summary":"Добавить расход 300 RUB: Кофе","actions":[{"tool":"create_transaction","input":{"kind":"expense","amount":300,"account":null,"category":"Кофе","description":"Кофе"}}]}',
+      'User: Доход 50 тысяч рублей => {"mode":"actions","summary":"Добавить доход 50000 RUB","actions":[{"tool":"create_transaction","input":{"kind":"income","amount":"50 тысяч","account":null,"category":"Доход","description":"Доход"}}]}',
+      'User: создай счет наличка и положи туда 5к => {"mode":"actions","summary":"Создать счёт Наличка и добавить 5000 RUB","actions":[{"tool":"create_account","input":{"name":"Наличка","type":"cash","currency":"RUB","initialBalance":0}},{"tool":"create_transaction","input":{"kind":"income","amount":"5к","account":"Наличка","category":"Пополнение","description":"Пополнение счёта"}}]}',
       'CONTEXT:',
       JSON.stringify(context),
       'USER:',
       command,
-    ].join('\n');
+    ].join('');
   }
 
   private compactContext(context: unknown) {
     const value = this.asRecord(context) as UserContext;
     return {
       accounts: Array.isArray(value.accounts)
-        ? value.accounts.slice(0, 3).map((account) => account.name).filter(Boolean)
+        ? value.accounts.slice(0, 6).map((account) => account.name).filter(Boolean)
         : [],
       categories: Array.isArray(value.categories)
-        ? value.categories.slice(0, 5).map((category) => category.name).filter(Boolean)
+        ? value.categories.slice(0, 8).map((category) => category.name).filter(Boolean)
         : [],
-      sections: [],
     };
   }
 
-  private normalizePlan(raw: Record<string, unknown>, command: string, repaired: boolean): AIPlan {
+  private normalizePlan(raw: Record<string, unknown>, command: string): AIActionPlan {
     const rawActions = Array.isArray(raw.actions)
       ? raw.actions
       : Array.isArray(raw.toolCalls)
@@ -104,22 +92,11 @@ export class AIPlannerService {
       .map((item): AIToolCall | null => this.normalizeAction(item, command))
       .filter((action): action is AIToolCall => action !== null);
 
-    if (actions.length > 0) {
-      return {
-        mode: 'actions',
-        language: this.asOptionalString(raw.language),
-        summary: this.asOptionalString(raw.summary) ?? 'Проверь действие перед выполнением.',
-        actions,
-      };
-    }
-
     return {
-      mode: 'question',
+      mode: 'actions',
       language: this.asOptionalString(raw.language),
-      answer: this.asOptionalString(raw.answer)
-        ?? (repaired
-          ? 'Не удалось подготовить безопасное действие. Напиши коротко: действие, сумма, счёт.'
-          : 'Не удалось распознать действие.'),
+      summary: this.asOptionalString(raw.summary) ?? this.buildDefaultSummary(actions),
+      actions,
     };
   }
 
@@ -159,21 +136,20 @@ export class AIPlannerService {
     }
 
     if (!clean && (input.amount !== undefined || input.category !== undefined || input.description !== undefined)) {
-      return { tool: 'create_transaction', extraInput: { kind: 'expense' } };
+      return { tool: 'create_transaction', extraInput: {} };
     }
 
     return null;
   }
 
-  private shouldRepairAsAction(command: string, answer: string) {
-    const text = `${command} ${answer}`.toLowerCase();
-    const hasDigit = /\d/.test(text);
-    const hasMoneyWord = /руб|₽|usd|eur|vnd|доллар|евро|к\b|тыс|тыщ|доход|зарплат|расход|трата|потрат|кофе|еда|такси|магазин|продукт|бензин|создай|переведи|положи|закинь/.test(text);
-    return hasDigit || hasMoneyWord;
-  }
-
   private isToolName(value: string): value is AIToolName {
     return TOOL_NAMES.has(value as AIToolName);
+  }
+
+  private buildDefaultSummary(actions: AIToolCall[]) {
+    if (actions.length === 0) return 'Не найдено действий для выполнения.';
+    if (actions.length === 1) return 'Подготовлено действие.';
+    return `Подготовлено действий: ${actions.length}.`;
   }
 
   private asOptionalString(value: unknown) {
