@@ -26,7 +26,9 @@ function getBooleanEnv(name: string, fallback: boolean): boolean {
   return ['1', 'true', 'yes', 'on'].includes(raw.toLowerCase());
 }
 
-const DEFAULT_GROQ_MODEL = 'llama-3.1-8b-instant';
+const DEFAULT_OPENROUTER_MODEL = 'meta-llama/llama-3.1-8b-instruct:free';
+
+const aiProvider = (process.env.AI_PROVIDER || process.env.AI_MODE || 'openrouter').trim().toLowerCase();
 
 export const env = {
   nodeEnv: getEnv('NODE_ENV', 'development'),
@@ -37,27 +39,26 @@ export const env = {
   adminTelegramId: process.env.ADMIN_TELEGRAM_ID ?? '',
   deepseekApiKey: process.env.DEEPSEEK_API_KEY ?? '',
 
-  aiMode: getEnv('AI_MODE', getEnv('AI_PROVIDER', 'groq')),
-  aiProvider: getEnv('AI_PROVIDER', getEnv('AI_MODE', 'groq')),
+  aiMode: getEnv('AI_MODE', aiProvider),
+  aiProvider,
   aiDebug: getBooleanEnv('AI_DEBUG', false),
-  aiLlmTimeoutMs: getNumberEnv('AI_LLM_TIMEOUT_MS', getNumberEnv('AI_TIMEOUT_MS', 12_000)),
-  aiFastTimeoutMs: getNumberEnv('AI_FAST_TIMEOUT_MS', getNumberEnv('AI_TIMEOUT_MS', 8_000)),
+
+  openrouterApiKey: getOptionalEnv('OPENROUTER_API_KEY'),
+  openrouterBaseUrl: getOptionalEnv('OPENROUTER_BASE_URL', 'https://openrouter.ai/api/v1'),
+  openrouterModel: getOptionalEnv('OPENROUTER_MODEL', DEFAULT_OPENROUTER_MODEL),
+  openrouterFastModel: getOptionalEnv('OPENROUTER_FAST_MODEL', getOptionalEnv('OPENROUTER_MODEL', DEFAULT_OPENROUTER_MODEL)),
+  openrouterReasoningModel: getOptionalEnv('OPENROUTER_REASONING_MODEL', getOptionalEnv('OPENROUTER_MODEL', DEFAULT_OPENROUTER_MODEL)),
+  openrouterAppTitle: getOptionalEnv('OPENROUTER_APP_TITLE', 'AI-financer'),
 
   groqApiKey: getOptionalEnv('GROQ_API_KEY'),
-  groqBaseUrl: getEnv('GROQ_BASE_URL', 'https://api.groq.com/openai/v1'),
-  groqModel: getEnv('GROQ_MODEL', DEFAULT_GROQ_MODEL),
-  groqFastModel: getEnv('GROQ_FAST_MODEL', getEnv('GROQ_MODEL', DEFAULT_GROQ_MODEL)),
-  groqPremiumModel: getEnv('GROQ_PREMIUM_MODEL', getEnv('GROQ_MODEL', DEFAULT_GROQ_MODEL)),
+  groqBaseUrl: getOptionalEnv('GROQ_BASE_URL', 'https://api.groq.com/openai/v1'),
+  groqModel: getOptionalEnv('GROQ_MODEL', 'llama-3.1-8b-instant'),
+  groqFastModel: getOptionalEnv('GROQ_FAST_MODEL', getOptionalEnv('GROQ_MODEL', 'llama-3.1-8b-instant')),
 
-  // Deprecated. Kept only so old imports do not break during migration.
-  ollamaBaseUrl: getOptionalEnv('OLLAMA_BASE_URL', 'http://127.0.0.1:11434'),
-  ollamaModel: getOptionalEnv('OLLAMA_MODEL', ''),
-  ollamaFastModel: getOptionalEnv('OLLAMA_FAST_MODEL', ''),
-  ollamaFreeReasoningModel: getOptionalEnv('OLLAMA_FREE_REASONING_MODEL', ''),
-  ollamaPremiumModel: getOptionalEnv('OLLAMA_PREMIUM_MODEL', ''),
-  ollamaTimeoutMs: getNumberEnv('OLLAMA_TIMEOUT_MS', 60_000),
-  ollamaNumCtx: getNumberEnv('OLLAMA_NUM_CTX', 768),
-  ollamaNumPredict: getNumberEnv('OLLAMA_NUM_PREDICT', 64),
+
+  aiFastTimeoutMs: getNumberEnv('AI_FAST_TIMEOUT_MS', 8_000),
+  aiLlmTimeoutMs: getNumberEnv('AI_LLM_TIMEOUT_MS', getNumberEnv('AI_TIMEOUT_MS', getNumberEnv('OLLAMA_TIMEOUT_MS', 60_000))),
+  aiTimeoutMs: getNumberEnv('AI_TIMEOUT_MS', 10_000),
 
   frontendUrl: getEnv('FRONTEND_URL', 'http://localhost:5173'),
   enableCron: getBooleanEnv('ENABLE_CRON', true),

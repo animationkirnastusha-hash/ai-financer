@@ -4,18 +4,28 @@ import { env } from '../../config/env';
 import { asyncHandler } from '../../shared/utils/asyncHandler';
 
 export const getHealth = asyncHandler(async (_req: Request, res: Response) => {
+  const checks: Record<string, string> = {
+    db: 'ok',
+    aiProvider: env.aiProvider,
+  };
+
+  if (env.aiProvider === 'openrouter') {
+    checks.openrouter = env.openrouterApiKey ? 'configured' : 'missing_api_key';
+  }
+
+  if (env.aiProvider === 'groq') {
+    checks.groq = env.groqApiKey ? 'configured' : 'missing_api_key';
+  }
+
   await prisma.$queryRaw`SELECT 1`;
 
   res.json({
-    status: 'ok',
+    status: checks.db === 'ok' ? 'ok' : 'degraded',
     service: 'ai-finance-backend',
     env: env.nodeEnv,
     aiMode: env.aiMode,
     aiProvider: env.aiProvider,
-    checks: {
-      db: 'ok',
-      ai: env.aiProvider === 'groq' ? 'external' : env.aiProvider,
-    },
+    checks,
     timestamp: new Date().toISOString(),
   });
 });

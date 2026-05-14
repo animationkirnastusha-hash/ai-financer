@@ -1,5 +1,5 @@
 import { AIPlan, AIToolCall, AIToolName } from './types';
-import { GroqProvider } from './providers/groq.provider';
+import { createAIProvider } from './providers/ai-provider.factory';
 import { AI_TOOL_REGISTRY, getPlannerToolContract } from './tools/tool-registry';
 
 const TOOL_NAMES = new Set(AI_TOOL_REGISTRY.map((tool) => tool.name));
@@ -10,7 +10,7 @@ type UserContext = {
 };
 
 export class AIPlannerService {
-  private readonly provider = new GroqProvider();
+  private readonly provider = createAIProvider();
 
   async plan(command: string, context: unknown): Promise<AIPlan> {
     const compactContext = this.compactContext(context);
@@ -20,9 +20,9 @@ export class AIPlannerService {
       prompt: this.buildPrompt(command, compactContext),
       temperature: 0,
       modelRole: 'fast',
-      timeoutMs: 22_000,
+      timeoutMs: 8_000,
       numCtx: 640,
-      numPredict: 48,
+      numPredict: 160,
     });
 
     const plan = this.normalizePlan(raw, command);

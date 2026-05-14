@@ -1,4 +1,4 @@
-import { GroqProvider } from './providers/groq.provider';
+import { createAIProvider } from './providers/ai-provider.factory';
 import { AIModelRole } from './providers/ai-provider.types';
 
 type UserContext = {
@@ -13,7 +13,7 @@ type AnswerResponse = {
 };
 
 export class AIAnswerService {
-  private readonly provider = new GroqProvider();
+  private readonly provider = createAIProvider();
 
   async answer(command: string, context: unknown, modelRole: AIModelRole, preplannedAnswer?: string): Promise<string> {
     if (preplannedAnswer && preplannedAnswer.trim().length > 8) {
@@ -39,9 +39,9 @@ export class AIAnswerService {
       prompt,
       modelRole,
       temperature: 0.2,
-      timeoutMs: modelRole === 'premium' ? 120_000 : 60_000,
+      timeoutMs: modelRole === 'premium' ? 20_000 : 12_000,
       numCtx: modelRole === 'premium' ? 2048 : 1536,
-      numPredict: modelRole === 'premium' ? 260 : 180,
+      numPredict: modelRole === 'premium' ? 420 : 260,
     });
 
     const answer = typeof raw.answer === 'string' ? raw.answer.trim() : '';
