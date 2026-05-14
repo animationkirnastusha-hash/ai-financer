@@ -8,6 +8,10 @@ function getEnv(name: string, fallback?: string): string {
   return value;
 }
 
+function getOptionalEnv(name: string, fallback = ''): string {
+  return process.env[name] ?? fallback;
+}
+
 function getNumberEnv(name: string, fallback: number): number {
   const raw = process.env[name];
   if (!raw) return fallback;
@@ -22,9 +26,7 @@ function getBooleanEnv(name: string, fallback: boolean): boolean {
   return ['1', 'true', 'yes', 'on'].includes(raw.toLowerCase());
 }
 
-const FAST_MODEL = 'qwen2.5:3b';
-const BASE_MODEL = 'qwen3:8b';
-const PREMIUM_MODEL = 'qwen3:14b-q4_K_M';
+const DEFAULT_GROQ_MODEL = 'llama-3.1-8b-instant';
 
 export const env = {
   nodeEnv: getEnv('NODE_ENV', 'development'),
@@ -35,17 +37,25 @@ export const env = {
   adminTelegramId: process.env.ADMIN_TELEGRAM_ID ?? '',
   deepseekApiKey: process.env.DEEPSEEK_API_KEY ?? '',
 
-  aiMode: getEnv('AI_MODE', 'ollama'),
+  aiMode: getEnv('AI_MODE', getEnv('AI_PROVIDER', 'groq')),
+  aiProvider: getEnv('AI_PROVIDER', getEnv('AI_MODE', 'groq')),
   aiDebug: getBooleanEnv('AI_DEBUG', false),
+  aiLlmTimeoutMs: getNumberEnv('AI_LLM_TIMEOUT_MS', getNumberEnv('AI_TIMEOUT_MS', 12_000)),
+  aiFastTimeoutMs: getNumberEnv('AI_FAST_TIMEOUT_MS', getNumberEnv('AI_TIMEOUT_MS', 8_000)),
 
-  ollamaBaseUrl: getEnv('OLLAMA_BASE_URL', 'http://127.0.0.1:11434'),
-  ollamaModel: getEnv('OLLAMA_MODEL', BASE_MODEL),
-  ollamaFastModel: getEnv('OLLAMA_FAST_MODEL', FAST_MODEL),
-  ollamaFreeReasoningModel: getEnv('OLLAMA_FREE_REASONING_MODEL', getEnv('OLLAMA_MODEL', BASE_MODEL)),
-  ollamaPremiumModel: getEnv('OLLAMA_PREMIUM_MODEL', PREMIUM_MODEL),
+  groqApiKey: getOptionalEnv('GROQ_API_KEY'),
+  groqBaseUrl: getEnv('GROQ_BASE_URL', 'https://api.groq.com/openai/v1'),
+  groqModel: getEnv('GROQ_MODEL', DEFAULT_GROQ_MODEL),
+  groqFastModel: getEnv('GROQ_FAST_MODEL', getEnv('GROQ_MODEL', DEFAULT_GROQ_MODEL)),
+  groqPremiumModel: getEnv('GROQ_PREMIUM_MODEL', getEnv('GROQ_MODEL', DEFAULT_GROQ_MODEL)),
 
-  aiLlmTimeoutMs: getNumberEnv('AI_LLM_TIMEOUT_MS', getNumberEnv('OLLAMA_TIMEOUT_MS', 60_000)),
-  ollamaTimeoutMs: getNumberEnv('OLLAMA_TIMEOUT_MS', getNumberEnv('AI_LLM_TIMEOUT_MS', 60_000)),
+  // Deprecated. Kept only so old imports do not break during migration.
+  ollamaBaseUrl: getOptionalEnv('OLLAMA_BASE_URL', 'http://127.0.0.1:11434'),
+  ollamaModel: getOptionalEnv('OLLAMA_MODEL', ''),
+  ollamaFastModel: getOptionalEnv('OLLAMA_FAST_MODEL', ''),
+  ollamaFreeReasoningModel: getOptionalEnv('OLLAMA_FREE_REASONING_MODEL', ''),
+  ollamaPremiumModel: getOptionalEnv('OLLAMA_PREMIUM_MODEL', ''),
+  ollamaTimeoutMs: getNumberEnv('OLLAMA_TIMEOUT_MS', 60_000),
   ollamaNumCtx: getNumberEnv('OLLAMA_NUM_CTX', 768),
   ollamaNumPredict: getNumberEnv('OLLAMA_NUM_PREDICT', 64),
 

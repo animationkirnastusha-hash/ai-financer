@@ -1,4 +1,4 @@
-import { OllamaProvider } from './providers/ollama.provider';
+import { GroqProvider } from './providers/groq.provider';
 import { AIModelRole } from './providers/ai-provider.types';
 
 type UserContext = {
@@ -13,7 +13,7 @@ type AnswerResponse = {
 };
 
 export class AIAnswerService {
-  private readonly provider = new OllamaProvider();
+  private readonly provider = new GroqProvider();
 
   async answer(command: string, context: unknown, modelRole: AIModelRole, preplannedAnswer?: string): Promise<string> {
     if (preplannedAnswer && preplannedAnswer.trim().length > 8) {

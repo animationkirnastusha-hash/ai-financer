@@ -3,10 +3,9 @@ import { env } from './config/env';
 import { prisma } from './lib/prisma';
 import cron from 'node-cron';
 import { BudgetService } from './modules/budgets/service';
-import { WarmupService } from './modules/ai/gateway/warmup.service';
+
 
 const app = createApp();
-const warmupService = new WarmupService();
 
 if (env.enableCron) {
   cron.schedule('0 * * * *', async () => {
@@ -25,8 +24,6 @@ const server = app.listen(env.port, () => {
   console.log(`🚀 Server running on http://localhost:${env.port}`);
   console.log(`📦 Environment: ${env.nodeEnv}`);
   console.log(`🤖 AI mode: ${env.aiMode}`);
-  warmupService.warmup().catch((error) => console.error('[AI Warmup Error]', error));
-  warmupService.startHeartbeat();
 });
 
 async function shutdown(signal: string) {

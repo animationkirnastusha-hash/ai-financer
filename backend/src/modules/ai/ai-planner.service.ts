@@ -1,5 +1,5 @@
 import { AIPlan, AIToolCall, AIToolName } from './types';
-import { OllamaProvider } from './providers/ollama.provider';
+import { GroqProvider } from './providers/groq.provider';
 import { AI_TOOL_REGISTRY, getPlannerToolContract } from './tools/tool-registry';
 
 const TOOL_NAMES = new Set(AI_TOOL_REGISTRY.map((tool) => tool.name));
@@ -10,7 +10,7 @@ type UserContext = {
 };
 
 export class AIPlannerService {
-  private readonly provider = new OllamaProvider();
+  private readonly provider = new GroqProvider();
 
   async plan(command: string, context: unknown): Promise<AIPlan> {
     const compactContext = this.compactContext(context);
