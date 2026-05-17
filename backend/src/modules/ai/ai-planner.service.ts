@@ -7,6 +7,11 @@ const TOOL_NAMES = new Set(AI_TOOL_REGISTRY.map((tool) => tool.name));
 type UserContext = {
   accounts?: Array<{ name?: string; type?: string; currency?: string }>;
   categories?: Array<{ name?: string; type?: string }>;
+  memory?: {
+    accountAliases?: Array<{ name?: string; type?: string; currency?: string; aliases?: string[] }>;
+    preferences?: unknown[];
+    recentSuccessfulCommands?: Array<{ command?: string; intent?: string; status?: string }>;
+  };
 };
 
 export class AIPlannerService {
@@ -21,7 +26,7 @@ export class AIPlannerService {
       temperature: 0,
       modelRole: 'fast',
       timeoutMs: 8_000,
-      numPredict: 96,
+      numPredict: 140,
     });
 
     const plan = this.normalizePlan(raw, command);
@@ -35,7 +40,12 @@ export class AIPlannerService {
   }
 
   private systemPrompt() {
-    return 'Return ONLY JSON: {"mode":"actions","actions":[{"tool":"create_transaction","input":{"kind":"income|expense","amount":"string|number","account":"string|null","category":"string|null","description":"string|null","currency":"RUB"}}]}. No prose. No markdown. Never ask questions.';
+    return [
+      'Return ONLY strict JSON.',
+      'Format: {"mode":"actions","actions":[{"tool":"create_transaction","input":{}}]}.',
+      'No prose. No markdown. No questions.',
+      'Never output accountId/categoryId/sectionId; backend resolves entities.',
+    ].join(' ');
   }
 
   private buildPrompt(command: string, context: unknown) {
@@ -43,25 +53,40 @@ export class AIPlannerService {
       'TOOLS:',
       getPlannerToolContract(),
       'RULES:',
-      'income/deposit/top-up/salary => create_transaction kind income.',
-      'expense/payment/purchase/item+amount => create_transaction kind expense.',
-      'create account => create_account initialBalance 0 unless user explicitly says initial balance.',
-      'create account and put/add money => create_account initialBalance 0 + create_transaction income to that account.',
-      'Preserve spoken amounts exactly: "30 тысяч рублей", "30 000 руб", "5к".',
-      'Use account names from CTX when present.',
+      'Use only listed tools.',
+      'Money commands must become create_transaction.',
+      'Income/deposit/top-up/salary/put money onto account => create_transaction kind income.',
+      'Expense/payment/purchase/item+amount => create_transaction kind expense.',
+      'Create account only creates account with initialBalance 0.',
+      'Create account and put/add money => create_account initialBalance 0 + create_transaction income to that account.',
+      'Preserve spoken amounts exactly as user wrote them.',
+      'Use account names/aliases from CTX when present.',
       'CTX:', JSON.stringify(context),
       'USER:', command,
-    ].join('\n');
+    ].join('
+');
   }
 
   private compactContext(context: unknown) {
     const value = this.asRecord(context) as UserContext;
+    const memory = value.memory && typeof value.memory === 'object' ? value.memory : {};
+
     return {
       accounts: Array.isArray(value.accounts)
-        ? value.accounts.slice(0, 4).map((account) => account.name).filter(Boolean)
+        ? value.accounts.slice(0, 8).map((account) => account.name).filter(Boolean)
+        : [],
+      accountAliases: Array.isArray(memory.accountAliases)
+        ? memory.accountAliases.slice(0, 8).map((item) => ({
+          name: item.name,
+          aliases: Array.isArray(item.aliases) ? item.aliases.slice(0, 5) : [],
+        }))
         : [],
       categories: Array.isArray(value.categories)
-        ? value.categories.slice(0, 4).map((category) => category.name).filter(Boolean)
+        ? value.categories.slice(0, 8).map((category) => category.name).filter(Boolean)
+        : [],
+      preferences: Array.isArray(memory.preferences) ? memory.preferences.slice(0, 6) : [],
+      recentSuccessfulCommands: Array.isArray(memory.recentSuccessfulCommands)
+        ? memory.recentSuccessfulCommands.slice(0, 5)
         : [],
     };
   }

@@ -10,6 +10,7 @@ import {
 } from './types';
 import { getToolDefinition } from './tools/tool-registry';
 import { convertMoney, detectCurrencyInText, normalizeCurrency, normalizeMoneyAmount } from './utils/amount-normalizer';
+import { AIEntityResolverService } from './ai-entity-resolver.service';
 
 interface AccountLite {
   id: string;
@@ -24,6 +25,7 @@ const CURRENCIES: AICurrency[] = ['RUB', 'USD', 'EUR', 'VND'];
 const DEFAULT_AUTO_TRANSACTION_LIMIT = 100000;
 
 export class AIValidatorService {
+  private readonly entityResolver = new AIEntityResolverService();
   async validate(userId: string, plan: AIActionPlan): Promise<AIValidatedPlan> {
     const [accounts, categories, sections] = await Promise.all([
       prisma.account.findMany({ where: { userId }, orderBy: { createdAt: 'asc' } }),
@@ -34,9 +36,6 @@ export class AIValidatorService {
     const issues: AIValidatedPlan['issues'] = [];
     const actions: AIValidatedAction[] = [];
     const plannedAccounts = new Map<string, { name: string; currency: AICurrency }>();
-    const transactionAccountRefs = this.collectTransactionAccountRefs(plan);
-    const createAccountCount = plan.actions.filter((action) => action.tool === 'create_account').length;
-    const transactionCount = plan.actions.filter((action) => action.tool === 'create_transaction').length;
 
     for (const [index, action] of plan.actions.entries()) {
       const definition = getToolDefinition(action.tool);
@@ -55,19 +54,13 @@ export class AIValidatorService {
         const name = this.cleanEntityName(input.name) || fallbackName;
         const type = this.coerceAccountType(input.type, 'cash');
         const currency: AICurrency = this.coerceCurrency(input.currency, userText, 'RUB') ?? 'RUB';
-        const rawInitialBalance = normalizeMoneyAmount(input.initialBalance) ?? 0;
+        const initialBalance = normalizeMoneyAmount(input.initialBalance) ?? 0;
         const existingAccount = this.resolveAccount(accounts, name);
-        const accountIsTransactionTarget = transactionAccountRefs.has(this.key(name));
-        const shouldZeroInitialBalance = transactionCount > 0 && (accountIsTransactionTarget || createAccountCount === 1);
-        const initialBalance = shouldZeroInitialBalance ? 0 : rawInitialBalance;
 
         input.name = existingAccount?.name ?? name;
         input.type = type;
         input.currency = existingAccount ? this.ensureCurrency(existingAccount.currency, currency) : currency;
         input.initialBalance = initialBalance;
-        if (shouldZeroInitialBalance && rawInitialBalance > 0) {
-          resolved.initialBalanceSuppressed = rawInitialBalance;
-        }
 
         if (existingAccount) {
           resolved.existingAccountId = existingAccount.id;
@@ -247,18 +240,6 @@ export class AIValidatorService {
     return defaultValue;
   }
 
-  private collectTransactionAccountRefs(plan: AIActionPlan) {
-    const refs = new Set<string>();
-
-    for (const action of plan.actions) {
-      if (action.tool !== 'create_transaction') continue;
-      const raw = action.input?.account;
-      if (typeof raw === 'string' && raw.trim()) refs.add(this.key(raw));
-    }
-
-    return refs;
-  }
-
   private ensureCurrency(value: unknown, fallback: AICurrency): AICurrency {
     if (typeof value === 'string') {
       const upper = value.trim().toUpperCase();
@@ -309,12 +290,10 @@ export class AIValidatorService {
   }
 
   private resolveAccount(accounts: AccountLite[], raw: string) {
-    const ref = raw.trim().toLowerCase();
-    if (!ref) return null;
-    return accounts.find((account) => account.id === raw)
-      ?? accounts.find((account) => account.name.toLowerCase() === ref)
-      ?? accounts.find((account) => account.name.toLowerCase().includes(ref) || ref.includes(account.name.toLowerCase()))
-      ?? null;
+    const direct = accounts.find((account) => account.id === raw);
+    if (direct) return direct;
+
+    return this.entityResolver.resolveAccount(accounts, raw)?.item ?? null;
   }
 
   private findByName<T extends { id?: string | null; name: string }>(items: T[], raw: string) {

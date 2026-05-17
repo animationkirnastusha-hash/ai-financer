@@ -1,6 +1,9 @@
 import { prisma } from '../../lib/prisma';
+import { AIMemoryService } from './ai-memory.service';
 
 export class AIContextService {
+  private readonly memory = new AIMemoryService();
+
   async buildUserContext(userId: string) {
     const [accounts, categories, sections, recentTransactions] = await Promise.all([
       prisma.account.findMany({
@@ -35,6 +38,8 @@ export class AIContextService {
       }),
     ]);
 
-    return { accounts, categories, sections, recentTransactions };
+    const memory = await this.memory.buildUserMemory(userId, { accounts });
+
+    return { accounts, categories, sections, recentTransactions, memory };
   }
 }
