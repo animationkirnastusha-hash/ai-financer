@@ -163,8 +163,7 @@ export class AIOrchestratorService {
       throw new BadRequestError('Invalid pending action payload');
     }
 
-    const result = await this.executor.execute(userId, parsed);
-    await this.pending.markConfirmed(userId, pendingActionId);
+    const result = await this.executor.execute(userId, parsed, { pendingActionId });
 
     const riskLevel = this.normalizeRisk(pending.riskLevel);
     const audit = await this.audit.create({
