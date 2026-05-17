@@ -6,6 +6,7 @@ import { AIPreviewService } from './ai-preview.service';
 import { AIValidatorService } from './ai-validator.service';
 import { AIAuditService } from './audit.service';
 import { AIPendingActionService } from './pending-action.service';
+import { aiSessionService } from './ai-session.service';
 import { AIActionPlan, AIClarificationRequest, AIHandleOptions, AIParsedCommand, AIResult, AIRiskLevel, AIValidatedPlan } from './types';
 
 export class AIOrchestratorService {
@@ -66,6 +67,8 @@ export class AIOrchestratorService {
             riskLevel: validated.riskLevel,
           });
 
+          await aiSessionService.rememberClarification(userId, { command: trimmed, intent: parsed.intent, tool: parsed.actions[clarification.actionIndex]?.tool, payload: parsedWithClarification, clarification });
+
           const audit = await this.audit.create({
             userId,
             command: trimmed,
@@ -117,6 +120,9 @@ export class AIOrchestratorService {
 
       if (!validated.requiresConfirmation) {
         const result = await this.executor.execute(userId, parsed);
+        await aiSessionService.clear(userId);
+        await aiSessionService.rememberResult(userId, { command: trimmed, intent: parsed.intent, tool: parsed.actions[0]?.tool, result });
+
         const audit = await this.audit.create({
           userId,
           command: trimmed,
@@ -138,7 +144,7 @@ export class AIOrchestratorService {
           message: this.preview.buildExecutedMessage(parsed),
           parsed: parsed as unknown as Record<string, unknown>,
           result,
-          meta: { auditLogId: audit.id, undo: { available: false } },
+          meta: { auditLogId: audit.id, undo: { available: true } },
         };
       }
 
@@ -207,6 +213,9 @@ export class AIOrchestratorService {
 
       const result = await this.executor.execute(userId, parsed, { pendingActionId });
 
+      await aiSessionService.clear(userId);
+      await aiSessionService.rememberResult(userId, { command: pending.command, intent: parsed.intent, tool: parsed.actions[0]?.tool, result });
+
       const riskLevel = this.normalizeRisk(pending.riskLevel);
       const audit = await this.audit.create({
         userId,
@@ -233,7 +242,7 @@ export class AIOrchestratorService {
         message: this.preview.buildExecutedMessage(parsed),
         parsed: parsed as unknown as Record<string, unknown>,
         result,
-        meta: { auditLogId: audit.id, undo: { available: false } },
+        meta: { auditLogId: audit.id, undo: { available: true } },
       };
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Confirm failed';
@@ -367,6 +376,9 @@ export class AIOrchestratorService {
 
     if (!validated.requiresConfirmation) {
       const result = await this.executor.execute(userId, nextParsed, { pendingActionId: pending.id });
+      await aiSessionService.clear(userId);
+      await aiSessionService.rememberResult(userId, { command: `${pending.command} / ${candidate}`, intent: nextParsed.intent, tool: nextParsed.actions[0]?.tool, result });
+
       const audit = await this.audit.create({
         userId,
         command: `${pending.command} / ${candidate}`,
@@ -388,7 +400,7 @@ export class AIOrchestratorService {
         message: this.preview.buildExecutedMessage(nextParsed),
         parsed: nextParsed as unknown as Record<string, unknown>,
         result,
-        meta: { auditLogId: audit.id, pendingActionId: pending.id, undo: { available: false } },
+        meta: { auditLogId: audit.id, pendingActionId: pending.id, undo: { available: true } },
       };
     }
 

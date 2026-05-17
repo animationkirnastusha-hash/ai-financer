@@ -17,7 +17,17 @@ export type AIToolName =
   | 'delete_section'
   | 'assign_category_to_section'
   | 'show_accounts'
-  | 'show_transactions';
+  | 'show_transactions'
+  | 'query_analytics'
+  | 'undo_last_action'
+  | 'show_companion_reactions'
+  | 'mark_companion_reactions_seen'
+  | 'show_premium_capabilities'
+  | 'show_ai_settings'
+  | 'update_ai_settings'
+  | 'apply_ai_settings_preset'
+  | 'update_onboarding_state'
+  | 'restart_onboarding';
 
 export interface AIToolCall<TInput extends Record<string, unknown> = Record<string, unknown>> {
   tool: AIToolName;

@@ -44,6 +44,9 @@ model User {
   progressionProfile ProgressionProfile?
   achievements      UserAchievement[]
   activities        UserActivity[]
+  premiumCapabilities AIPremiumCapability[]
+  companionEvents   AICompanionEvent[]
+  aiSessionState    AISessionState?
   aiSettings        UserAISettings?
   onboardingState   OnboardingState?
 
@@ -387,5 +390,64 @@ model OnboardingState {
   updatedAt   DateTime @updatedAt
 
   @@index([status])
+}
+
+model AISessionState {
+  id             String   @id @default(cuid())
+  userId         String   @unique
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  pendingIntent  String?
+  pendingTool    String?
+  pendingPayload String?
+  clarification  String?
+  lastCommand    String?
+  lastResult     String?
+  expiresAt      DateTime?
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([expiresAt])
+}
+
+
+model AICompanionEvent {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  type      String
+  tone      String   @default("calm")
+  title     String
+  message   String
+  payload   String?
+  seen      Boolean  @default(false)
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([type])
+  @@index([seen])
+  @@index([createdAt])
+}
+
+
+model AIPremiumCapability {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  key       String
+  enabled   Boolean  @default(false)
+  source    String   @default("system")
+  meta      String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, key])
+  @@index([key])
+  @@index([enabled])
 }
 

@@ -15,6 +15,16 @@ const TOOL_LABELS: Record<string, string> = {
   assign_category_to_section: 'привязать категорию к разделу',
   show_accounts: 'показать счета',
   show_transactions: 'показать операции',
+  query_analytics: 'показать аналитику',
+  undo_last_action: 'отменить последнее действие',
+  show_companion_reactions: 'показать реакции компаньона',
+  mark_companion_reactions_seen: 'прочитать реакции компаньона',
+  show_premium_capabilities: 'показать возможности Premium',
+  show_ai_settings: 'показать настройки ИИ',
+  update_ai_settings: 'изменить настройки ИИ',
+  apply_ai_settings_preset: 'применить режим настроек',
+  update_onboarding_state: 'обновить обучение',
+  restart_onboarding: 'запустить обучение заново',
 };
 
 export class AIPreviewService {
@@ -60,8 +70,9 @@ export class AIPreviewService {
 
   private describeAction(action: AIValidatedAction) {
     const input = action.input ?? {};
+    const tool = String(action.tool);
 
-    if (action.tool === 'create_transaction') {
+    if (tool === 'create_transaction') {
       const kind = input.kind === 'income' ? 'доход' : 'расход';
       const amount = this.formatAmount(input.amount, input.currency);
       const name = this.clean(input.description || input.category) || (input.kind === 'income' ? 'Доход' : 'Расход');
@@ -69,17 +80,47 @@ export class AIPreviewService {
       return `${kind} ${amount}: ${name}${account ? `, счёт ${account}` : ''}`;
     }
 
-    if (action.tool === 'create_account') {
+    if (tool === 'create_account') {
       if (input.__skipCreate) return `счёт "${this.clean(input.name) || 'без названия'}" уже существует`;
       const initialBalance = Number(input.initialBalance ?? 0);
       return `создать счёт "${this.clean(input.name) || 'без названия'}"${initialBalance > 0 ? ` с балансом ${this.formatAmount(initialBalance, input.currency)}` : ''}`;
     }
 
-    if (action.tool === 'transfer_money') {
+    if (tool === 'transfer_money') {
       return `перевод ${this.formatAmount(input.amount, input.currency)} со счёта ${this.clean(input.fromAccount) || '?'} на ${this.clean(input.toAccount) || '?'}`;
     }
 
-    return TOOL_LABELS[action.tool] ?? action.tool;
+    if (tool === 'apply_ai_settings_preset') {
+      return `применить режим настроек "${this.clean(input.preset) || 'balanced'}"`;
+    }
+
+    if (tool === 'update_ai_settings') {
+      return 'изменить настройки ИИ';
+    }
+
+    if (tool === 'show_ai_settings') {
+      return 'показать настройки ИИ';
+    }
+
+    if (tool === 'update_onboarding_state') {
+      return 'обновить состояние обучения';
+    }
+
+    if (tool === 'restart_onboarding') {
+      return 'запустить обучение заново';
+    }
+
+    if (tool === 'query_analytics') return 'показать аналитику';
+    if (tool === 'undo_last_action') return 'отменить последнее действие';
+    if (tool === 'apply_ai_settings_preset') return `применить режим настроек "${this.clean(input.preset) || 'balanced'}"`;
+    if (tool === 'update_ai_settings') return 'изменить настройки ИИ';
+    if (tool === 'show_ai_settings') return 'показать настройки ИИ';
+    if (tool === 'update_onboarding_state') return 'обновить состояние обучения';
+    if (tool === 'restart_onboarding') return 'запустить обучение заново';
+    if (tool === 'show_companion_reactions') return 'показать реакции компаньона';
+    if (tool === 'show_premium_capabilities') return 'показать возможности Premium';
+
+    return TOOL_LABELS[tool] ?? tool;
   }
 
   private formatAmount(amount: unknown, currency: unknown) {

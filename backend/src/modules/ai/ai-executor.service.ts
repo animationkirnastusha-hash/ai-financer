@@ -3,6 +3,9 @@ import { prisma } from '../../lib/prisma';
 import { BadRequestError, NotFoundError } from '../../shared/core/errors';
 import { AIParsedCommand, AIValidatedAction } from './types';
 import { progressionActivityBridge } from '../progression/activity-bridge.service';
+import { aiPremiumService } from './ai-premium.service';
+import { aiCompanionService } from './ai-companion.service';
+import { aiAnalyticsService } from './ai-analytics.service';
 
 const transactionInclude = {
   account: {
@@ -69,6 +72,7 @@ export class AIExecutorService {
     });
 
     await progressionActivityBridge.trackAIExecution(userId, parsed, results);
+    await aiCompanionService.recordExecution(userId, { tools: parsed.actions.map((action) => action.tool), result: results, source: 'ai' });
 
     return {
       summary: parsed.summary,
@@ -86,8 +90,9 @@ export class AIExecutorService {
   ) {
     const input = action.input;
     const resolved = action.resolved ?? {};
+    const tool = String(action.tool);
 
-    if (action.tool === 'create_account') {
+    if (tool === 'create_account') {
       const name = this.cleanString(input.name);
       if (!name) throw new BadRequestError('Account name is required');
 
@@ -96,14 +101,14 @@ export class AIExecutorService {
         const account = await this.getAccount(tx, userId, existingAccountId);
         this.rememberAccount(createdAccountNames, name, account.id);
         this.rememberAccount(createdAccountNames, account.name, account.id);
-        return { tool: action.tool, account, skipped: true, reason: 'account_already_exists' };
+        return { tool, account, skipped: true, reason: 'account_already_exists' };
       }
 
       const existing = await tx.account.findFirst({ where: { userId, name } });
       if (existing) {
         this.rememberAccount(createdAccountNames, name, existing.id);
         this.rememberAccount(createdAccountNames, existing.name, existing.id);
-        return { tool: action.tool, account: existing, skipped: true, reason: 'account_already_exists' };
+        return { tool, account: existing, skipped: true, reason: 'account_already_exists' };
       }
 
       const account = await tx.account.create({
@@ -126,10 +131,10 @@ export class AIExecutorService {
 
       this.rememberAccount(createdAccountNames, name, account.id);
       this.rememberAccount(createdAccountNames, account.name, account.id);
-      return { tool: action.tool, account };
+      return { tool, account };
     }
 
-    if (action.tool === 'update_account') {
+    if (tool === 'update_account') {
       const accountId = this.requireString(resolved.accountId, 'accountId');
       const account = await tx.account.update({
         where: { id: accountId },
@@ -140,17 +145,17 @@ export class AIExecutorService {
           ...(input.balance !== null && input.balance !== undefined ? { balance: this.toInteger(input.balance, 0) } : {}),
         },
       });
-      return { tool: action.tool, account };
+      return { tool, account };
     }
 
-    if (action.tool === 'delete_account') {
+    if (tool === 'delete_account') {
       const accountId = this.requireString(resolved.accountId, 'accountId');
       const account = await this.getAccount(tx, userId, accountId);
       await tx.account.delete({ where: { id: accountId } });
-      return { tool: action.tool, account };
+      return { tool, account };
     }
 
-    if (action.tool === 'create_transaction') {
+    if (tool === 'create_transaction') {
       const accountId = await this.resolveTransactionAccountId(tx, userId, input, resolved, createdAccountNames);
       const kind = input.kind === 'income' ? 'income' : 'expense';
       const amount = this.toInteger(resolved.amountInAccountCurrency ?? input.amount, 0);
@@ -188,10 +193,10 @@ export class AIExecutorService {
         include: transactionInclude,
       });
 
-      return { tool: action.tool, transaction };
+      return { tool, transaction };
     }
 
-    if (action.tool === 'transfer_money') {
+    if (tool === 'transfer_money') {
       const fromAccountId = this.requireString(resolved.fromAccountId, 'fromAccountId');
       const toAccountId = this.requireString(resolved.toAccountId, 'toAccountId');
       const amount = this.toInteger(resolved.amountInFromCurrency ?? input.amount, 0);
@@ -220,14 +225,14 @@ export class AIExecutorService {
         include: transactionInclude,
       });
 
-      return { tool: action.tool, transaction };
+      return { tool, transaction };
     }
 
-    if (action.tool === 'create_category') {
+    if (tool === 'create_category') {
       const name = this.cleanString(input.name);
       if (!name) throw new BadRequestError('Category name is required');
       const existing = await tx.category.findFirst({ where: { userId, name } });
-      if (existing) return { tool: action.tool, category: existing, skipped: true, reason: 'category_already_exists' };
+      if (existing) return { tool, category: existing, skipped: true, reason: 'category_already_exists' };
       const category = await tx.category.create({
         data: {
           userId,
@@ -236,34 +241,247 @@ export class AIExecutorService {
           sectionId: typeof resolved.sectionId === 'string' ? resolved.sectionId : null,
         },
       });
-      return { tool: action.tool, category };
+      return { tool, category };
     }
 
-    if (action.tool === 'create_section') {
+    if (tool === 'create_section') {
       const name = this.cleanString(input.name);
       if (!name) throw new BadRequestError('Section name is required');
       const existing = await tx.section.findFirst({ where: { userId, name } });
-      if (existing) return { tool: action.tool, section: existing, skipped: true, reason: 'section_already_exists' };
+      if (existing) return { tool, section: existing, skipped: true, reason: 'section_already_exists' };
       const section = await tx.section.create({ data: { userId, name } });
-      return { tool: action.tool, section };
+      return { tool, section };
     }
 
-    if (action.tool === 'show_accounts') {
+
+    if (tool === 'show_ai_settings') {
+      const [settings, onboarding, accounts] = await Promise.all([
+        tx.userAISettings.upsert({ where: { userId }, create: { userId }, update: {} }),
+        tx.onboardingState.upsert({
+          where: { userId },
+          create: { userId, status: 'not_started', currentStep: 'create_first_account' },
+          update: {},
+        }),
+        tx.account.findMany({ where: { userId }, orderBy: { createdAt: 'asc' } }),
+      ]);
+
+      return { tool, settings, onboarding, accounts };
+    }
+
+    if (tool === 'update_ai_settings') {
+      const data: Record<string, unknown> = {};
+
+      if (typeof resolved.defaultExpenseAccountId === 'string') data.defaultExpenseAccountId = resolved.defaultExpenseAccountId;
+      if (typeof resolved.defaultIncomeAccountId === 'string') data.defaultIncomeAccountId = resolved.defaultIncomeAccountId;
+      if (input.autoConfirmExpenseLimit !== undefined) data.autoConfirmExpenseLimit = this.toInteger(input.autoConfirmExpenseLimit, 0);
+      if (input.autoConfirmIncomeLimit !== undefined) data.autoConfirmIncomeLimit = this.toInteger(input.autoConfirmIncomeLimit, 0);
+      if (input.autoConfirmTransferLimit !== undefined) data.autoConfirmTransferLimit = this.toInteger(input.autoConfirmTransferLimit, 0);
+      if (input.requireConfirmForAccountActions !== undefined) data.requireConfirmForAccountActions = Boolean(input.requireConfirmForAccountActions);
+      if (typeof input.companionTone === 'string') data.companionTone = input.companionTone;
+
+      const settings = await tx.userAISettings.upsert({
+        where: { userId },
+        create: { userId, ...data },
+        update: data,
+      });
+
+      return { tool, settings };
+    }
+
+    if (tool === 'apply_ai_settings_preset') {
+      const preset = typeof input.preset === 'string' ? input.preset : 'balanced';
+      const config = this.presetConfig(preset);
       const accounts = await tx.account.findMany({ where: { userId }, orderBy: { createdAt: 'asc' } });
-      return { tool: action.tool, accounts };
+      const defaultExpenseAccountId = accounts.find((account) => account.type === 'cash')?.id
+        ?? accounts.find((account) => account.type === 'card')?.id
+        ?? accounts[0]?.id
+        ?? null;
+      const defaultIncomeAccountId = accounts.find((account) => account.type === 'card')?.id
+        ?? accounts[0]?.id
+        ?? null;
+
+      const settings = await tx.userAISettings.upsert({
+        where: { userId },
+        create: {
+          userId,
+          preset,
+          ...config,
+          ...(preset !== 'strict' ? { defaultExpenseAccountId, defaultIncomeAccountId } : {}),
+        },
+        update: {
+          preset,
+          ...config,
+          ...(preset !== 'strict' ? { defaultExpenseAccountId, defaultIncomeAccountId } : {}),
+        },
+      });
+
+      return { tool, settings };
     }
 
-    if (action.tool === 'show_transactions') {
+    if (tool === 'update_onboarding_state') {
+      const status = typeof input.status === 'string' ? input.status : undefined;
+      const currentStep = typeof input.currentStep === 'string' ? input.currentStep : undefined;
+      const skipped = typeof input.skipped === 'boolean' ? input.skipped : undefined;
+      const completedAt = status === 'completed' || skipped === true ? new Date() : undefined;
+
+      const onboarding = await tx.onboardingState.upsert({
+        where: { userId },
+        create: {
+          userId,
+          status: status ?? 'active',
+          currentStep: currentStep ?? 'create_first_account',
+          skipped: skipped ?? false,
+          completedAt,
+        },
+        update: {
+          ...(status ? { status } : {}),
+          ...(currentStep !== undefined ? { currentStep } : {}),
+          ...(skipped !== undefined ? { skipped } : {}),
+          ...(completedAt ? { completedAt } : {}),
+        },
+      });
+
+      return { tool, onboarding };
+    }
+
+    if (tool === 'restart_onboarding') {
+      const onboarding = await tx.onboardingState.upsert({
+        where: { userId },
+        create: { userId, status: 'active', currentStep: 'create_first_account', skipped: false },
+        update: { status: 'active', currentStep: 'create_first_account', skipped: false, completedAt: null, meta: null },
+      });
+
+      return { tool, onboarding };
+    }
+
+
+    if (tool === 'query_analytics') {
+      const analytics = await aiAnalyticsService.query(userId, input);
+      return { tool, analytics };
+    }
+
+    if (tool === 'undo_last_action') {
+      const transaction = await tx.transaction.findFirst({
+        where: { userId, isAIGenerated: true },
+        orderBy: [{ createdAt: 'desc' }],
+      });
+
+      if (!transaction) return { tool, skipped: true, reason: 'nothing_to_undo' };
+
+      await this.applyBalanceEffect(tx, {
+        type: transaction.type as 'income' | 'expense' | 'transfer',
+        amount: transaction.amount,
+        accountId: transaction.accountId,
+        toAccountId: transaction.toAccountId,
+        direction: 'revert',
+      });
+
+      await tx.transaction.delete({ where: { id: transaction.id } });
+
+      return { tool, undone: { transactionId: transaction.id, type: transaction.type, amount: transaction.amount } };
+    }
+
+    if (tool === 'show_companion_reactions') {
+      const events = await aiCompanionService.list(userId, input);
+      return { tool, events };
+    }
+
+    if (tool === 'mark_companion_reactions_seen') {
+      const result = await aiCompanionService.markSeen(userId);
+      return { tool, result };
+    }
+
+    if (tool === 'show_premium_capabilities') {
+      const capabilities = await aiPremiumService.getCapabilities(userId);
+      return { tool, capabilities };
+    }
+
+    if (tool === 'show_ai_settings') {
+      const [settings, onboarding, accounts] = await Promise.all([
+        tx.userAISettings.upsert({ where: { userId }, create: { userId }, update: {} }),
+        tx.onboardingState.upsert({
+          where: { userId },
+          create: { userId, status: 'not_started', currentStep: 'create_first_account' },
+          update: {},
+        }),
+        tx.account.findMany({ where: { userId }, orderBy: { createdAt: 'asc' } }),
+      ]);
+
+      return { tool, settings, onboarding, accounts };
+    }
+
+    if (tool === 'update_ai_settings') {
+      const data: Record<string, unknown> = {};
+
+      if (typeof resolved.defaultExpenseAccountId === 'string') data.defaultExpenseAccountId = resolved.defaultExpenseAccountId;
+      if (typeof resolved.defaultIncomeAccountId === 'string') data.defaultIncomeAccountId = resolved.defaultIncomeAccountId;
+      if (input.autoConfirmExpenseLimit !== undefined) data.autoConfirmExpenseLimit = this.toInteger(input.autoConfirmExpenseLimit, 0);
+      if (input.autoConfirmIncomeLimit !== undefined) data.autoConfirmIncomeLimit = this.toInteger(input.autoConfirmIncomeLimit, 0);
+      if (input.autoConfirmTransferLimit !== undefined) data.autoConfirmTransferLimit = this.toInteger(input.autoConfirmTransferLimit, 0);
+      if (input.requireConfirmForAccountActions !== undefined) data.requireConfirmForAccountActions = Boolean(input.requireConfirmForAccountActions);
+      if (typeof input.companionTone === 'string') data.companionTone = input.companionTone;
+
+      const settings = await tx.userAISettings.upsert({ where: { userId }, create: { userId, ...data }, update: data });
+      return { tool, settings };
+    }
+
+    if (tool === 'apply_ai_settings_preset') {
+      const preset = typeof input.preset === 'string' ? input.preset : 'balanced';
+      const config = this.presetConfig(preset);
+      const accounts = await tx.account.findMany({ where: { userId }, orderBy: { createdAt: 'asc' } });
+      const defaultExpenseAccountId = accounts.find((account) => account.type === 'cash')?.id ?? accounts.find((account) => account.type === 'card')?.id ?? accounts[0]?.id ?? null;
+      const defaultIncomeAccountId = accounts.find((account) => account.type === 'card')?.id ?? accounts[0]?.id ?? null;
+
+      const settings = await tx.userAISettings.upsert({
+        where: { userId },
+        create: { userId, preset, ...config, ...(preset !== 'strict' ? { defaultExpenseAccountId, defaultIncomeAccountId } : {}) },
+        update: { preset, ...config, ...(preset !== 'strict' ? { defaultExpenseAccountId, defaultIncomeAccountId } : {}) },
+      });
+
+      return { tool, settings };
+    }
+
+    if (tool === 'update_onboarding_state') {
+      const status = typeof input.status === 'string' ? input.status : undefined;
+      const currentStep = typeof input.currentStep === 'string' ? input.currentStep : undefined;
+      const skipped = typeof input.skipped === 'boolean' ? input.skipped : undefined;
+      const completedAt = status === 'completed' || skipped === true ? new Date() : undefined;
+
+      const onboarding = await tx.onboardingState.upsert({
+        where: { userId },
+        create: { userId, status: status ?? 'active', currentStep: currentStep ?? 'create_first_account', skipped: skipped ?? false, completedAt },
+        update: { ...(status ? { status } : {}), ...(currentStep !== undefined ? { currentStep } : {}), ...(skipped !== undefined ? { skipped } : {}), ...(completedAt ? { completedAt } : {}) },
+      });
+
+      return { tool, onboarding };
+    }
+
+    if (tool === 'restart_onboarding') {
+      const onboarding = await tx.onboardingState.upsert({
+        where: { userId },
+        create: { userId, status: 'active', currentStep: 'create_first_account', skipped: false },
+        update: { status: 'active', currentStep: 'create_first_account', skipped: false, completedAt: null, meta: null },
+      });
+
+      return { tool, onboarding };
+    }
+
+    if (tool === 'show_accounts') {
+      const accounts = await tx.account.findMany({ where: { userId }, orderBy: { createdAt: 'asc' } });
+      return { tool, accounts };
+    }
+
+    if (tool === 'show_transactions') {
       const transactions = await tx.transaction.findMany({
         where: { userId },
         include: transactionInclude,
         orderBy: [{ date: 'desc' }, { createdAt: 'desc' }],
         take: Math.min(Math.max(Number(input.limit ?? 20), 1), 100),
       });
-      return { tool: action.tool, transactions };
+      return { tool, transactions };
     }
 
-    return { tool: action.tool, skipped: true };
+    return { tool, skipped: true };
   }
 
   private async resolveTransactionAccountId(
@@ -421,6 +639,36 @@ export class AIExecutorService {
     const parsed = Number(value);
     if (!Number.isFinite(parsed) || !Number.isInteger(parsed)) return fallback;
     return parsed;
+  }
+
+  private presetConfig(preset: string) {
+    if (preset === 'strict') {
+      return {
+        autoConfirmExpenseLimit: 0,
+        autoConfirmIncomeLimit: 0,
+        autoConfirmTransferLimit: 0,
+        requireConfirmForAccountActions: true,
+        companionTone: 'calm',
+      };
+    }
+
+    if (preset === 'simple') {
+      return {
+        autoConfirmExpenseLimit: 1000,
+        autoConfirmIncomeLimit: 250000,
+        autoConfirmTransferLimit: 0,
+        requireConfirmForAccountActions: true,
+        companionTone: 'coach',
+      };
+    }
+
+    return {
+      autoConfirmExpenseLimit: 500,
+      autoConfirmIncomeLimit: 100000,
+      autoConfirmTransferLimit: 0,
+      requireConfirmForAccountActions: true,
+      companionTone: 'friendly',
+    };
   }
 
   private requireString(value: unknown, fieldName: string) {

@@ -12,6 +12,21 @@ type UserContext = {
     preferences?: unknown[];
     recentSuccessfulCommands?: Array<{ command?: string; intent?: string; status?: string }>;
   };
+  aiSettings?: {
+    preset?: string;
+    defaultExpenseAccountId?: string | null;
+    defaultIncomeAccountId?: string | null;
+    autoConfirmExpenseLimit?: number;
+    autoConfirmIncomeLimit?: number;
+    autoConfirmTransferLimit?: number;
+    companionTone?: string;
+  } | null;
+  aiSessionState?: { pendingIntent?: string | null; pendingTool?: string | null; lastCommand?: string | null } | null;
+  onboardingState?: {
+    status?: string;
+    currentStep?: string | null;
+    skipped?: boolean;
+  } | null;
 };
 
 export class AIPlannerService {
@@ -54,6 +69,10 @@ export class AIPlannerService {
       getPlannerToolContract(),
       'RULES:',
       'Use only listed tools.',
+      'For analytics questions like сколько потратил/доход/топ категорий/баланс, use query_analytics.',
+      'For undo/cancel last operation, use undo_last_action.',
+      'For companion/reactions, use show_companion_reactions.',
+      'For premium/tariff/capabilities, use show_premium_capabilities.',
       'Money commands must become create_transaction.',
       'Income/deposit/top-up/salary/put money onto account => create_transaction kind income.',
       'Expense/payment/purchase/item+amount => create_transaction kind expense.',
@@ -61,8 +80,12 @@ export class AIPlannerService {
       'Create account and put/add money => create_account initialBalance 0 + create_transaction income to that account.',
       'Preserve spoken amounts exactly as user wrote them.',
       'Use account names/aliases from CTX when present.',
+      'If user asks to show/change AI settings, use show_ai_settings/update_ai_settings/apply_ai_settings_preset.',
+      'If user asks to start/skip/finish tutorial/onboarding, use restart_onboarding/update_onboarding_state.',
+      'If user asks for режим строгий/баланс/простой, use apply_ai_settings_preset.',
+      'If user sets default account, use update_ai_settings with natural account name.',
       'If user says main/default/primary account, use account: "основной счет".',
-      'For expense without account, leave account null; backend will ask one short clarification.',
+      'For expense without account, leave account null; backend may use default account or ask clarification.',
       'CTX:', JSON.stringify(context),
       'USER:', command,
     ].join('');
@@ -89,6 +112,31 @@ export class AIPlannerService {
       recentSuccessfulCommands: Array.isArray(memory.recentSuccessfulCommands)
         ? memory.recentSuccessfulCommands.slice(0, 5)
         : [],
+      aiSettings: value.aiSettings
+        ? {
+          preset: value.aiSettings.preset,
+          defaultExpenseAccountId: value.aiSettings.defaultExpenseAccountId,
+          defaultIncomeAccountId: value.aiSettings.defaultIncomeAccountId,
+          autoConfirmExpenseLimit: value.aiSettings.autoConfirmExpenseLimit,
+          autoConfirmIncomeLimit: value.aiSettings.autoConfirmIncomeLimit,
+          autoConfirmTransferLimit: value.aiSettings.autoConfirmTransferLimit,
+          companionTone: value.aiSettings.companionTone,
+        }
+        : null,
+      onboardingState: value.onboardingState
+        ? {
+          status: value.onboardingState.status,
+          currentStep: value.onboardingState.currentStep,
+          skipped: value.onboardingState.skipped,
+        }
+        : null,
+      aiSessionState: value.aiSessionState
+        ? {
+          pendingIntent: value.aiSessionState.pendingIntent,
+          pendingTool: value.aiSessionState.pendingTool,
+          lastCommand: value.aiSessionState.lastCommand,
+        }
+        : null,
     };
   }
 
