@@ -30,7 +30,7 @@ if (existsSync(`${dbPath}-journal`)) rmSync(`${dbPath}-journal`, { force: true }
 run('npx', ['prisma', 'generate']);
 run('npx', ['prisma', 'db', 'push', '--skip-generate']);
 run('npm', ['run', 'build']);
-run('node', ['--test', 'dist/modules/ai/__tests__/*.test.js']);
+run('node', ['--test', 'dist/modules/ai/__tests__']);
 
 if (existsSync(dbPath)) rmSync(dbPath, { force: true });
 if (existsSync(`${dbPath}-journal`)) rmSync(`${dbPath}-journal`, { force: true });

@@ -6,6 +6,7 @@ import {
   updatePendingAction,
   getPendingActions,
   getAuditLogs,
+  getObservabilityEvents,
   undoCommand,
 } from './controller';
 import { authMiddleware } from '../../middleware/auth';
@@ -16,6 +17,7 @@ router.use(authMiddleware);
 
 router.get('/pending-actions', getPendingActions);
 router.get('/audit-logs', getAuditLogs);
+router.get('/observability', getObservabilityEvents);
 
 router.post('/parse', parseCommand);
 router.post('/confirm', confirmCommand);

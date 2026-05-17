@@ -62,10 +62,14 @@ export class AIExecutorService {
       }
 
       if (options.pendingActionId) {
-        await tx.aIPendingAction.updateMany({
+        const claimed = await tx.aIPendingAction.updateMany({
           where: { id: options.pendingActionId, userId, status: 'pending' },
           data: { status: 'confirmed', confirmedAt: new Date() },
         });
+
+        if (claimed.count !== 1) {
+          throw new BadRequestError('Pending action was already processed or expired');
+        }
       }
 
       return actionResults;

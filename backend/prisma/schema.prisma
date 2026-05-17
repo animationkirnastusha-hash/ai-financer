@@ -44,6 +44,8 @@ model User {
   progressionProfile ProgressionProfile?
   achievements      UserAchievement[]
   activities        UserActivity[]
+  aiOperationEvents AIOperationEvent[]
+  aiIdempotencyRecords AIIdempotencyRecord[]
   premiumCapabilities AIPremiumCapability[]
   companionEvents   AICompanionEvent[]
   aiSessionState    AISessionState?
@@ -449,5 +451,45 @@ model AIPremiumCapability {
   @@unique([userId, key])
   @@index([key])
   @@index([enabled])
+}
+
+model AIIdempotencyRecord {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  key         String
+  scope       String
+  requestHash String?
+  response    String?
+  status      String   @default("completed")
+  expiresAt   DateTime
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([userId, scope, key])
+  @@index([expiresAt])
+  @@index([scope])
+}
+
+
+model AIOperationEvent {
+  id        String   @id @default(cuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  type      String
+  severity  String   @default("info")
+  scope     String?
+  message   String?
+  payload   String?
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([type])
+  @@index([severity])
+  @@index([createdAt])
 }
 

@@ -1,7 +1,11 @@
 import { Request, Response } from 'express';
 import { asyncHandler } from '../../shared/utils/asyncHandler';
-import { BadRequestError } from '../../shared/core/errors';
+import { BadRequestError, ConflictError } from '../../shared/core/errors';
 import { AIService } from './service';
+import { aiRateLimitService } from './ai-rate-limit.service';
+import { aiIdempotencyService } from './ai-idempotency.service';
+import { aiResponseNormalizer } from './ai-response-normalizer.service';
+import { aiObservability } from './ai-observability.service';
 
 const aiService = new AIService();
 
@@ -27,15 +31,69 @@ function readPendingActionId(req: Request) {
       : '';
 }
 
+function readIdempotencyKey(req: Request) {
+  const header = req.header('x-idempotency-key');
+  const body = typeof req.body?.idempotencyKey === 'string' ? req.body.idempotencyKey : '';
+
+  return String(header || body || '').trim().slice(0, 128);
+}
+
+async function withIdempotency<T>(
+  userId: string,
+  scope: string,
+  key: string,
+  payload: unknown,
+  run: () => Promise<T>,
+): Promise<T> {
+  if (!key) return run();
+
+  const requestHash = aiIdempotencyService.hashPayload(payload);
+  const existing = await aiIdempotencyService.get(userId, scope, key, requestHash);
+
+  if (existing?.conflict) {
+    throw new ConflictError('Idempotency key already used with a different payload');
+  }
+
+  if (existing?.response) {
+    return existing.response as T;
+  }
+
+  const response = await run();
+  await aiIdempotencyService.save(userId, scope, key, requestHash, response);
+
+  return response;
+}
+
 export const parseCommand = asyncHandler(async (req: Request, res: Response) => {
   const userId = req.userId;
   if (!userId) throw new BadRequestError('Unauthorized user');
+
+  aiRateLimitService.assertAllowed({ userId, scope: 'parse' });
 
   const command = typeof req.body.command === 'string' ? req.body.command : '';
   const execute = req.body.execute === undefined ? true : Boolean(req.body.execute);
   if (!command.trim()) throw new BadRequestError('command is required');
 
-  const result = await aiService.handleCommand(userId, command, { execute });
+  const key = readIdempotencyKey(req);
+
+  const result = await withIdempotency(userId, 'ai_parse', key, { command, execute }, async () => {
+    const raw = await aiService.handleCommand(userId, command, { execute });
+    return aiResponseNormalizer.normalize(raw);
+  });
+
+  await aiObservability.log({
+    userId,
+    type: 'ai_parse',
+    severity: result.success ? 'info' : 'warn',
+    scope: result.intent,
+    message: result.message,
+    payload: {
+      executed: result.executed,
+      requiresConfirmation: result.requiresConfirmation,
+      riskLevel: result.riskLevel,
+    },
+  });
+
   res.json(result);
 });
 
@@ -43,10 +101,31 @@ export const confirmCommand = asyncHandler(async (req: Request, res: Response) =
   const userId = req.userId;
   if (!userId) throw new BadRequestError('Unauthorized user');
 
+  aiRateLimitService.assertAllowed({ userId, scope: 'confirm' });
+
   const pendingActionId = readPendingActionId(req);
   if (!pendingActionId.trim()) throw new BadRequestError('pendingActionId is required');
 
-  const result = await aiService.confirmCommand(userId, pendingActionId);
+  const key = readIdempotencyKey(req) || `confirm:${pendingActionId}`;
+
+  const result = await withIdempotency(userId, 'ai_confirm', key, { pendingActionId }, async () => {
+    const raw = await aiService.confirmCommand(userId, pendingActionId);
+    return aiResponseNormalizer.normalize(raw);
+  });
+
+  await aiObservability.log({
+    userId,
+    type: 'ai_confirm',
+    severity: result.success ? 'info' : 'error',
+    scope: result.intent,
+    message: result.message,
+    payload: {
+      pendingActionId,
+      executed: result.executed,
+      riskLevel: result.riskLevel,
+    },
+  });
+
   res.json(result);
 });
 
@@ -75,7 +154,7 @@ export const cancelCommand = asyncHandler(async (req: Request, res: Response) =>
   if (!pendingActionId.trim()) throw new BadRequestError('pendingActionId is required');
 
   const result = await aiService.cancelCommand(userId, pendingActionId);
-  res.json(result);
+  res.json(aiResponseNormalizer.normalize(result));
 });
 
 export const getPendingActions = asyncHandler(async (req: Request, res: Response) => {
@@ -100,9 +179,34 @@ export const undoCommand = asyncHandler(async (req: Request, res: Response) => {
   const userId = req.userId;
   if (!userId) throw new BadRequestError('Unauthorized user');
 
+  aiRateLimitService.assertAllowed({ userId, scope: 'confirm' });
+
   const auditLogId = typeof req.body.auditLogId === 'string' ? req.body.auditLogId : '';
   if (!auditLogId.trim()) throw new BadRequestError('auditLogId is required');
 
-  const result = await aiService.undoByAuditLog(userId, auditLogId);
+  const key = readIdempotencyKey(req) || `undo:${auditLogId}`;
+
+  const result = await withIdempotency(userId, 'ai_undo', key, { auditLogId }, async () => {
+    return aiService.undoByAuditLog(userId, auditLogId);
+  });
+
+  await aiObservability.log({
+    userId,
+    type: 'ai_undo',
+    severity: 'warn',
+    scope: 'undo',
+    message: 'Undo requested',
+    payload: { auditLogId, result },
+  });
+
   res.json(result);
+});
+
+export const getObservabilityEvents = asyncHandler(async (req: Request, res: Response) => {
+  const userId = req.userId;
+  if (!userId) throw new BadRequestError('Unauthorized user');
+
+  const limit = parseLimit(req.query.limit, 50);
+  const events = await aiObservability.list(userId, limit);
+  res.json({ events });
 });

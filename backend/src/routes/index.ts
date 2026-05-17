@@ -13,6 +13,8 @@ import aiRoutes from '../modules/ai/routes';
 import voiceRoutes from './voice.routes';
 import progressionRoutes from '../modules/progression/routes';
 import aiSettingsRoutes from '../modules/ai-settings/routes';
+import companionRoutes from '../modules/companion/routes';
+import premiumRoutes from '../modules/premium/routes';
 const router = Router();
 
 router.use('/auth', authRoutes);
@@ -29,4 +31,6 @@ router.use('/ai', aiRoutes);
 router.use('/voice', voiceRoutes);
 router.use('/progression', progressionRoutes);
 router.use('/ai-settings', aiSettingsRoutes);
+router.use('/companion', companionRoutes);
+router.use('/premium', premiumRoutes);
 export default router;
