@@ -65,8 +65,7 @@ export class AIPlannerService {
       'For expense without account, leave account null; backend will ask one short clarification.',
       'CTX:', JSON.stringify(context),
       'USER:', command,
-    ].join('
-');
+    ].join('');
   }
 
   private compactContext(context: unknown) {
