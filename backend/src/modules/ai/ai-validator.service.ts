@@ -34,6 +34,9 @@ export class AIValidatorService {
     const issues: AIValidatedPlan['issues'] = [];
     const actions: AIValidatedAction[] = [];
     const plannedAccounts = new Map<string, { name: string; currency: AICurrency }>();
+    const transactionAccountRefs = this.collectTransactionAccountRefs(plan);
+    const createAccountCount = plan.actions.filter((action) => action.tool === 'create_account').length;
+    const transactionCount = plan.actions.filter((action) => action.tool === 'create_transaction').length;
 
     for (const [index, action] of plan.actions.entries()) {
       const definition = getToolDefinition(action.tool);
@@ -52,13 +55,19 @@ export class AIValidatorService {
         const name = this.cleanEntityName(input.name) || fallbackName;
         const type = this.coerceAccountType(input.type, 'cash');
         const currency: AICurrency = this.coerceCurrency(input.currency, userText, 'RUB') ?? 'RUB';
-        const initialBalance = normalizeMoneyAmount(input.initialBalance) ?? 0;
+        const rawInitialBalance = normalizeMoneyAmount(input.initialBalance) ?? 0;
         const existingAccount = this.resolveAccount(accounts, name);
+        const accountIsTransactionTarget = transactionAccountRefs.has(this.key(name));
+        const shouldZeroInitialBalance = transactionCount > 0 && (accountIsTransactionTarget || createAccountCount === 1);
+        const initialBalance = shouldZeroInitialBalance ? 0 : rawInitialBalance;
 
         input.name = existingAccount?.name ?? name;
         input.type = type;
         input.currency = existingAccount ? this.ensureCurrency(existingAccount.currency, currency) : currency;
         input.initialBalance = initialBalance;
+        if (shouldZeroInitialBalance && rawInitialBalance > 0) {
+          resolved.initialBalanceSuppressed = rawInitialBalance;
+        }
 
         if (existingAccount) {
           resolved.existingAccountId = existingAccount.id;
@@ -236,6 +245,18 @@ export class AIValidatorService {
     }
 
     return defaultValue;
+  }
+
+  private collectTransactionAccountRefs(plan: AIActionPlan) {
+    const refs = new Set<string>();
+
+    for (const action of plan.actions) {
+      if (action.tool !== 'create_transaction') continue;
+      const raw = action.input?.account;
+      if (typeof raw === 'string' && raw.trim()) refs.add(this.key(raw));
+    }
+
+    return refs;
   }
 
   private ensureCurrency(value: unknown, fallback: AICurrency): AICurrency {

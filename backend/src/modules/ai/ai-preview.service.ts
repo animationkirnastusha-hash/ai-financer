@@ -40,12 +40,12 @@ export class AIPreviewService {
   buildMessage(parsed: AIParsedCommand) {
     if (parsed.actions.length === 0) return 'Я не нашёл действий для выполнения.';
     if (parsed.actions.length === 1) return `Проверь: ${this.describeAction(parsed.actions[0])}`;
-    return `Проверь ${parsed.actions.length} действия: ${parsed.actions.map((action) => this.describeAction(action)).join('; ')}`;
+    return `Проверь пакет из ${parsed.actions.length} действий: ${parsed.actions.map((action) => this.describeAction(action)).join('; ')}`;
   }
 
   buildExecutedMessage(parsed: AIParsedCommand) {
     if (parsed.actions.length === 1) return `Готово: ${this.describeAction(parsed.actions[0])}`;
-    return `Готово. Выполнено: ${parsed.actions.map((action) => this.describeAction(action)).join('; ')}`;
+    return `Готово. Пакет выполнен: ${parsed.actions.map((action) => this.describeAction(action)).join('; ')}`;
   }
 
   private normalizeSummary(summary: string, actions: AIValidatedAction[]) {
