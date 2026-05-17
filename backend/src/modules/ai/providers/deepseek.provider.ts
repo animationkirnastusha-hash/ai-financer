@@ -44,7 +44,7 @@ function timeoutForRole(request: AIProviderJsonRequest, role: AIModelRole) {
 
 function maxTokensForRole(request: AIProviderJsonRequest, role: AIModelRole) {
   const requested = request.numPredict;
-  if (role === 'fast') return Math.max(96, Math.min(320, requested ?? 180));
+  if (role === 'fast') return Math.max(64, Math.min(180, requested ?? 96));
   if (role === 'premium') return Math.max(180, Math.min(900, requested ?? 500));
   return Math.max(128, Math.min(600, requested ?? 300));
 }
@@ -85,6 +85,10 @@ async function readError(response: Response) {
   }
 }
 
+async function delay(ms: number) {
+  await new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 export class DeepSeekProvider implements AIProvider {
   async generateJson<T>(request: AIProviderJsonRequest): Promise<T> {
     if (!env.deepseekApiKey) {
@@ -116,7 +120,7 @@ export class DeepSeekProvider implements AIProvider {
         promptChars: system.length + request.prompt.length,
       });
 
-      const response = await fetch(`${baseUrl}/chat/completions`, {
+      let response = await fetch(`${baseUrl}/chat/completions`, {
         method: 'POST',
         signal: controller.signal,
         headers: {
@@ -134,6 +138,30 @@ export class DeepSeekProvider implements AIProvider {
           response_format: { type: 'json_object' },
         }),
       });
+
+      if (!response.ok && [408, 429, 500, 502, 503, 504].includes(response.status)) {
+        const firstError = await readError(response);
+        console.warn('[DEEPSEEK] generateJson:retry', { role, model, status: response.status, reason: firstError });
+        await delay(250);
+        response = await fetch(`${baseUrl}/chat/completions`, {
+          method: 'POST',
+          signal: controller.signal,
+          headers: {
+            Authorization: `Bearer ${env.deepseekApiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model,
+            messages: [
+              { role: 'system', content: system },
+              { role: 'user', content: request.prompt },
+            ],
+            temperature: request.temperature ?? 0,
+            max_tokens: maxTokens,
+            response_format: { type: 'json_object' },
+          }),
+        });
+      }
 
       if (!response.ok) {
         const error = await readError(response);

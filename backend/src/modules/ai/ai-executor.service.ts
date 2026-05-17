@@ -1,6 +1,7 @@
 import { Prisma } from '@prisma/client';
 import { prisma } from '../../lib/prisma';
-import { BadRequestError, NotFoundError } from '../../shared/core/errors';
+import { randomUUID } from 'node:crypto';
+import { BadRequestError, ConflictError, NotFoundError } from '../../shared/core/errors';
 import { AIParsedCommand, AIValidatedAction } from './types';
 
 const transactionInclude = {
@@ -48,39 +49,54 @@ type ExecuteOptions = {
 
 export class AIExecutorService {
   async execute(userId: string, parsed: AIParsedCommand, options: ExecuteOptions = {}) {
+    const executionId = randomUUID();
+    const startedAt = Date.now();
+
     const results = await prisma.$transaction(async (tx) => {
       if (options.pendingActionId) {
-        await this.claimPendingAction(tx, userId, options.pendingActionId);
+        const claimed = await tx.aIPendingAction.updateMany({
+          where: {
+            id: options.pendingActionId,
+            userId,
+            status: 'pending',
+            expiresAt: { gt: new Date() },
+          },
+          data: { status: 'claimed' },
+        });
+
+        if (claimed.count !== 1) {
+          throw new ConflictError('Pending action was already confirmed, claimed, cancelled, failed or expired');
+        }
       }
 
       const createdAccountNames = new Map<string, string>();
       const actionResults: unknown[] = [];
 
-      for (const action of parsed.actions) {
+      for (const [index, action] of parsed.actions.entries()) {
         const result = await this.executeAction(tx, userId, action, createdAccountNames);
-        actionResults.push(result);
+        actionResults.push({ index, ...this.asResultObject(result) });
+      }
+
+      if (options.pendingActionId) {
+        await tx.aIPendingAction.updateMany({
+          where: { id: options.pendingActionId, userId, status: 'claimed' },
+          data: { status: 'confirmed', confirmedAt: new Date() },
+        });
       }
 
       return actionResults;
     });
 
     return {
+      executionId,
+      pendingActionId: options.pendingActionId ?? null,
+      status: 'executed',
       summary: parsed.summary,
       actionsCount: parsed.actions.length,
       atomic: true,
+      elapsedMs: Date.now() - startedAt,
       results,
     };
-  }
-
-  private async claimPendingAction(tx: Prisma.TransactionClient, userId: string, pendingActionId: string) {
-    const claimed = await tx.aIPendingAction.updateMany({
-      where: { id: pendingActionId, userId, status: 'pending', expiresAt: { gt: new Date() } },
-      data: { status: 'confirmed', confirmedAt: new Date() },
-    });
-
-    if (claimed.count !== 1) {
-      throw new BadRequestError('Pending action was already confirmed, cancelled, expired, or does not exist');
-    }
   }
 
   private async executeAction(
@@ -269,6 +285,12 @@ export class AIExecutorService {
     }
 
     return { tool: action.tool, skipped: true };
+  }
+
+  private asResultObject(value: unknown): Record<string, unknown> {
+    return value && typeof value === 'object' && !Array.isArray(value)
+      ? value as Record<string, unknown>
+      : { value };
   }
 
   private async resolveTransactionAccountId(

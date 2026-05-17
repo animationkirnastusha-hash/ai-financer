@@ -21,7 +21,7 @@ export class AIPlannerService {
       temperature: 0,
       modelRole: 'fast',
       timeoutMs: 8_000,
-      numPredict: 140,
+      numPredict: 96,
     });
 
     const plan = this.normalizePlan(raw, command);
@@ -35,7 +35,7 @@ export class AIPlannerService {
   }
 
   private systemPrompt() {
-    return 'Return ONLY strict JSON. Shape: {"mode":"actions","actions":[{"tool":"create_transaction","input":{"kind":"income|expense","amount":"string|number","account":"string|null","category":"string|null","description":"string|null","currency":"RUB"}}]}. No prose. No markdown. Never ask questions.';
+    return 'Return ONLY JSON: {"mode":"actions","actions":[{"tool":"create_transaction","input":{"kind":"income|expense","amount":"string|number","account":"string|null","category":"string|null","description":"string|null","currency":"RUB"}}]}. No prose. No markdown. Never ask questions.';
   }
 
   private buildPrompt(command: string, context: unknown) {
@@ -45,13 +45,10 @@ export class AIPlannerService {
       'RULES:',
       'income/deposit/top-up/salary => create_transaction kind income.',
       'expense/payment/purchase/item+amount => create_transaction kind expense.',
-      'create account => create_account with initialBalance 0.',
-      'create account and put/add money => two actions: create_account initialBalance 0, then create_transaction kind income to that account.',
-      'Never put the same money both into create_account.initialBalance and create_transaction.amount.',
-      'Use initialBalance only when user explicitly says opening/initial balance and there is no create_transaction for that account.',
-      'Preserve spoken amounts exactly as text when possible: "30 тысяч рублей", "30 000 руб", "5к".',
+      'create account => create_account initialBalance 0 unless user explicitly says initial balance.',
+      'create account and put/add money => create_account initialBalance 0 + create_transaction income to that account.',
+      'Preserve spoken amounts exactly: "30 тысяч рублей", "30 000 руб", "5к".',
       'Use account names from CTX when present.',
-      'Example USER: "создай счёт тест и положи туда 5000" => actions create_account{name:"тест",initialBalance:0} + create_transaction{kind:"income",amount:"5000",account:"тест"}.',
       'CTX:', JSON.stringify(context),
       'USER:', command,
     ].join('\n');

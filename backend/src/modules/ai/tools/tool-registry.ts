@@ -3,7 +3,7 @@ import { AIToolDefinition } from './tool-types';
 export const AI_TOOL_REGISTRY: AIToolDefinition[] = [
   {
     name: 'create_account',
-    description: 'Create account/wallet/card/cash/savings/investment. Keep initialBalance 0 when a separate create_transaction will add money.',
+    description: 'Create account/wallet/card/cash/savings/investment. For “create account and put money”, set initialBalance 0 and add separate create_transaction income.',
     risk: 'medium',
     requiresConfirmation: true,
     input: { name: 'string', type: 'cash|card|savings|investment|null', currency: 'RUB|USD|EUR|VND|null', initialBalance: 'number|string|null' },
@@ -108,7 +108,7 @@ export function getToolDefinition(name: string) {
 export function getPlannerToolContract() {
   return [
     'create_transaction{kind:income|expense,amount,account,category,description,currency}',
-    'create_account{name,type:cash|card|savings|investment,currency,initialBalance}', // use 0 when paired with create_transaction
+    'create_account{name,type,currency,initialBalance=0}',
     'transfer_money{fromAccount,toAccount,amount,currency,description}',
     'show_accounts{}',
     'show_transactions{limit}',

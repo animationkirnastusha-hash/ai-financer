@@ -156,39 +156,81 @@ export class AIOrchestratorService {
   }
 
   async confirmCommand(userId: string, pendingActionId: string): Promise<AIResult> {
-    const pending = await this.pending.getForConfirm(userId, pendingActionId);
-    const parsed = pending.parsed as unknown as AIParsedCommand | null;
+    const startedAt = Date.now();
+    let pending: Awaited<ReturnType<AIPendingActionService['getForConfirm']>> | null = null;
+    let parsed: AIParsedCommand | null = null;
 
-    if (!parsed || parsed.intent !== 'batch' || !Array.isArray(parsed.actions)) {
-      throw new BadRequestError('Invalid pending action payload');
+    try {
+      pending = await this.pending.getForConfirm(userId, pendingActionId);
+      parsed = pending.parsed as unknown as AIParsedCommand | null;
+
+      if (!parsed || parsed.intent !== 'batch' || !Array.isArray(parsed.actions)) {
+        throw new BadRequestError('Invalid pending action payload');
+      }
+
+      const result = await this.executor.execute(userId, parsed, { pendingActionId });
+
+      const riskLevel = this.normalizeRisk(pending.riskLevel);
+      const audit = await this.audit.create({
+        userId,
+        command: pending.command,
+        intent: parsed.intent,
+        riskLevel,
+        requiresConfirmation: true,
+        executed: true,
+        status: 'executed',
+        parsed,
+        result: {
+          ...this.asResultObject(result),
+          lifecycle: 'pending_confirmed',
+          confirmElapsedMs: Date.now() - startedAt,
+        },
+      });
+
+      return {
+        success: true,
+        intent: parsed.intent,
+        executed: true,
+        requiresConfirmation: false,
+        riskLevel,
+        message: this.preview.buildExecutedMessage(parsed),
+        parsed: parsed as unknown as Record<string, unknown>,
+        result,
+        meta: { auditLogId: audit.id, undo: { available: false } },
+      };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Confirm failed';
+      console.error('[AI] confirmCommand failed', { message, pendingActionId });
+
+      if (pendingActionId) {
+        await this.pending.markFailed(userId, pendingActionId, message).catch(() => null);
+      }
+
+      const riskLevel = pending ? this.normalizeRisk(pending.riskLevel) : 'low';
+      const audit = await this.audit.create({
+        userId,
+        command: pending?.command ?? '',
+        intent: parsed?.intent ?? pending?.intent ?? 'confirm_error',
+        riskLevel,
+        requiresConfirmation: true,
+        executed: false,
+        status: 'confirm_failed',
+        parsed: parsed ?? pending?.parsed ?? { pendingActionId },
+        errorMessage: message,
+        result: { pendingActionId, confirmElapsedMs: Date.now() - startedAt },
+      });
+
+      return {
+        success: false,
+        intent: parsed?.intent ?? 'confirm_error',
+        executed: false,
+        requiresConfirmation: false,
+        riskLevel,
+        message: 'Не удалось выполнить подтверждённое действие. Оно помечено как failed, чтобы не выполнить его повторно.',
+        parsed: parsed as unknown as Record<string, unknown> | null,
+        meta: { auditLogId: audit.id },
+      };
     }
-
-    const result = await this.executor.execute(userId, parsed, { pendingActionId });
-
-    const riskLevel = this.normalizeRisk(pending.riskLevel);
-    const audit = await this.audit.create({
-      userId,
-      command: pending.command,
-      intent: parsed.intent,
-      riskLevel,
-      requiresConfirmation: true,
-      executed: true,
-      status: 'executed',
-      parsed,
-      result,
-    });
-
-    return {
-      success: true,
-      intent: parsed.intent,
-      executed: true,
-      requiresConfirmation: false,
-      riskLevel,
-      message: this.preview.buildExecutedMessage(parsed),
-      parsed: parsed as unknown as Record<string, unknown>,
-      result,
-      meta: { auditLogId: audit.id, undo: { available: false } },
-    };
   }
 
   async updatePendingAction(userId: string, pendingActionId: string, parsed: Record<string, unknown>, command?: string) {
@@ -214,6 +256,12 @@ export class AIOrchestratorService {
 
   async getAuditLogs(userId: string, limit = 50) {
     return this.audit.list(userId, limit);
+  }
+
+  private asResultObject(value: unknown): Record<string, unknown> {
+    return value && typeof value === 'object' && !Array.isArray(value)
+      ? value as Record<string, unknown>
+      : { value };
   }
 
   private normalizeRisk(value: unknown): AIRiskLevel {

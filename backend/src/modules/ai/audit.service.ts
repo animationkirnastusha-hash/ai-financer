@@ -1,6 +1,8 @@
 import { prisma } from '../../lib/prisma';
 import { AIRiskLevel } from './types';
 
+const MAX_JSON_LENGTH = 120_000;
+
 export class AIAuditService {
   async create(params: {
     userId: string;
@@ -23,8 +25,13 @@ export class AIAuditService {
         requiresConfirmation: params.requiresConfirmation,
         executed: params.executed,
         status: params.status,
-        parsed: params.parsed === undefined ? null : JSON.stringify(params.parsed),
-        result: params.result === undefined ? null : JSON.stringify(params.result),
+        parsed: params.parsed === undefined ? null : this.stringifySafe(params.parsed),
+        result: params.result === undefined ? null : this.stringifySafe({
+          status: params.status,
+          executed: params.executed,
+          requiresConfirmation: params.requiresConfirmation,
+          payload: params.result,
+        }),
         errorMessage: params.errorMessage ?? null,
       },
     });
@@ -38,6 +45,17 @@ export class AIAuditService {
     });
 
     return rows.map((row) => ({ ...row, parsed: this.parse(row.parsed), result: this.parse(row.result) }));
+  }
+
+  private stringifySafe(value: unknown) {
+    try {
+      const json = JSON.stringify(value);
+      return json.length > MAX_JSON_LENGTH
+        ? JSON.stringify({ truncated: true, length: json.length, preview: json.slice(0, MAX_JSON_LENGTH) })
+        : json;
+    } catch (error) {
+      return JSON.stringify({ serializeError: error instanceof Error ? error.message : 'unknown error' });
+    }
   }
 
   private parse(value: string | null) {

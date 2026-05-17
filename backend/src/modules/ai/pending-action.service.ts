@@ -28,6 +28,8 @@ export class AIPendingActionService {
     parsed: AIParsedCommand;
     riskLevel: AIRiskLevel;
   }): Promise<AIPendingActionView> {
+    await this.expireOld(params.userId);
+
     const pending = await prisma.aIPendingAction.create({
       data: {
         userId: params.userId,
@@ -36,7 +38,7 @@ export class AIPendingActionService {
         riskLevel: params.riskLevel,
         parsed: JSON.stringify(params.parsed),
         status: 'pending',
-        expiresAt: new Date(Date.now() + 1000 * 60 * 30),
+        expiresAt: new Date(Date.now() + 1000 * 60 * 15),
       },
     });
 
@@ -79,6 +81,25 @@ export class AIPendingActionService {
     return this.serialize(updated as PrismaPendingActionRow);
   }
 
+  async markFailed(userId: string, pendingActionId: string, reason?: string): Promise<AIPendingActionView | null> {
+    const updated = await prisma.aIPendingAction.updateMany({
+      where: {
+        id: pendingActionId,
+        userId,
+        status: { in: ['pending', 'claimed'] },
+      },
+      data: {
+        status: 'failed',
+        parsed: reason ? JSON.stringify({ failureReason: reason }) : undefined,
+      },
+    });
+
+    if (updated.count !== 1) return null;
+
+    const row = await prisma.aIPendingAction.findFirst({ where: { id: pendingActionId, userId } });
+    return row ? this.serialize(row as PrismaPendingActionRow) : null;
+  }
+
   async cancel(userId: string, pendingActionId: string): Promise<AIPendingActionView> {
     const pending = await this.ensurePending(userId, pendingActionId);
 
@@ -91,10 +112,12 @@ export class AIPendingActionService {
   }
 
   async list(userId: string, includeExpired = false): Promise<AIPendingActionView[]> {
+    if (!includeExpired) await this.expireOld(userId);
+
     const rows = await prisma.aIPendingAction.findMany({
       where: {
         userId,
-        status: 'pending',
+        status: includeExpired ? { in: ['pending', 'expired'] } : 'pending',
         ...(includeExpired ? {} : { expiresAt: { gt: new Date() } }),
       },
       orderBy: { createdAt: 'desc' },
@@ -103,7 +126,22 @@ export class AIPendingActionService {
     return rows.map((row) => this.serialize(row as PrismaPendingActionRow));
   }
 
+  async expireOld(userId?: string): Promise<number> {
+    const result = await prisma.aIPendingAction.updateMany({
+      where: {
+        ...(userId ? { userId } : {}),
+        status: 'pending',
+        expiresAt: { lte: new Date() },
+      },
+      data: { status: 'expired' },
+    });
+
+    return result.count;
+  }
+
   private async ensurePending(userId: string, pendingActionId: string): Promise<PrismaPendingActionRow> {
+    await this.expireOld(userId);
+
     const pending = await prisma.aIPendingAction.findFirst({
       where: { id: pendingActionId, userId, status: 'pending' },
     });
