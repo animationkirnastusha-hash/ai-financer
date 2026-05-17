@@ -44,6 +44,8 @@ model User {
   progressionProfile ProgressionProfile?
   achievements      UserAchievement[]
   activities        UserActivity[]
+  aiSettings        UserAISettings?
+  onboardingState   OnboardingState?
 
 
   @@index([telegramId])
@@ -349,3 +351,41 @@ model ProductEvent {
   @@index([event])
   @@index([createdAt])
 }
+
+model UserAISettings {
+  id                              String   @id @default(cuid())
+  userId                          String   @unique
+  user                            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  preset                          String   @default("balanced")
+  defaultExpenseAccountId         String?
+  defaultIncomeAccountId          String?
+  autoConfirmExpenseLimit         Int      @default(500)
+  autoConfirmIncomeLimit          Int      @default(100000)
+  autoConfirmTransferLimit        Int      @default(0)
+  requireConfirmForAccountActions Boolean  @default(true)
+  companionTone                   String   @default("friendly")
+
+  createdAt                       DateTime @default(now())
+  updatedAt                       DateTime @updatedAt
+
+  @@index([preset])
+}
+
+model OnboardingState {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  status      String   @default("not_started")
+  currentStep String?
+  skipped     Boolean  @default(false)
+  completedAt DateTime?
+  meta        String?
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([status])
+}
+
