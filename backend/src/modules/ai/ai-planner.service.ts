@@ -63,8 +63,7 @@ export class AIPlannerService {
       'Use account names/aliases from CTX when present.',
       'CTX:', JSON.stringify(context),
       'USER:', command,
-    ].join('
-');
+    ].join('');
   }
 
   private compactContext(context: unknown) {
