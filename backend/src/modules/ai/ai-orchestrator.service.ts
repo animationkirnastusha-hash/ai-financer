@@ -6,7 +6,7 @@ import { AIPreviewService } from './ai-preview.service';
 import { AIValidatorService } from './ai-validator.service';
 import { AIAuditService } from './audit.service';
 import { AIPendingActionService } from './pending-action.service';
-import { AIHandleOptions, AIParsedCommand, AIResult, AIRiskLevel } from './types';
+import { AIActionPlan, AIClarificationRequest, AIHandleOptions, AIParsedCommand, AIResult, AIRiskLevel, AIValidatedPlan } from './types';
 
 export class AIOrchestratorService {
   private readonly context = new AIContextService();
@@ -22,6 +22,9 @@ export class AIOrchestratorService {
     if (!trimmed) throw new BadRequestError('command is required');
 
     try {
+      const clarificationResult = await this.tryAnswerPendingClarification(userId, trimmed);
+      if (clarificationResult) return clarificationResult;
+
       const context = await this.context.buildUserContext(userId);
       const plan = await this.planner.plan(trimmed, context);
 
@@ -53,6 +56,40 @@ export class AIOrchestratorService {
       const parsed = this.preview.buildParsed(validated.summary, validated.actions);
 
       if (!validated.ok) {
+        const clarification = this.buildAccountClarification(validated);
+        if (clarification) {
+          const parsedWithClarification = { ...parsed, clarification };
+          const pending = await this.pending.create({
+            userId,
+            command: trimmed,
+            parsed: parsedWithClarification,
+            riskLevel: validated.riskLevel,
+          });
+
+          const audit = await this.audit.create({
+            userId,
+            command: trimmed,
+            intent: parsed.intent,
+            riskLevel: validated.riskLevel,
+            requiresConfirmation: false,
+            executed: false,
+            status: 'pending_clarification',
+            parsed: parsedWithClarification,
+            errorMessage: clarification.question,
+          });
+
+          return {
+            success: true,
+            intent: 'clarification',
+            executed: false,
+            requiresConfirmation: false,
+            riskLevel: validated.riskLevel,
+            message: clarification.question,
+            parsed: parsedWithClarification as unknown as Record<string, unknown>,
+            meta: { auditLogId: audit.id, pendingActionId: pending.id, clarification },
+          };
+        }
+
         const message = validated.issues.map((issue) => issue.message).join('\n') || 'Не удалось безопасно подготовить действие.';
         const audit = await this.audit.create({
           userId,
@@ -256,6 +293,139 @@ export class AIOrchestratorService {
 
   async getAuditLogs(userId: string, limit = 50) {
     return this.audit.list(userId, limit);
+  }
+
+
+  private async tryAnswerPendingClarification(userId: string, answer: string): Promise<AIResult | null> {
+    const pending = await this.pending.getLatestClarification(userId);
+    if (!pending) return null;
+
+    const parsed = pending.parsed as unknown as AIParsedCommand | null;
+    const clarification = parsed?.clarification;
+
+    if (!parsed || parsed.intent !== 'batch' || !Array.isArray(parsed.actions) || !clarification) return null;
+    if (clarification.type !== 'account') return null;
+
+    const action = parsed.actions[clarification.actionIndex];
+    if (!action) return null;
+
+    const candidate = answer.trim();
+    if (!candidate) return null;
+
+    const nextActions = parsed.actions.map((item, index) => {
+      if (index !== clarification.actionIndex) return item;
+      return {
+        ...item,
+        input: {
+          ...item.input,
+          account: candidate,
+          __userText: `${pending.command} ${candidate}`,
+        },
+      };
+    });
+
+    const nextPlan: AIActionPlan = {
+      mode: 'actions',
+      summary: parsed.summary,
+      actions: nextActions,
+    };
+
+    const validated = await this.validator.validate(userId, nextPlan);
+    const nextParsed = this.preview.buildParsed(validated.summary, validated.actions);
+
+    if (!validated.ok) {
+      const stillNeedsAccount = this.buildAccountClarification(validated);
+      const message = stillNeedsAccount
+        ? `Не нашёл счёт "${candidate}". Назови другой счёт.`
+        : validated.issues.map((issue) => issue.message).join('\n') || 'Не удалось применить уточнение.';
+
+      const audit = await this.audit.create({
+        userId,
+        command: `${pending.command} / ${candidate}`,
+        intent: 'clarification_failed',
+        riskLevel: validated.riskLevel,
+        requiresConfirmation: false,
+        executed: false,
+        status: 'clarification_failed',
+        parsed: nextParsed,
+        errorMessage: message,
+      });
+
+      return {
+        success: false,
+        intent: 'clarification_failed',
+        executed: false,
+        requiresConfirmation: false,
+        riskLevel: validated.riskLevel,
+        message,
+        parsed: nextParsed as unknown as Record<string, unknown>,
+        meta: { auditLogId: audit.id, pendingActionId: pending.id },
+      };
+    }
+
+    await this.pending.update(userId, pending.id, nextParsed as unknown as Record<string, unknown>, `${pending.command} / ${candidate}`);
+
+    if (!validated.requiresConfirmation) {
+      const result = await this.executor.execute(userId, nextParsed, { pendingActionId: pending.id });
+      const audit = await this.audit.create({
+        userId,
+        command: `${pending.command} / ${candidate}`,
+        intent: nextParsed.intent,
+        riskLevel: validated.riskLevel,
+        requiresConfirmation: false,
+        executed: true,
+        status: 'executed_after_clarification',
+        parsed: nextParsed,
+        result,
+      });
+
+      return {
+        success: true,
+        intent: nextParsed.intent,
+        executed: true,
+        requiresConfirmation: false,
+        riskLevel: validated.riskLevel,
+        message: this.preview.buildExecutedMessage(nextParsed),
+        parsed: nextParsed as unknown as Record<string, unknown>,
+        result,
+        meta: { auditLogId: audit.id, pendingActionId: pending.id, undo: { available: false } },
+      };
+    }
+
+    const audit = await this.audit.create({
+      userId,
+      command: `${pending.command} / ${candidate}`,
+      intent: nextParsed.intent,
+      riskLevel: validated.riskLevel,
+      requiresConfirmation: true,
+      executed: false,
+      status: 'pending_confirmation_after_clarification',
+      parsed: nextParsed,
+    });
+
+    return {
+      success: true,
+      intent: nextParsed.intent,
+      executed: false,
+      requiresConfirmation: true,
+      riskLevel: validated.riskLevel,
+      message: this.preview.buildMessage(nextParsed),
+      parsed: nextParsed as unknown as Record<string, unknown>,
+      meta: { auditLogId: audit.id, pendingActionId: pending.id },
+    };
+  }
+
+  private buildAccountClarification(validated: AIValidatedPlan): AIClarificationRequest | null {
+    const issue = validated.issues.find((item) => item.code === 'needs_account_clarification' && typeof item.actionIndex === 'number');
+    if (!issue || typeof issue.actionIndex !== 'number') return null;
+
+    return {
+      type: 'account',
+      field: 'account',
+      actionIndex: issue.actionIndex,
+      question: 'С какого счёта списать?',
+      createdAt: new Date().toISOString(),
+    };
   }
 
   private asResultObject(value: unknown): Record<string, unknown> {

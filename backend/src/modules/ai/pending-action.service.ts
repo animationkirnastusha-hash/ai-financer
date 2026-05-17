@@ -45,6 +45,32 @@ export class AIPendingActionService {
     return this.serialize(pending as PrismaPendingActionRow);
   }
 
+
+  async getLatestClarification(userId: string): Promise<AIPendingActionView | null> {
+    await this.expireOld(userId);
+
+    const rows = await prisma.aIPendingAction.findMany({
+      where: {
+        userId,
+        status: 'pending',
+        expiresAt: { gt: new Date() },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 10,
+    });
+
+    for (const row of rows) {
+      const view = this.serialize(row as PrismaPendingActionRow);
+      const clarification = view.parsed?.clarification;
+      if (clarification && typeof clarification === 'object' && !Array.isArray(clarification)) {
+        const type = (clarification as Record<string, unknown>).type;
+        if (type === 'account') return view;
+      }
+    }
+
+    return null;
+  }
+
   async update(
     userId: string,
     pendingActionId: string,

@@ -61,9 +61,12 @@ export class AIPlannerService {
       'Create account and put/add money => create_account initialBalance 0 + create_transaction income to that account.',
       'Preserve spoken amounts exactly as user wrote them.',
       'Use account names/aliases from CTX when present.',
+      'If user says main/default/primary account, use account: "основной счет".',
+      'For expense without account, leave account null; backend will ask one short clarification.',
       'CTX:', JSON.stringify(context),
       'USER:', command,
-    ].join('');
+    ].join('
+');
   }
 
   private compactContext(context: unknown) {

@@ -13,8 +13,8 @@ export type ResolvedEntity<T> = {
 };
 
 const TYPE_ALIASES: Record<string, string[]> = {
-  cash: ['cash', 'кэш', 'наличные', 'наличка', 'нал', 'деньги'],
-  card: ['card', 'карта', 'картa', 'карточка', 'банк'],
+  cash: ['cash', 'кэш', 'наличные', 'наличка', 'наличку', 'нал', 'деньги'],
+  card: ['card', 'карта', 'карту', 'карты', 'картa', 'карточка', 'банк'],
   savings: ['savings', 'накопления', 'копилка', 'сбережения'],
   investment: ['investment', 'инвестиции', 'брокер', 'акции'],
 };
@@ -23,6 +23,11 @@ export class AIEntityResolverService {
   resolveAccount<T extends AccountLike>(accounts: T[], raw: unknown): ResolvedEntity<T> | null {
     const query = this.normalize(raw);
     if (!query) return null;
+
+    const primary = this.resolvePrimaryAccount(accounts, query);
+    if (primary) {
+      return { item: primary, score: 0.98, reason: 'primary_account_alias' };
+    }
 
     let best: ResolvedEntity<T> | null = null;
 
@@ -48,6 +53,29 @@ export class AIEntityResolverService {
         .filter((alias, index, list) => alias && list.indexOf(alias) === index)
         .slice(0, 6),
     }));
+  }
+
+
+  private resolvePrimaryAccount<T extends AccountLike>(accounts: T[], query: string): T | null {
+    const primaryAliases = new Set([
+      'основной',
+      'основная',
+      'основной счет',
+      'основная карта',
+      'главный',
+      'главная',
+      'главный счет',
+      'главная карта',
+      'main',
+      'default',
+    ]);
+
+    if (!primaryAliases.has(query)) return null;
+
+    return accounts.find((account) => this.normalize(account.name).includes('основн'))
+      ?? accounts.find((account) => this.normalize(account.type) === 'card')
+      ?? accounts[0]
+      ?? null;
   }
 
   private accountAliases(account: AccountLike): string[] {

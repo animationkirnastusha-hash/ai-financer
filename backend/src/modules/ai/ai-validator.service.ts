@@ -104,10 +104,12 @@ export class AIValidatorService {
       if (action.tool === 'create_transaction') {
         const kind = input.kind === 'income' || input.kind === 'expense' ? input.kind : null;
         const amount = normalizeMoneyAmount(input.amount, userText);
-        const accountRef = this.cleanString(input.account)
-          || this.lastPlannedAccountName(plannedAccounts)
-          || accounts[0]?.name
-          || '';
+        const explicitAccountRef = this.cleanString(input.account);
+        const plannedAccountRef = this.lastPlannedAccountName(plannedAccounts);
+        const shouldAskAccount = !explicitAccountRef && !plannedAccountRef && kind === 'expense' && accounts.length > 1;
+        const accountRef = explicitAccountRef
+          || plannedAccountRef
+          || (shouldAskAccount ? '' : accounts[0]?.name || '');
 
         const account = this.resolveAccount(accounts, accountRef);
         const plannedAccount = plannedAccounts.get(this.key(accountRef));
@@ -116,7 +118,23 @@ export class AIValidatorService {
 
         if (!kind) issues.push({ code: 'missing_transaction_kind', message: 'AI не указал тип операции: income или expense.', actionIndex: index, field: 'kind' });
         if (!amount) issues.push({ code: 'missing_amount', message: 'Не хватает суммы операции.', actionIndex: index, field: 'amount' });
-        if (!account && !plannedAccount) issues.push({ code: 'account_not_found', message: 'Не найден счёт для операции.', actionIndex: index, field: 'account' });
+        if (!account && !plannedAccount) {
+          if (shouldAskAccount) {
+            issues.push({
+              code: 'needs_account_clarification',
+              message: 'С какого счёта списать расход?',
+              actionIndex: index,
+              field: 'account',
+            });
+          } else {
+            issues.push({
+              code: 'account_not_found',
+              message: accountRef ? `Не найден счёт для операции: ${accountRef}` : 'Не найден счёт для операции.',
+              actionIndex: index,
+              field: 'account',
+            });
+          }
+        }
 
         const category = this.cleanEntityName(input.category) || this.cleanEntityName(input.description) || (kind === 'income' ? 'Доход' : 'Расход');
         const section = this.cleanEntityName(input.section);
@@ -124,7 +142,7 @@ export class AIValidatorService {
 
         input.kind = kind ?? 'expense';
         input.amount = amount ?? 0;
-        input.account = accountRef || input.account;
+        input.account = accountRef || input.account || null;
         input.currency = moneyCurrency;
         input.category = category;
         input.section = section;

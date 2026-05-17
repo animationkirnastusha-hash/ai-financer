@@ -56,10 +56,19 @@ export interface AIValidatedPlan {
   issues: AIValidationIssue[];
 }
 
+export interface AIClarificationRequest {
+  type: 'account';
+  field: 'account';
+  actionIndex: number;
+  question: string;
+  createdAt: string;
+}
+
 export interface AIParsedCommand {
   intent: 'batch';
   summary: string;
   actions: AIValidatedAction[];
+  clarification?: AIClarificationRequest | null;
 }
 
 export interface AIHandleOptions {
@@ -78,6 +87,7 @@ export interface AIResult {
   meta?: {
     auditLogId?: string;
     pendingActionId?: string;
+    clarification?: AIClarificationRequest;
     undo?: {
       available: boolean;
       actionType?: string;
