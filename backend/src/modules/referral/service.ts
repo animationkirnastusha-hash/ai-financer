@@ -9,6 +9,23 @@ export class ReferralService {
         id: true,
         referralCode: true,
         referralBalance: true,
+        referrer: {
+          select: {
+            id: true,
+            firstName: true,
+            username: true,
+          },
+        },
+        referrals: {
+          select: {
+            id: true,
+            firstName: true,
+            username: true,
+            createdAt: true,
+          },
+          orderBy: { createdAt: 'desc' },
+          take: 20,
+        },
       },
     });
 
@@ -36,6 +53,8 @@ export class ReferralService {
     return {
       referralCode: user.referralCode,
       referralBalance: user.referralBalance,
+      referrer: user.referrer,
+      referrals: user.referrals,
       referralTransactions,
     };
   }

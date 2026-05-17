@@ -1,5 +1,6 @@
 import { prisma } from '../../lib/prisma';
 import { BadRequestError, NotFoundError } from '../../shared/core/errors';
+import { progressionActivityBridge } from '../progression/activity-bridge.service';
 
 export interface CreateSectionInput {
   name: string;
@@ -35,7 +36,7 @@ export class SectionService {
     const existing = await this.findSectionByName(userId, name);
     if (existing) return existing;
 
-    return prisma.section.create({
+    const section = await prisma.section.create({
       data: {
         userId,
         name,
@@ -43,6 +44,10 @@ export class SectionService {
         color: input.color ?? '#7C5CFF',
       },
     });
+
+    await progressionActivityBridge.trackSectionCreated(userId, section);
+
+    return section;
   }
 
   async updateSection(userId: string, sectionId: string, input: UpdateSectionInput) {

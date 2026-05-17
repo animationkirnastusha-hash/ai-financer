@@ -12,8 +12,9 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:push": "prisma db push",
     "prisma:studio": "prisma studio",
-    "test": "npm run build && node --test dist/modules/ai/__tests__/*.test.js",
-    "test:ai": "npm run test"
+    "test": "node scripts/run-ai-tests.mjs",
+    "test:ai": "node scripts/run-ai-tests.mjs",
+    "test:ai:compiled": "node --test dist/modules/ai/__tests__/*.test.js"
   },
   "keywords": [],
   "author": "",

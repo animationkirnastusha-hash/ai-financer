@@ -1,6 +1,7 @@
 import { Prisma } from '@prisma/client';
 import { prisma } from '../../lib/prisma';
 import { BadRequestError, ConflictError, NotFoundError } from '../../shared/core/errors';
+import { progressionActivityBridge } from '../progression/activity-bridge.service';
 
 export interface CreateAccountInput {
   name: string;
@@ -115,6 +116,8 @@ export class AccountService {
       },
       select: accountSelect,
     });
+
+    await progressionActivityBridge.trackAccountCreated(userId, account);
 
     return this.serializeAccount(account);
   }

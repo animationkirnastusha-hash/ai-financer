@@ -1,5 +1,6 @@
 import { prisma } from '../../lib/prisma';
 import { BadRequestError, NotFoundError } from '../../shared/core/errors';
+import { progressionActivityBridge } from '../progression/activity-bridge.service';
 
 export interface CreateBudgetInput {
   categoryId: string;
@@ -73,7 +74,7 @@ export class BudgetService {
       throw new NotFoundError('Expense category not found');
     }
 
-    return prisma.budget.create({
+    const budget = await prisma.budget.create({
       data: {
         userId,
         categoryId: input.categoryId,
@@ -86,6 +87,10 @@ export class BudgetService {
         category: true,
       },
     });
+
+    await progressionActivityBridge.trackBudgetCreated(userId, budget);
+
+    return budget;
   }
 
   async updateBudget(userId: string, budgetId: string, input: UpdateBudgetInput) {

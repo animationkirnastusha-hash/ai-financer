@@ -1,5 +1,6 @@
 import { prisma } from '../../lib/prisma';
 import { BadRequestError, NotFoundError } from '../../shared/core/errors';
+import { progressionActivityBridge } from '../progression/activity-bridge.service';
 
 export type CategoryType = 'income' | 'expense';
 
@@ -50,6 +51,8 @@ export class CategoryService {
         sectionId: input.sectionId ?? null,
       },
     });
+
+    await progressionActivityBridge.trackCategoryCreated(userId, category);
 
     return category;
   }

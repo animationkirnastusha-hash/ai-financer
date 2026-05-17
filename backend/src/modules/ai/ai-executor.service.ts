@@ -1,8 +1,8 @@
 import { Prisma } from '@prisma/client';
 import { prisma } from '../../lib/prisma';
-import { randomUUID } from 'node:crypto';
-import { BadRequestError, ConflictError, NotFoundError } from '../../shared/core/errors';
+import { BadRequestError, NotFoundError } from '../../shared/core/errors';
 import { AIParsedCommand, AIValidatedAction } from './types';
+import { progressionActivityBridge } from '../progression/activity-bridge.service';
 
 const transactionInclude = {
   account: {
@@ -49,37 +49,18 @@ type ExecuteOptions = {
 
 export class AIExecutorService {
   async execute(userId: string, parsed: AIParsedCommand, options: ExecuteOptions = {}) {
-    const executionId = randomUUID();
-    const startedAt = Date.now();
-
     const results = await prisma.$transaction(async (tx) => {
-      if (options.pendingActionId) {
-        const claimed = await tx.aIPendingAction.updateMany({
-          where: {
-            id: options.pendingActionId,
-            userId,
-            status: 'pending',
-            expiresAt: { gt: new Date() },
-          },
-          data: { status: 'claimed' },
-        });
-
-        if (claimed.count !== 1) {
-          throw new ConflictError('Pending action was already confirmed, claimed, cancelled, failed or expired');
-        }
-      }
-
       const createdAccountNames = new Map<string, string>();
       const actionResults: unknown[] = [];
 
-      for (const [index, action] of parsed.actions.entries()) {
+      for (const action of parsed.actions) {
         const result = await this.executeAction(tx, userId, action, createdAccountNames);
-        actionResults.push({ index, ...this.asResultObject(result) });
+        actionResults.push(result);
       }
 
       if (options.pendingActionId) {
         await tx.aIPendingAction.updateMany({
-          where: { id: options.pendingActionId, userId, status: 'claimed' },
+          where: { id: options.pendingActionId, userId, status: 'pending' },
           data: { status: 'confirmed', confirmedAt: new Date() },
         });
       }
@@ -87,14 +68,12 @@ export class AIExecutorService {
       return actionResults;
     });
 
+    await progressionActivityBridge.trackAIExecution(userId, parsed, results);
+
     return {
-      executionId,
-      pendingActionId: options.pendingActionId ?? null,
-      status: 'executed',
       summary: parsed.summary,
       actionsCount: parsed.actions.length,
       atomic: true,
-      elapsedMs: Date.now() - startedAt,
       results,
     };
   }
@@ -285,12 +264,6 @@ export class AIExecutorService {
     }
 
     return { tool: action.tool, skipped: true };
-  }
-
-  private asResultObject(value: unknown): Record<string, unknown> {
-    return value && typeof value === 'object' && !Array.isArray(value)
-      ? value as Record<string, unknown>
-      : { value };
   }
 
   private async resolveTransactionAccountId(

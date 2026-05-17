@@ -1,6 +1,7 @@
 import { Prisma } from '@prisma/client';
 import { prisma } from '../../lib/prisma';
 import { BadRequestError, NotFoundError } from '../../shared/core/errors';
+import { progressionActivityBridge } from '../progression/activity-bridge.service';
 
 export type TransactionType = 'income' | 'expense' | 'transfer';
 
@@ -251,6 +252,10 @@ export class TransactionService {
         include: transactionInclude,
       });
     });
+
+    if (!transaction.isAIGenerated) {
+      await progressionActivityBridge.trackManualTransaction(userId, transaction);
+    }
 
     return transaction;
   }
