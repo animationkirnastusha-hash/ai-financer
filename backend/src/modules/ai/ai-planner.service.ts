@@ -21,7 +21,6 @@ export class AIPlannerService {
       temperature: 0,
       modelRole: 'fast',
       timeoutMs: 8_000,
-      numCtx: 640,
       numPredict: 160,
     });
 

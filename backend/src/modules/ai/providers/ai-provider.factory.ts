@@ -1,13 +1,18 @@
 import { env } from '../../../config/env';
 import { AIProvider } from './ai-provider.types';
-import { OpenRouterProvider } from './openrouter.provider';
+import { DeepSeekProvider } from './deepseek.provider';
+
+let instance: AIProvider | null = null;
 
 export function createAIProvider(): AIProvider {
+  if (instance) return instance;
+
   switch (env.aiProvider) {
-    case 'openrouter':
-      return new OpenRouterProvider();
+    case 'deepseek':
+      instance = new DeepSeekProvider();
+      return instance;
 
     default:
-      throw new Error(`Unsupported AI_PROVIDER: ${env.aiProvider}. Use AI_PROVIDER=openrouter.`);
+      throw new Error(`Unsupported AI_PROVIDER: ${env.aiProvider}. Use AI_PROVIDER=deepseek.`);
   }
 }

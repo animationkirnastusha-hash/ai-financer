@@ -39,9 +39,8 @@ export class AIAnswerService {
       prompt,
       modelRole,
       temperature: 0.2,
-      timeoutMs: modelRole === 'premium' ? 20_000 : 12_000,
-      numCtx: modelRole === 'premium' ? 2048 : 1536,
-      numPredict: modelRole === 'premium' ? 420 : 260,
+      timeoutMs: modelRole === 'premium' ? 45_000 : 12_000,
+      numPredict: modelRole === 'premium' ? 700 : 300,
     });
 
     const answer = typeof raw.answer === 'string' ? raw.answer.trim() : '';

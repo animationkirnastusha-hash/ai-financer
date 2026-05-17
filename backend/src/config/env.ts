@@ -1,15 +1,11 @@
 import dotenv from 'dotenv';
 
-dotenv.config();
+dotenv.config({ override: true });
 
 function getEnv(name: string, fallback?: string): string {
   const value = process.env[name] ?? fallback;
   if (value === undefined || value === '') throw new Error(`Missing required environment variable: ${name}`);
   return value;
-}
-
-function getOptionalEnv(name: string, fallback = ''): string {
-  return process.env[name] ?? fallback;
 }
 
 function getNumberEnv(name: string, fallback: number): number {
@@ -26,9 +22,13 @@ function getBooleanEnv(name: string, fallback: boolean): boolean {
   return ['1', 'true', 'yes', 'on'].includes(raw.toLowerCase());
 }
 
-const DEFAULT_OPENROUTER_MODEL = 'meta-llama/llama-3.1-8b-instruct:free';
+export type AIProviderName = 'deepseek';
 
-const aiProvider = (process.env.AI_PROVIDER || process.env.AI_MODE || 'openrouter').trim().toLowerCase();
+const aiProvider = getEnv('AI_PROVIDER', getEnv('AI_MODE', 'deepseek')).toLowerCase() as AIProviderName;
+
+if (aiProvider !== 'deepseek') {
+  throw new Error(`Unsupported AI_PROVIDER=${aiProvider}. Current backend pack supports AI_PROVIDER=deepseek.`);
+}
 
 export const env = {
   nodeEnv: getEnv('NODE_ENV', 'development'),
@@ -37,28 +37,30 @@ export const env = {
   jwtSecret: getEnv('JWT_SECRET', 'dev-secret'),
   telegramBotToken: process.env.TELEGRAM_BOT_TOKEN ?? '',
   adminTelegramId: process.env.ADMIN_TELEGRAM_ID ?? '',
-  deepseekApiKey: process.env.DEEPSEEK_API_KEY ?? '',
 
-  aiMode: getEnv('AI_MODE', aiProvider),
   aiProvider,
+  aiMode: getEnv('AI_MODE', aiProvider),
   aiDebug: getBooleanEnv('AI_DEBUG', false),
-
-  openrouterApiKey: getOptionalEnv('OPENROUTER_API_KEY'),
-  openrouterBaseUrl: getOptionalEnv('OPENROUTER_BASE_URL', 'https://openrouter.ai/api/v1'),
-  openrouterModel: getOptionalEnv('OPENROUTER_MODEL', DEFAULT_OPENROUTER_MODEL),
-  openrouterFastModel: getOptionalEnv('OPENROUTER_FAST_MODEL', getOptionalEnv('OPENROUTER_MODEL', DEFAULT_OPENROUTER_MODEL)),
-  openrouterReasoningModel: getOptionalEnv('OPENROUTER_REASONING_MODEL', getOptionalEnv('OPENROUTER_MODEL', DEFAULT_OPENROUTER_MODEL)),
-  openrouterAppTitle: getOptionalEnv('OPENROUTER_APP_TITLE', 'AI-financer'),
-
-  groqApiKey: getOptionalEnv('GROQ_API_KEY'),
-  groqBaseUrl: getOptionalEnv('GROQ_BASE_URL', 'https://api.groq.com/openai/v1'),
-  groqModel: getOptionalEnv('GROQ_MODEL', 'llama-3.1-8b-instant'),
-  groqFastModel: getOptionalEnv('GROQ_FAST_MODEL', getOptionalEnv('GROQ_MODEL', 'llama-3.1-8b-instant')),
-
-
   aiFastTimeoutMs: getNumberEnv('AI_FAST_TIMEOUT_MS', 8_000),
-  aiLlmTimeoutMs: getNumberEnv('AI_LLM_TIMEOUT_MS', getNumberEnv('AI_TIMEOUT_MS', getNumberEnv('OLLAMA_TIMEOUT_MS', 60_000))),
-  aiTimeoutMs: getNumberEnv('AI_TIMEOUT_MS', 10_000),
+  aiLlmTimeoutMs: getNumberEnv('AI_LLM_TIMEOUT_MS', getNumberEnv('AI_TIMEOUT_MS', 12_000)),
+
+  deepseekApiKey: process.env.DEEPSEEK_API_KEY ?? '',
+  deepseekBaseUrl: getEnv('DEEPSEEK_BASE_URL', 'https://api.deepseek.com'),
+  deepseekModel: getEnv('DEEPSEEK_MODEL', 'deepseek-chat'),
+  deepseekFastModel: getEnv('DEEPSEEK_FAST_MODEL', getEnv('DEEPSEEK_MODEL', 'deepseek-chat')),
+  deepseekReasoningModel: getEnv('DEEPSEEK_REASONING_MODEL', 'deepseek-reasoner'),
+
+  // Compatibility only. These prevent stale unused provider files from breaking typecheck.
+  ollamaBaseUrl: process.env.OLLAMA_BASE_URL ?? 'http://127.0.0.1:11434',
+  ollamaModel: process.env.OLLAMA_MODEL ?? '',
+  ollamaFastModel: process.env.OLLAMA_FAST_MODEL ?? '',
+  ollamaFreeReasoningModel: process.env.OLLAMA_FREE_REASONING_MODEL ?? '',
+  ollamaPremiumModel: process.env.OLLAMA_PREMIUM_MODEL ?? '',
+  ollamaTimeoutMs: getNumberEnv('OLLAMA_TIMEOUT_MS', 60_000),
+  ollamaNumCtx: getNumberEnv('OLLAMA_NUM_CTX', 768),
+  ollamaNumPredict: getNumberEnv('OLLAMA_NUM_PREDICT', 64),
+  groqApiKey: process.env.GROQ_API_KEY ?? '',
+  openrouterApiKey: process.env.OPENROUTER_API_KEY ?? '',
 
   frontendUrl: getEnv('FRONTEND_URL', 'http://localhost:5173'),
   enableCron: getBooleanEnv('ENABLE_CRON', true),

@@ -1,9 +1,9 @@
 export class WarmupService {
   async warmup(): Promise<void> {
-    // Remote AI providers do not need local model warmup.
+    // Remote providers such as DeepSeek do not need local model warmup.
   }
 
   startHeartbeat(): void {
-    // Disabled. Warmup was only needed for local Ollama models.
+    // Disabled intentionally. No Ollama/model preload in DeepSeek mode.
   }
 }
