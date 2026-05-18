@@ -1,9 +1,6 @@
-export type AppScreen =
-  | 'ai-core'
-  | 'dashboard'
-  | 'accounts'
-  | 'transactions'
-  | 'settings';
+import type { AppScreen } from './navigation.store';
+
+export type { AppScreen };
 
 export type NavigationIntent =
   | { type: 'open_screen'; screen: AppScreen }

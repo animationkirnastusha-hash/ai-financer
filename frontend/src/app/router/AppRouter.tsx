@@ -1,124 +1,62 @@
-import { AICoreScreen } from '@/features/ai-core/ui/AICoreScreen';
-import { AIAssistantDock } from '@/features/ai-core/ui/AIAssistantDock';
-import { AIMenuSheet } from '@/features/ai-core/ui/AIMenuSheet';
+import { AppShell } from '@/shared/ui/AppShell';
 import { CreateAccountSheet } from '@/features/accounts/ui/CreateAccountSheet';
 import { useAccountFlowStore } from '@/features/accounts/model/accountFlow.store';
 import { useAccountsStore } from '@/features/accounts/model/accounts.store';
 import { CommandListSheet } from '@/features/commands/ui/CommandListSheet';
 import { useNavigationStore } from '@/features/navigation/model/navigation.store';
-import { useSwipeNavigation } from '@/features/navigation/lib/useSwipeNavigation';
-import { MainMenuDots } from '@/features/navigation/ui/MainMenuDots';
-import { AppTopActions } from '@/features/navigation/ui/AppTopActions';
 import { PremiumUpgradeSheet } from '@/features/premium/ui/PremiumUpgradeSheet';
 import { LaunchOnboardingSheet } from '@/features/onboarding/ui/LaunchOnboardingSheet';
 
 import AccountsPage from '@/pages/accounts/AccountsPage';
+import AnalyticsPage from '@/pages/analytics/AnalyticsPage';
+import CompanionPage from '@/pages/companion/CompanionPage';
 import DashboardPage from '@/pages/dashboard/DashboardPage';
+import GoalsPage from '@/pages/goals/GoalsPage';
+import PremiumPage from '@/pages/premium/PremiumPage';
 import SettingsPage from '@/pages/settings/SettingsPage';
 import TaxonomySettingsPage from '@/pages/settings/TaxonomySettingsPage';
 import TransactionsPage from '@/pages/transactions/TransactionsPage';
 import SectionsPage from '@/pages/sections/SectionsPage';
+import { AICoreScreen } from '@/features/ai-core/ui/AICoreScreen';
 
 export function AppRouter() {
   const currentScreen = useNavigationStore((state) => state.currentScreen);
   const goBack = useNavigationStore((state) => state.goBack);
-
-  const isAIMenuOpen = useNavigationStore((state) => state.isAIMenuOpen);
-  const isGlobalCommandListOpen = useNavigationStore((state) => state.isGlobalCommandListOpen);
-
   const navigateTo = useNavigationStore((state) => state.navigateTo);
-  const openAIMenu = useNavigationStore((state) => state.openAIMenu);
-  const closeAIMenu = useNavigationStore((state) => state.closeAIMenu);
-  const openGlobalCommandList = useNavigationStore((state) => state.openGlobalCommandList);
+  const isGlobalCommandListOpen = useNavigationStore((state) => state.isGlobalCommandListOpen);
   const closeGlobalCommandList = useNavigationStore((state) => state.closeGlobalCommandList);
 
   const isCreateAccountOpen = useAccountFlowStore((state) => state.isCreateAccountOpen);
   const closeCreateAccount = useAccountFlowStore((state) => state.closeCreateAccount);
-
   const createAccount = useAccountsStore((state) => state.createAccount);
 
-  useSwipeNavigation({
-    currentScreen,
-    navigateTo,
-    goBack,
-  });
-
   const runGlobalCommand = (command: string) => {
-    const normalized = command.trim().toLowerCase();
+    const input = command.trim().toLowerCase().replaceAll('ё', 'е');
 
-    if (normalized.includes('главн') || normalized.includes('core') || normalized.includes('ai')) {
-      navigateTo('ai-core');
-      return;
-    }
+    if (input.includes('аналит') || input.includes('анализ') || input.includes('сравни')) return navigateTo('analytics');
+    if (input.includes('цель') || input.includes('копил') || input.includes('подуш')) return navigateTo('goals');
+    if (input.includes('прем') || input.includes('premium')) return navigateTo('premium');
+    if (input.includes('компань') || input.includes('companion') || input.includes('ассист')) return navigateTo('companion');
+    if (input.includes('счет') || input.includes('карта') || input.includes('баланс')) return navigateTo('accounts');
+    if (input.includes('операц') || input.includes('транзак') || input.includes('расход') || input.includes('доход')) return navigateTo('transactions');
+    if (input.includes('настрой') || input.includes('settings')) return navigateTo('settings');
 
-    if (normalized.includes('дашборд') || normalized.includes('сводк')) {
-      navigateTo('dashboard');
-      return;
-    }
-
-    if (normalized.includes('сч') || normalized.includes('баланс') || normalized.includes('карт')) {
-      navigateTo('accounts');
-      return;
-    }
-
-    if (
-      normalized.includes('транзак') ||
-      normalized.includes('операц') ||
-      normalized.includes('истори') ||
-      normalized.includes('расход') ||
-      normalized.includes('доход')
-    ) {
-      navigateTo('transactions');
-      return;
-    }
-
-    if (
-      normalized.includes('раздел') ||
-      normalized.includes('категор') ||
-      normalized.includes('папк') ||
-      normalized.includes('групп')
-    ) {
-      navigateTo('taxonomy-settings');
-      return;
-    }
-
-    if (normalized.includes('настрой') || normalized.includes('профиль') || normalized.includes('подписк')) {
-      navigateTo('settings');
-      return;
-    }
-
-    navigateTo('ai-core');
+    navigateTo('dashboard');
   };
 
-  const showRootDots = currentScreen === 'ai-core';
-
   return (
-    <div className="telegram-app-shell">
-      <div key={currentScreen} className="telegram-app-content ai-screen-transition">
-        {currentScreen === 'ai-core' && <AICoreScreen />}
-        {currentScreen === 'dashboard' && <DashboardPage />}
-        {currentScreen === 'accounts' && <AccountsPage />}
-        {currentScreen === 'transactions' && <TransactionsPage onBack={goBack} />}
-        {currentScreen === 'sections' && <SectionsPage onBack={goBack} />}
-        {currentScreen === 'settings' && <SettingsPage />}
-        {currentScreen === 'taxonomy-settings' && <TaxonomySettingsPage />}
-      </div>
-
-      <AppTopActions />
-
-      {showRootDots ? (
-        <MainMenuDots currentScreen={currentScreen} onNavigate={navigateTo} bottomOffset={28} />
-      ) : null}
-
-      {currentScreen !== 'ai-core' ? <AIAssistantDock onOpen={openAIMenu} /> : null}
-
-      <AIMenuSheet
-        open={isAIMenuOpen}
-        onClose={closeAIMenu}
-        onOpenAI={() => navigateTo('ai-core')}
-        onOpenCommands={openGlobalCommandList}
-        onOpenVoice={() => navigateTo('ai-core')}
-      />
+    <AppShell>
+      {currentScreen === 'dashboard' && <DashboardPage />}
+      {currentScreen === 'transactions' && <TransactionsPage onBack={goBack} />}
+      {currentScreen === 'accounts' && <AccountsPage />}
+      {currentScreen === 'analytics' && <AnalyticsPage />}
+      {currentScreen === 'goals' && <GoalsPage />}
+      {currentScreen === 'companion' && <CompanionPage />}
+      {currentScreen === 'settings' && <SettingsPage />}
+      {currentScreen === 'premium' && <PremiumPage />}
+      {currentScreen === 'sections' && <SectionsPage onBack={goBack} />}
+      {currentScreen === 'taxonomy-settings' && <TaxonomySettingsPage />}
+      {currentScreen === 'ai-core' && <AICoreScreen />}
 
       <CommandListSheet open={isGlobalCommandListOpen} onClose={closeGlobalCommandList} onRunCommand={runGlobalCommand} />
 
@@ -133,6 +71,6 @@ export function AppRouter() {
 
       <PremiumUpgradeSheet />
       <LaunchOnboardingSheet />
-    </div>
+    </AppShell>
   );
 }

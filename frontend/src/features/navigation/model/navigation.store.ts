@@ -1,13 +1,17 @@
 import { create } from 'zustand';
 
 export type AppScreen =
-  | 'ai-core'
   | 'dashboard'
-  | 'accounts'
   | 'transactions'
-  | 'sections'
+  | 'accounts'
+  | 'analytics'
+  | 'goals'
+  | 'companion'
   | 'settings'
-  | 'taxonomy-settings';
+  | 'premium'
+  | 'sections'
+  | 'taxonomy-settings'
+  | 'ai-core';
 
 type NavigationState = {
   currentScreen: AppScreen;
@@ -33,11 +37,11 @@ type NavigationState = {
 };
 
 function compactHistory(history: AppScreen[], currentScreen: AppScreen, nextScreen: AppScreen) {
-  return [...history.filter((screen) => screen !== nextScreen), currentScreen];
+  return [...history.filter((screen) => screen !== nextScreen), currentScreen].slice(-12);
 }
 
 export const useNavigationStore = create<NavigationState>((set, get) => ({
-  currentScreen: 'ai-core',
+  currentScreen: 'dashboard',
   history: [],
 
   isAIMenuOpen: false,
@@ -71,11 +75,12 @@ export const useNavigationStore = create<NavigationState>((set, get) => ({
     const nextHistory = [...history];
     let previous = nextHistory.pop();
 
-    while (previous === currentScreen) {
-      previous = nextHistory.pop();
-    }
+    while (previous === currentScreen) previous = nextHistory.pop();
 
-    if (!previous) return;
+    if (!previous) {
+      set({ currentScreen: 'dashboard', history: [] });
+      return;
+    }
 
     set({
       currentScreen: previous,
@@ -88,7 +93,7 @@ export const useNavigationStore = create<NavigationState>((set, get) => ({
 
   goHome: () =>
     set({
-      currentScreen: 'ai-core',
+      currentScreen: 'dashboard',
       history: [],
       isAIMenuOpen: false,
       isGlobalCommandListOpen: false,

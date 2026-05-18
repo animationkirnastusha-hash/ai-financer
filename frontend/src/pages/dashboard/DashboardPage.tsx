@@ -1,287 +1,107 @@
 import { useEffect, useMemo } from 'react';
-
 import { useAccountsStore } from '@/features/accounts/model/accounts.store';
 import { useNavigationStore } from '@/features/navigation/model/navigation.store';
 import { useTransactionsStore } from '@/features/transactions/model/transactions.store';
-import { DashboardMetricCard } from '@/features/dashboard/ui/DashboardMetricCard';
-import { DashboardSection } from '@/features/dashboard/ui/DashboardSection';
-import { InsightPill } from '@/features/dashboard/ui/InsightPill';
-import { RecentActivityCard } from '@/features/dashboard/ui/RecentActivityCard';
-import { QuickActionCard } from '@/features/dashboard/ui/QuickActionCard';
+import { CompanionPresence } from '@/features/companion/ui/CompanionPresence';
 import { formatMoney, formatTransactionDate } from '@/shared/lib/money';
-import { PremiumInlineCard } from '@/features/premium/ui/PremiumInlineCard';
-import { EmptyState } from '@/shared/ui/EmptyState';
-import { ErrorState } from '@/shared/ui/ErrorState';
-import { usePremiumStore } from '@/features/premium/model/premium.store';
+
 const quickActions = [
-  {
-    title: 'Добавить расход',
-    description: 'Например: “такси 780”',
-  },
-  {
-    title: 'Добавить доход',
-    description: 'Например: “+50000 зарплата”',
-  },
-  {
-    title: 'Показать расходы',
-    description: 'Например: “расходы за месяц”',
-  },
+  { label: 'Расход', prompt: 'кофе 300' },
+  { label: 'Доход', prompt: 'доход 50000' },
+  { label: 'Перевод', prompt: 'переведи 1000 на карту' },
+  { label: 'Спросить AI', prompt: 'куда ушли деньги?' },
 ];
 
 function isCurrentMonth(dateValue: string) {
   const date = new Date(dateValue);
   const now = new Date();
-
-  return (
-    date.getFullYear() === now.getFullYear() &&
-    date.getMonth() === now.getMonth()
-  );
+  return date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth();
 }
 
 export default function DashboardPage() {
   const navigateTo = useNavigationStore((state) => state.navigateTo);
-
   const accounts = useAccountsStore((state) => state.items);
-  const accountsError = useAccountsStore((state) => state.error);
   const loadAccounts = useAccountsStore((state) => state.loadAccounts);
-
   const transactions = useTransactionsStore((state) => state.items);
-  const transactionsError = useTransactionsStore((state) => state.error);
   const loadTransactions = useTransactionsStore((state) => state.loadTransactions);
 
-  const openPremium = usePremiumStore((state) => state.openPremium);
   useEffect(() => {
     void Promise.allSettled([loadAccounts(), loadTransactions()]);
   }, [loadAccounts, loadTransactions]);
 
-  const dashboard = useMemo(() => {
+  const data = useMemo(() => {
     const rubAccounts = accounts.filter((account) => account.currency === 'RUB');
-    const foreignAccounts = accounts.filter((account) => account.currency !== 'RUB');
-
-    const totalRub = rubAccounts.reduce((sum, account) => {
-      return sum + (Number(account.balance) || 0);
-    }, 0);
-
-    const monthRubTransactions = transactions.filter((item) => {
-      return isCurrentMonth(item.date) && item.account?.currency === 'RUB';
-    });
-
-    const income = monthRubTransactions.reduce((sum, item) => {
-      return item.type === 'income' ? sum + (Number(item.amount) || 0) : sum;
-    }, 0);
-
-    const expenses = monthRubTransactions.reduce((sum, item) => {
-      return item.type === 'expense' ? sum + (Number(item.amount) || 0) : sum;
-    }, 0);
-
-    const savingsAccounts = rubAccounts.filter((account) => {
-      return account.type === 'savings' || account.type === 'investment';
-    });
-
-    const savings = savingsAccounts.reduce((sum, account) => {
-      return sum + (Number(account.balance) || 0);
-    }, 0);
-
-    return {
-      totalRub,
-      income,
-      expenses,
-      savings,
-      foreignAccountsCount: foreignAccounts.length,
-    };
+    const totalRub = rubAccounts.reduce((sum, account) => sum + (Number(account.balance) || 0), 0);
+    const currentMonth = transactions.filter((item) => isCurrentMonth(item.date) && item.account?.currency === 'RUB');
+    const income = currentMonth.reduce((sum, item) => (item.type === 'income' ? sum + Number(item.amount || 0) : sum), 0);
+    const expenses = currentMonth.reduce((sum, item) => (item.type === 'expense' ? sum + Number(item.amount || 0) : sum), 0);
+    const delta = income - expenses;
+    return { totalRub, income, expenses, delta };
   }, [accounts, transactions]);
 
-  const metrics = [
-    {
-      label: 'Общий баланс',
-      value: formatMoney(dashboard.totalRub, 'RUB'),
-      hint:
-        dashboard.foreignAccountsCount > 0
-          ? `+ ${dashboard.foreignAccountsCount} счёта в других валютах`
-          : 'только ₽ счета',
-    },
-    {
-      label: 'Доходы',
-      value: formatMoney(dashboard.income, 'RUB', { sign: 'plus' }),
-      hint: 'за текущий месяц',
-    },
-    {
-      label: 'Расходы',
-      value: formatMoney(dashboard.expenses, 'RUB', { sign: 'minus' }),
-      hint: 'за текущий месяц',
-    },
-    {
-      label: 'Накопления',
-      value: formatMoney(dashboard.savings, 'RUB'),
-      hint: 'savings + investment',
-    },
-  ];
-  const insights =
-    accounts.length === 0
-      ? ['Создай первый счёт', 'AI начнёт считать баланс', 'Потом добавь доход']
-      : transactions.length === 0
-        ? ['Счета готовы', 'Добавь первую операцию', 'Например: “+50000 зарплата”']
-        : [
-            `${transactions.length} операций в истории`,
-            dashboard.income > dashboard.expenses
-              ? 'Месяц в плюсе'
-              : 'Проверь расходы месяца',
-            dashboard.foreignAccountsCount > 0
-              ? 'Есть счета в других валютах'
-              : 'Все данные в ₽',
-          ];
-
-  const recentTransactions = transactions.slice(0, 5);
+  const recent = transactions.slice(0, 4);
 
   return (
-    <div className="flex h-dvh flex-col bg-[radial-gradient(circle_at_top,rgba(16,185,129,0.10),transparent_24%),linear-gradient(180deg,#0b1016_0%,#090d13_100%)] text-white">
-      <div className="flex-1 overflow-y-auto px-4 pb-28 pt-[calc(env(safe-area-inset-top)+78px)]">
-        <div className="mx-auto w-full max-w-[560px] space-y-4">
-          <section className="rounded-[30px] border border-white/10 bg-white/[0.05] p-5 backdrop-blur-xl">
-            <div className="text-[11px] uppercase tracking-[0.18em] text-emerald-300/70">
-              AI Overview
+    <div className="h-full overflow-y-auto px-4 pb-32 pt-[calc(env(safe-area-inset-top)+18px)] text-white">
+      <div className="mx-auto w-full max-w-[620px] space-y-4">
+        <header className="rounded-[34px] border border-white/10 bg-white/[0.045] p-5 shadow-2xl">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <div className="text-[11px] uppercase tracking-[0.2em] text-emerald-200/60">AI-Financer</div>
+              <h1 className="mt-3 text-3xl font-semibold tracking-[-0.04em]">Финансовая картина</h1>
+              <p className="mt-2 max-w-[430px] text-sm leading-6 text-white/55">
+                Не dashboard ради графиков. Это спокойный обзор состояния, действий и следующего шага.
+              </p>
             </div>
+            <button onClick={() => navigateTo('premium')} className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-2 text-xs text-white/60">Premium</button>
+          </div>
 
-            <h1 className="mt-3 text-[28px] font-semibold leading-tight text-white">
-              {accounts.length === 0
-                ? 'Начни с первого счёта'
-                : transactions.length === 0
-                  ? 'Счета готовы'
-                  : 'Финансы обновлены'}
-            </h1>
-
-            <p className="mt-2 max-w-[440px] text-sm leading-6 text-white/60">
-              {accounts.length === 0
-                ? 'Создай счёт, потом запиши доход или расход — AI начнёт собирать финансовую картину.'
-                : transactions.length === 0
-                  ? 'Теперь добавь первую операцию через AI: доход, расход или перевод.'
-                  : 'AI синхронизировал счета, операции и разделы.'}
-            </p>
-
-            <div className="mt-4 flex flex-wrap gap-2">
-              {insights.map((item) => (
-                <InsightPill key={item} text={item} />
-              ))}
+          <div className="mt-6 rounded-[28px] border border-emerald-300/12 bg-emerald-300/[0.08] p-5">
+            <div className="text-sm text-emerald-100/60">Общий баланс</div>
+            <div className="mt-2 text-[38px] font-semibold tracking-[-0.06em]">{formatMoney(data.totalRub, 'RUB')}</div>
+            <div className="mt-3 flex flex-wrap gap-2 text-xs text-white/56">
+              <span className="rounded-full bg-black/22 px-3 py-1">Доходы: {formatMoney(data.income, 'RUB', { sign: 'plus' })}</span>
+              <span className="rounded-full bg-black/22 px-3 py-1">Расходы: {formatMoney(data.expenses, 'RUB', { sign: 'minus' })}</span>
+              <span className="rounded-full bg-black/22 px-3 py-1">Дельта: {formatMoney(data.delta, 'RUB', { sign: 'auto' })}</span>
             </div>
-          </section>
+          </div>
+        </header>
 
-          {accountsError || transactionsError ? (
-            <ErrorState
-              title="Часть данных не загрузилась"
-              message={accountsError || transactionsError}
-              onRetry={() => void Promise.allSettled([loadAccounts(true), loadTransactions(true)])}
-              onOpenAI={() => navigateTo('ai-core')}
-            />
-          ) : accounts.length === 0 ? (
-            <EmptyState
-              eyebrow="Первый запуск"
-              title="Создай первый счёт"
-              description="После этого AI сможет считать баланс, записывать доходы и расходы, распределять операции по категориям и разделам."
-              actionLabel="Открыть AI Core"
-              onAction={() => navigateTo('ai-core')}
-            />
-          ) : transactions.length === 0 ? (
-            <EmptyState
-              eyebrow="Счета готовы"
-              title="Добавь первую операцию"
-              description="Напиши AI: “+50000 зарплата” или “кофе 350”. Это базовый сценарий приложения."
-              actionLabel="Открыть AI Core"
-              onAction={() => navigateTo('ai-core')}
-            />
-          ) : null}
+        <CompanionPresence />
 
-          <section className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            {metrics.map((metric) => (
-              <DashboardMetricCard
-                key={metric.label}
-                label={metric.label}
-                value={metric.value}
-                hint={metric.hint}
-              />
-            ))}
-          </section>
-<PremiumInlineCard
-  onOpen={openPremium}
-  trigger={{
-    kind: 'deep_analysis',
-    title: 'AI нашёл скрытые зоны роста',
-    description:
-      transactions.length > 0
-        ? 'Можно глубже разобрать расходы, найти повторяющиеся траты и построить план на следующий месяц.'
-        : 'Когда появятся первые операции, Premium покажет глубокий финансовый разбор.',
-    cta: 'Открыть полный AI-анализ',
-    value:
-      transactions.length > 0
-        ? 'Потенциальная экономия может быть выше подписки'
-        : 'Готово к анализу после первых операций',
-  }}
-/>
-          <DashboardSection
-            title="Быстрые сценарии"
-            description="То, с чего пользователь чаще всего начинает действие."
-          >
-            <div className="grid gap-3">
-              {quickActions.map((item) => (
-                <QuickActionCard
-                  key={item.title}
-                  title={item.title}
-                  description={item.description}
-                  onClick={() => navigateTo('ai-core')}
-                />
-              ))}
+        <section className="grid grid-cols-2 gap-3">
+          {quickActions.map((action) => (
+            <button key={action.label} onClick={() => navigateTo('ai-core')} className="rounded-[26px] border border-white/10 bg-white/[0.045] p-4 text-left transition active:scale-[0.98]">
+              <div className="text-base font-semibold">{action.label}</div>
+              <div className="mt-2 text-xs leading-5 text-white/45">“{action.prompt}”</div>
+            </button>
+          ))}
+        </section>
+
+        <section className="rounded-[30px] border border-white/10 bg-white/[0.04] p-4">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <div className="text-lg font-semibold">Последние операции</div>
+              <div className="mt-1 text-sm text-white/45">Timeline, не бухгалтерская таблица.</div>
             </div>
-          </DashboardSection>
-
-          <DashboardSection
-            title="Последняя активность"
-            description="Недавние доходы, расходы и переводы."
-          >
-            <div className="space-y-3">
-              {recentTransactions.length === 0 ? (
-                <RecentActivityCard
-                  title="Пока нет операций"
-                  subtitle="Создай первую операцию через AI"
-                  amount={formatMoney(0, 'RUB')}
-                  time="—"
-                />
-              ) : (
-                recentTransactions.map((item) => {
-                  const currency = item.account?.currency || 'RUB';
-                  const isIncome = item.type === 'income';
-                  const isExpense = item.type === 'expense';
-
-                  return (
-                    <RecentActivityCard
-                      key={item.id}
-                      title={
-                        item.description?.trim() ||
-                        item.category?.name ||
-                        (isIncome
-                          ? 'Доход'
-                          : isExpense
-                            ? 'Расход'
-                            : 'Перевод')
-                      }
-                      subtitle={
-                        item.type === 'transfer'
-                          ? `${item.account?.name || 'Счёт'} → ${
-                              item.toAccount?.name || 'Другой счёт'
-                            }`
-                          : `${item.category?.name || 'Без категории'} · ${
-                              item.account?.name || 'Счёт'
-                            }`
-                      }
-                      amount={formatMoney(Number(item.amount) || 0, currency, {
-                        sign: isIncome ? 'plus' : isExpense ? 'minus' : 'none',
-                      })}
-                      time={formatTransactionDate(item.date)}
-                    />
-                  );
-                })
-              )}
-            </div>
-          </DashboardSection>
-        </div>
+            <button onClick={() => navigateTo('transactions')} className="text-sm text-emerald-200/80">Все</button>
+          </div>
+          <div className="mt-4 space-y-2">
+            {recent.length === 0 ? (
+              <div className="rounded-[22px] border border-white/8 bg-black/18 p-4 text-sm text-white/45">Пока нет операций. Напиши AI: “кофе 300”.</div>
+            ) : (
+              recent.map((item) => (
+                <div key={item.id} className="flex items-center justify-between gap-3 rounded-[22px] border border-white/8 bg-black/18 p-3">
+                  <div className="min-w-0">
+                    <div className="truncate text-sm font-medium">{item.description || item.category?.name || 'Операция'}</div>
+                    <div className="mt-1 text-xs text-white/42">{item.account?.name || 'Счёт'} · {formatTransactionDate(item.date)}</div>
+                  </div>
+                  <div className="text-sm font-semibold">{formatMoney(Number(item.amount) || 0, item.account?.currency || 'RUB', { sign: item.type === 'income' ? 'plus' : item.type === 'expense' ? 'minus' : 'none' })}</div>
+                </div>
+              ))
+            )}
+          </div>
+        </section>
       </div>
     </div>
   );
