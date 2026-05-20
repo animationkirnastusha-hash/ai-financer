@@ -8,9 +8,6 @@ export function AuthBootstrap({ children }: PropsWithChildren) {
   const isLoading = useAuthStore((state) => state.isLoading);
   const error = useAuthStore((state) => state.error);
   const bootstrap = useAuthStore((state) => state.bootstrap);
-console.log('[TG] window.Telegram:', window.Telegram);
-console.log('[TG] initData:', window.Telegram?.WebApp?.initData);
-console.log('[TG] initDataUnsafe:', window.Telegram?.WebApp?.initDataUnsafe);
   useEffect(() => {
     const initData = getTelegramInitData();
 

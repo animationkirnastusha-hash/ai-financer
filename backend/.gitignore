@@ -1,4 +1,17 @@
 node_modules
-# Keep environment variables out of version control
+
+# Environment variables
 .env
+.env.*
+!.env.example
+
+# Prisma generated/local database
 /src/generated/prisma
+prisma/dev.db
+prisma/dev.db-journal
+
+# Logs and local artifacts
+logs
+*.log
+desktop.ini
+.DS_Store

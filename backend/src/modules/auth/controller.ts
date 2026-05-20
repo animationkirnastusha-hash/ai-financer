@@ -13,9 +13,7 @@ import {
 const authService = new AuthService();
 
 export const login = asyncHandler(async (req: Request, res: Response) => {
- const { initData } = req.body as { initData?: string };
-  console.log('[AUTH] initData exists:', Boolean(initData));
-console.log('[AUTH] initData length:', initData?.length ?? 0);
+  const { initData } = req.body as { initData?: string };
   /**
    * REAL TELEGRAM LOGIN
    */
@@ -31,7 +29,6 @@ console.log('[AUTH] initData length:', initData?.length ?? 0);
     }
 
     const telegramUser = parseTelegramInitData(initData);
-console.log('[AUTH] telegram user:', telegramUser);
     if (!telegramUser) {
       throw new UnauthorizedError('Telegram user is missing');
     }

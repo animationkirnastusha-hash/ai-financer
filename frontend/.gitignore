@@ -22,3 +22,12 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# OS / local artifacts
+desktop.ini
+.DS_Store
+Thumbs.db
+
+# Local HTTPS certs
+certs/
+tsconfig*.tsbuildinfo

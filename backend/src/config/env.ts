@@ -26,6 +26,16 @@ function getBooleanEnv(name: string, fallback: boolean): boolean {
   return ['1', 'true', 'yes', 'on'].includes(raw.toLowerCase());
 }
 
+function getListEnv(name: string, fallback: string[] = []): string[] {
+  const raw = process.env[name];
+  if (!raw) return fallback;
+
+  return raw
+    .split(',')
+    .map((value) => value.trim())
+    .filter(Boolean);
+}
+
 const DEFAULT_DEEPSEEK_MODEL = 'deepseek-chat';
 const DEFAULT_OPENROUTER_MODEL = 'meta-llama/llama-3.2-3b-instruct:free';
 const aiProvider = (process.env.AI_PROVIDER || process.env.AI_MODE || 'deepseek').trim().toLowerCase();
@@ -60,6 +70,10 @@ export const env = {
   aiTimeoutMs: getNumberEnv('AI_TIMEOUT_MS', 10_000),
 
   frontendUrl: getEnv('FRONTEND_URL', 'http://localhost:5173'),
+  corsOrigins: getListEnv('CORS_ORIGINS', [
+    'http://localhost:5173',
+    'https://ai-financer.pages.dev',
+  ]),
   enableCron: getBooleanEnv('ENABLE_CRON', true),
   isDevelopment: (process.env.NODE_ENV ?? 'development') === 'development',
   isProduction: (process.env.NODE_ENV ?? 'development') === 'production',
