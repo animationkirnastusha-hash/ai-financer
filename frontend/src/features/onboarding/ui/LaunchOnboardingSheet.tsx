@@ -11,8 +11,14 @@ export function LaunchOnboardingSheet() {
   const isOpen = useOnboardingStore((state) => state.isOpen);
   const close = useOnboardingStore((state) => state.close);
   const navigateTo = useNavigationStore((state) => state.navigateTo);
+  const openAIWithCommand = useNavigationStore((state) => state.openAIWithCommand);
 
   if (!isOpen) return null;
+
+  const runExample = (command: string) => {
+    close();
+    openAIWithCommand(command);
+  };
 
   return (
     <div className="fixed inset-0 z-[140] bg-black/70 px-3 backdrop-blur-sm">
@@ -72,11 +78,8 @@ export function LaunchOnboardingSheet() {
                   <button
                     key={example}
                     type="button"
-                    onClick={() => {
-                      close();
-                      navigateTo('ai-core');
-                    }}
-                    className="w-full rounded-2xl border border-white/8 bg-white/[0.04] px-3 py-2 text-left text-xs leading-5 text-emerald-100/90"
+                    onClick={() => runExample(example)}
+                    className="w-full rounded-2xl border border-white/8 bg-white/[0.04] px-3 py-2 text-left text-xs leading-5 text-emerald-100/90 transition active:scale-[0.99]"
                   >
                     {example}
                   </button>
@@ -91,11 +94,11 @@ export function LaunchOnboardingSheet() {
                 type="button"
                 onClick={() => {
                   close();
-                  navigateTo('ai-core');
+                  openAIWithCommand('создай первый счет');
                 }}
                 className="rounded-2xl border border-emerald-300/20 bg-emerald-400/16 px-4 py-4 text-sm font-medium text-white"
               >
-                Начать с AI Core
+                Начать с первого счёта
               </button>
 
               <button

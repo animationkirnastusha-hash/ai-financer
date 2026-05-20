@@ -12,6 +12,13 @@ const quickActions = [
   { label: 'Спросить AI', prompt: 'куда ушли деньги?' },
 ];
 
+const onboardingSteps = [
+  { label: '1. Первый счёт', prompt: 'создай счет основной' },
+  { label: '2. Добавить деньги', prompt: 'доход 50000 на основной счет' },
+  { label: '3. Записать расход', prompt: 'кофе 300' },
+  { label: '4. Спросить аналитику', prompt: 'сколько я потратил за неделю' },
+];
+
 function isCurrentMonth(dateValue: string) {
   const date = new Date(dateValue);
   const now = new Date();
@@ -41,6 +48,7 @@ export default function DashboardPage() {
   }, [accounts, transactions]);
 
   const recent = transactions.slice(0, 4);
+  const isEmptyState = accounts.length === 0 && transactions.length === 0;
 
   return (
     <div className="h-full overflow-y-auto px-4 pb-32 pt-[calc(env(safe-area-inset-top)+18px)] text-white">
@@ -68,6 +76,33 @@ export default function DashboardPage() {
           </div>
         </header>
 
+        {isEmptyState ? (
+          <section className="rounded-[32px] border border-emerald-300/14 bg-[radial-gradient(circle_at_top,rgba(16,185,129,0.16),transparent_52%),rgba(255,255,255,0.04)] p-5 shadow-2xl">
+            <div className="text-[11px] uppercase tracking-[0.2em] text-emerald-200/62">Первый запуск</div>
+            <h2 className="mt-3 text-2xl font-semibold tracking-[-0.03em]">Настрой финансовую систему через AI</h2>
+            <p className="mt-2 text-sm leading-6 text-white/56">
+              Начни не с пустого dashboard, а с короткого действия. AI подготовит preview, ты подтвердишь результат и сможешь отменить операцию при необходимости.
+            </p>
+
+            <div className="mt-5 grid gap-2">
+              {onboardingSteps.map((step) => (
+                <button
+                  key={step.prompt}
+                  type="button"
+                  onClick={() => openAIWithCommand(step.prompt)}
+                  className="flex items-center justify-between gap-3 rounded-[22px] border border-white/8 bg-black/20 px-4 py-3 text-left transition active:scale-[0.99]"
+                >
+                  <div>
+                    <div className="text-sm font-medium text-white">{step.label}</div>
+                    <div className="mt-1 text-xs text-emerald-100/66">“{step.prompt}”</div>
+                  </div>
+                  <span className="text-white/28">→</span>
+                </button>
+              ))}
+            </div>
+          </section>
+        ) : null}
+
         <CompanionPresence />
 
         <section className="grid grid-cols-2 gap-3">
@@ -89,7 +124,13 @@ export default function DashboardPage() {
           </div>
           <div className="mt-4 space-y-2">
             {recent.length === 0 ? (
-              <div className="rounded-[22px] border border-white/8 bg-black/18 p-4 text-sm text-white/45">Пока нет операций. Напиши AI: “кофе 300”.</div>
+              <button
+                type="button"
+                onClick={() => openAIWithCommand('кофе 300')}
+                className="w-full rounded-[22px] border border-white/8 bg-black/18 p-4 text-left text-sm text-white/45 transition active:scale-[0.99]"
+              >
+                Пока нет операций. Напиши AI: “кофе 300”.
+              </button>
             ) : (
               recent.map((item) => (
                 <div key={item.id} className="flex items-center justify-between gap-3 rounded-[22px] border border-white/8 bg-black/18 p-3">

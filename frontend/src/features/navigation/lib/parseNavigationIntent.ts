@@ -19,6 +19,138 @@ function normalize(input: string) {
 function detectScreen(input: string): AppScreen | null {
   if (
     includesAny(input, [
+      'ai core',
+      'ai-core',
+      'ии ядро',
+      'ядро',
+      'ассистент',
+      'чат',
+      'ии',
+      'ai',
+      'помощник',
+      'финансовый помощник',
+      'командный центр',
+    ])
+  ) {
+    return 'ai-core';
+  }
+
+  if (
+    includesAny(input, [
+      'аналитика',
+      'аналитику',
+      'анализ',
+      'analytics',
+      'статистика',
+      'статистику',
+      'отчет',
+      'отчеты',
+      'сравнение',
+      'сравни',
+    ])
+  ) {
+    return 'analytics';
+  }
+
+  if (
+    includesAny(input, [
+      'цели',
+      'цель',
+      'копилка',
+      'копилки',
+      'подушка',
+      'накопительная цель',
+      'goals',
+    ])
+  ) {
+    return 'goals';
+  }
+
+  if (
+    includesAny(input, [
+      'premium',
+      'премиум',
+      'подписка',
+      'подписку',
+      'план',
+      'тариф',
+      'возможности premium',
+    ])
+  ) {
+    return 'premium';
+  }
+
+  if (
+    includesAny(input, [
+      'companion',
+      'компаньон',
+      'компаньона',
+      'спутник',
+      'присутствие',
+      'настроение companion',
+    ])
+  ) {
+    return 'companion';
+  }
+
+  if (
+    includesAny(input, [
+      'разделы и категории',
+      'категории и разделы',
+      'taxonomy',
+      'таксономия',
+      'структура категорий',
+    ])
+  ) {
+    return 'taxonomy-settings';
+  }
+
+  if (
+    includesAny(input, [
+      'настройки',
+      'settings',
+      'параметры',
+      'профиль',
+      'голосовые настройки',
+      'voice settings',
+      'режим ai',
+      'режим ии',
+    ])
+  ) {
+    return 'settings';
+  }
+
+  if (
+    includesAny(input, [
+      'счета',
+      'счет',
+      'счета мои',
+      'мои счета',
+      'аккаунты',
+      'accounts',
+      'кошельки',
+      'карты',
+    ])
+  ) {
+    return 'accounts';
+  }
+
+  if (
+    includesAny(input, [
+      'транзакции',
+      'операции',
+      'история',
+      'историю',
+      'transactions',
+      'платежи',
+      'движения',
+    ])
+  ) {
+    return 'transactions';
+  }
+
+  if (
+    includesAny(input, [
       'дашборд',
       'dashboard',
       'главная',
@@ -32,72 +164,6 @@ function detectScreen(input: string): AppScreen | null {
     ])
   ) {
     return 'dashboard';
-  }
-
-  if (
-    includesAny(input, [
-      'счета',
-      'счет',
-      'счета мои',
-      'мои счета',
-      'аккаунты',
-      'accounts',
-      'баланс',
-      'кошельки',
-      'карты',
-      'накопления',
-    ])
-  ) {
-    return 'accounts';
-  }
-
-  if (
-    includesAny(input, [
-      'транзакции',
-      'операции',
-      'история',
-      'историю',
-      'transactions',
-      'расходы',
-      'доходы',
-      'траты',
-      'платежи',
-      'движения',
-    ])
-  ) {
-    return 'transactions';
-  }
-
-  if (
-    includesAny(input, [
-      'настройки',
-      'settings',
-      'параметры',
-      'профиль',
-      'подписка',
-      'premium',
-      'премиум',
-      'голос',
-    ])
-  ) {
-    return 'settings';
-  }
-
-  if (
-    includesAny(input, [
-      'ядро',
-      'главный экран',
-      'ассистент',
-      'ai core',
-      'core',
-      'чат',
-      'ии',
-      'ai',
-      'помощник',
-      'финансовый помощник',
-    ])
-  ) {
-    return 'ai-core';
   }
 
   return null;

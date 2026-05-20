@@ -18,11 +18,13 @@ import TaxonomySettingsPage from '@/pages/settings/TaxonomySettingsPage';
 import TransactionsPage from '@/pages/transactions/TransactionsPage';
 import SectionsPage from '@/pages/sections/SectionsPage';
 import { AICoreScreen } from '@/features/ai-core/ui/AICoreScreen';
+import { parseNavigationIntent } from '@/features/navigation/lib/parseNavigationIntent';
 
 export function AppRouter() {
   const currentScreen = useNavigationStore((state) => state.currentScreen);
   const goBack = useNavigationStore((state) => state.goBack);
   const navigateTo = useNavigationStore((state) => state.navigateTo);
+  const openAIWithCommand = useNavigationStore((state) => state.openAIWithCommand);
   const isGlobalCommandListOpen = useNavigationStore((state) => state.isGlobalCommandListOpen);
   const closeGlobalCommandList = useNavigationStore((state) => state.closeGlobalCommandList);
 
@@ -31,17 +33,19 @@ export function AppRouter() {
   const createAccount = useAccountsStore((state) => state.createAccount);
 
   const runGlobalCommand = (command: string) => {
-    const input = command.trim().toLowerCase().replaceAll('ё', 'е');
+    const navigationIntent = parseNavigationIntent(command);
 
-    if (input.includes('аналит') || input.includes('анализ') || input.includes('сравни')) return navigateTo('analytics');
-    if (input.includes('цель') || input.includes('копил') || input.includes('подуш')) return navigateTo('goals');
-    if (input.includes('прем') || input.includes('premium')) return navigateTo('premium');
-    if (input.includes('компань') || input.includes('companion') || input.includes('ассист')) return navigateTo('companion');
-    if (input.includes('счет') || input.includes('карта') || input.includes('баланс')) return navigateTo('accounts');
-    if (input.includes('операц') || input.includes('транзак') || input.includes('расход') || input.includes('доход')) return navigateTo('transactions');
-    if (input.includes('настрой') || input.includes('settings')) return navigateTo('settings');
+    if (navigationIntent.type === 'open_screen') {
+      navigateTo(navigationIntent.screen);
+      return;
+    }
 
-    navigateTo('dashboard');
+    if (navigationIntent.type === 'go_back') {
+      goBack();
+      return;
+    }
+
+    openAIWithCommand(command);
   };
 
   return (
