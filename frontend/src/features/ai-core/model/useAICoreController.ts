@@ -16,6 +16,7 @@ export function useAICoreController() {
 
   const navigateTo = useNavigationStore((state) => state.navigateTo);
   const goBack = useNavigationStore((state) => state.goBack);
+  const consumeInitialAICommand = useNavigationStore((state) => state.consumeInitialAICommand);
 
   const voiceEnabled = useSettingsStore((state) => state.voiceEnabled);
   const voiceBetaEnabled = useSettingsStore((state) => state.voiceBetaEnabled);
@@ -67,6 +68,18 @@ export function useAICoreController() {
       await handleIntentOrMessage(text);
     },
   });
+
+  useEffect(() => {
+    const command = consumeInitialAICommand();
+    if (!command) return;
+
+    voice.stopSpeaking();
+    setMode('text');
+    setIsVoiceLocked(false);
+    setIsCommandPanelOpen(true);
+    setCoreState('expanded');
+    setInputValue(command);
+  }, [consumeInitialAICommand, voice]);
 
   useEffect(() => {
     if (voice.state === 'recording') {

@@ -17,6 +17,7 @@ const navItems: NavItem[] = [
   { screen: 'goals', label: 'Цели', icon: '◇' },
   { screen: 'companion', label: 'Companion', icon: '●' },
   { screen: 'settings', label: 'Settings', icon: '⚙' },
+  { screen: 'premium', label: 'Premium', icon: '✦' },
 ];
 
 export function AppShell({ children }: { children: ReactNode }) {
@@ -36,7 +37,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       ) : null}
 
       <nav className="pointer-events-auto fixed bottom-[calc(env(safe-area-inset-bottom)+12px)] left-3 right-3 z-[75] rounded-[26px] border border-white/10 bg-[#050b10]/86 p-2 shadow-2xl">
-        <div className="grid grid-cols-7 gap-1">
+        <div className="grid grid-cols-8 gap-1">
           {navItems.map((item) => {
             const active = item.screen === currentScreen;
             return (

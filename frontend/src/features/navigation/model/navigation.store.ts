@@ -21,8 +21,11 @@ type NavigationState = {
   isGlobalCommandListOpen: boolean;
   hasSystemNotifications: boolean;
   isNotificationsOpen: boolean;
+  initialAICommand: string | null;
 
   navigateTo: (screen: AppScreen) => void;
+  openAIWithCommand: (command?: string) => void;
+  consumeInitialAICommand: () => string | null;
   goBack: () => void;
   goHome: () => void;
 
@@ -48,6 +51,7 @@ export const useNavigationStore = create<NavigationState>((set, get) => ({
   isGlobalCommandListOpen: false,
   hasSystemNotifications: true,
   isNotificationsOpen: false,
+  initialAICommand: null,
 
   navigateTo: (screen) => {
     const { currentScreen, history } = get();
@@ -67,7 +71,28 @@ export const useNavigationStore = create<NavigationState>((set, get) => ({
       isAIMenuOpen: false,
       isGlobalCommandListOpen: false,
       isNotificationsOpen: false,
+      initialAICommand: screen === 'ai-core' ? get().initialAICommand : null,
     });
+  },
+
+  openAIWithCommand: (command) => {
+    const { currentScreen, history } = get();
+    const trimmedCommand = command?.trim() || null;
+
+    set({
+      currentScreen: 'ai-core',
+      history: currentScreen === 'ai-core' ? history : compactHistory(history, currentScreen, 'ai-core'),
+      initialAICommand: trimmedCommand,
+      isAIMenuOpen: false,
+      isGlobalCommandListOpen: false,
+      isNotificationsOpen: false,
+    });
+  },
+
+  consumeInitialAICommand: () => {
+    const command = get().initialAICommand;
+    if (command) set({ initialAICommand: null });
+    return command;
   },
 
   goBack: () => {
@@ -88,6 +113,7 @@ export const useNavigationStore = create<NavigationState>((set, get) => ({
       isAIMenuOpen: false,
       isGlobalCommandListOpen: false,
       isNotificationsOpen: false,
+      initialAICommand: null,
     });
   },
 
@@ -98,6 +124,7 @@ export const useNavigationStore = create<NavigationState>((set, get) => ({
       isAIMenuOpen: false,
       isGlobalCommandListOpen: false,
       isNotificationsOpen: false,
+      initialAICommand: null,
     }),
 
   openAIMenu: () => set({ isAIMenuOpen: true, isNotificationsOpen: false }),

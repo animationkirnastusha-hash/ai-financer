@@ -20,6 +20,7 @@ function isCurrentMonth(dateValue: string) {
 
 export default function DashboardPage() {
   const navigateTo = useNavigationStore((state) => state.navigateTo);
+  const openAIWithCommand = useNavigationStore((state) => state.openAIWithCommand);
   const accounts = useAccountsStore((state) => state.items);
   const loadAccounts = useAccountsStore((state) => state.loadAccounts);
   const transactions = useTransactionsStore((state) => state.items);
@@ -71,7 +72,7 @@ export default function DashboardPage() {
 
         <section className="grid grid-cols-2 gap-3">
           {quickActions.map((action) => (
-            <button key={action.label} onClick={() => navigateTo('ai-core')} className="rounded-[26px] border border-white/10 bg-white/[0.045] p-4 text-left transition active:scale-[0.98]">
+            <button key={action.label} onClick={() => openAIWithCommand(action.prompt)} className="rounded-[26px] border border-white/10 bg-white/[0.045] p-4 text-left transition active:scale-[0.98]">
               <div className="text-base font-semibold">{action.label}</div>
               <div className="mt-2 text-xs leading-5 text-white/45">“{action.prompt}”</div>
             </button>

@@ -7,5 +7,17 @@ dist
 backend/prisma/dev.db
 backend/prisma/dev.db-journal
 backend/uploads
+
+# OS / editor artifacts
 .DS_Store
-.vscode
+Thumbs.db
+desktop.ini
+
+# Temporary Drive sync folders
+.tmp.drivedownload/
+.tmp.driveupload/
+
+# Frontend generated/local artifacts
+frontend/dist/
+frontend/tsconfig*.tsbuildinfo
+frontend/certs/
