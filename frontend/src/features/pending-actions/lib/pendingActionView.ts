@@ -12,6 +12,7 @@ export type PendingActionView = {
   currency?: string;
   rows: Array<{ label: string; value: string }>;
   explanation: string;
+  actionCount: number;
 };
 
 function isRecord(value: unknown): value is UnknownRecord {
@@ -72,8 +73,8 @@ function intentLabel(intent?: string, type?: string) {
   if (normalized.includes('section')) return 'Раздел';
   if (normalized.includes('categor')) return 'Категория';
   if (normalized.includes('delete')) return 'Удаление';
-  if (normalized.includes('batch')) return 'Пакет действий';
-  return 'AI-действие';
+  if (normalized.includes('batch')) return 'Действие';
+  return 'Действие';
 }
 
 function riskTone(risk?: string): PendingActionView['riskTone'] {
@@ -96,60 +97,88 @@ function compactRows(rows: Array<{ label: string; value?: string | number | null
     .map((row) => ({ label: row.label, value: String(row.value) }));
 }
 
+function firstAction(parsed: UnknownRecord | undefined) {
+  const actions = Array.isArray(parsed?.actions) ? parsed.actions : [];
+  const first = actions.find(isRecord);
+  if (!first) return parsed;
+  const input = pickRecord(first.input);
+  return { ...first, ...(input ?? {}) };
+}
+
+function getActionCount(parsed: UnknownRecord | undefined) {
+  if (!Array.isArray(parsed?.actions)) return 1;
+  return parsed.actions.filter(isRecord).length || 1;
+}
+
 function getBatchRows(parsed: UnknownRecord | undefined) {
   const actions = Array.isArray(parsed?.actions) ? parsed.actions : [];
   return actions
     .map((action, index) => {
       if (!isRecord(action)) return null;
-      const intent = readString(action, ['intent']) || 'action';
-      const name = readString(action, ['name', 'accountName', 'description', 'rawCategory']);
-      const amount = readNumber(action, ['amount', 'balance']);
-      const currency = readString(action, ['currency']) || 'RUB';
-      const label = intentLabel(intent);
+      const input = pickRecord(action.input) ?? action;
+      const intent = readString(action, ['tool', 'intent']) || readString(input, ['intent', 'kind']) || 'action';
+      const name = readString(input, ['name', 'accountName', 'description', 'category', 'rawCategory']);
+      const amount = readNumber(input, ['amount', 'balance', 'initialBalance']);
+      const currency = readString(input, ['currency']) || 'RUB';
+      const label = intentLabel(intent, readString(input, ['kind']));
       const value = [name, formatAmount(amount, currency)].filter(Boolean).join(' · ');
       return { label: `${index + 1}. ${label}`, value: value || label };
     })
     .filter((item): item is { label: string; value: string } => Boolean(item));
 }
 
-export function getPendingActionView(item: PendingActionItem): PendingActionView {
-  const payload = pickRecord(item.payload, item.parsed);
-  const parsed = pickRecord(payload?.parsed, payload?.data, payload?.transaction, payload) || payload;
-  const isBatch = item.intent === 'batch' || Array.isArray(parsed?.actions);
-  const currency = readString(parsed, ['currency', 'currencyCode']) || 'RUB';
-  const amount = readNumber(parsed, ['amount', 'value', 'sum', 'balance']);
-  const amountLabel = formatAmount(amount, currency);
-  const description = readString(parsed, ['description', 'merchant', 'title', 'name']);
-  const category = readString(parsed, ['categoryName', 'category', 'rawCategory', 'categoryTitle']);
-  const section = readString(parsed, ['sectionName', 'section', 'sectionTitle']);
-  const account = readString(parsed, ['accountName', 'account', 'fromAccountName', 'name']);
-  const toAccount = readString(parsed, ['toAccountName', 'targetAccountName']);
+function resolveParsed(item: PendingActionItem) {
+  const root = pickRecord(item.parsed, item.payload) ?? {};
+  const payload = pickRecord(root.parsed, root.data, root.transaction, root) ?? root;
+  return payload;
+}
 
-  const rows = isBatch
+export function getPendingActionView(item: PendingActionItem): PendingActionView {
+  const parsed = resolveParsed(item);
+  const action = firstAction(parsed) ?? parsed;
+  const actionCount = getActionCount(parsed);
+  const isBatch = item.intent === 'batch' || Array.isArray(parsed?.actions);
+  const actionTool = readString(action, ['tool', 'intent']) || readString(action, ['kind']) || item.intent || item.type;
+  const currency = readString(action, ['currency', 'currencyCode']) || 'RUB';
+  const amount = readNumber(action, ['amount', 'value', 'sum', 'balance', 'initialBalance']);
+  const amountLabel = formatAmount(amount, currency);
+  const description = readString(action, ['description', 'merchant', 'title', 'name']);
+  const category = readString(action, ['categoryName', 'category', 'rawCategory', 'categoryTitle']);
+  const section = readString(action, ['sectionName', 'section', 'sectionTitle']);
+  const kind = readString(action, ['kind', 'type']);
+  const account = readString(action, ['accountName', 'account', 'fromAccountName']);
+  const toAccount = readString(action, ['toAccountName', 'targetAccountName', 'toAccount']);
+
+  const rows = isBatch && actionCount > 1
     ? getBatchRows(parsed)
     : compactRows([
+        { label: 'Тип', value: intentLabel(actionTool, kind) },
         { label: 'Сумма', value: amountLabel },
-        { label: 'Название', value: description },
-        { label: 'Раздел', value: section },
-        { label: 'Категория', value: category },
         { label: 'Счёт', value: account },
         { label: 'Куда', value: toAccount },
+        { label: 'Категория', value: category },
+        { label: 'Раздел', value: section },
+        { label: 'Описание', value: description && description !== category ? description : undefined },
       ]);
 
-  const title = isBatch
-    ? `Проверь ${getBatchRows(parsed).length || 'несколько'} действия`
-    : item.summary || description || `${intentLabel(item.intent, item.type)} ожидает подтверждения`;
+  const label = intentLabel(actionTool, kind);
+  const title = amountLabel
+    ? label
+    : isBatch && actionCount > 1
+      ? `Проверь ${actionCount} действия`
+      : item.summary || description || label;
 
   return {
     title,
-    subtitle: item.command || 'Проверь действие перед выполнением',
-    intentLabel: isBatch ? 'Пакет действий' : intentLabel(item.intent, item.type),
+    subtitle: item.command || 'Проверь перед сохранением',
+    intentLabel: label,
     riskLabel: riskLabel(item.riskLevel),
     riskTone: riskTone(item.riskLevel),
     amountLabel,
     currency,
     rows,
-    explanation: 'Проверь детали. Если AI ошибся — исправь поля перед подтверждением.',
+    explanation: 'AI подготовил действие. Проверь сумму, счёт и категорию.',
+    actionCount,
   };
 }
 

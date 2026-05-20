@@ -5,8 +5,6 @@ import { FinancePreviewCard } from '@/features/chat/ui/FinancePreviewCard';
 import { AICoreOrb } from '@/features/ai-core/ui/AICoreOrb';
 import { AICoreInput } from '@/features/ai-core/ui/AICoreInput';
 import { AICoreBalanceHero } from '@/features/ai-core/ui/AICoreBalanceHero';
-import { AICoreQuickPrompts } from '@/features/ai-core/ui/AICoreQuickPrompts';
-import { AICoreRecentActivity } from '@/features/ai-core/ui/AICoreRecentActivity';
 import { useAICoreController } from '@/features/ai-core/model/useAICoreController';
 import { CommandListSheet } from '@/features/commands/ui/CommandListSheet';
 import { LastTransactionCard } from '@/features/transactions/ui/LastTransactionCard';
@@ -111,40 +109,47 @@ export function AICoreScreen() {
       <div className="mx-auto flex h-full w-full max-w-[560px] flex-col overflow-hidden">
 
         {/* HEADER */}
-        <header className="shrink-0 px-4 pt-5 pb-2">
-          <div className="flex items-center justify-between">
-
+        <header className="shrink-0 px-4 pt-5 pb-2" data-no-swipe="true">
+          <div className="grid grid-cols-[auto_1fr_auto] items-center gap-3">
             <button
               type="button"
               onClick={goBack}
-              className="flex h-11 min-w-11 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] px-3 text-sm text-white/72"
+              className="flex h-10 min-w-10 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] px-3 text-sm text-white/72"
             >
               Назад
             </button>
 
-            <div className="text-center">
-              <div className="text-[32px] font-semibold tracking-tight leading-none">
+            <div className="min-w-0 text-center">
+              <div className="truncate text-[28px] font-semibold leading-none tracking-tight">
                 AI-Financer
               </div>
 
-              <div className="mt-1 text-xs text-white/38">
+              <div className="mt-1 truncate text-xs text-white/38">
                 финансовый помощник
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex shrink-0 items-center gap-2">
               <button
                 type="button"
                 onClick={openCommandList}
-                className="flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-white/[0.04]"
+                className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/[0.04]"
                 aria-label="Команды"
               >
-                <span className="text-emerald-200 text-xl">⌘</span>
+                <span className="text-lg text-emerald-200">⌘</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setHistoryOpen(true)}
+                className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] text-sm text-white/72"
+                aria-label="История операций"
+              >
+                ◷
               </button>
               <button
                 type="button"
                 onClick={goHome}
-                className="flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] text-sm text-white/72"
+                className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] text-sm text-white/72"
                 aria-label="Домой"
               >
                 ⌂
@@ -208,18 +213,15 @@ export function AICoreScreen() {
                 onLockedCancel={cancelLockedVoice}
               />
 
-              <div className="mt-5 text-center">
-                <div className="text-lg font-medium text-white">
+              <div className="mt-4 text-center">
+                <div className="text-base font-medium text-white">
                   Зажми и говори
-                </div>
-
-                <div className="mt-1 text-sm text-white/38">
-                  вверх — замок, влево — отмена
                 </div>
               </div>
             </section>
 
             {/* INPUT */}
+            <div className="pb-2">
             {isCommandPanelOpen ? (
                <AICoreInput
                   value={inputValue}
@@ -229,9 +231,7 @@ export function AICoreScreen() {
                   disabled={isSending}
               />
             ) : null}
-
-            {/* QUICK COMMANDS */}
-            <AICoreQuickPrompts onRunCommand={runQuickCommand} />
+            </div>
 
             {/* PREVIEW */}
             {latestAssistantMessage?.kind === 'preview' ? (
@@ -271,9 +271,6 @@ export function AICoreScreen() {
                 На этом устройстве голос может работать только через серверную расшифровку.
               </section>
             ) : null}
-
-            {/* HISTORY PREVIEW */}
-            <AICoreRecentActivity />
 
           </div>
         </div>

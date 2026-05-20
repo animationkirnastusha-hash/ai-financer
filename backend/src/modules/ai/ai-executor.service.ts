@@ -165,10 +165,14 @@ export class AIExecutorService {
       const amount = this.toInteger(resolved.amountInAccountCurrency ?? input.amount, 0);
       if (amount <= 0) throw new BadRequestError('Transaction amount must be positive');
 
+      const sectionId = typeof resolved.sectionId === 'string'
+        ? resolved.sectionId
+        : await this.findOrCreateSectionId(tx, userId, typeof input.section === 'string' ? input.section : '');
+
       const categoryId = await this.findOrCreateCategoryId(tx, userId, {
         name: typeof input.category === 'string' ? input.category : '',
         type: kind,
-        sectionId: typeof resolved.sectionId === 'string' ? resolved.sectionId : null,
+        sectionId,
       });
 
       await this.applyBalanceEffect(tx, {
@@ -183,7 +187,7 @@ export class AIExecutorService {
           userId,
           accountId,
           categoryId,
-          sectionId: typeof resolved.sectionId === 'string' ? resolved.sectionId : null,
+          sectionId,
           amount,
           type: kind,
           description: typeof input.description === 'string' && input.description.trim()
@@ -444,6 +448,27 @@ export class AIExecutorService {
     }
 
     throw new Error('Cannot execute transaction: account was not resolved');
+  }
+
+  private async findOrCreateSectionId(
+    tx: Prisma.TransactionClient,
+    userId: string,
+    rawName: string,
+  ) {
+    const name = rawName.trim();
+    if (!name) return null;
+
+    const existing = await tx.section.findFirst({ where: { userId, name } });
+    if (existing) return existing.id;
+
+    const created = await tx.section.create({
+      data: {
+        userId,
+        name,
+      },
+    });
+
+    return created.id;
   }
 
   private async findOrCreateCategoryId(

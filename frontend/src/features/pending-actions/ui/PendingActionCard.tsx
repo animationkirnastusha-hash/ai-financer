@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
+import type { MouseEvent } from 'react';
 
 import { Button, Surface } from '@/shared/ui';
-import { formatTime } from '@/shared/lib/format';
 import { cn } from '@/shared/lib/cn';
 import type { PendingActionItem } from '@/features/pending-actions/model/pendingActions.types';
 import { getPendingActionView } from '@/features/pending-actions/lib/pendingActionView';
@@ -29,39 +29,45 @@ function getActions(parsed: Record<string, unknown>): EditableAction[] {
   if (parsed.intent === 'batch' && Array.isArray(parsed.actions)) {
     return parsed.actions.filter(isRecord);
   }
-  return [parsed].filter((item) => Object.keys(item).length > 0);
+  return [parsed].filter((entry) => Object.keys(entry).length > 0);
 }
 
-function formatActionTitle(action: EditableAction, index: number) {
-  const intent = String(action.intent || '').toLowerCase();
-  if (intent === 'create_account') return `${index + 1}. Создать счёт`;
-  if (intent === 'income') return `${index + 1}. Доход`;
-  if (intent === 'expense') return `${index + 1}. Расход`;
-  if (intent === 'transfer') return `${index + 1}. Перевод`;
-  if (intent === 'create_category') return `${index + 1}. Категория`;
-  if (intent === 'create_section') return `${index + 1}. Раздел`;
-  return `${index + 1}. Действие`;
+function getActionInput(action: EditableAction) {
+  return isRecord(action.input) ? action.input : action;
+}
+
+function getActionTool(action: EditableAction) {
+  return String(action.tool || action.intent || getActionInput(action).kind || '').toLowerCase();
 }
 
 const fieldLabels: Record<string, string> = {
   name: 'Название',
   type: 'Тип',
+  kind: 'Тип',
   currency: 'Валюта',
   balance: 'Баланс',
+  initialBalance: 'Баланс',
   amount: 'Сумма',
+  category: 'Категория',
   rawCategory: 'Категория',
   description: 'Описание',
+  account: 'Счёт',
   accountName: 'Счёт',
+  fromAccount: 'Откуда',
   fromAccountName: 'Откуда',
+  toAccount: 'Куда',
   toAccountName: 'Куда',
+  section: 'Раздел',
   sectionName: 'Раздел',
 };
 
 const editableFieldsByIntent: Record<string, string[]> = {
-  create_account: ['name', 'type', 'currency', 'balance'],
-  income: ['amount', 'accountName', 'rawCategory', 'description', 'sectionName'],
-  expense: ['amount', 'accountName', 'rawCategory', 'description', 'sectionName'],
-  transfer: ['amount', 'fromAccountName', 'toAccountName'],
+  create_account: ['name', 'type', 'currency', 'initialBalance'],
+  income: ['amount', 'account', 'category', 'section', 'description'],
+  expense: ['amount', 'account', 'category', 'section', 'description'],
+  create_transaction: ['amount', 'account', 'category', 'section', 'description'],
+  transfer_money: ['amount', 'fromAccount', 'toAccount'],
+  transfer: ['amount', 'fromAccount', 'toAccount'],
   create_category: ['name', 'type', 'sectionName'],
   create_section: ['name'],
 };
@@ -72,7 +78,7 @@ function normalizeInputValue(value: unknown) {
 }
 
 function coerceValue(key: string, value: string): unknown {
-  if (key === 'amount' || key === 'balance') {
+  if (key === 'amount' || key === 'balance' || key === 'initialBalance') {
     const number = Number(value.replace(/\s/g, '').replace(',', '.'));
     return Number.isFinite(number) ? number : value;
   }
@@ -86,6 +92,20 @@ function rebuildParsed(original: Record<string, unknown>, actions: EditableActio
   return actions[0] ? { ...original, ...actions[0] } : original;
 }
 
+function updateNestedActionField(action: EditableAction, key: string, value: string) {
+  if (isRecord(action.input)) {
+    return {
+      ...action,
+      input: {
+        ...action.input,
+        [key]: coerceValue(key, value),
+      },
+    };
+  }
+
+  return { ...action, [key]: coerceValue(key, value) };
+}
+
 export function PendingActionCard({ item, onConfirm, onCancel, onUpdate }: Props) {
   const [processingAction, setProcessingAction] = useState<'confirm' | 'cancel' | 'save' | null>(null);
   const [showEditor, setShowEditor] = useState(false);
@@ -97,12 +117,12 @@ export function PendingActionCard({ item, onConfirm, onCancel, onUpdate }: Props
   const updateActionField = (index: number, key: string, value: string) => {
     setActions((current) =>
       current.map((action, actionIndex) =>
-        actionIndex === index ? { ...action, [key]: coerceValue(key, value) } : action,
+        actionIndex === index ? updateNestedActionField(action, key, value) : action,
       ),
     );
   };
 
-  const handleConfirm = async (event: React.MouseEvent<HTMLButtonElement>) => {
+  const handleConfirm = async (event: MouseEvent<HTMLButtonElement>) => {
     event.preventDefault();
     event.stopPropagation();
     if (isProcessing) return;
@@ -114,7 +134,7 @@ export function PendingActionCard({ item, onConfirm, onCancel, onUpdate }: Props
     }
   };
 
-  const handleCancel = async (event: React.MouseEvent<HTMLButtonElement>) => {
+  const handleCancel = async (event: MouseEvent<HTMLButtonElement>) => {
     event.preventDefault();
     event.stopPropagation();
     if (isProcessing) return;
@@ -138,13 +158,13 @@ export function PendingActionCard({ item, onConfirm, onCancel, onUpdate }: Props
   };
 
   return (
-    <Surface className="overflow-hidden border-amber-300/18 bg-[radial-gradient(circle_at_top_left,rgba(251,191,36,0.16),transparent_34%),rgba(255,255,255,0.045)]">
+    <Surface className="overflow-hidden border-emerald-300/16 bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.12),transparent_34%),rgba(255,255,255,0.045)]">
       <div className="p-4">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="rounded-full border border-amber-300/20 bg-amber-300/10 px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.16em] text-amber-100/85">
-                Проверь действие
+              <span className="rounded-full border border-emerald-300/20 bg-emerald-300/10 px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.16em] text-emerald-100/85">
+                Проверь
               </span>
               <span
                 className={cn(
@@ -158,25 +178,21 @@ export function PendingActionCard({ item, onConfirm, onCancel, onUpdate }: Props
               </span>
             </div>
 
-            <div className="mt-3 text-[11px] uppercase tracking-[0.16em] text-white/35">
+            <div className="mt-4 text-[11px] uppercase tracking-[0.16em] text-white/35">
               {view.intentLabel}
             </div>
 
-            <div className="mt-1 text-lg font-semibold leading-snug text-white">
+            <div className="mt-1 text-3xl font-semibold tracking-[-0.04em] text-white">
               {view.amountLabel || view.title}
             </div>
 
-            {view.amountLabel && view.title ? (
+            {view.amountLabel ? (
               <div className="mt-1 text-sm leading-5 text-white/65">{view.title}</div>
             ) : null}
           </div>
-
-          <div className="shrink-0 text-[11px] text-white/35">
-            {item.createdAt ? formatTime(item.createdAt) : '—'}
-          </div>
         </div>
 
-        <div className="mt-4 rounded-[22px] border border-white/8 bg-black/20 px-3.5 py-3 text-sm leading-6 text-white/76">
+        <div className="mt-4 rounded-[22px] border border-white/8 bg-black/20 px-3.5 py-3 text-sm leading-6 text-white/72">
           {view.explanation}
         </div>
 
@@ -200,20 +216,23 @@ export function PendingActionCard({ item, onConfirm, onCancel, onUpdate }: Props
             onClick={() => setShowEditor((value) => !value)}
             className="mt-3 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs text-white/70 transition active:scale-95"
           >
-            {showEditor ? 'Скрыть правки' : 'Исправить перед подтверждением'}
+            {showEditor ? 'Скрыть правки' : 'Изменить'}
           </button>
         ) : null}
 
         {showEditor ? (
           <div className="mt-3 space-y-3 rounded-[24px] border border-white/8 bg-black/24 p-3">
             {actions.map((action, index) => {
-              const intent = String(action.intent || '');
-              const fields = editableFieldsByIntent[intent] ?? Object.keys(action).filter((key) => key !== 'intent');
+              const intent = getActionTool(action);
+              const input = getActionInput(action);
+              const fields = editableFieldsByIntent[intent]
+                ?? editableFieldsByIntent[String(input.kind || '').toLowerCase()]
+                ?? Object.keys(input).filter((key) => !key.startsWith('__') && key !== 'intent' && key !== 'tool');
 
               return (
                 <div key={`${intent}-${index}`} className="space-y-2 rounded-[20px] border border-white/8 bg-white/[0.03] p-3">
                   <div className="text-xs font-medium uppercase tracking-[0.14em] text-white/40">
-                    {formatActionTitle(action, index)}
+                    {view.actionCount > 1 ? `${index + 1}. ` : ''}{intent || 'действие'}
                   </div>
 
                   <div className="grid gap-2">
@@ -221,7 +240,7 @@ export function PendingActionCard({ item, onConfirm, onCancel, onUpdate }: Props
                       <label key={field} className="grid gap-1.5 text-xs text-white/45">
                         {fieldLabels[field] ?? field}
                         <input
-                          value={normalizeInputValue(action[field])}
+                          value={normalizeInputValue(input[field])}
                           onChange={(event) => updateActionField(index, field, event.target.value)}
                           className="h-10 rounded-2xl border border-white/10 bg-black/28 px-3 text-sm text-white outline-none focus:border-emerald-300/35"
                         />
@@ -233,7 +252,7 @@ export function PendingActionCard({ item, onConfirm, onCancel, onUpdate }: Props
             })}
 
             <Button disabled={isProcessing || !onUpdate} onClick={handleSave} fullWidth>
-              {processingAction === 'save' ? 'Сохраняю...' : 'Сохранить правки'}
+              {processingAction === 'save' ? 'Сохраняю...' : 'Сохранить'}
             </Button>
           </div>
         ) : null}

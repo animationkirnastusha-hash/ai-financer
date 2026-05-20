@@ -36,7 +36,7 @@ export function CommandListSheet({ open, onClose, onRunCommand }: Props) {
           <div className="flex items-center justify-between gap-3">
             <div>
               <div className="text-[11px] uppercase tracking-[0.16em] text-white/35">
-                AI Core
+                Команды
               </div>
               <div className="mt-1 text-lg font-semibold text-white">
                 Говори естественно
@@ -53,8 +53,7 @@ export function CommandListSheet({ open, onClose, onRunCommand }: Props) {
           </div>
 
           <div className="mt-5 rounded-[24px] border border-emerald-300/10 bg-emerald-300/[0.06] p-4 text-sm leading-6 text-white/72">
-            AI понимает не шаблоны, а смысл: счета, доходы, расходы, переводы,
-            аналитику, настройки и навигацию. Выбери пример или напиши свою фразу.
+            Это только примеры. Можно писать или говорить своими словами: AI разберёт смысл, покажет проверку и попросит подтверждение там, где это нужно.
           </div>
 
           <div className="mt-5 space-y-5">

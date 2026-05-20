@@ -143,16 +143,24 @@ export class AIValidatorService {
           }
         }
 
-        const category = this.cleanEntityName(input.category) || this.cleanEntityName(input.description) || (kind === 'income' ? 'Доход' : 'Расход');
-        const section = this.cleanEntityName(input.section);
-        const description = this.cleanEntityName(input.description) || category;
+        const rawCategory = this.cleanEntityName(input.category);
+        const rawSection = this.cleanEntityName(input.section);
+        const rawDescription = this.cleanEntityName(input.description);
+        const taxonomy = this.inferTransactionTaxonomy({
+          kind: kind ?? 'expense',
+          category: rawCategory,
+          section: rawSection,
+          description: rawDescription,
+          text: userText,
+        });
+        const description = rawDescription || taxonomy.category;
 
         input.kind = kind ?? 'expense';
         input.amount = amount ?? 0;
         input.account = accountRef || input.account || null;
         input.currency = moneyCurrency;
-        input.category = category;
-        input.section = section;
+        input.category = taxonomy.category;
+        input.section = taxonomy.section;
         input.description = description;
 
         const amountInAccountCurrency = amount ? convertMoney(amount, moneyCurrency, targetCurrency) : 0;
@@ -178,9 +186,12 @@ export class AIValidatorService {
           resolved.amountInAccountCurrency = convertMoney(amount, moneyCurrency, plannedAccount.currency);
         }
 
-        const existingCategory = category ? this.findByName(categories, category) : null;
-        const existingSection = section ? this.findByName(sections, section) : null;
-        if (existingCategory) resolved.categoryId = existingCategory.id;
+        const existingCategory = taxonomy.category ? this.findByName(categories, taxonomy.category) : null;
+        const existingSection = taxonomy.section ? this.findByName(sections, taxonomy.section) : null;
+        if (existingCategory) {
+          resolved.categoryId = existingCategory.id;
+          if (typeof existingCategory.sectionId === 'string') resolved.sectionId = existingCategory.sectionId;
+        }
         if (existingSection) resolved.sectionId = existingSection.id;
       }
 
@@ -415,6 +426,67 @@ export class AIValidatorService {
     }
 
     return fallback;
+  }
+
+  private inferTransactionTaxonomy(params: {
+    kind: 'income' | 'expense';
+    category: string;
+    section: string;
+    description: string;
+    text: string;
+  }) {
+    const haystack = `${params.category} ${params.description} ${params.text}`.toLowerCase();
+    const genericCategory = !params.category || ['расход', 'доход', 'операция', 'покупка'].includes(params.category.toLowerCase());
+
+    if (params.kind === 'income') {
+      if (haystack.includes('зарплат') || haystack.includes('salary')) {
+        return {
+          category: genericCategory ? 'Зарплата' : params.category,
+          section: params.section || 'Доходы',
+        };
+      }
+
+      if (haystack.includes('кэшбек') || haystack.includes('cashback')) {
+        return {
+          category: genericCategory ? 'Кэшбек' : params.category,
+          section: params.section || 'Доходы',
+        };
+      }
+
+      return {
+        category: genericCategory ? 'Доход' : params.category,
+        section: params.section || 'Доходы',
+      };
+    }
+
+    const rules: Array<{ section: string; category: string; match: string[] }> = [
+      { section: 'Еда и напитки', category: 'Кофе', match: ['кофе', 'coffee', 'капучино', 'латте', 'эспрессо'] },
+      { section: 'Еда и напитки', category: 'Рестораны', match: ['ресторан', 'кафе', 'ужин', 'обед', 'доставка', 'еда', 'food'] },
+      { section: 'Продукты', category: 'Продукты', match: ['продукты', 'магазин', 'супермаркет', 'пятерочка', 'перекресток', 'магнит', 'grocery'] },
+      { section: 'Транспорт', category: 'Такси', match: ['такси', 'uber', 'яндекс go', 'яндекс такси'] },
+      { section: 'Транспорт', category: 'Транспорт', match: ['метро', 'автобус', 'транспорт', 'бензин', 'парковка'] },
+      { section: 'Дом', category: 'Жильё', match: ['аренда', 'квартира', 'жилье', 'жильё', 'коммунал', 'интернет'] },
+      { section: 'Подписки', category: 'Подписки', match: ['подписка', 'netflix', 'spotify', 'apple', 'icloud', 'telegram premium'] },
+      { section: 'Здоровье', category: 'Здоровье', match: ['аптека', 'врач', 'медицина', 'лекар', 'здоров'] },
+      { section: 'Покупки', category: 'Одежда', match: ['одежда', 'обувь', 'футболка', 'куртка'] },
+      { section: 'Покупки', category: 'Покупки', match: ['покупка', 'маркет', 'wildberries', 'ozon', 'amazon'] },
+      { section: 'Развлечения', category: 'Развлечения', match: ['кино', 'бар', 'игра', 'театр', 'развлеч'] },
+      { section: 'Образование', category: 'Образование', match: ['курс', 'книга', 'обучение', 'образование'] },
+    ];
+
+    const matched = rules.find((rule) => rule.match.some((token) => haystack.includes(token)));
+
+    if (matched) {
+      return {
+        category: genericCategory ? matched.category : params.category,
+        section: params.section || matched.section,
+      };
+    }
+
+    return {
+      category: genericCategory ? (params.description || 'Расход') : params.category,
+      section: params.section || 'Прочее',
+    };
   }
 
   private coerceAccountType(value: unknown, fallback: AIAccountType | null): AIAccountType | null {

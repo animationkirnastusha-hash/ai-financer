@@ -17,7 +17,7 @@ export const navigationCommands: CommandCatalogItem[] = [
   {
     id: 'income-salary',
     label: 'Добавить доход',
-    description: 'Доход проходит через понятный preview и confirmation.',
+    description: 'AI покажет проверку и попросит подтверждение, если оно нужно.',
     command: 'доход 50000 на основной счет',
     group: 'money',
   },
@@ -65,7 +65,7 @@ export const navigationCommands: CommandCatalogItem[] = [
   },
   {
     id: 'open-dashboard',
-    label: 'Открыть Dashboard',
+    label: 'Открыть главную',
     description: 'Быстрый переход к живой финансовой сводке.',
     command: 'покажи главную',
     group: 'navigation',
@@ -73,7 +73,7 @@ export const navigationCommands: CommandCatalogItem[] = [
   {
     id: 'open-transactions',
     label: 'Открыть операции',
-    description: 'Переход к timeline операций.',
+    description: 'Переход к истории операций.',
     command: 'покажи историю операций',
     group: 'navigation',
   },
@@ -100,16 +100,16 @@ export const navigationCommands: CommandCatalogItem[] = [
   },
   {
     id: 'open-companion',
-    label: 'Открыть Companion',
-    description: 'Переход к subtle presence layer.',
-    command: 'открой companion',
+    label: 'Открыть помощника',
+    description: 'Переход к помощнику.',
+    command: 'открой помощника',
     group: 'navigation',
   },
   {
     id: 'open-premium',
-    label: 'Открыть Premium',
-    description: 'Переход к calm capability expansion.',
-    command: 'покажи premium',
+    label: 'Открыть Премиум',
+    description: 'Переход к расширенным возможностям.',
+    command: 'покажи премиум',
     group: 'navigation',
   },
   {

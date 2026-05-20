@@ -9,8 +9,6 @@ import { PageHeader } from '@/shared/ui/PageHeader';
 import { EmptyState } from '@/shared/ui/EmptyState';
 import { ErrorState } from '@/shared/ui/ErrorState';
 import { formatMoney } from '@/shared/lib/money';
-import { PremiumInlineCard } from '@/features/premium/ui/PremiumInlineCard';
-import { usePremiumStore } from '@/features/premium/model/premium.store';
 
 type Props = {
   onBack?: () => void;
@@ -39,7 +37,6 @@ export default function TransactionsPage({ onBack }: Props = {}) {
   const closeEdit = useTransactionsStore((state) => state.closeEdit);
   const saveEdit = useTransactionsStore((state) => state.saveEdit);
   const deleteItem = useTransactionsStore((state) => state.deleteItem);
-  const openPremium = usePremiumStore((state) => state.openPremium);
 
   useEffect(() => {
     void loadTransactions();
@@ -82,22 +79,6 @@ export default function TransactionsPage({ onBack }: Props = {}) {
             income={formatMoney(summary.income, 'RUB', { sign: 'plus' })}
           />
 
-          <PremiumInlineCard
-            onOpen={openPremium}
-            trigger={{
-              kind: 'locked_insight',
-              title: 'AI может найти лишние расходы',
-              description:
-                'Базовый режим показывает операции и суммы. Премиум разберёт повторяющиеся траты, подписки и категории риска.',
-              cta: 'Показать скрытые расходы',
-              value:
-                summary.expenses > 0
-                  ? `Расходы месяца: ${formatMoney(summary.expenses, 'RUB', {
-                      sign: 'minus',
-                    })}`
-                  : 'Добавь операции — AI начнёт анализ',
-            }}
-          />
 
           {summary.foreignCount > 0 ? (
             <div className="rounded-[24px] border border-amber-300/15 bg-amber-300/8 p-4 text-sm leading-6 text-amber-100/75">
@@ -106,23 +87,6 @@ export default function TransactionsPage({ onBack }: Props = {}) {
             </div>
           ) : null}
 
-          <section className="rounded-[28px] border border-white/8 bg-white/[0.04] p-4">
-            <div className="text-[11px] uppercase tracking-[0.16em] text-white/35">
-              Действия через AI
-            </div>
-
-            <div className="mt-3 text-sm leading-6 text-white/60">
-              Можно редактировать вручную или попросить AI: изменить категорию, исправить сумму или удалить ошибочную запись.
-            </div>
-
-            <button
-              type="button"
-              onClick={() => navigateTo('ai-core')}
-              className="mt-4 rounded-2xl border border-white/10 bg-white/10 px-4 py-2 text-sm transition hover:bg-white/15"
-            >
-              Открыть AI
-            </button>
-          </section>
 
           {error && transactions.length === 0 ? (
             <ErrorState

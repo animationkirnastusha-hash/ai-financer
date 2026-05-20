@@ -3,7 +3,7 @@ import { useAccountsStore } from '@/features/accounts/model/accounts.store';
 import { useNavigationStore } from '@/features/navigation/model/navigation.store';
 import { useTransactionsStore } from '@/features/transactions/model/transactions.store';
 import { CompanionPresence } from '@/features/companion/ui/CompanionPresence';
-import { formatMoney, formatTransactionDate } from '@/shared/lib/money';
+import { formatMoney } from '@/shared/lib/money';
 
 const quickActions = [
   { label: 'Расход', prompt: 'кофе 300' },
@@ -47,11 +47,10 @@ export default function DashboardPage() {
     return { totalRub, income, expenses, delta };
   }, [accounts, transactions]);
 
-  const recent = transactions.slice(0, 4);
   const isEmptyState = accounts.length === 0 && transactions.length === 0;
 
   return (
-    <div className="h-full overflow-y-auto px-4 pb-28 pt-[calc(env(safe-area-inset-top)+70px)] text-white">
+    <div className="h-full overflow-y-auto px-4 pb-28 pt-[calc(env(safe-area-inset-top)+126px)] text-white">
       <div className="mx-auto w-full max-w-[620px] space-y-4">
         <header className="rounded-[34px] border border-white/10 bg-white/[0.045] p-5 shadow-2xl">
           <div className="flex items-start justify-between gap-4">
@@ -114,36 +113,6 @@ export default function DashboardPage() {
           ))}
         </section>
 
-        <section className="rounded-[30px] border border-white/10 bg-white/[0.04] p-4">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <div className="text-lg font-semibold">Последние операции</div>
-              <div className="mt-1 text-sm text-white/45">Новые записи появятся здесь.</div>
-            </div>
-            <button onClick={() => navigateTo('transactions')} className="text-sm text-emerald-200/80">Все</button>
-          </div>
-          <div className="mt-4 space-y-2">
-            {recent.length === 0 ? (
-              <button
-                type="button"
-                onClick={() => openAIWithCommand('кофе 300')}
-                className="w-full rounded-[22px] border border-white/8 bg-black/18 p-4 text-left text-sm text-white/45 transition active:scale-[0.99]"
-              >
-                Пока нет операций. Можно начать с команды “кофе 300”.
-              </button>
-            ) : (
-              recent.map((item) => (
-                <div key={item.id} className="flex items-center justify-between gap-3 rounded-[22px] border border-white/8 bg-black/18 p-3">
-                  <div className="min-w-0">
-                    <div className="truncate text-sm font-medium">{item.description || item.category?.name || 'Операция'}</div>
-                    <div className="mt-1 text-xs text-white/42">{item.account?.name || 'Счёт'} · {formatTransactionDate(item.date)}</div>
-                  </div>
-                  <div className="text-sm font-semibold">{formatMoney(Number(item.amount) || 0, item.account?.currency || 'RUB', { sign: item.type === 'income' ? 'plus' : item.type === 'expense' ? 'minus' : 'none' })}</div>
-                </div>
-              ))
-            )}
-          </div>
-        </section>
       </div>
     </div>
   );

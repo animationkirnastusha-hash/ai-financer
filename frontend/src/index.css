@@ -226,8 +226,9 @@ body.ai-any-modal-open .ai-core-input-shell { display: none !important; }
 
 .ai-page-card-compact {
   min-width: 0;
-  border-radius: 24px;
+  border-radius: 22px;
   border: 1px solid rgba(255, 255, 255, 0.08);
   background: rgba(255, 255, 255, 0.04);
-  padding: 14px;
+  padding: 12px;
+  overflow: hidden;
 }

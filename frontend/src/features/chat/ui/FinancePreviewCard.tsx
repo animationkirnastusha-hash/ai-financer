@@ -50,11 +50,11 @@ export function FinancePreviewCard({
   };
 
   return (
-    <Surface className="mx-auto w-full max-w-[430px] overflow-hidden border-amber-300/18 bg-[radial-gradient(circle_at_top_left,rgba(251,191,36,0.16),transparent_35%),rgba(255,255,255,0.045)]">
+    <Surface className="mx-auto w-full max-w-[430px] overflow-hidden border-emerald-300/16 bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.12),transparent_35%),rgba(255,255,255,0.045)]">
       <div className="p-4">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="rounded-full border border-amber-300/20 bg-amber-300/10 px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.16em] text-amber-100/85">
-            Требуется подтверждение
+          <span className="rounded-full border border-emerald-300/20 bg-emerald-300/10 px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.16em] text-emerald-100/85">
+            Проверь
           </span>
           <span
             className={cn(
@@ -72,7 +72,7 @@ export function FinancePreviewCard({
           {view.intentLabel}
         </div>
 
-        <div className="mt-1 text-2xl font-semibold tracking-tight text-white">
+        <div className="mt-1 text-3xl font-semibold tracking-[-0.04em] text-white">
           {view.amountLabel || view.title}
         </div>
 
@@ -80,8 +80,8 @@ export function FinancePreviewCard({
           <div className="mt-1 text-sm leading-5 text-white/65">{view.title}</div>
         ) : null}
 
-        <div className="mt-4 rounded-[22px] border border-white/8 bg-black/20 px-3.5 py-3 text-sm leading-6 text-white/76">
-          <span className="text-amber-100">ИИ понял так:</span> {view.explanation}
+        <div className="mt-4 rounded-[22px] border border-white/8 bg-black/20 px-3.5 py-3 text-sm leading-6 text-white/72">
+          {view.explanation}
         </div>
 
         {view.rows.length > 0 ? (
