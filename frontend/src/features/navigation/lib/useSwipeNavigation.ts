@@ -5,10 +5,9 @@ import type { AppScreen } from '@/features/navigation/model/navigation.store';
 type Options = {
   currentScreen: AppScreen;
   navigateTo: (screen: AppScreen) => void;
-  goBack: () => void;
 };
 
-const MAIN_SCREENS: AppScreen[] = ['dashboard', 'ai-core', 'accounts'];
+export const MAIN_SWIPE_SCREENS: AppScreen[] = ['transactions', 'dashboard', 'analytics'];
 
 function isInteractiveTarget(target: EventTarget | null) {
   if (!(target instanceof HTMLElement)) return false;
@@ -22,11 +21,13 @@ function isBlockedByUi() {
   return (
     document.body.classList.contains('ai-voice-gesture-active') ||
     document.body.classList.contains('ai-composer-focused') ||
-    document.body.classList.contains('ai-core-modal-open') || document.body.classList.contains('ai-any-modal-open')
+    document.body.classList.contains('ai-core-modal-open') ||
+    document.body.classList.contains('ai-any-modal-open') ||
+    document.body.classList.contains('ai-modal-open')
   );
 }
 
-export function useSwipeNavigation({ currentScreen, navigateTo, goBack }: Options) {
+export function useSwipeNavigation({ currentScreen, navigateTo }: Options) {
   const startX = useRef(0);
   const startY = useRef(0);
   const startedOnInteractive = useRef(false);
@@ -50,21 +51,13 @@ export function useSwipeNavigation({ currentScreen, navigateTo, goBack }: Option
       const deltaX = touch.clientX - startX.current;
       const deltaY = touch.clientY - startY.current;
 
-      if (Math.abs(deltaX) < 72 || Math.abs(deltaY) > 70) return;
+      if (Math.abs(deltaX) < 68 || Math.abs(deltaY) > 72) return;
 
-      const currentIndex = MAIN_SCREENS.indexOf(currentScreen);
-
-      if (currentIndex === -1) {
-        if (deltaX > 0) {
-          goBack();
-          telegramHaptic('light');
-        }
-        return;
-      }
+      const currentIndex = MAIN_SWIPE_SCREENS.indexOf(currentScreen);
+      if (currentIndex === -1) return;
 
       const nextIndex = deltaX < 0 ? currentIndex + 1 : currentIndex - 1;
-      const nextScreen = MAIN_SCREENS[nextIndex];
-
+      const nextScreen = MAIN_SWIPE_SCREENS[nextIndex];
       if (!nextScreen) return;
 
       document.body.classList.toggle('ai-screen-slide-left', deltaX < 0);
@@ -81,9 +74,9 @@ export function useSwipeNavigation({ currentScreen, navigateTo, goBack }: Option
       window.removeEventListener('touchstart', handleTouchStart);
       window.removeEventListener('touchend', handleTouchEnd);
     };
-  }, [currentScreen, goBack, navigateTo]);
+  }, [currentScreen, navigateTo]);
 
   return {
-    mainScreens: MAIN_SCREENS,
+    mainScreens: MAIN_SWIPE_SCREENS,
   };
 }

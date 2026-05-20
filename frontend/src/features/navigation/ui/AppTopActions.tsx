@@ -1,37 +1,31 @@
 import { useNavigationStore } from '@/features/navigation/model/navigation.store';
+import { LanguageSwitcher } from '@/shared/ui/LanguageSwitcher';
 
-const MAIN_WITH_EXTERNAL_COMMANDS = new Set(['dashboard', 'accounts']);
+const SCREENS_WITH_COMMANDS = new Set(['dashboard', 'transactions', 'analytics']);
 
 export function AppTopActions() {
   const currentScreen = useNavigationStore((state) => state.currentScreen);
   const navigateTo = useNavigationStore((state) => state.navigateTo);
-  const openGlobalCommandList = useNavigationStore(
-    (state) => state.openGlobalCommandList,
-  );
-  const hasSystemNotifications = useNavigationStore(
-    (state) => state.hasSystemNotifications,
-  );
+  const openGlobalCommandList = useNavigationStore((state) => state.openGlobalCommandList);
   const isNotificationsOpen = useNavigationStore((state) => state.isNotificationsOpen);
   const openNotifications = useNavigationStore((state) => state.openNotifications);
   const closeNotifications = useNavigationStore((state) => state.closeNotifications);
 
-  if (currentScreen === 'settings' || currentScreen === 'taxonomy-settings') {
-    return null;
-  }
+  if (currentScreen === 'ai-core') return null;
 
-  const showCommandButton = MAIN_WITH_EXTERNAL_COMMANDS.has(currentScreen);
+  const showCommandButton = SCREENS_WITH_COMMANDS.has(currentScreen);
 
   return (
     <>
       {showCommandButton ? (
         <div
-          className="pointer-events-auto fixed left-4 top-[calc(env(safe-area-inset-top)+18px)] z-[85]"
+          className="pointer-events-auto fixed left-4 top-[calc(env(safe-area-inset-top)+14px)] z-[85]"
           data-no-swipe="true"
         >
           <button
             type="button"
             onClick={openGlobalCommandList}
-            className="flex h-11 items-center gap-2 rounded-full border border-white/10 bg-black/35 px-4 text-sm text-white/82 shadow-2xl backdrop-blur-xl"
+            className="flex h-10 items-center gap-2 rounded-full border border-white/10 bg-[#050b10]/74 px-3 text-sm text-white/78 shadow-2xl"
             aria-label="Команды"
           >
             <span className="text-emerald-200">⌘</span>
@@ -41,26 +35,25 @@ export function AppTopActions() {
       ) : null}
 
       <div
-        className="pointer-events-auto fixed right-4 top-[calc(env(safe-area-inset-top)+18px)] z-[85]"
+        className="pointer-events-auto fixed right-4 top-[calc(env(safe-area-inset-top)+14px)] z-[85]"
         data-no-swipe="true"
       >
         <div className="flex items-center gap-2">
+          {currentScreen === 'settings' ? <LanguageSwitcher compact /> : null}
+
           <button
             type="button"
             onClick={openNotifications}
-            className="relative flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-black/35 text-lg text-white/80 shadow-2xl backdrop-blur-xl"
-            aria-label="Уведомления системы"
+            className="relative flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-[#050b10]/74 text-base text-white/70 shadow-2xl"
+            aria-label="Уведомления"
           >
-            🔔
-            {hasSystemNotifications ? (
-              <span className="absolute right-2.5 top-2.5 h-2.5 w-2.5 rounded-full bg-emerald-300 shadow-[0_0_12px_rgba(110,231,183,0.7)]" />
-            ) : null}
+            •
           </button>
 
           <button
             type="button"
             onClick={() => navigateTo('settings')}
-            className="flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-black/35 text-xl text-emerald-100 shadow-2xl backdrop-blur-xl"
+            className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-[#050b10]/74 text-lg text-emerald-100 shadow-2xl"
             aria-label="Настройки"
           >
             ⚙
@@ -68,13 +61,12 @@ export function AppTopActions() {
         </div>
 
         {isNotificationsOpen ? (
-          <div className="absolute right-0 mt-3 w-[min(320px,calc(100vw-32px))] rounded-[26px] border border-white/10 bg-[#07111b]/95 p-4 shadow-2xl backdrop-blur-2xl">
+          <div className="absolute right-0 mt-3 w-[min(320px,calc(100vw-32px))] rounded-[26px] border border-white/10 bg-[#07111b]/96 p-4 shadow-2xl">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <div className="text-sm font-semibold text-white">Системные уведомления</div>
+                <div className="text-sm font-semibold text-white">Уведомления</div>
                 <div className="mt-1 text-xs leading-5 text-white/45">
-                  Здесь будут важные события: подтверждения AI, ошибки синхронизации,
-                  напоминания и советы по базе.
+                  Здесь появятся подтверждения, ошибки синхронизации и важные финансовые события.
                 </div>
               </div>
 
@@ -88,10 +80,9 @@ export function AppTopActions() {
             </div>
 
             <div className="mt-4 rounded-2xl border border-emerald-300/12 bg-emerald-300/8 p-3">
-              <div className="text-sm text-emerald-50">Base почти собран</div>
+              <div className="text-sm text-emerald-50">Пока всё спокойно</div>
               <div className="mt-1 text-xs leading-5 text-emerald-50/60">
-                Проверь счета, разделы, категории и AI-команды. Все найденные баги будем
-                закрывать перед Premium.
+                Если AI попросит подтверждение или найдёт важное изменение, оно появится здесь.
               </div>
             </div>
           </div>

@@ -88,7 +88,7 @@ export function AICoreScreen() {
           ? 'AI отвечает...'
           : isSending
             ? 'AI думает...'
-            : 'AI активен';
+            : 'AI готов';
 
   const handleDelete = async (transaction: TransactionDto) => {
     await deleteTx(transaction);
@@ -121,11 +121,11 @@ export function AICoreScreen() {
 
             <div className="text-center">
               <div className="text-[32px] font-semibold tracking-tight leading-none">
-                ai finance
+                AI-Financer
               </div>
 
               <div className="mt-1 text-xs text-white/38">
-                ваш финансовый ai
+                финансовый помощник
               </div>
             </div>
 
@@ -155,7 +155,7 @@ export function AICoreScreen() {
                   Ждёт: {pendingCount}
                 </button>
               ) : (
-                <span className="text-xs text-emerald-200/80">Active</span>
+                <span className="text-xs text-emerald-200/80">Готов</span>
               )}
             </div>
 
@@ -228,7 +228,7 @@ export function AICoreScreen() {
             latestAssistantMessage.kind !== 'preview' ? (
               <section className="rounded-[24px] border border-white/10 bg-white/[0.04] px-4 py-4">
                 <div className="text-[10px] uppercase tracking-[0.18em] text-white/35">
-                  AI Response
+                  Ответ AI
                 </div>
 
                 <div className="mt-2 text-sm leading-6 text-white">

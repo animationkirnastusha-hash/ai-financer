@@ -13,10 +13,10 @@ const quickActions = [
 ];
 
 const onboardingSteps = [
-  { label: '1. Первый счёт', prompt: 'создай счет основной' },
-  { label: '2. Добавить деньги', prompt: 'доход 50000 на основной счет' },
-  { label: '3. Записать расход', prompt: 'кофе 300' },
-  { label: '4. Спросить аналитику', prompt: 'сколько я потратил за неделю' },
+  { label: 'Первый счёт', prompt: 'создай счет основной' },
+  { label: 'Добавить деньги', prompt: 'доход 50000 на основной счет' },
+  { label: 'Записать расход', prompt: 'кофе 300' },
+  { label: 'Спросить аналитику', prompt: 'сколько я потратил за неделю' },
 ];
 
 function isCurrentMonth(dateValue: string) {
@@ -51,18 +51,18 @@ export default function DashboardPage() {
   const isEmptyState = accounts.length === 0 && transactions.length === 0;
 
   return (
-    <div className="h-full overflow-y-auto px-4 pb-32 pt-[calc(env(safe-area-inset-top)+18px)] text-white">
+    <div className="h-full overflow-y-auto px-4 pb-28 pt-[calc(env(safe-area-inset-top)+70px)] text-white">
       <div className="mx-auto w-full max-w-[620px] space-y-4">
         <header className="rounded-[34px] border border-white/10 bg-white/[0.045] p-5 shadow-2xl">
           <div className="flex items-start justify-between gap-4">
             <div>
               <div className="text-[11px] uppercase tracking-[0.2em] text-emerald-200/60">AI-Financer</div>
-              <h1 className="mt-3 text-3xl font-semibold tracking-[-0.04em]">Финансовая картина</h1>
+              <h1 className="mt-3 text-3xl font-semibold tracking-[-0.04em]">Главная</h1>
               <p className="mt-2 max-w-[430px] text-sm leading-6 text-white/55">
-                Не dashboard ради графиков. Это спокойный обзор состояния, действий и следующего шага.
+                Баланс, последние действия и быстрый доступ к AI.
               </p>
             </div>
-            <button onClick={() => navigateTo('premium')} className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-2 text-xs text-white/60">Premium</button>
+            <button onClick={() => navigateTo('premium')} className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-2 text-xs text-white/60">Премиум</button>
           </div>
 
           <div className="mt-6 rounded-[28px] border border-emerald-300/12 bg-emerald-300/[0.08] p-5">
@@ -71,7 +71,7 @@ export default function DashboardPage() {
             <div className="mt-3 flex flex-wrap gap-2 text-xs text-white/56">
               <span className="rounded-full bg-black/22 px-3 py-1">Доходы: {formatMoney(data.income, 'RUB', { sign: 'plus' })}</span>
               <span className="rounded-full bg-black/22 px-3 py-1">Расходы: {formatMoney(data.expenses, 'RUB', { sign: 'minus' })}</span>
-              <span className="rounded-full bg-black/22 px-3 py-1">Дельта: {formatMoney(data.delta, 'RUB', { sign: 'auto' })}</span>
+              <span className="rounded-full bg-black/22 px-3 py-1">Итог: {formatMoney(data.delta, 'RUB', { sign: 'auto' })}</span>
             </div>
           </div>
         </header>
@@ -79,13 +79,13 @@ export default function DashboardPage() {
         {isEmptyState ? (
           <section className="rounded-[32px] border border-emerald-300/14 bg-[radial-gradient(circle_at_top,rgba(16,185,129,0.16),transparent_52%),rgba(255,255,255,0.04)] p-5 shadow-2xl">
             <div className="text-[11px] uppercase tracking-[0.2em] text-emerald-200/62">Первый запуск</div>
-            <h2 className="mt-3 text-2xl font-semibold tracking-[-0.03em]">Настрой финансовую систему через AI</h2>
+            <h2 className="mt-3 text-2xl font-semibold tracking-[-0.03em]">Начни с одного действия</h2>
             <p className="mt-2 text-sm leading-6 text-white/56">
-              Начни не с пустого dashboard, а с короткого действия. AI подготовит preview, ты подтвердишь результат и сможешь отменить операцию при необходимости.
+              AI подготовит предварительный результат. Ты подтвердишь действие перед сохранением.
             </p>
 
             <div className="mt-5 grid gap-2">
-              {onboardingSteps.map((step) => (
+              {onboardingSteps.map((step, index) => (
                 <button
                   key={step.prompt}
                   type="button"
@@ -93,7 +93,7 @@ export default function DashboardPage() {
                   className="flex items-center justify-between gap-3 rounded-[22px] border border-white/8 bg-black/20 px-4 py-3 text-left transition active:scale-[0.99]"
                 >
                   <div>
-                    <div className="text-sm font-medium text-white">{step.label}</div>
+                    <div className="text-sm font-medium text-white">{index + 1}. {step.label}</div>
                     <div className="mt-1 text-xs text-emerald-100/66">“{step.prompt}”</div>
                   </div>
                   <span className="text-white/28">→</span>
@@ -118,7 +118,7 @@ export default function DashboardPage() {
           <div className="flex items-center justify-between gap-3">
             <div>
               <div className="text-lg font-semibold">Последние операции</div>
-              <div className="mt-1 text-sm text-white/45">Timeline, не бухгалтерская таблица.</div>
+              <div className="mt-1 text-sm text-white/45">Новые записи появятся здесь.</div>
             </div>
             <button onClick={() => navigateTo('transactions')} className="text-sm text-emerald-200/80">Все</button>
           </div>
@@ -129,7 +129,7 @@ export default function DashboardPage() {
                 onClick={() => openAIWithCommand('кофе 300')}
                 className="w-full rounded-[22px] border border-white/8 bg-black/18 p-4 text-left text-sm text-white/45 transition active:scale-[0.99]"
               >
-                Пока нет операций. Напиши AI: “кофе 300”.
+                Пока нет операций. Можно начать с команды “кофе 300”.
               </button>
             ) : (
               recent.map((item) => (

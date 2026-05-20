@@ -13,7 +13,7 @@ import { PremiumInlineCard } from '@/features/premium/ui/PremiumInlineCard';
 import { usePremiumStore } from '@/features/premium/model/premium.store';
 
 type Props = {
-  onBack: () => void;
+  onBack?: () => void;
 };
 
 function isCurrentMonth(dateValue: string) {
@@ -26,7 +26,7 @@ function isCurrentMonth(dateValue: string) {
   );
 }
 
-export default function TransactionsPage({ onBack }: Props) {
+export default function TransactionsPage({ onBack }: Props = {}) {
   const navigateTo = useNavigationStore((state) => state.navigateTo);
 
   const transactions = useTransactionsStore((state) => state.items);
@@ -73,7 +73,7 @@ export default function TransactionsPage({ onBack }: Props) {
 
   return (
     <div className="flex h-dvh flex-col bg-[linear-gradient(180deg,#0b1016_0%,#090d13_100%)] text-white">
-      <PageHeader title="Transactions" onBack={onBack} />
+      <PageHeader title="Операции" onBack={onBack} />
 
       <div className="flex-1 overflow-y-auto px-4 pb-28">
         <div className="mx-auto max-w-[560px] space-y-4">
@@ -86,9 +86,9 @@ export default function TransactionsPage({ onBack }: Props) {
             onOpen={openPremium}
             trigger={{
               kind: 'locked_insight',
-              title: 'AI может найти, где ты теряешь деньги',
+              title: 'AI может найти лишние расходы',
               description:
-                'Base показывает операции, разделы и базовые суммы. Premium разберёт повторяющиеся траты, лишние подписки и категории риска.',
+                'Базовый режим показывает операции и суммы. Премиум разберёт повторяющиеся траты, подписки и категории риска.',
               cta: 'Показать скрытые расходы',
               value:
                 summary.expenses > 0
@@ -108,12 +108,11 @@ export default function TransactionsPage({ onBack }: Props) {
 
           <section className="rounded-[28px] border border-white/8 bg-white/[0.04] p-4">
             <div className="text-[11px] uppercase tracking-[0.16em] text-white/35">
-              AI Actions
+              Действия через AI
             </div>
 
             <div className="mt-3 text-sm leading-6 text-white/60">
-              Операции можно редактировать вручную или попросить AI: поменять категорию,
-              перенести в раздел, исправить сумму или удалить ошибочную запись.
+              Можно редактировать вручную или попросить AI: изменить категорию, исправить сумму или удалить ошибочную запись.
             </div>
 
             <button
@@ -137,7 +136,7 @@ export default function TransactionsPage({ onBack }: Props) {
               eyebrow="Операции"
               title="История пока пустая"
               description="Добавь первую операцию через AI: расход, доход или перевод между счетами."
-              actionLabel="Открыть AI Core"
+              actionLabel="Открыть AI"
               onAction={() => navigateTo('ai-core')}
             />
           ) : (

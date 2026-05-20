@@ -1,11 +1,14 @@
 import { create } from 'zustand';
 import type {
   AppCurrency,
+  AppLanguage,
   AppSettings,
   SubscriptionPlan,
 } from '@/features/settings/model/settings.types';
 
 type SettingsState = AppSettings & {
+  setAppLanguage: (language: AppLanguage) => void;
+
   setVoiceEnabled: (value: boolean) => void;
   setVoiceBetaEnabled: (value: boolean) => void;
   setVoiceRepliesEnabled: (value: boolean) => void;
@@ -25,6 +28,8 @@ type SettingsState = AppSettings & {
 const STORAGE_KEY = 'ai-financer-settings';
 
 const defaultSettings: AppSettings = {
+  appLanguage: 'ru',
+
   voiceEnabled: true,
   voiceBetaEnabled: true,
   voiceRepliesEnabled: false,
@@ -51,6 +56,7 @@ function loadSettings(): AppSettings {
     return {
       ...defaultSettings,
       ...parsed,
+      appLanguage: parsed.appLanguage === 'en' ? 'en' : 'ru',
     };
   } catch {
     return defaultSettings;
@@ -61,6 +67,7 @@ function saveSettings(state: AppSettings) {
   localStorage.setItem(
     STORAGE_KEY,
     JSON.stringify({
+      appLanguage: state.appLanguage,
       voiceEnabled: state.voiceEnabled,
       voiceBetaEnabled: state.voiceBetaEnabled,
       voiceRepliesEnabled: state.voiceRepliesEnabled,
@@ -79,6 +86,11 @@ function saveSettings(state: AppSettings) {
 
 export const useSettingsStore = create<SettingsState>((set, get) => ({
   ...loadSettings(),
+
+  setAppLanguage: (appLanguage) => {
+    set({ appLanguage });
+    saveSettings(get());
+  },
 
   setVoiceEnabled: (value) => {
     set({ voiceEnabled: value });

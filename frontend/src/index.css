@@ -77,3 +77,17 @@ body.ai-any-modal-open .ai-core-input-shell { display: none !important; }
   from { opacity: 0.78; transform: translateY(10px) scale(0.995); }
   to { opacity: 1; transform: translateY(0) scale(1); }
 }
+
+.ai-companion-control,
+.ai-companion-control * {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-user-drag: none;
+  touch-action: manipulation;
+}
+
+.ai-app-shell img,
+.ai-app-shell svg {
+  -webkit-user-drag: none;
+}

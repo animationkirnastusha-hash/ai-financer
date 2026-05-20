@@ -51,7 +51,7 @@ export function AppRouter() {
   return (
     <AppShell>
       {currentScreen === 'dashboard' && <DashboardPage />}
-      {currentScreen === 'transactions' && <TransactionsPage onBack={goBack} />}
+      {currentScreen === 'transactions' && <TransactionsPage />}
       {currentScreen === 'accounts' && <AccountsPage />}
       {currentScreen === 'analytics' && <AnalyticsPage />}
       {currentScreen === 'goals' && <GoalsPage />}

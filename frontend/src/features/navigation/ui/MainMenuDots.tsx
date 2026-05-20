@@ -13,10 +13,10 @@ type Props = {
   bottomOffset?: number;
 };
 
-const MAIN_ITEMS: DotItem[] = [
-  { screen: 'dashboard', aria: 'Dashboard' },
-  { screen: 'ai-core', aria: 'AI Core' },
-  { screen: 'accounts', aria: 'Accounts' },
+export const MAIN_ITEMS: DotItem[] = [
+  { screen: 'transactions', aria: 'Операции' },
+  { screen: 'dashboard', aria: 'Главная' },
+  { screen: 'analytics', aria: 'Аналитика' },
 ];
 
 export const SETTINGS_FLOW_ITEMS: DotItem[] = [
@@ -28,15 +28,18 @@ export function MainMenuDots({
   currentScreen,
   onNavigate,
   items = MAIN_ITEMS,
-  bottomOffset = 8,
+  bottomOffset = 12,
 }: Props) {
-  const [composerFocused, setComposerFocused] = useState(false);
-  const [modalOpen, setModalOpen] = useState(false);
+  const [hidden, setHidden] = useState(false);
 
   useEffect(() => {
     const sync = () => {
-      setComposerFocused(document.body.classList.contains('ai-composer-focused'));
-      setModalOpen(document.body.classList.contains('ai-modal-open') || document.body.classList.contains('ai-any-modal-open') || document.body.classList.contains('ai-core-modal-open'));
+      setHidden(
+        document.body.classList.contains('ai-composer-focused') ||
+          document.body.classList.contains('ai-modal-open') ||
+          document.body.classList.contains('ai-any-modal-open') ||
+          document.body.classList.contains('ai-core-modal-open'),
+      );
     };
 
     sync();
@@ -52,14 +55,14 @@ export function MainMenuDots({
 
   return (
     <div
-      className={`main-nav-dots pointer-events-auto fixed left-0 right-0 z-[70] flex justify-center px-4 transition duration-200 ${
-        composerFocused || modalOpen ? 'translate-y-2 opacity-0 pointer-events-none' : 'translate-y-0 opacity-100'
+      className={`pointer-events-auto fixed left-0 right-0 z-[70] flex justify-center px-4 transition duration-200 ${
+        hidden ? 'translate-y-2 opacity-0 pointer-events-none' : 'translate-y-0 opacity-100'
       }`}
       style={{ bottom: `calc(env(safe-area-inset-bottom) + ${bottomOffset}px)` }}
       data-no-swipe="true"
-      aria-hidden={composerFocused || modalOpen}
+      aria-hidden={hidden}
     >
-      <div className="flex items-center gap-2 rounded-full border border-white/10 bg-black/35 px-3 py-2 shadow-2xl backdrop-blur-xl">
+      <div className="flex items-center gap-2 rounded-full border border-white/10 bg-[#050b10]/78 px-3 py-2 shadow-2xl">
         {items.map((item) => {
           const active = item.screen === currentScreen;
 
@@ -68,14 +71,14 @@ export function MainMenuDots({
               key={item.screen}
               type="button"
               onClick={() => onNavigate(item.screen)}
-              className={`h-3 w-3 rounded-full transition ${
+              className={`h-2.5 rounded-full transition ${
                 active
-                  ? 'scale-110 bg-emerald-300 shadow-[0_0_16px_rgba(110,231,183,0.45)]'
-                  : 'bg-white/25 hover:bg-white/40'
+                  ? 'w-7 bg-emerald-200 shadow-[0_0_16px_rgba(110,231,183,0.45)]'
+                  : 'w-2.5 bg-white/24 hover:bg-white/42'
               }`}
               aria-label={item.aria}
               title={item.aria}
-              tabIndex={composerFocused || modalOpen ? -1 : 0}
+              tabIndex={hidden ? -1 : 0}
             />
           );
         })}
