@@ -322,59 +322,6 @@ export class AIValidatorService {
         // No validation needed.
       }
 
-      if (action.tool === 'show_ai_settings') {
-        // No validation needed.
-      }
-
-      if (action.tool === 'update_ai_settings') {
-        const defaultExpenseAccount = this.cleanString(input.defaultExpenseAccount);
-        const defaultIncomeAccount = this.cleanString(input.defaultIncomeAccount);
-        const expenseAccount = defaultExpenseAccount ? this.resolveAccount(accounts, defaultExpenseAccount) : null;
-        const incomeAccount = defaultIncomeAccount ? this.resolveAccount(accounts, defaultIncomeAccount) : null;
-
-        if (defaultExpenseAccount && !expenseAccount) issues.push({ code: 'account_not_found', message: `Не нашёл счёт для расходов: ${defaultExpenseAccount}`, actionIndex: index, field: 'defaultExpenseAccount' });
-        if (defaultIncomeAccount && !incomeAccount) issues.push({ code: 'account_not_found', message: `Не нашёл счёт для доходов: ${defaultIncomeAccount}`, actionIndex: index, field: 'defaultIncomeAccount' });
-
-        if (expenseAccount) resolved.defaultExpenseAccountId = expenseAccount.id;
-        if (incomeAccount) resolved.defaultIncomeAccountId = incomeAccount.id;
-
-        const expenseLimit = this.optionalMoneyLimit(input.autoConfirmExpenseLimit);
-        const incomeLimit = this.optionalMoneyLimit(input.autoConfirmIncomeLimit);
-        const transferLimit = this.optionalMoneyLimit(input.autoConfirmTransferLimit);
-
-        if (expenseLimit !== null) input.autoConfirmExpenseLimit = expenseLimit; else delete input.autoConfirmExpenseLimit;
-        if (incomeLimit !== null) input.autoConfirmIncomeLimit = incomeLimit; else delete input.autoConfirmIncomeLimit;
-        if (transferLimit !== null) input.autoConfirmTransferLimit = transferLimit; else delete input.autoConfirmTransferLimit;
-
-        if (input.requireConfirmForAccountActions !== null && input.requireConfirmForAccountActions !== undefined) input.requireConfirmForAccountActions = Boolean(input.requireConfirmForAccountActions);
-        else delete input.requireConfirmForAccountActions;
-
-        const tone = this.cleanString(input.companionTone).toLowerCase();
-        if (tone && ['calm', 'friendly', 'strict', 'coach'].includes(tone)) input.companionTone = tone;
-        else delete input.companionTone;
-      }
-
-      if (action.tool === 'apply_ai_settings_preset') {
-        const preset = this.cleanString(input.preset).toLowerCase();
-        if (!['strict', 'balanced', 'simple'].includes(preset)) issues.push({ code: 'invalid_preset', message: 'Неизвестный режим настроек. Доступно: strict, balanced, simple.', actionIndex: index, field: 'preset' });
-        else input.preset = preset;
-      }
-
-      if (action.tool === 'update_onboarding_state') {
-        const status = this.cleanString(input.status).toLowerCase();
-        if (status && !['not_started', 'active', 'completed'].includes(status)) issues.push({ code: 'invalid_onboarding_status', message: 'Некорректный статус обучения.', actionIndex: index, field: 'status' });
-        else if (status) input.status = status; else delete input.status;
-
-        if (input.currentStep !== null && input.currentStep !== undefined) input.currentStep = this.cleanString(input.currentStep);
-        else delete input.currentStep;
-
-        if (input.skipped !== null && input.skipped !== undefined) input.skipped = Boolean(input.skipped);
-        else delete input.skipped;
-      }
-
-      if (action.tool === 'restart_onboarding') {
-        // No validation needed.
-      }
 
       if (action.tool === 'create_category') {
         const name = this.cleanEntityName(input.name);

@@ -7,12 +7,7 @@ const TOOL_LABELS: Record<string, string> = {
   create_transaction: 'добавить операцию',
   transfer_money: 'перевести деньги',
   create_category: 'создать категорию',
-  update_category: 'изменить категорию',
-  delete_category: 'удалить категорию',
   create_section: 'создать раздел',
-  update_section: 'изменить раздел',
-  delete_section: 'удалить раздел',
-  assign_category_to_section: 'привязать категорию к разделу',
   show_accounts: 'показать счета',
   show_transactions: 'показать операции',
   query_analytics: 'показать аналитику',
@@ -112,12 +107,8 @@ export class AIPreviewService {
 
     if (tool === 'query_analytics') return 'показать аналитику';
     if (tool === 'undo_last_action') return 'отменить последнее действие';
-    if (tool === 'apply_ai_settings_preset') return `применить режим настроек "${this.clean(input.preset) || 'balanced'}"`;
-    if (tool === 'update_ai_settings') return 'изменить настройки ИИ';
-    if (tool === 'show_ai_settings') return 'показать настройки ИИ';
-    if (tool === 'update_onboarding_state') return 'обновить состояние обучения';
-    if (tool === 'restart_onboarding') return 'запустить обучение заново';
     if (tool === 'show_companion_reactions') return 'показать реакции компаньона';
+    if (tool === 'mark_companion_reactions_seen') return 'прочитать реакции компаньона';
     if (tool === 'show_premium_capabilities') return 'показать возможности Premium';
 
     return TOOL_LABELS[tool] ?? tool;
