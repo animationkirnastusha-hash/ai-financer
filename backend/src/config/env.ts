@@ -37,7 +37,6 @@ function getListEnv(name: string, fallback: string[] = []): string[] {
 }
 
 const DEFAULT_DEEPSEEK_MODEL = 'deepseek-chat';
-const DEFAULT_OPENROUTER_MODEL = 'meta-llama/llama-3.2-3b-instruct:free';
 const aiProvider = (process.env.AI_PROVIDER || process.env.AI_MODE || 'deepseek').trim().toLowerCase();
 
 export const env = {
