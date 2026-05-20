@@ -1,10 +1,14 @@
-
 export type HomeState =
   | 'NEW_USER'
   | 'EARLY_USER'
   | 'ACTIVE_USER';
 
-export function getHomeState(data) {
+type HomeStateInput = {
+  accountsCount: number;
+  transactionsCount: number;
+};
+
+export function getHomeState(data: HomeStateInput): HomeState {
   if (data.accountsCount === 0 || data.transactionsCount === 0) {
     return 'NEW_USER';
   }
