@@ -13,6 +13,7 @@ import { AccountTransferSheet } from '@/features/accounts/ui/AccountTransferShee
 import { EditAccountModal } from '@/features/accounts/ui/EditAccountModal';
 import { EmptyAccountsState } from '@/features/accounts/ui/EmptyAccountsState';
 import { ErrorState } from '@/shared/ui/ErrorState';
+import { PageHeader } from '@/shared/ui/PageHeader';
 import { formatMoney } from '@/shared/lib/money';
 
 type CurrencyGroup = {
@@ -25,7 +26,7 @@ export default function AccountsPage() {
   const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
   const [transferFromAccountId, setTransferFromAccountId] = useState<string | null>(null);
 
-  const navigateTo = useNavigationStore((s) => s.navigateTo);
+  const openAIWithCommand = useNavigationStore((s) => s.openAIWithCommand);
 
   const items = useAccountsStore((state) => state.items);
   const isLoading = useAccountsStore((state) => state.isLoading);
@@ -111,13 +112,14 @@ export default function AccountsPage() {
 
   return (
     <div className="flex h-dvh flex-col bg-[linear-gradient(180deg,#0b1016_0%,#090d13_100%)] text-white">
-      <div className="flex-1 overflow-y-auto px-4 pb-28 pt-[calc(env(safe-area-inset-top)+78px)]">
+      <PageHeader title="Счета" subtitle="Баланс и структура" />
+      <div className="flex-1 overflow-y-auto px-4 pb-28">
         <div className="mx-auto max-w-[560px] space-y-4">
           <AccountsSummary total={formatMoney(mainGroup?.total ?? 0, mainCurrency)} />
 
           <section className="rounded-[28px] border border-white/8 bg-white/[0.04] p-4">
             <div className="text-[11px] uppercase tracking-[0.16em] text-white/35">
-              Account rules
+              Правила счетов
             </div>
 
             <div className="mt-3 grid gap-3">
@@ -164,11 +166,11 @@ export default function AccountsPage() {
 
           <section className="rounded-[28px] border border-white/8 bg-white/[0.04] p-4">
             <div className="text-[11px] uppercase tracking-[0.16em] text-white/35">
-              AI Actions
+              Действия
             </div>
 
             <div className="mt-3 text-sm leading-6 text-white/60">
-              Всё, что можно сделать вручную со счетами, должно быть доступно и через AI: создать счёт, изменить валюту, назначить главный счёт, перевести деньги.
+              Создавай счета, меняй основные настройки и делай переводы вручную или через AI.
             </div>
 
             <div className="mt-4 flex flex-wrap gap-3">
@@ -196,7 +198,7 @@ export default function AccountsPage() {
 
               <button
                 type="button"
-                onClick={() => navigateTo('ai-core')}
+                onClick={() => openAIWithCommand('создай счет отпуск')}
                 className="rounded-2xl border border-white/10 bg-white/10 px-4 py-2 text-sm transition hover:bg-white/15"
               >
                 Открыть AI
@@ -209,7 +211,7 @@ export default function AccountsPage() {
               title="Счета не загрузились"
               message={error}
               onRetry={() => void loadAccounts(true)}
-              onOpenAI={() => navigateTo('ai-core')}
+              onOpenAI={() => openAIWithCommand()}
             />
           ) : isLoading ? (
             <div className="rounded-[28px] border border-white/8 bg-white/[0.04] p-5 text-sm text-white/60">
@@ -224,7 +226,7 @@ export default function AccountsPage() {
                   <div className="mb-3 flex items-center justify-between gap-3">
                     <div>
                       <div className="text-[11px] uppercase tracking-[0.16em] text-white/35">
-                        {group.currency === mainCurrency ? 'Main currency' : 'Other currency'}
+                        {group.currency === mainCurrency ? 'Основная валюта' : 'Другая валюта'}
                       </div>
                       <div className="mt-1 text-lg font-semibold text-white">{group.currency}</div>
                     </div>
@@ -273,7 +275,7 @@ export default function AccountsPage() {
         }}
         onAskAI={() => {
           setSelectedAccountId(null);
-          navigateTo('ai-core');
+          openAIWithCommand();
         }}
         isDeleting={isDeleting}
         onDelete={async (accountId) => {

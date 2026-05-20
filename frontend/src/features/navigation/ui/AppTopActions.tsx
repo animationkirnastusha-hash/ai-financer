@@ -50,14 +50,16 @@ export function AppTopActions() {
             •
           </button>
 
-          <button
-            type="button"
-            onClick={() => navigateTo('settings')}
-            className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-[#050b10]/74 text-lg text-emerald-100 shadow-2xl"
-            aria-label="Настройки"
-          >
-            ⚙
-          </button>
+          {currentScreen !== 'settings' ? (
+            <button
+              type="button"
+              onClick={() => navigateTo('settings')}
+              className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-[#050b10]/74 text-lg text-emerald-100 shadow-2xl"
+              aria-label="Настройки"
+            >
+              ⚙
+            </button>
+          ) : null}
         </div>
 
         {isNotificationsOpen ? (

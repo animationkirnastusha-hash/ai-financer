@@ -51,7 +51,7 @@ export function useVoiceInput({
     setPermissionError(null);
 
     if (permissionPrimed) return true;
-    if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia) {
+    if (typeof navigator === 'undefined' || typeof navigator.mediaDevices?.getUserMedia !== 'function') {
       setPermissionPrimed(true);
       return true;
     }
