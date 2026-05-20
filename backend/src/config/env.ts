@@ -58,13 +58,6 @@ export const env = {
   deepseekFastModel: getOptionalEnv('DEEPSEEK_FAST_MODEL', getOptionalEnv('DEEPSEEK_MODEL', DEFAULT_DEEPSEEK_MODEL)),
   deepseekReasoningModel: getOptionalEnv('DEEPSEEK_REASONING_MODEL', 'deepseek-reasoner'),
 
-  openrouterApiKey: getOptionalEnv('OPENROUTER_API_KEY'),
-  openrouterBaseUrl: getOptionalEnv('OPENROUTER_BASE_URL', 'https://openrouter.ai/api/v1'),
-  openrouterModel: getOptionalEnv('OPENROUTER_MODEL', DEFAULT_OPENROUTER_MODEL),
-  openrouterFastModel: getOptionalEnv('OPENROUTER_FAST_MODEL', getOptionalEnv('OPENROUTER_MODEL', DEFAULT_OPENROUTER_MODEL)),
-  openrouterReasoningModel: getOptionalEnv('OPENROUTER_REASONING_MODEL', getOptionalEnv('OPENROUTER_MODEL', DEFAULT_OPENROUTER_MODEL)),
-  openrouterAppTitle: getOptionalEnv('OPENROUTER_APP_TITLE', 'AI-financer'),
-
   aiFastTimeoutMs: getNumberEnv('AI_FAST_TIMEOUT_MS', 8_000),
   aiLlmTimeoutMs: getNumberEnv('AI_LLM_TIMEOUT_MS', getNumberEnv('AI_TIMEOUT_MS', 12_000)),
   aiTimeoutMs: getNumberEnv('AI_TIMEOUT_MS', 10_000),
