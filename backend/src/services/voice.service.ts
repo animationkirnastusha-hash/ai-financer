@@ -6,6 +6,13 @@ type TranscribeParams = {
   originalName: string;
 };
 
+export class VoiceTranscriptionNotConfiguredError extends Error {
+  constructor() {
+    super('VOICE_TRANSCRIPTION_NOT_CONFIGURED');
+    this.name = 'VoiceTranscriptionNotConfiguredError';
+  }
+}
+
 class VoiceService {
   private client: OpenAI | null;
 
@@ -17,10 +24,7 @@ class VoiceService {
 
   async transcribe({ buffer, mimeType, originalName }: TranscribeParams) {
     if (!this.client) {
-      return {
-        text: '',
-        mode: 'stub',
-      };
+      throw new VoiceTranscriptionNotConfiguredError();
     }
 
     const file = new File([buffer], originalName || 'voice.webm', {
@@ -29,7 +33,7 @@ class VoiceService {
 
     const transcription = await this.client.audio.transcriptions.create({
       file,
-      model: 'gpt-4o-mini-transcribe',
+      model: process.env.OPENAI_TRANSCRIBE_MODEL || 'gpt-4o-mini-transcribe',
     });
 
     return {

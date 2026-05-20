@@ -8,6 +8,7 @@ type Props = {
   onOpenHistory: () => void;
   onEdit: (transaction: TransactionDto) => void;
   onDelete: (transaction: TransactionDto) => void;
+  compact?: boolean;
 };
 
 function getTitle(transaction: TransactionDto) {
@@ -30,15 +31,20 @@ export function LastTransactionCard({
   onOpenHistory,
   onEdit,
   onDelete,
+  compact = false,
 }: Props) {
+  const shellClass = compact
+    ? 'ai-page-card-compact h-full'
+    : 'mx-4 mb-3 rounded-[24px] border border-white/8 bg-white/[0.045] p-4 shadow-xl shadow-black/20';
+
   if (!transaction) {
     return (
-      <div className="mx-4 mb-3 rounded-[24px] border border-white/8 bg-white/[0.04] p-4">
-        <div className="text-[11px] uppercase tracking-[0.16em] text-white/35">
+      <div className={shellClass}>
+        <div className="text-[10px] uppercase tracking-[0.16em] text-white/35">
           Последняя операция
         </div>
-        <div className="mt-2 text-sm text-white/70">
-          Пока операций нет. Попробуй написать: «кофе 300».
+        <div className={compact ? 'mt-2 text-xs leading-5 text-white/62' : 'mt-2 text-sm text-white/70'}>
+          Пока нет операций.
         </div>
         <Button className="mt-3 h-9" variant="secondary" onClick={onOpenHistory}>
           История
@@ -52,8 +58,47 @@ export function LastTransactionCard({
     transaction.type === 'income' ? 'plus' : transaction.type === 'expense' ? 'minus' : 'none';
   const deleteLabel = transaction.type === 'income' ? 'Удалить' : 'Отменить';
 
+  if (compact) {
+    return (
+      <div className={shellClass}>
+        <div className="text-[10px] uppercase tracking-[0.16em] text-white/35">Последняя</div>
+        <div className="mt-3 flex items-start gap-2">
+          <span className="grid h-8 w-8 shrink-0 place-items-center rounded-2xl bg-white/8 text-base">
+            {getIcon(transaction)}
+          </span>
+          <div className="min-w-0 flex-1">
+            <div className="truncate text-sm font-semibold text-white">{getTitle(transaction)}</div>
+            <div className="mt-1 truncate text-xs text-white/42">
+              {transaction.account?.name ?? 'Счёт'} · {formatTransactionDate(transaction.date)}
+            </div>
+          </div>
+        </div>
+        <div className="mt-3 text-lg font-semibold tracking-[-0.03em] text-white">
+          {formatMoney(transaction.amount, currency, { sign: amountSign })}
+        </div>
+        <div className="mt-3 flex gap-2">
+          <button
+            type="button"
+            onClick={() => onEdit(transaction)}
+            className="rounded-full border border-white/8 bg-white/[0.05] px-3 py-1.5 text-xs text-white/72"
+          >
+            Изм.
+          </button>
+          <button
+            type="button"
+            disabled={isMutating}
+            onClick={() => onDelete(transaction)}
+            className="rounded-full border border-white/8 bg-white/[0.05] px-3 py-1.5 text-xs text-white/72 disabled:opacity-40"
+          >
+            {deleteLabel}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="mx-4 mb-3 rounded-[24px] border border-white/8 bg-white/[0.045] p-4 shadow-xl shadow-black/20">
+    <div className={shellClass}>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="text-[11px] uppercase tracking-[0.16em] text-white/35">

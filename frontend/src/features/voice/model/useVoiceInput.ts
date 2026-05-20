@@ -66,7 +66,7 @@ export function useVoiceInput({
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       stream.getTracks().forEach((track) => track.stop());
       setPermissionPrimed(true);
-      return false;
+      return true;
     } catch (error) {
       setPermissionPrimed(false);
       setPermissionError('microphone-denied');

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useNavigationStore } from '@/features/navigation/model/navigation.store';
 import { PendingActionsDrawer } from '@/features/pending-actions/ui/PendingActionsDrawer';
 import { FinancePreviewCard } from '@/features/chat/ui/FinancePreviewCard';
 import { AICoreOrb } from '@/features/ai-core/ui/AICoreOrb';
@@ -17,6 +18,8 @@ import type { TransactionDto } from '@/features/transactions/api/transactions.ap
 
 export function AICoreScreen() {
   const [historyOpen, setHistoryOpen] = useState(false);
+  const goBack = useNavigationStore((state) => state.goBack);
+  const goHome = useNavigationStore((state) => state.goHome);
 
   const {
     items,
@@ -113,10 +116,10 @@ export function AICoreScreen() {
 
             <button
               type="button"
-              onClick={openCommandList}
-              className="flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-white/[0.04]"
+              onClick={goBack}
+              className="flex h-11 min-w-11 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] px-3 text-sm text-white/72"
             >
-              <span className="text-emerald-200 text-xl">⌘</span>
+              Назад
             </button>
 
             <div className="text-center">
@@ -129,7 +132,24 @@ export function AICoreScreen() {
               </div>
             </div>
 
-            <div className="h-11 w-24" aria-hidden="true" />
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={openCommandList}
+                className="flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-white/[0.04]"
+                aria-label="Команды"
+              >
+                <span className="text-emerald-200 text-xl">⌘</span>
+              </button>
+              <button
+                type="button"
+                onClick={goHome}
+                className="flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] text-sm text-white/72"
+                aria-label="Домой"
+              >
+                ⌂
+              </button>
+            </div>
           </div>
         </header>
 
@@ -159,17 +179,19 @@ export function AICoreScreen() {
               )}
             </div>
 
-            {/* LAST TRANSACTION */}
-            <LastTransactionCard
-              transaction={latest ?? items[0] ?? null}
-              isMutating={isMutating}
-              onOpenHistory={() => setHistoryOpen(true)}
-              onEdit={handleEdit}
-              onDelete={handleDelete}
-            />
+            {/* SUMMARY CARDS */}
+            <div className="grid grid-cols-2 gap-3 px-4">
+              <LastTransactionCard
+                compact
+                transaction={latest ?? items[0] ?? null}
+                isMutating={isMutating}
+                onOpenHistory={() => setHistoryOpen(true)}
+                onEdit={handleEdit}
+                onDelete={handleDelete}
+              />
 
-            {/* MONTHLY STATS */}
-            <MonthlyStatsCard stats={monthlyStats} />
+              <MonthlyStatsCard compact stats={monthlyStats} />
+            </div>
 
             {/* CORE */}
             <section className="relative flex flex-col items-center justify-center py-3">
@@ -240,13 +262,13 @@ export function AICoreScreen() {
             {/* ERRORS */}
             {voiceError ? (
               <section className="rounded-2xl border border-rose-400/15 bg-rose-400/10 px-4 py-3 text-sm text-rose-100">
-                Голос временно недоступен. Используй текстовый ввод.
+                Голос не прошёл. Проверь доступ к микрофону и серверную расшифровку.
               </section>
             ) : null}
 
             {!isVoiceSupported ? (
               <section className="rounded-2xl border border-white/8 bg-white/5 px-4 py-3 text-sm text-white/55">
-                Голос не поддерживается устройством.
+                На этом устройстве голос может работать только через серверную расшифровку.
               </section>
             ) : null}
 

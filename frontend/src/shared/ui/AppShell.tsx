@@ -9,8 +9,9 @@ export function AppShell({ children }: { children: ReactNode }) {
   const currentScreen = useNavigationStore((state) => state.currentScreen);
   const navigateTo = useNavigationStore((state) => state.navigateTo);
   const openAIWithCommand = useNavigationStore((state) => state.openAIWithCommand);
+  const goBack = useNavigationStore((state) => state.goBack);
 
-  useSwipeNavigation({ currentScreen, navigateTo });
+  useSwipeNavigation({ currentScreen, navigateTo, goBack });
 
   const showMainDots = MAIN_ITEMS.some((item) => item.screen === currentScreen);
   const showCompanion = currentScreen !== 'ai-core';
@@ -25,7 +26,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
       {showCompanion ? (
         <div
-          className="pointer-events-auto fixed bottom-[calc(env(safe-area-inset-bottom)+58px)] right-4 z-[80]"
+          className="pointer-events-auto fixed bottom-[calc(env(safe-area-inset-bottom)+72px)] right-4 z-[80]"
           data-no-swipe="true"
         >
           <CompanionButton

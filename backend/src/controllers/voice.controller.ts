@@ -1,5 +1,5 @@
 import type { Request, Response } from 'express';
-import { voiceService } from '../services/voice.service';
+import { VoiceTranscriptionNotConfiguredError, voiceService } from '../services/voice.service';
 
 export async function transcribeVoice(req: Request, res: Response) {
   try {
@@ -21,6 +21,14 @@ export async function transcribeVoice(req: Request, res: Response) {
       text: result.text,
     });
   } catch (error) {
+    if (error instanceof VoiceTranscriptionNotConfiguredError) {
+      return res.status(503).json({
+        success: false,
+        message: 'Voice transcription is not configured on the server.',
+        code: 'VOICE_TRANSCRIPTION_NOT_CONFIGURED',
+      });
+    }
+
     console.error('Voice transcription failed:', error);
 
     return res.status(500).json({

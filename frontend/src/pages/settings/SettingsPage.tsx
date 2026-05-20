@@ -4,6 +4,8 @@ import { LanguageSwitcher } from '@/shared/ui/LanguageSwitcher';
 
 export default function SettingsPage() {
   const navigateTo = useNavigationStore((state) => state.navigateTo);
+  const goBack = useNavigationStore((state) => state.goBack);
+  const goHome = useNavigationStore((state) => state.goHome);
   const voiceEnabled = useSettingsStore((state) => state.voiceEnabled);
   const voiceBetaEnabled = useSettingsStore((state) => state.voiceBetaEnabled);
   const aiInsightsEnabled = useSettingsStore((state) => state.aiInsightsEnabled);
@@ -15,7 +17,24 @@ export default function SettingsPage() {
     <div className="h-full overflow-y-auto px-4 pb-28 pt-[calc(env(safe-area-inset-top)+70px)] text-white">
       <div className="mx-auto max-w-[620px] space-y-4">
         <header className="rounded-[34px] border border-white/10 bg-white/[0.045] p-5">
-          <div className="text-[11px] uppercase tracking-[0.2em] text-emerald-200/60">Настройки</div>
+          <div className="flex items-center justify-between gap-3">
+            <button
+              type="button"
+              onClick={goBack}
+              className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-white/72"
+            >
+              Назад
+            </button>
+            <button
+              type="button"
+              onClick={goHome}
+              className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-white/72"
+            >
+              Домой
+            </button>
+          </div>
+
+          <div className="mt-5 text-[11px] uppercase tracking-[0.2em] text-emerald-200/60">Настройки</div>
           <h1 className="mt-3 text-3xl font-semibold tracking-[-0.04em]">Управление</h1>
           <p className="mt-2 text-sm leading-6 text-white/55">
             Язык, голос, поведение AI и структура финансов.

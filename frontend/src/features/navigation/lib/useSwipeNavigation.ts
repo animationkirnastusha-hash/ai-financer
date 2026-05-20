@@ -5,6 +5,7 @@ import type { AppScreen } from '@/features/navigation/model/navigation.store';
 type Options = {
   currentScreen: AppScreen;
   navigateTo: (screen: AppScreen) => void;
+  goBack: () => void;
 };
 
 export const MAIN_SWIPE_SCREENS: AppScreen[] = ['transactions', 'dashboard', 'analytics'];
@@ -27,7 +28,7 @@ function isBlockedByUi() {
   );
 }
 
-export function useSwipeNavigation({ currentScreen, navigateTo }: Options) {
+export function useSwipeNavigation({ currentScreen, navigateTo, goBack }: Options) {
   const startX = useRef(0);
   const startY = useRef(0);
   const startedOnInteractive = useRef(false);
@@ -51,20 +52,27 @@ export function useSwipeNavigation({ currentScreen, navigateTo }: Options) {
       const deltaX = touch.clientX - startX.current;
       const deltaY = touch.clientY - startY.current;
 
-      if (Math.abs(deltaX) < 68 || Math.abs(deltaY) > 72) return;
+      if (Math.abs(deltaX) < 64 || Math.abs(deltaY) > 76) return;
 
       const currentIndex = MAIN_SWIPE_SCREENS.indexOf(currentScreen);
-      if (currentIndex === -1) return;
 
-      const nextIndex = deltaX < 0 ? currentIndex + 1 : currentIndex - 1;
-      const nextScreen = MAIN_SWIPE_SCREENS[nextIndex];
-      if (!nextScreen) return;
+      if (currentIndex !== -1) {
+        const nextIndex = deltaX < 0 ? currentIndex + 1 : currentIndex - 1;
+        const nextScreen = MAIN_SWIPE_SCREENS[nextIndex];
+        if (!nextScreen) return;
 
-      document.body.classList.toggle('ai-screen-slide-left', deltaX < 0);
-      document.body.classList.toggle('ai-screen-slide-right', deltaX > 0);
+        document.body.classList.toggle('ai-screen-slide-left', deltaX < 0);
+        document.body.classList.toggle('ai-screen-slide-right', deltaX > 0);
 
-      navigateTo(nextScreen);
-      telegramHaptic('light');
+        navigateTo(nextScreen);
+        telegramHaptic('light');
+        return;
+      }
+
+      if (deltaX > 0) {
+        goBack();
+        telegramHaptic('light');
+      }
     };
 
     window.addEventListener('touchstart', handleTouchStart, { passive: true });
@@ -74,7 +82,7 @@ export function useSwipeNavigation({ currentScreen, navigateTo }: Options) {
       window.removeEventListener('touchstart', handleTouchStart);
       window.removeEventListener('touchend', handleTouchEnd);
     };
-  }, [currentScreen, navigateTo]);
+  }, [currentScreen, goBack, navigateTo]);
 
   return {
     mainScreens: MAIN_SWIPE_SCREENS,

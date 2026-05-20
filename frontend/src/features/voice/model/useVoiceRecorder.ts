@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { transcribeVoice } from '@/features/voice/api/voice.api';
 
 type VoiceRecorderState = 'idle' | 'recording' | 'uploading' | 'error';
@@ -7,18 +7,41 @@ type UseVoiceRecorderParams = {
   onText: (text: string) => Promise<void> | void;
 };
 
+type RecorderFormat = {
+  mimeType: string;
+  extension: string;
+};
+
+function getBestRecorderFormat(): RecorderFormat | null {
+  if (typeof MediaRecorder === 'undefined') return null;
+
+  const formats: RecorderFormat[] = [
+    { mimeType: 'audio/webm;codecs=opus', extension: 'webm' },
+    { mimeType: 'audio/webm', extension: 'webm' },
+    { mimeType: 'audio/mp4', extension: 'mp4' },
+    { mimeType: 'audio/aac', extension: 'aac' },
+  ];
+
+  return formats.find((format) => MediaRecorder.isTypeSupported(format.mimeType)) ?? null;
+}
+
 export function useVoiceRecorder({ onText }: UseVoiceRecorderParams) {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const chunksRef = useRef<BlobPart[]>([]);
   const shouldSubmitRef = useRef(true);
+  const activeFormatRef = useRef<RecorderFormat | null>(null);
 
   const [state, setState] = useState<VoiceRecorderState>('idle');
   const [error, setError] = useState<string | null>(null);
-  const [isSupported] = useState(
+
+  const recorderFormat = useMemo(() => getBestRecorderFormat(), []);
+  const isSupported = Boolean(
     typeof window !== 'undefined' &&
-      !!navigator.mediaDevices &&
-      typeof MediaRecorder !== 'undefined',
+      typeof navigator !== 'undefined' &&
+      typeof navigator.mediaDevices?.getUserMedia === 'function' &&
+      typeof MediaRecorder !== 'undefined' &&
+      recorderFormat,
   );
 
   const cleanupStream = useCallback(() => {
@@ -29,7 +52,7 @@ export function useVoiceRecorder({ onText }: UseVoiceRecorderParams) {
   }, []);
 
   const startRecording = useCallback(async () => {
-    if (!isSupported) {
+    if (!isSupported || !recorderFormat) {
       setError('unsupported');
       setState('error');
       return;
@@ -39,12 +62,13 @@ export function useVoiceRecorder({ onText }: UseVoiceRecorderParams) {
       setError(null);
       chunksRef.current = [];
       shouldSubmitRef.current = true;
+      activeFormatRef.current = recorderFormat;
 
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       streamRef.current = stream;
 
       const recorder = new MediaRecorder(stream, {
-        mimeType: 'audio/webm',
+        mimeType: recorderFormat.mimeType,
       });
 
       recorder.ondataavailable = (event) => {
@@ -71,8 +95,9 @@ export function useVoiceRecorder({ onText }: UseVoiceRecorderParams) {
 
           setState('uploading');
 
-          const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
-          const result = await transcribeVoice(blob);
+          const format = activeFormatRef.current ?? recorderFormat;
+          const blob = new Blob(chunksRef.current, { type: format.mimeType });
+          const result = await transcribeVoice(blob, `voice.${format.extension}`);
 
           if (!result.text?.trim()) {
             setError('no-speech');
@@ -84,12 +109,13 @@ export function useVoiceRecorder({ onText }: UseVoiceRecorderParams) {
           setState('idle');
         } catch (err) {
           console.error(err);
-          setError('transcription-error');
+          setError(err instanceof Error ? err.message : 'transcription-error');
           setState('error');
         } finally {
           cleanupStream();
           chunksRef.current = [];
           shouldSubmitRef.current = true;
+          activeFormatRef.current = null;
         }
       };
 
@@ -101,7 +127,7 @@ export function useVoiceRecorder({ onText }: UseVoiceRecorderParams) {
       setState('error');
       cleanupStream();
     }
-  }, [cleanupStream, isSupported, onText]);
+  }, [cleanupStream, isSupported, onText, recorderFormat]);
 
   const stopRecording = useCallback(() => {
     const recorder = mediaRecorderRef.current;
@@ -123,6 +149,7 @@ export function useVoiceRecorder({ onText }: UseVoiceRecorderParams) {
     } else {
       cleanupStream();
       chunksRef.current = [];
+      activeFormatRef.current = null;
       setState('idle');
     }
   }, [cleanupStream]);
