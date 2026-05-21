@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigationStore } from '@/features/navigation/model/navigation.store';
+import { ScreenTopBar } from '@/shared/ui/ScreenTopBar';
 import { PendingActionsDrawer } from '@/features/pending-actions/ui/PendingActionsDrawer';
 import { FinancePreviewCard } from '@/features/chat/ui/FinancePreviewCard';
 import { AICoreOrb } from '@/features/ai-core/ui/AICoreOrb';
@@ -16,8 +16,6 @@ import type { TransactionDto } from '@/features/transactions/api/transactions.ap
 
 export function AICoreScreen() {
   const [historyOpen, setHistoryOpen] = useState(false);
-  const goBack = useNavigationStore((state) => state.goBack);
-  const goHome = useNavigationStore((state) => state.goHome);
 
   const {
     items,
@@ -108,54 +106,8 @@ export function AICoreScreen() {
     <div className="flex h-dvh flex-col overflow-hidden bg-[radial-gradient(circle_at_top,rgba(16,185,129,0.10),transparent_28%),linear-gradient(180deg,#040811_0%,#07111b_100%)] text-white">
       <div className="mx-auto flex h-full w-full max-w-[560px] flex-col overflow-hidden">
 
-        {/* HEADER */}
-        <header className="shrink-0 px-4 pt-5 pb-2" data-no-swipe="true">
-          <div className="grid grid-cols-[auto_1fr_auto] items-center gap-3">
-            <button
-              type="button"
-              onClick={goBack}
-              className="flex h-10 min-w-10 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] px-3 text-sm text-white/72"
-            >
-              Назад
-            </button>
-
-            <div className="min-w-0 text-center">
-              <div className="truncate text-[28px] font-semibold leading-none tracking-tight">
-                AI-Financer
-              </div>
-
-              <div className="mt-1 truncate text-xs text-white/38">
-                финансовый помощник
-              </div>
-            </div>
-
-            <div className="flex shrink-0 items-center gap-2">
-              <button
-                type="button"
-                onClick={openCommandList}
-                className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/[0.04]"
-                aria-label="Команды"
-              >
-                <span className="text-lg text-emerald-200">⌘</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setHistoryOpen(true)}
-                className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] text-sm text-white/72"
-                aria-label="История операций"
-              >
-                ◷
-              </button>
-              <button
-                type="button"
-                onClick={goHome}
-                className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] text-sm text-white/72"
-                aria-label="Домой"
-              >
-                ⌂
-              </button>
-            </div>
-          </div>
+        <header className="shrink-0 px-4 pt-3 pb-2" data-no-swipe="true">
+          <ScreenTopBar title="AI" left="back" right={['home']} />
         </header>
 
         {/* BODY */}
@@ -164,6 +116,11 @@ export function AICoreScreen() {
           <div className="space-y-4">
 
             <AICoreBalanceHero />
+
+            <div className="grid grid-cols-2 gap-2" data-no-swipe="true">
+              <button type="button" onClick={openCommandList} className="app-secondary-button h-11">⌘ Команды</button>
+              <button type="button" onClick={() => setHistoryOpen(true)} className="app-secondary-button h-11">◷ История</button>
+            </div>
 
             {/* LIVE STATUS */}
             <div className="flex items-center justify-between rounded-2xl border border-white/8 bg-white/[0.035] px-4 py-3">
@@ -185,7 +142,7 @@ export function AICoreScreen() {
             </div>
 
             {/* SUMMARY CARDS */}
-            <div className="grid grid-cols-2 gap-3 px-4">
+            <div className="grid grid-cols-2 gap-3">
               <LastTransactionCard
                 compact
                 transaction={latest ?? items[0] ?? null}
@@ -213,15 +170,18 @@ export function AICoreScreen() {
                 onLockedCancel={cancelLockedVoice}
               />
 
-              <div className="mt-4 text-center">
-                <div className="text-base font-medium text-white">
+              <div className="mt-5 text-center">
+                <div className="text-lg font-medium text-white">
                   Зажми и говори
+                </div>
+
+                <div className="mt-1 text-sm text-white/38">
+                  вверх — замок, влево — отмена
                 </div>
               </div>
             </section>
 
             {/* INPUT */}
-            <div className="pb-2">
             {isCommandPanelOpen ? (
                <AICoreInput
                   value={inputValue}
@@ -231,7 +191,6 @@ export function AICoreScreen() {
                   disabled={isSending}
               />
             ) : null}
-            </div>
 
             {/* PREVIEW */}
             {latestAssistantMessage?.kind === 'preview' ? (

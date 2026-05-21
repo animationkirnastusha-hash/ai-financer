@@ -46,6 +46,13 @@ export const env = {
   jwtSecret: getEnv('JWT_SECRET', 'dev-secret'),
   telegramBotToken: process.env.TELEGRAM_BOT_TOKEN ?? '',
   adminTelegramId: process.env.ADMIN_TELEGRAM_ID ?? '',
+  adminTelegramIds: getListEnv('ADMIN_TELEGRAM_IDS', [process.env.ADMIN_TELEGRAM_ID ?? ''].filter(Boolean)),
+
+  adminAlertsEnabled: getBooleanEnv('ADMIN_ALERTS_ENABLED', false),
+  adminAlertWebhookUrl: getOptionalEnv('ADMIN_ALERT_WEBHOOK_URL'),
+  adminAlertCooldownMs: getNumberEnv('ADMIN_ALERT_COOLDOWN_MS', 300_000),
+  apiSlowRequestMs: getNumberEnv('API_SLOW_REQUEST_MS', 2_500),
+  apiErrorRateThreshold: getNumberEnv('API_ERROR_RATE_THRESHOLD', 0.2),
 
   aiMode: getEnv('AI_MODE', aiProvider),
   aiProvider,

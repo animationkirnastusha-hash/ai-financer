@@ -9,3 +9,10 @@ export const getReferralInfo = asyncHandler(async (req: Request, res: Response) 
 
   res.json({ referral });
 });
+
+export const applyReferralCode = asyncHandler(async (req: Request, res: Response) => {
+  const { code } = req.body as { code?: string };
+  const referral = await referralService.applyReferralCode(req.userId!, code ?? '');
+
+  res.json({ referral });
+});

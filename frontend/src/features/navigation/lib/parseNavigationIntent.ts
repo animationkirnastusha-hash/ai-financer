@@ -19,6 +19,32 @@ function normalize(input: string) {
 function detectScreen(input: string): AppScreen | null {
   if (
     includesAny(input, [
+      'рефералы',
+      'реферальная',
+      'приглашения',
+      'пригласить',
+      'referral',
+      'invite',
+    ])
+  ) {
+    return 'referral';
+  }
+
+  if (
+    includesAny(input, [
+      'админ',
+      'админка',
+      'admin',
+      'панель администратора',
+      'статистика приложения',
+      'состояние сервера',
+    ])
+  ) {
+    return 'admin';
+  }
+
+  if (
+    includesAny(input, [
       'ai core',
       'ai-core',
       'ии ядро',

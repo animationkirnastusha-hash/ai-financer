@@ -1,8 +1,12 @@
-# Companion animation slot
+Здесь можно позже заменить CSS-companion на свои видео-анимации.
 
-Place your After Effects export here:
+Поддерживаемые имена файлов:
 
-- `companion.webm` — recommended, transparent WebM if supported by your export pipeline.
-- Keep the animation loop calm and short, around 2-4 seconds.
-- The app will use `/companion/companion.webm` automatically.
-- If the file is missing or unsupported, the CSS fallback avatar remains visible.
+idle.webm
+listening.webm
+thinking.webm
+confirm.webm
+success.webm
+warning.webm
+
+Если файла нет, приложение покажет CSS fallback.

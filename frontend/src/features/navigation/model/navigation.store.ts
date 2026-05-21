@@ -11,7 +11,9 @@ export type AppScreen =
   | 'premium'
   | 'sections'
   | 'taxonomy-settings'
-  | 'ai-core';
+  | 'ai-core'
+  | 'admin'
+  | 'referral';
 
 type NavigationState = {
   currentScreen: AppScreen;

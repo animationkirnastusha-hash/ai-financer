@@ -15,19 +15,17 @@ type Props = {
   onLockedCancel?: () => void;
 };
 
-const HOLD_DELAY_MS = 240;
+const HOLD_DELAY_MS = 220;
 
-export function AICoreOrb({
-  state,
-  isActive = false,
-  isVoiceLocked = false,
-  onClick,
-  onTap,
-  onHoldStart,
-  onHoldEnd,
-  onHoldCancel,
-}: Props) {
-  const active = isActive || isVoiceLocked || state === 'listening' || state === 'thinking';
+function moodFromState(state?: string, active?: boolean, locked?: boolean) {
+  if (locked || state === 'listening') return 'listening';
+  if (state === 'thinking' || active) return 'thinking';
+  if (state === 'success') return 'success';
+  if (state === 'warning') return 'warning';
+  return 'idle';
+}
+
+export function AICoreOrb({ state, isActive = false, isVoiceLocked = false, onClick, onTap, onHoldStart, onHoldEnd, onHoldCancel }: Props) {
   const holdTimerRef = useRef<number | null>(null);
   const isHoldingRef = useRef(false);
   const pointerIdRef = useRef<number | null>(null);
@@ -43,10 +41,8 @@ export function AICoreOrb({
     event.preventDefault();
     pointerIdRef.current = event.pointerId;
     event.currentTarget.setPointerCapture?.(event.pointerId);
-
     clearHoldTimer();
     isHoldingRef.current = false;
-
     holdTimerRef.current = window.setTimeout(() => {
       isHoldingRef.current = true;
       document.body.classList.add('ai-voice-gesture-active');
@@ -57,15 +53,9 @@ export function AICoreOrb({
   const finishPointer = (event: React.PointerEvent<HTMLDivElement>, cancelled = false) => {
     event.preventDefault();
     clearHoldTimer();
-
     if (pointerIdRef.current !== null) {
-      try {
-        event.currentTarget.releasePointerCapture?.(pointerIdRef.current);
-      } catch {
-        // ignore pointer capture release race
-      }
+      try { event.currentTarget.releasePointerCapture?.(pointerIdRef.current); } catch { /* ignore */ }
     }
-
     pointerIdRef.current = null;
     document.body.classList.remove('ai-voice-gesture-active');
 
@@ -76,9 +66,7 @@ export function AICoreOrb({
       return;
     }
 
-    if (!cancelled) {
-      (onTap || onClick)?.();
-    }
+    if (!cancelled) (onTap || onClick)?.();
   };
 
   return (
@@ -90,12 +78,7 @@ export function AICoreOrb({
       onPointerCancel={(event) => finishPointer(event, true)}
       onContextMenu={(event) => event.preventDefault()}
     >
-      <CompanionButton
-        size="lg"
-        mood={active ? state === 'listening' ? 'listening' : 'focused' : 'calm'}
-        label="AI помощник"
-        tabIndex={-1}
-      />
+      <CompanionButton size="lg" mood={moodFromState(state, isActive, isVoiceLocked)} label="AI помощник" tabIndex={-1} />
     </div>
   );
 }

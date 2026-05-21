@@ -9,6 +9,7 @@ import healthRoutes from './modules/health/routes';
 import { notFoundHandler } from './middleware/not-found';
 import { errorHandler } from './middleware/error-handler';
 import { rateLimit } from './middleware/rate-limit';
+import { apiMonitoringMiddleware } from './middleware/api-monitoring';
 
 export function createApp() {
   const app = express();
@@ -44,7 +45,7 @@ export function createApp() {
   app.use(express.urlencoded({ extended: true }));
 
   app.use('/health', healthRoutes);
-  app.use('/api', rateLimit({ windowMs: 60_000, max: 120 }), apiRoutes);
+  app.use('/api', apiMonitoringMiddleware, rateLimit({ windowMs: 60_000, max: 120 }), apiRoutes);
 
   app.use(notFoundHandler);
   app.use(errorHandler);

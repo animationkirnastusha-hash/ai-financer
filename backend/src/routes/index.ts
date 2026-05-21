@@ -15,6 +15,8 @@ import progressionRoutes from '../modules/progression/routes';
 import aiSettingsRoutes from '../modules/ai-settings/routes';
 import companionRoutes from '../modules/companion/routes';
 import premiumRoutes from '../modules/premium/routes';
+import adminRoutes from '../modules/admin/routes';
+import analyticsRoutes from '../modules/analytics/routes';
 const router = Router();
 
 router.use('/auth', authRoutes);
@@ -33,4 +35,6 @@ router.use('/progression', progressionRoutes);
 router.use('/ai-settings', aiSettingsRoutes);
 router.use('/companion', companionRoutes);
 router.use('/premium', premiumRoutes);
+router.use('/analytics', analyticsRoutes);
+router.use('/admin', adminRoutes);
 export default router;

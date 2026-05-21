@@ -49,9 +49,10 @@ export class AuthService {
     lastName: string | null;
     photoUrl: string | null;
     tier?: string;
+    isAdmin?: boolean;
   }) {
     const telegramId = user.telegramId.toString();
-    const isAdmin = telegramId === String(env.adminTelegramId);
+    const isAdmin = user.isAdmin || env.adminTelegramIds.includes(telegramId);
 
     return {
       id: user.id,

@@ -17,8 +17,11 @@ import SettingsPage from '@/pages/settings/SettingsPage';
 import TaxonomySettingsPage from '@/pages/settings/TaxonomySettingsPage';
 import TransactionsPage from '@/pages/transactions/TransactionsPage';
 import SectionsPage from '@/pages/sections/SectionsPage';
+import AdminPage from '@/pages/admin/AdminPage';
+import ReferralPage from '@/pages/referral/ReferralPage';
 import { AICoreScreen } from '@/features/ai-core/ui/AICoreScreen';
 import { parseNavigationIntent } from '@/features/navigation/lib/parseNavigationIntent';
+import { ProductAnalyticsTracker } from '@/features/product-analytics/ui/ProductAnalyticsTracker';
 
 export function AppRouter() {
   const currentScreen = useNavigationStore((state) => state.currentScreen);
@@ -50,6 +53,7 @@ export function AppRouter() {
 
   return (
     <AppShell>
+      <ProductAnalyticsTracker />
       {currentScreen === 'dashboard' && <DashboardPage />}
       {currentScreen === 'transactions' && <TransactionsPage />}
       {currentScreen === 'accounts' && <AccountsPage />}
@@ -61,6 +65,8 @@ export function AppRouter() {
       {currentScreen === 'sections' && <SectionsPage onBack={goBack} />}
       {currentScreen === 'taxonomy-settings' && <TaxonomySettingsPage />}
       {currentScreen === 'ai-core' && <AICoreScreen />}
+      {currentScreen === 'admin' && <AdminPage />}
+      {currentScreen === 'referral' && <ReferralPage />}
 
       <CommandListSheet open={isGlobalCommandListOpen} onClose={closeGlobalCommandList} onRunCommand={runGlobalCommand} />
 

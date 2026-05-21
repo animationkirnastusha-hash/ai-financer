@@ -1,11 +1,12 @@
 import { useSettingsStore } from '@/features/settings/model/settings.store';
 import { useNavigationStore } from '@/features/navigation/model/navigation.store';
 import { LanguageSwitcher } from '@/shared/ui/LanguageSwitcher';
+import { ScreenTopBar } from '@/shared/ui/ScreenTopBar';
+import { useAuthStore } from '@/features/auth/model/auth.store';
 
 export default function SettingsPage() {
   const navigateTo = useNavigationStore((state) => state.navigateTo);
-  const goBack = useNavigationStore((state) => state.goBack);
-  const goHome = useNavigationStore((state) => state.goHome);
+  const user = useAuthStore((state) => state.user);
   const voiceEnabled = useSettingsStore((state) => state.voiceEnabled);
   const voiceBetaEnabled = useSettingsStore((state) => state.voiceBetaEnabled);
   const aiInsightsEnabled = useSettingsStore((state) => state.aiInsightsEnabled);
@@ -14,28 +15,12 @@ export default function SettingsPage() {
   const setAIInsightsEnabled = useSettingsStore((state) => state.setAIInsightsEnabled);
 
   return (
-    <div className="h-full overflow-y-auto px-4 pb-28 pt-[calc(env(safe-area-inset-top)+70px)] text-white">
+    <div className="h-full overflow-y-auto px-4 pb-28 pt-4 text-white">
       <div className="mx-auto max-w-[620px] space-y-4">
-        <header className="rounded-[34px] border border-white/10 bg-white/[0.045] p-5">
-          <div className="flex items-center justify-between gap-3">
-            <button
-              type="button"
-              onClick={goBack}
-              className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-white/72"
-            >
-              Назад
-            </button>
-            <button
-              type="button"
-              onClick={goHome}
-              className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-white/72"
-            >
-              Домой
-            </button>
-          </div>
+        <ScreenTopBar title="Настройки" left="back" right={['home']} />
 
-          <div className="mt-5 text-[11px] uppercase tracking-[0.2em] text-emerald-200/60">Настройки</div>
-          <h1 className="mt-3 text-3xl font-semibold tracking-[-0.04em]">Управление</h1>
+        <header className="rounded-[34px] border border-white/10 bg-white/[0.045] p-5">
+          <h1 className="text-3xl font-semibold tracking-[-0.04em]">Управление</h1>
           <p className="mt-2 text-sm leading-6 text-white/55">
             Язык, голос, поведение AI и структура финансов.
           </p>
@@ -94,6 +79,16 @@ export default function SettingsPage() {
             <div className="font-semibold">Премиум</div>
             <div className="mt-1 text-sm text-white/42">Дополнительные возможности</div>
           </button>
+          <button onClick={() => navigateTo('referral')} className="rounded-[26px] border border-white/10 bg-white/[0.04] p-4 text-left">
+            <div className="font-semibold">Рефералы</div>
+            <div className="mt-1 text-sm text-white/42">Код и приглашения</div>
+          </button>
+          {user?.isAdmin ? (
+            <button onClick={() => navigateTo('admin')} className="rounded-[26px] border border-emerald-300/20 bg-emerald-300/[0.06] p-4 text-left">
+              <div className="font-semibold">Админ</div>
+              <div className="mt-1 text-sm text-white/42">Статистика и сервер</div>
+            </button>
+          ) : null}
         </section>
       </div>
     </div>

@@ -3,13 +3,14 @@ import { useAccountsStore } from '@/features/accounts/model/accounts.store';
 import { useNavigationStore } from '@/features/navigation/model/navigation.store';
 import { useTransactionsStore } from '@/features/transactions/model/transactions.store';
 import { CompanionPresence } from '@/features/companion/ui/CompanionPresence';
-import { formatMoney } from '@/shared/lib/money';
+import { ScreenTopBar } from '@/shared/ui/ScreenTopBar';
+import { formatMoney, formatTransactionDate } from '@/shared/lib/money';
 
 const quickActions = [
   { label: 'Расход', prompt: 'кофе 300' },
   { label: 'Доход', prompt: 'доход 50000' },
   { label: 'Перевод', prompt: 'переведи 1000 на карту' },
-  { label: 'Спросить AI', prompt: 'куда ушли деньги?' },
+  { label: 'AI', prompt: 'что изменилось за месяц?' },
 ];
 
 const onboardingSteps = [
@@ -23,6 +24,12 @@ function isCurrentMonth(dateValue: string) {
   const date = new Date(dateValue);
   const now = new Date();
   return date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth();
+}
+
+function titleOf(transaction: any) {
+  if (!transaction) return '';
+  if (transaction.type === 'transfer') return `${transaction.account?.name ?? 'Счёт'} → ${transaction.toAccount?.name ?? 'Счёт'}`;
+  return transaction.category?.name || transaction.description || 'Операция';
 }
 
 export default function DashboardPage() {
@@ -47,42 +54,51 @@ export default function DashboardPage() {
     return { totalRub, income, expenses, delta };
   }, [accounts, transactions]);
 
+  const recent = transactions.slice(0, 3);
   const isEmptyState = accounts.length === 0 && transactions.length === 0;
 
   return (
-    <div className="h-full overflow-y-auto px-4 pb-28 pt-[calc(env(safe-area-inset-top)+126px)] text-white">
-      <div className="mx-auto w-full max-w-[620px] space-y-4">
-        <header className="rounded-[34px] border border-white/10 bg-white/[0.045] p-5 shadow-2xl">
+    <div className="app-page text-white">
+      <div className="app-page__inner space-y-4">
+        <ScreenTopBar title="Главная" right={['referral', 'history', 'settings']} />
+
+        <header className="app-card app-card--hero">
           <div className="flex items-start justify-between gap-4">
-            <div>
-              <div className="text-[11px] uppercase tracking-[0.2em] text-emerald-200/60">AI-Financer</div>
-              <h1 className="mt-3 text-3xl font-semibold tracking-[-0.04em]">Главная</h1>
-              <p className="mt-2 max-w-[430px] text-sm leading-6 text-white/55">
-                Баланс, последние действия и быстрый доступ к AI.
-              </p>
+            <div className="min-w-0">
+              <div className="app-eyebrow">AI-Financer</div>
+              <h1 className="mt-3 text-[34px] font-semibold leading-none tracking-[-0.055em]">Главная</h1>
             </div>
-            <button onClick={() => navigateTo('premium')} className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-2 text-xs text-white/60">Премиум</button>
+            <button onClick={() => navigateTo('premium')} className="app-secondary-button shrink-0">Премиум</button>
           </div>
 
           <div className="mt-6 rounded-[28px] border border-emerald-300/12 bg-emerald-300/[0.08] p-5">
             <div className="text-sm text-emerald-100/60">Общий баланс</div>
-            <div className="mt-2 text-[38px] font-semibold tracking-[-0.06em]">{formatMoney(data.totalRub, 'RUB')}</div>
-            <div className="mt-3 flex flex-wrap gap-2 text-xs text-white/56">
-              <span className="rounded-full bg-black/22 px-3 py-1">Доходы: {formatMoney(data.income, 'RUB', { sign: 'plus' })}</span>
-              <span className="rounded-full bg-black/22 px-3 py-1">Расходы: {formatMoney(data.expenses, 'RUB', { sign: 'minus' })}</span>
-              <span className="rounded-full bg-black/22 px-3 py-1">Итог: {formatMoney(data.delta, 'RUB', { sign: 'auto' })}</span>
+            <div className="mt-2 text-[40px] font-semibold leading-none tracking-[-0.06em]">{formatMoney(data.totalRub, 'RUB')}</div>
+            <div className="mt-4 grid grid-cols-3 gap-2 text-xs text-white/58">
+              <span className="app-mini-pill">Доходы {formatMoney(data.income, 'RUB', { sign: 'plus' })}</span>
+              <span className="app-mini-pill">Расходы {formatMoney(data.expenses, 'RUB', { sign: 'minus' })}</span>
+              <span className="app-mini-pill">Итог {formatMoney(data.delta, 'RUB', { sign: 'auto' })}</span>
             </div>
           </div>
         </header>
 
-        {isEmptyState ? (
-          <section className="rounded-[32px] border border-emerald-300/14 bg-[radial-gradient(circle_at_top,rgba(16,185,129,0.16),transparent_52%),rgba(255,255,255,0.04)] p-5 shadow-2xl">
-            <div className="text-[11px] uppercase tracking-[0.2em] text-emerald-200/62">Первый запуск</div>
-            <h2 className="mt-3 text-2xl font-semibold tracking-[-0.03em]">Начни с одного действия</h2>
-            <p className="mt-2 text-sm leading-6 text-white/56">
-              AI подготовит предварительный результат. Ты подтвердишь действие перед сохранением.
-            </p>
+        <section className="grid grid-cols-4 gap-2">
+          {quickActions.map((action) => (
+            <button
+              key={action.label}
+              type="button"
+              onClick={() => openAIWithCommand(action.prompt)}
+              className="rounded-[22px] border border-white/10 bg-white/[0.04] px-2 py-3 text-center text-sm text-white/78 active:scale-[0.98]"
+            >
+              {action.label}
+            </button>
+          ))}
+        </section>
 
+        {isEmptyState ? (
+          <section className="app-card">
+            <div className="app-eyebrow">Первый запуск</div>
+            <h2 className="mt-3 text-2xl font-semibold tracking-[-0.03em]">Начни с одного действия</h2>
             <div className="mt-5 grid gap-2">
               {onboardingSteps.map((step, index) => (
                 <button
@@ -95,7 +111,7 @@ export default function DashboardPage() {
                     <div className="text-sm font-medium text-white">{index + 1}. {step.label}</div>
                     <div className="mt-1 text-xs text-emerald-100/66">“{step.prompt}”</div>
                   </div>
-                  <span className="text-white/28">→</span>
+                  <span className="text-white/30">→</span>
                 </button>
               ))}
             </div>
@@ -104,15 +120,36 @@ export default function DashboardPage() {
 
         <CompanionPresence />
 
-        <section className="grid grid-cols-2 gap-3">
-          {quickActions.map((action) => (
-            <button key={action.label} onClick={() => openAIWithCommand(action.prompt)} className="rounded-[26px] border border-white/10 bg-white/[0.045] p-4 text-left transition active:scale-[0.98]">
-              <div className="text-base font-semibold">{action.label}</div>
-              <div className="mt-2 text-xs leading-5 text-white/45">“{action.prompt}”</div>
-            </button>
-          ))}
-        </section>
+        <section className="app-card">
+          <div className="flex items-center justify-between gap-3">
+            <div className="app-eyebrow">Недавнее</div>
+            <button type="button" onClick={() => navigateTo('transactions')} className="text-sm text-emerald-100/72">Все</button>
+          </div>
 
+          <div className="mt-4 space-y-2">
+            {recent.length === 0 ? (
+              <div className="rounded-2xl border border-white/8 bg-black/18 p-4 text-sm text-white/50">Операций пока нет.</div>
+            ) : (
+              recent.map((transaction) => {
+                const sign = transaction.type === 'income' ? 'plus' : transaction.type === 'expense' ? 'minus' : 'none';
+                return (
+                  <button
+                    key={transaction.id}
+                    type="button"
+                    onClick={() => navigateTo('transactions')}
+                    className="flex w-full items-center justify-between gap-3 rounded-2xl border border-white/8 bg-black/18 p-3 text-left"
+                  >
+                    <div className="min-w-0">
+                      <div className="truncate text-sm font-medium text-white">{titleOf(transaction)}</div>
+                      <div className="mt-1 truncate text-xs text-white/40">{formatTransactionDate(transaction.date)} · {transaction.account?.name ?? 'Счёт'}</div>
+                    </div>
+                    <div className="shrink-0 text-sm font-semibold text-white">{formatMoney(transaction.amount, transaction.account?.currency ?? 'RUB', { sign })}</div>
+                  </button>
+                );
+              })
+            )}
+          </div>
+        </section>
       </div>
     </div>
   );

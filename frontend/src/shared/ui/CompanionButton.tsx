@@ -10,16 +10,10 @@ type Props = ButtonHTMLAttributes<HTMLButtonElement> & {
 const sizes = {
   sm: 'h-12 w-12',
   md: 'h-16 w-16',
-  lg: 'h-28 w-28',
+  lg: 'h-32 w-32',
 };
 
-export function CompanionButton({
-  mood = 'calm',
-  size = 'md',
-  label = 'Открыть AI',
-  className = '',
-  ...props
-}: Props) {
+export function CompanionButton({ mood = 'idle', size = 'md', label = 'Открыть AI', className = '', ...props }: Props) {
   return (
     <button
       type="button"
