@@ -10,9 +10,9 @@ type Options = {
 
 export const MAIN_SWIPE_SCREENS: AppScreen[] = ['transactions', 'dashboard', 'analytics'];
 
-const MIN_SWIPE_DISTANCE = 34;
-const MAX_VERTICAL_DRIFT = 96;
-const MIN_HORIZONTAL_RATIO = 1.15;
+const MIN_SWIPE_DISTANCE = 22;
+const MAX_VERTICAL_DRIFT = 120;
+const MIN_HORIZONTAL_RATIO = 0.82;
 
 function isInteractiveTarget(target: EventTarget | null) {
   if (!(target instanceof HTMLElement)) return false;
@@ -37,7 +37,7 @@ function setSwipeDirection(direction: 'left' | 'right') {
   document.body.classList.add(direction === 'left' ? 'ai-screen-slide-left' : 'ai-screen-slide-right');
   window.setTimeout(() => {
     document.body.classList.remove('ai-screen-slide-left', 'ai-screen-slide-right');
-  }, 360);
+  }, 460);
 }
 
 export function useSwipeNavigation({ currentScreen, navigateTo, goBack }: Options) {

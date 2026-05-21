@@ -10,6 +10,9 @@ export type AppSettings = {
   voiceEnabled: boolean;
   voiceBetaEnabled: boolean;
   voiceRepliesEnabled: boolean;
+  voiceAlwaysOnEnabled: boolean;
+  voicePermissionPrompted: boolean;
+  textInputEnabled: boolean;
   aiInsightsEnabled: boolean;
   subscriptionPlan: SubscriptionPlan;
 

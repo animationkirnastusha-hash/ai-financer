@@ -635,3 +635,210 @@ body.ai-screen-slide-right .ai-screen-transition {
     animation: none !important;
   }
 }
+
+/* Patch 18: voice-first companion */
+.voice-first-companion {
+  position: fixed;
+  right: max(16px, env(safe-area-inset-right));
+  bottom: calc(78px + env(safe-area-inset-bottom));
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.voice-first-companion__controls {
+  display: flex;
+  align-items: flex-end;
+  gap: 9px;
+  pointer-events: auto;
+}
+
+.voice-first-companion__voice-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+.voice-first-status {
+  min-width: 58px;
+  border: 1px solid rgba(255,255,255,.11);
+  border-radius: 999px;
+  background: rgba(255,255,255,.075);
+  color: rgba(255,255,255,.66);
+  font-size: 11px;
+  line-height: 1;
+  padding: 9px 11px;
+  backdrop-filter: blur(18px);
+  transition: border-color .18s ease, background .18s ease, color .18s ease;
+}
+
+.voice-first-status--on {
+  border-color: rgba(129, 239, 208, .34);
+  background: rgba(129, 239, 208, .11);
+  color: rgba(218,255,245,.94);
+}
+
+.voice-first-mic-toggle {
+  max-width: min(190px, calc(100vw - 96px));
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 999px;
+  background: linear-gradient(135deg, rgba(129,239,208,.16), rgba(148,199,255,.1));
+  box-shadow: 0 12px 32px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.07);
+  color: rgba(255,255,255,.9);
+  font-size: 11px;
+  font-weight: 650;
+  line-height: 1;
+  padding: 10px 12px;
+  white-space: nowrap;
+  backdrop-filter: blur(18px);
+  touch-action: manipulation;
+  transition: transform .18s ease, border-color .18s ease, background .18s ease, color .18s ease;
+}
+
+.voice-first-mic-toggle:active {
+  transform: scale(.96);
+}
+
+.voice-first-mic-toggle:disabled {
+  opacity: .48;
+}
+
+.voice-first-mic-toggle--off {
+  border-color: rgba(255, 126, 126, .22);
+  background: linear-gradient(135deg, rgba(255,126,126,.13), rgba(255,255,255,.06));
+  color: rgba(255,225,225,.94);
+}
+
+.voice-first-bubble {
+  max-width: min(270px, calc(100vw - 42px));
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 20px 20px 8px 20px;
+  background: linear-gradient(145deg, rgba(20,24,32,.93), rgba(10,12,18,.91));
+  box-shadow: 0 18px 46px rgba(0,0,0,.42), inset 0 1px 0 rgba(255,255,255,.08);
+  color: rgba(255,255,255,.88);
+  font-size: 13px;
+  line-height: 1.45;
+  padding: 11px 13px;
+  pointer-events: none;
+  animation: voiceBubbleIn .28s cubic-bezier(.2,.9,.2,1) both;
+  backdrop-filter: blur(20px);
+}
+
+.voice-first-bubble--listening {
+  border-color: rgba(148, 199, 255, .26);
+  background: linear-gradient(145deg, rgba(32,43,65,.94), rgba(10,14,24,.92));
+}
+
+.voice-first-bubble--thinking {
+  border-color: rgba(183, 159, 255, .24);
+}
+
+.voice-first-bubble--success {
+  border-color: rgba(129, 239, 208, .28);
+}
+
+.voice-first-bubble--warning {
+  border-color: rgba(255, 207, 115, .28);
+}
+
+.voice-first-intro {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: grid;
+  place-items: end center;
+  padding: 20px;
+  padding-bottom: calc(22px + env(safe-area-inset-bottom));
+  background: linear-gradient(180deg, rgba(0,0,0,.14), rgba(0,0,0,.62));
+  backdrop-filter: blur(10px);
+}
+
+.voice-first-intro__card {
+  width: min(100%, 390px);
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 28px;
+  background: linear-gradient(145deg, rgba(21,25,34,.95), rgba(8,10,16,.96));
+  box-shadow: 0 26px 70px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.08);
+  padding: 18px;
+  color: white;
+  animation: appSheetIn .32s cubic-bezier(.2,.9,.2,1) both;
+}
+
+.voice-first-intro__title {
+  font-size: 20px;
+  font-weight: 650;
+  letter-spacing: -.04em;
+}
+
+.voice-first-intro__card p {
+  margin-top: 8px;
+  color: rgba(255,255,255,.58);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.voice-first-intro__actions {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.voice-first-intro__actions button {
+  border-radius: 18px;
+  padding: 13px 14px;
+  border: 1px solid rgba(255,255,255,.1);
+  background: rgba(255,255,255,.08);
+  color: rgba(255,255,255,.78);
+  font-weight: 600;
+}
+
+.voice-first-intro__actions button:first-child {
+  background: linear-gradient(135deg, rgba(129,239,208,.22), rgba(148,199,255,.14));
+  color: white;
+  border-color: rgba(129,239,208,.28);
+}
+
+@keyframes voiceBubbleIn {
+  from { opacity: 0; transform: translate3d(10px, 8px, 0) scale(.96); filter: blur(4px); }
+  to { opacity: 1; transform: translate3d(0,0,0) scale(1); filter: blur(0); }
+}
+
+@media (max-width: 380px) {
+  .voice-first-companion { right: 12px; bottom: calc(70px + env(safe-area-inset-bottom)); }
+  .voice-first-status { display: none; }
+  .voice-first-mic-toggle { max-width: calc(100vw - 104px); font-size: 10px; padding: 9px 10px; }
+  .voice-first-bubble { max-width: calc(100vw - 32px); }
+}
+
+/* Patch 18: stronger swipe feedback */
+body.ai-screen-slide-left .ai-screen-transition {
+  animation: aiPageTurnLeft 440ms cubic-bezier(.18,.86,.24,1) both !important;
+  transform-origin: left center;
+  will-change: transform, opacity, filter;
+}
+
+body.ai-screen-slide-right .ai-screen-transition {
+  animation: aiPageTurnRight 440ms cubic-bezier(.18,.86,.24,1) both !important;
+  transform-origin: right center;
+  will-change: transform, opacity, filter;
+}
+
+@keyframes aiPageTurnLeft {
+  0% { opacity: .45; transform: perspective(760px) translateX(46px) rotateY(-13deg) scale(.982); filter: blur(2px); }
+  58% { opacity: 1; transform: perspective(760px) translateX(-3px) rotateY(1.4deg) scale(1.002); filter: blur(0); }
+  100% { opacity: 1; transform: perspective(760px) translateX(0) rotateY(0) scale(1); filter: blur(0); }
+}
+
+@keyframes aiPageTurnRight {
+  0% { opacity: .45; transform: perspective(760px) translateX(-46px) rotateY(13deg) scale(.982); filter: blur(2px); }
+  58% { opacity: 1; transform: perspective(760px) translateX(3px) rotateY(-1.4deg) scale(1.002); filter: blur(0); }
+  100% { opacity: 1; transform: perspective(760px) translateX(0) rotateY(0) scale(1); filter: blur(0); }
+}

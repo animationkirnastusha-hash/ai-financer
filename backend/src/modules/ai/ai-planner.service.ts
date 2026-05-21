@@ -59,8 +59,9 @@ export class AIPlannerService {
   private systemPrompt() {
     return [
       'Return ONLY strict JSON.',
-      'Format: {"mode":"actions","actions":[{"tool":"create_transaction","input":{}}]}.',
-      'No prose. No markdown. No questions.',
+      'Format for actions: {"mode":"actions","actions":[{"tool":"create_transaction","input":{}}],"summary":"..."}.',
+      'For non-financial or philosophical small talk, return {"mode":"reply","summary":"short human answer, then gently return to finance context","actions":[]}.',
+      'No prose. No markdown. No questions outside JSON.',
       'Never output accountId/categoryId/sectionId; backend resolves entities.',
     ].join(' ');
   }
@@ -71,6 +72,8 @@ export class AIPlannerService {
       getPlannerToolContract(),
       'RULES:',
       'Use only listed tools.',
+      'If the user says something unrelated to finance, answer briefly and meaningfully in summary, but do not create actions and do not pretend to save memory.',
+      'For philosophical/off-topic questions: respond in 1-2 short lines, connect gently to financial stability/control only if natural.',
       'For analytics questions like сколько потратил/доход/топ категорий/баланс, use query_analytics.',
       'For undo/cancel last operation, use undo_last_action.',
       'For companion/reactions, use show_companion_reactions.',
@@ -184,7 +187,7 @@ export class AIPlannerService {
     return {
       mode: 'actions',
       language: this.asOptionalString(raw.language),
-      summary: this.asOptionalString(raw.summary) ?? (actions.length ? 'Действие подготовлено.' : 'Нет действий'),
+      summary: this.asOptionalString(raw.summary) ?? (actions.length ? 'Действие подготовлено.' : 'Я рядом. Могу ответить коротко и помочь с финансами.'),
       actions,
     };
   }

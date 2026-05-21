@@ -1,19 +1,17 @@
 import type { ReactNode } from 'react';
-import { CompanionButton } from '@/shared/ui/CompanionButton';
 import { useSwipeNavigation } from '@/features/navigation/lib/useSwipeNavigation';
 import { MainMenuDots, MAIN_ITEMS } from '@/features/navigation/ui/MainMenuDots';
 import { useNavigationStore } from '@/features/navigation/model/navigation.store';
+import { VoiceFirstCompanionLayer } from '@/features/voice/ui/VoiceFirstCompanionLayer';
 
 export function AppShell({ children }: { children: ReactNode }) {
   const currentScreen = useNavigationStore((state) => state.currentScreen);
   const navigateTo = useNavigationStore((state) => state.navigateTo);
-  const openAIWithCommand = useNavigationStore((state) => state.openAIWithCommand);
   const goBack = useNavigationStore((state) => state.goBack);
 
   useSwipeNavigation({ currentScreen, navigateTo, goBack });
 
   const showMainDots = MAIN_ITEMS.some((item) => item.screen === currentScreen);
-  const showCompanion = currentScreen !== 'ai-core';
 
   return (
     <div className="telegram-app-shell ai-app-shell">
@@ -21,11 +19,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         {children}
       </main>
 
-      {showCompanion ? (
-        <div className="ai-floating-companion" data-no-swipe="true">
-          <CompanionButton mood="idle" size="md" label="Открыть AI" onClick={() => openAIWithCommand()} />
-        </div>
-      ) : null}
+      <VoiceFirstCompanionLayer />
 
       {showMainDots ? <MainMenuDots currentScreen={currentScreen} onNavigate={navigateTo} items={MAIN_ITEMS} /> : null}
     </div>

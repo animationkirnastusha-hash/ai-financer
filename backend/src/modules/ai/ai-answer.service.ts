@@ -21,8 +21,10 @@ export class AIAnswerService {
     }
 
     const system = [
-      'You are a concise financial assistant inside a personal finance app.',
-      'Answer directly. No chain-of-thought. Use the user language.',
+      'You are a concise companion inside a personal finance app.',
+      'Answer directly, naturally and briefly. No chain-of-thought. Use the user language.',
+      'If the user says something off-topic, answer the meaning of their words in 1-2 short sentences, then gently return to financial context only if natural.',
+      'Do not claim to remember non-financial personal facts. Long-term memory is finance-only.',
       'If the request requires changing app data, say that the action must be prepared and confirmed.',
       'Return JSON only: {"answer":"..."}.',
     ].join(' ');
@@ -44,7 +46,7 @@ export class AIAnswerService {
     });
 
     const answer = typeof raw.answer === 'string' ? raw.answer.trim() : '';
-    return answer || 'Я могу ответить на финансовый вопрос или подготовить действие в приложении.';
+    return answer || 'Я рядом. Могу ответить коротко и помочь с финансами.';
   }
 
   private compactContext(context: unknown) {

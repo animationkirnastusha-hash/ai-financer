@@ -4,6 +4,7 @@ import { AIExecutorService } from './ai-executor.service';
 import { AIPlannerService } from './ai-planner.service';
 import { AIPreviewService } from './ai-preview.service';
 import { AIValidatorService } from './ai-validator.service';
+import { AIAnswerService } from './ai-answer.service';
 import { AIAuditService } from './audit.service';
 import { AIPendingActionService } from './pending-action.service';
 import { aiSessionService } from './ai-session.service';
@@ -17,6 +18,7 @@ export class AIOrchestratorService {
   private readonly executor = new AIExecutorService();
   private readonly pending = new AIPendingActionService();
   private readonly audit = new AIAuditService();
+  private readonly answer = new AIAnswerService();
 
   async handleCommand(userId: string, command: string, _options: AIHandleOptions = {}): Promise<AIResult> {
     const trimmed = command.trim();
@@ -30,24 +32,25 @@ export class AIOrchestratorService {
       const plan = await this.planner.plan(trimmed, context);
 
       if (!plan.actions.length) {
+        const companionAnswer = await this.answer.answer(trimmed, context, 'fast', plan.summary);
         const audit = await this.audit.create({
           userId,
           command: trimmed,
-          intent: 'no_action',
+          intent: 'companion_reply',
           riskLevel: 'low',
           requiresConfirmation: false,
           executed: false,
-          status: 'no_action',
-          result: { plan },
+          status: 'companion_reply',
+          result: { domain: 'non_finance_or_unclear', memoryEligible: false, plan },
         });
 
         return {
-          success: false,
-          intent: 'no_action',
+          success: true,
+          intent: 'companion_reply',
           executed: false,
           requiresConfirmation: false,
           riskLevel: 'low',
-          message: 'Не нашёл действие для выполнения. Сформулируй как действие: сумма, счёт, тип операции.',
+          message: companionAnswer,
           parsed: null,
           meta: { auditLogId: audit.id },
         };

@@ -13,9 +13,11 @@ import { EditTransactionModal } from '@/features/transactions/ui/EditTransaction
 import { MonthlyStatsCard } from '@/features/transactions/ui/MonthlyStatsCard';
 import { useTransactionsStore } from '@/features/transactions/model/transactions.store';
 import type { TransactionDto } from '@/features/transactions/api/transactions.api';
+import { useSettingsStore } from '@/features/settings/model/settings.store';
 
 export function AICoreScreen() {
   const [historyOpen, setHistoryOpen] = useState(false);
+  const textInputEnabled = useSettingsStore((state) => state.textInputEnabled);
 
   const {
     items,
@@ -172,17 +174,17 @@ export function AICoreScreen() {
 
               <div className="mt-5 text-center">
                 <div className="text-lg font-medium text-white">
-                  Зажми и говори
+                  Companion слушает
                 </div>
 
                 <div className="mt-1 text-sm text-white/38">
-                  вверх — замок, влево — отмена
+                  можно говорить или открыть текстовый ввод
                 </div>
               </div>
             </section>
 
             {/* INPUT */}
-            {isCommandPanelOpen ? (
+            {textInputEnabled && isCommandPanelOpen ? (
                <AICoreInput
                   value={inputValue}
                   onChange={setInputValue}

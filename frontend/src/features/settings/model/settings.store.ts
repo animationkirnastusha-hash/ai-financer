@@ -12,6 +12,9 @@ type SettingsState = AppSettings & {
   setVoiceEnabled: (value: boolean) => void;
   setVoiceBetaEnabled: (value: boolean) => void;
   setVoiceRepliesEnabled: (value: boolean) => void;
+  setVoiceAlwaysOnEnabled: (value: boolean) => void;
+  setVoicePermissionPrompted: (value: boolean) => void;
+  setTextInputEnabled: (value: boolean) => void;
   setAIInsightsEnabled: (value: boolean) => void;
   setSubscriptionPlan: (plan: SubscriptionPlan) => void;
 
@@ -33,6 +36,9 @@ const defaultSettings: AppSettings = {
   voiceEnabled: true,
   voiceBetaEnabled: true,
   voiceRepliesEnabled: false,
+  voiceAlwaysOnEnabled: false,
+  voicePermissionPrompted: false,
+  textInputEnabled: true,
   aiInsightsEnabled: true,
   subscriptionPlan: 'free',
 
@@ -57,6 +63,9 @@ function loadSettings(): AppSettings {
       ...defaultSettings,
       ...parsed,
       appLanguage: parsed.appLanguage === 'en' ? 'en' : 'ru',
+      voiceAlwaysOnEnabled: Boolean(parsed.voiceAlwaysOnEnabled),
+      voicePermissionPrompted: Boolean(parsed.voicePermissionPrompted),
+      textInputEnabled: parsed.textInputEnabled === false ? false : true,
     };
   } catch {
     return defaultSettings;
@@ -71,6 +80,9 @@ function saveSettings(state: AppSettings) {
       voiceEnabled: state.voiceEnabled,
       voiceBetaEnabled: state.voiceBetaEnabled,
       voiceRepliesEnabled: state.voiceRepliesEnabled,
+      voiceAlwaysOnEnabled: state.voiceAlwaysOnEnabled,
+      voicePermissionPrompted: state.voicePermissionPrompted,
+      textInputEnabled: state.textInputEnabled,
       aiInsightsEnabled: state.aiInsightsEnabled,
       subscriptionPlan: state.subscriptionPlan,
       mainCurrency: state.mainCurrency,
@@ -104,6 +116,21 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
 
   setVoiceRepliesEnabled: (value) => {
     set({ voiceRepliesEnabled: value });
+    saveSettings(get());
+  },
+
+  setVoiceAlwaysOnEnabled: (value) => {
+    set({ voiceAlwaysOnEnabled: value });
+    saveSettings(get());
+  },
+
+  setVoicePermissionPrompted: (value) => {
+    set({ voicePermissionPrompted: value });
+    saveSettings(get());
+  },
+
+  setTextInputEnabled: (value) => {
+    set({ textInputEnabled: value });
     saveSettings(get());
   },
 
