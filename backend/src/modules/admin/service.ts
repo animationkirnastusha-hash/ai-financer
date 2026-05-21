@@ -1,5 +1,6 @@
 import { prisma } from '../../lib/prisma';
 import { monitoringService } from '../monitoring/monitoring.instance';
+import { ensureProductAnalyticsSchema } from '../analytics/bootstrap';
 
 function startOfDay(daysAgo: number) {
   const date = new Date();
@@ -17,8 +18,19 @@ function parseEventData(data: string | null) {
   }
 }
 
+async function safeCount(label: string, count: () => Promise<number>) {
+  try {
+    return await count();
+  } catch (error) {
+    console.error(`[Admin] ${label} failed:`, error);
+    return 0;
+  }
+}
+
 export class AdminService {
   async getOverview() {
+    await ensureProductAnalyticsSchema();
+
     const now = new Date();
     const today = startOfDay(0);
     const sevenDaysAgo = startOfDay(7);
@@ -35,15 +47,15 @@ export class AdminService {
       pendingActions,
       premiumUsers,
     ] = await Promise.all([
-      prisma.user.count(),
-      prisma.user.count({ where: { createdAt: { gte: today } } }),
-      prisma.user.count({ where: { createdAt: { gte: sevenDaysAgo } } }),
-      prisma.transaction.count(),
-      prisma.transaction.count({ where: { createdAt: { gte: today } } }),
-      prisma.account.count(),
-      prisma.productEvent.count({ where: { createdAt: { gte: today } } }),
-      prisma.aIPendingAction.count({ where: { status: 'pending' } }),
-      prisma.user.count({ where: { tier: { not: 'FREE' } } }),
+      safeCount('usersTotal', () => prisma.user.count()),
+      safeCount('usersToday', () => prisma.user.count({ where: { createdAt: { gte: today } } })),
+      safeCount('users7d', () => prisma.user.count({ where: { createdAt: { gte: sevenDaysAgo } } })),
+      safeCount('transactionsTotal', () => prisma.transaction.count()),
+      safeCount('transactionsToday', () => prisma.transaction.count({ where: { createdAt: { gte: today } } })),
+      safeCount('accountsTotal', () => prisma.account.count()),
+      safeCount('eventsToday', () => prisma.productEvent.count({ where: { createdAt: { gte: today } } })),
+      safeCount('pendingActions', () => prisma.aIPendingAction.count({ where: { status: 'pending' } })),
+      safeCount('premiumUsers', () => prisma.user.count({ where: { tier: { not: 'FREE' } } })),
     ]);
 
     const events = await prisma.productEvent.findMany({
@@ -71,9 +83,9 @@ export class AdminService {
 
     const activeUserIds = new Set(events.map((event) => event.userId).filter(Boolean));
     const totalStarted = sourceEvents.length;
-    const didTransaction = new Set(
+    const didAction = new Set(
       events
-        .filter((event) => event.event === 'transaction_created' || event.event === 'ai_confirmed')
+        .filter((event) => event.event === 'transaction_created' || event.event === 'ai_confirmed' || event.event === 'ai_command_submitted')
         .map((event) => event.userId)
         .filter(Boolean),
     );
@@ -96,8 +108,8 @@ export class AdminService {
       screens: Array.from(screens.entries()).map(([screen, count]) => ({ screen, count })).sort((a, b) => b.count - a.count),
       funnel: [
         { step: 'Открыли приложение', count: totalStarted },
-        { step: 'Авторизованы', count: activeUserIds.size },
-        { step: 'Создали действие', count: didTransaction.size },
+        { step: 'Активные пользователи', count: activeUserIds.size },
+        { step: 'Выполнили действие', count: didAction.size },
       ],
       monitoring: monitoringService.getSnapshot(),
     };
@@ -139,16 +151,20 @@ export class AdminService {
   }
 
   async getEvents() {
+    await ensureProductAnalyticsSchema();
+
     const events = await prisma.productEvent.findMany({
       orderBy: { createdAt: 'desc' },
       take: 120,
     });
 
     const userIds = Array.from(new Set(events.map((event) => event.userId).filter((id): id is string => Boolean(id))));
-    const users = await prisma.user.findMany({
-      where: { id: { in: userIds } },
-      select: { id: true, firstName: true, username: true },
-    });
+    const users = userIds.length
+      ? await prisma.user.findMany({
+          where: { id: { in: userIds } },
+          select: { id: true, firstName: true, username: true },
+        })
+      : [];
     const usersById = new Map(users.map((user) => [user.id, user]));
 
     return events.map((event) => ({

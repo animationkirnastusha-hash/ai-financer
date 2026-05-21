@@ -35,17 +35,20 @@ function getSource() {
 }
 
 function fireAndForget(event: string, data?: Record<string, unknown>) {
-  void productAnalyticsApi.track(event, data).catch(() => undefined);
+  void productAnalyticsApi.track(event, data).catch((error) => {
+    if (import.meta.env.DEV) console.warn('[analytics] event was not sent', event, error);
+  });
 }
 
 export function ProductAnalyticsTracker() {
   const currentScreen = useNavigationStore((state) => state.currentScreen);
   const user = useAuthStore((state) => state.user);
+  const isReady = useAuthStore((state) => state.isReady);
   const startedRef = useRef(false);
   const lastScreenRef = useRef<string | null>(null);
 
   useEffect(() => {
-    if (!user || startedRef.current) return;
+    if (!isReady || !user || startedRef.current) return;
     startedRef.current = true;
 
     const telegram = getTelegramTrackingData();
@@ -55,13 +58,13 @@ export function ProductAnalyticsTracker() {
       path: window.location.pathname,
       query: window.location.search,
       platform: telegram?.platform ?? 'web',
-      telegramVersion: telegram?.version,
+      telegramVersion: telegram?.version ?? null,
       language: navigator.language,
     });
-  }, [user]);
+  }, [isReady, user]);
 
   useEffect(() => {
-    if (!user) return;
+    if (!isReady || !user) return;
     if (lastScreenRef.current === currentScreen) return;
     lastScreenRef.current = currentScreen;
 
@@ -69,7 +72,7 @@ export function ProductAnalyticsTracker() {
       screen: currentScreen,
       source: getSource(),
     });
-  }, [currentScreen, user]);
+  }, [currentScreen, isReady, user]);
 
   return null;
 }

@@ -7,7 +7,9 @@ import type { TelegramInitDataUser } from '../../shared/utils/telegramAuth';
 export class AuthService {
   async findOrCreateUser(telegramUser: TelegramInitDataUser) {
     const telegramId = BigInt(telegramUser.id);
+    const telegramIdString = telegramUser.id.toString();
     const firstName = telegramUser.first_name || 'Telegram user';
+    const isEnvAdmin = env.adminTelegramIds.includes(telegramIdString);
 
     return prisma.user.upsert({
       where: {
@@ -18,6 +20,7 @@ export class AuthService {
         firstName,
         lastName: telegramUser.last_name ?? null,
         photoUrl: telegramUser.photo_url ?? null,
+        ...(isEnvAdmin ? { isAdmin: true } : {}),
       },
       create: {
         telegramId,
@@ -25,6 +28,7 @@ export class AuthService {
         firstName,
         lastName: telegramUser.last_name ?? null,
         photoUrl: telegramUser.photo_url ?? null,
+        isAdmin: isEnvAdmin,
       },
     });
   }
@@ -52,7 +56,7 @@ export class AuthService {
     isAdmin?: boolean;
   }) {
     const telegramId = user.telegramId.toString();
-    const isAdmin = user.isAdmin || env.adminTelegramIds.includes(telegramId);
+    const isAdmin = Boolean(user.isAdmin) || env.adminTelegramIds.includes(telegramId);
 
     return {
       id: user.id,

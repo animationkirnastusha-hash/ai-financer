@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { adminApi, type AdminEvent, type AdminOverview, type AdminUser } from '@/features/admin/api/admin.api';
 import { useAuthStore } from '@/features/auth/model/auth.store';
+import { HttpError } from '@/shared/api/http';
 import { ScreenTopBar } from '@/shared/ui/ScreenTopBar';
 
 type Tab = 'overview' | 'users' | 'events' | 'monitoring';
@@ -17,7 +18,29 @@ function MetricCard({ title, value, caption }: { title: string; value: string | 
 
 function formatDate(value: string | null) {
   if (!value) return '—';
-  return new Intl.DateTimeFormat('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }).format(new Date(value));
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '—';
+  return new Intl.DateTimeFormat('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }).format(date);
+}
+
+function getErrorMessage(error: unknown) {
+  if (error instanceof HttpError) {
+    const payload = error.payload as { error?: { message?: string; code?: string }; message?: string } | string | null | undefined;
+
+    if (typeof payload === 'string' && payload) {
+      return `${error.status}: ${payload.slice(0, 180)}`;
+    }
+
+    if (payload && typeof payload === 'object') {
+      const message = payload.error?.message || payload.message || 'Запрос не выполнен';
+      const code = payload.error?.code ? ` · ${payload.error.code}` : '';
+      return `${error.status}: ${message}${code}`;
+    }
+
+    return `${error.status}: Запрос не выполнен`;
+  }
+
+  return error instanceof Error ? error.message : 'Неизвестная ошибка';
 }
 
 export default function AdminPage() {
@@ -27,7 +50,7 @@ export default function AdminPage() {
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [events, setEvents] = useState<AdminEvent[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [errors, setErrors] = useState<string[]>([]);
 
   const isAdmin = Boolean(user?.isAdmin);
 
@@ -36,21 +59,29 @@ export default function AdminPage() {
 
     let cancelled = false;
     setIsLoading(true);
-    setError(null);
+    setErrors([]);
 
-    Promise.all([
+    Promise.allSettled([
       adminApi.overview(),
       adminApi.users(),
       adminApi.events(),
     ])
-      .then(([overviewPayload, usersPayload, eventsPayload]) => {
+      .then((results) => {
         if (cancelled) return;
-        setOverview(overviewPayload);
-        setUsers(usersPayload.users);
-        setEvents(eventsPayload.events);
-      })
-      .catch(() => {
-        if (!cancelled) setError('Не удалось загрузить админ-данные');
+
+        const nextErrors: string[] = [];
+
+        const [overviewResult, usersResult, eventsResult] = results;
+        if (overviewResult.status === 'fulfilled') setOverview(overviewResult.value);
+        else nextErrors.push(`Обзор: ${getErrorMessage(overviewResult.reason)}`);
+
+        if (usersResult.status === 'fulfilled') setUsers(usersResult.value.users);
+        else nextErrors.push(`Пользователи: ${getErrorMessage(usersResult.reason)}`);
+
+        if (eventsResult.status === 'fulfilled') setEvents(eventsResult.value.events);
+        else nextErrors.push(`События: ${getErrorMessage(eventsResult.reason)}`);
+
+        setErrors(nextErrors);
       })
       .finally(() => {
         if (!cancelled) setIsLoading(false);
@@ -113,7 +144,14 @@ export default function AdminPage() {
         </div>
 
         {isLoading ? <div className="rounded-[26px] border border-white/10 bg-white/[0.04] p-5 text-sm text-white/50">Загрузка…</div> : null}
-        {error ? <div className="rounded-[26px] border border-red-400/20 bg-red-500/10 p-5 text-sm text-red-100">{error}</div> : null}
+        {errors.length ? (
+          <div className="rounded-[26px] border border-amber-400/20 bg-amber-500/10 p-5 text-sm text-amber-50">
+            <div className="font-medium">Часть админ-данных не загрузилась</div>
+            <div className="mt-2 space-y-1 text-xs text-amber-100/75">
+              {errors.map((item) => <div key={item}>{item}</div>)}
+            </div>
+          </div>
+        ) : null}
 
         {tab === 'overview' && overview ? (
           <div className="space-y-4">
@@ -121,30 +159,30 @@ export default function AdminPage() {
               <MetricCard title="Пользователи" value={overview.metrics.usersTotal} caption={`+${overview.metrics.usersToday} сегодня`} />
               <MetricCard title="Активные 30д" value={overview.metrics.activeUsers30d} caption={`+${overview.metrics.users7d} за 7 дней`} />
               <MetricCard title="Операции" value={overview.metrics.transactionsTotal} caption={`+${overview.metrics.transactionsToday} сегодня`} />
-              <MetricCard title="Pending AI" value={overview.metrics.pendingActions} caption="ждут подтверждения" />
+              <MetricCard title="События" value={overview.metrics.eventsToday} caption="сегодня" />
             </section>
 
             <section className="rounded-[30px] border border-white/10 bg-white/[0.04] p-5">
               <div className="text-lg font-semibold">Откуда пришли</div>
               <div className="mt-4 space-y-2">
-                {overview.acquisition.slice(0, 8).map((item) => (
+                {overview.acquisition.length ? overview.acquisition.slice(0, 8).map((item) => (
                   <div key={item.source} className="flex items-center justify-between rounded-[18px] bg-black/18 px-4 py-3 text-sm">
                     <span className="truncate text-white/70">{item.source}</span>
                     <span className="font-semibold">{item.count}</span>
                   </div>
-                ))}
+                )) : <div className="text-sm text-white/42">Пока нет данных.</div>}
               </div>
             </section>
 
             <section className="rounded-[30px] border border-white/10 bg-white/[0.04] p-5">
               <div className="text-lg font-semibold">Где бывают чаще</div>
               <div className="mt-4 grid gap-2">
-                {overview.screens.slice(0, 8).map((item) => (
+                {overview.screens.length ? overview.screens.slice(0, 8).map((item) => (
                   <div key={item.screen} className="flex items-center justify-between rounded-[18px] bg-black/18 px-4 py-3 text-sm">
                     <span className="text-white/70">{item.screen}</span>
                     <span className="font-semibold">{item.count}</span>
                   </div>
-                ))}
+                )) : <div className="text-sm text-white/42">Пока нет просмотров экранов.</div>}
               </div>
             </section>
 
@@ -186,7 +224,7 @@ export default function AdminPage() {
 
         {tab === 'events' ? (
           <section className="space-y-2">
-            {events.map((item) => (
+            {events.length ? events.map((item) => (
               <div key={item.id} className="rounded-[20px] border border-white/10 bg-white/[0.035] p-4">
                 <div className="flex items-center justify-between gap-3">
                   <div className="font-medium">{item.event}</div>
@@ -195,7 +233,7 @@ export default function AdminPage() {
                 <div className="mt-1 text-xs text-white/42">{item.user?.firstName ?? 'Без пользователя'} {item.user?.username ? `@${item.user.username}` : ''}</div>
                 {item.data ? <pre className="mt-3 max-h-32 overflow-auto rounded-[14px] bg-black/25 p-3 text-[11px] text-white/45">{JSON.stringify(item.data, null, 2)}</pre> : null}
               </div>
-            ))}
+            )) : <div className="rounded-[24px] border border-white/10 bg-white/[0.04] p-5 text-sm text-white/42">Событий пока нет.</div>}
           </section>
         ) : null}
 
@@ -211,12 +249,12 @@ export default function AdminPage() {
             <section className="rounded-[30px] border border-white/10 bg-white/[0.04] p-5">
               <div className="text-lg font-semibold">Эндпоинты</div>
               <div className="mt-4 space-y-2">
-                {monitoring.topEndpoints.map((item) => (
+                {monitoring.topEndpoints.length ? monitoring.topEndpoints.map((item) => (
                   <div key={item.path} className="rounded-[18px] bg-black/18 px-4 py-3 text-sm">
                     <div className="truncate text-white/70">{item.path}</div>
                     <div className="mt-1 text-xs text-white/38">{item.count} запросов · {item.errors} ошибок · {item.avgMs}мс</div>
                   </div>
-                ))}
+                )) : <div className="text-sm text-white/42">Метрик пока нет.</div>}
               </div>
             </section>
 
