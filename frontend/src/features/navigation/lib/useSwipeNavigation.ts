@@ -28,6 +28,15 @@ function isBlockedByUi() {
   );
 }
 
+function markSwipeDirection(direction: 'left' | 'right') {
+  document.documentElement.dataset.aiSwipeDir = direction;
+  window.setTimeout(() => {
+    if (document.documentElement.dataset.aiSwipeDir === direction) {
+      delete document.documentElement.dataset.aiSwipeDir;
+    }
+  }, 380);
+}
+
 export function useSwipeNavigation({ currentScreen, navigateTo, goBack }: Options) {
   const startX = useRef(0);
   const startY = useRef(0);
@@ -61,15 +70,14 @@ export function useSwipeNavigation({ currentScreen, navigateTo, goBack }: Option
         const nextScreen = MAIN_SWIPE_SCREENS[nextIndex];
         if (!nextScreen) return;
 
-        document.body.classList.toggle('ai-screen-slide-left', deltaX < 0);
-        document.body.classList.toggle('ai-screen-slide-right', deltaX > 0);
-
+        markSwipeDirection(deltaX < 0 ? 'left' : 'right');
         navigateTo(nextScreen);
         telegramHaptic('light');
         return;
       }
 
       if (deltaX > 0) {
+        markSwipeDirection('right');
         goBack();
         telegramHaptic('light');
       }

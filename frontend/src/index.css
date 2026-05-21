@@ -873,3 +873,254 @@ body.ai-any-modal-open .ai-core-input-shell { display: none !important; }
     gap: 4px;
   }
 }
+
+
+/* Patch-16: palette and motion layer */
+:root {
+  --ai-bg-0: #05080d;
+  --ai-bg-1: #071019;
+  --ai-bg-2: #0a151f;
+  --ai-surface-1: rgba(255, 255, 255, 0.045);
+  --ai-surface-2: rgba(255, 255, 255, 0.065);
+  --ai-surface-3: rgba(0, 0, 0, 0.22);
+  --ai-border-soft: rgba(255, 255, 255, 0.085);
+  --ai-border-accent: rgba(110, 231, 183, 0.22);
+  --ai-text-main: rgba(255, 255, 255, 0.94);
+  --ai-text-muted: rgba(255, 255, 255, 0.52);
+  --ai-text-dim: rgba(255, 255, 255, 0.36);
+  --ai-accent: #74f1c3;
+  --ai-accent-soft: rgba(116, 241, 195, 0.18);
+  --ai-accent-deep: rgba(16, 185, 129, 0.22);
+  --ai-warning: #f8d36d;
+  --ai-danger: #fb7185;
+  --ai-radius-xl: 30px;
+  --ai-radius-lg: 24px;
+  --ai-motion-fast: 150ms;
+  --ai-motion-base: 260ms;
+  --ai-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ai-ease-soft: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+html { background: var(--ai-bg-0); }
+body { background: var(--ai-bg-0); color: var(--ai-text-main); }
+
+.telegram-app-shell {
+  background:
+    radial-gradient(circle at 50% -18%, rgba(116, 241, 195, 0.13), transparent 32%),
+    radial-gradient(circle at 110% 4%, rgba(56, 189, 248, 0.075), transparent 26%),
+    radial-gradient(circle at -12% 76%, rgba(116, 241, 195, 0.055), transparent 24%),
+    linear-gradient(180deg, var(--ai-bg-2) 0%, var(--ai-bg-0) 100%);
+}
+
+.telegram-app-content {
+  perspective: 1300px;
+  transform-style: preserve-3d;
+}
+
+.ai-screen-transition {
+  transform-origin: 50% 60%;
+  animation: aiPageSettle var(--ai-motion-base) var(--ai-ease-out);
+  backface-visibility: hidden;
+}
+
+html[data-ai-swipe-dir='left'] .ai-screen-transition {
+  transform-origin: left center;
+  animation: aiPageTurnLeft 330ms var(--ai-ease-soft);
+}
+
+html[data-ai-swipe-dir='right'] .ai-screen-transition {
+  transform-origin: right center;
+  animation: aiPageTurnRight 330ms var(--ai-ease-soft);
+}
+
+.app-page {
+  background:
+    radial-gradient(circle at 50% -10%, rgba(116, 241, 195, 0.10), transparent 32%),
+    linear-gradient(180deg, var(--ai-bg-1) 0%, var(--ai-bg-0) 100%);
+}
+
+.app-card,
+.app-stat-card,
+.app-action-card,
+.app-nav-card,
+.app-page-card-compact,
+.app-list-button,
+.app-empty-button,
+.app-transaction-row,
+.app-toggle-row,
+.app-admin-row {
+  border-color: var(--ai-border-soft);
+  background: var(--ai-surface-1);
+  transition:
+    transform var(--ai-motion-fast) var(--ai-ease-out),
+    border-color var(--ai-motion-base) ease,
+    background-color var(--ai-motion-base) ease,
+    box-shadow var(--ai-motion-base) ease,
+    opacity var(--ai-motion-base) ease;
+}
+
+.app-card,
+.app-stat-card,
+.app-action-card,
+.app-nav-card {
+  animation: aiCardEnter 340ms var(--ai-ease-out) both;
+}
+
+.app-card:nth-of-type(2),
+.app-action-card:nth-of-type(2),
+.app-stat-card:nth-of-type(2) { animation-delay: 35ms; }
+.app-card:nth-of-type(3),
+.app-action-card:nth-of-type(3),
+.app-stat-card:nth-of-type(3) { animation-delay: 70ms; }
+.app-card:nth-of-type(4),
+.app-action-card:nth-of-type(4),
+.app-stat-card:nth-of-type(4) { animation-delay: 105ms; }
+
+.app-card--hero,
+.app-home-hero {
+  background:
+    radial-gradient(circle at 0% 0%, rgba(116, 241, 195, 0.13), transparent 42%),
+    radial-gradient(circle at 95% 10%, rgba(148, 163, 184, 0.055), transparent 32%),
+    var(--ai-surface-1);
+}
+
+.app-primary-button,
+.app-secondary-button,
+.app-icon-action,
+.screen-top-bar__icon,
+.screen-top-bar__text-button,
+.app-small-link,
+.app-mini-pill {
+  transition:
+    transform var(--ai-motion-fast) var(--ai-ease-out),
+    border-color var(--ai-motion-base) ease,
+    background-color var(--ai-motion-base) ease,
+    color var(--ai-motion-base) ease,
+    box-shadow var(--ai-motion-base) ease,
+    opacity var(--ai-motion-base) ease;
+}
+
+.app-primary-button,
+.app-mini-pill {
+  border-color: var(--ai-border-accent);
+  background: var(--ai-accent-soft);
+}
+
+.screen-top-bar__icon,
+.screen-top-bar__text-button,
+.app-icon-action {
+  background: rgba(7, 13, 20, 0.84);
+  box-shadow: 0 12px 34px rgba(0, 0, 0, 0.20), inset 0 1px 0 rgba(255, 255, 255, 0.035);
+}
+
+.screen-top-bar__icon:active,
+.screen-top-bar__text-button:active,
+.app-icon-action:active,
+.app-small-link:active,
+.app-list-button:active,
+.app-action-card:active,
+.app-nav-card:active {
+  transform: translateY(1px) scale(0.975);
+  border-color: rgba(116, 241, 195, 0.20);
+  background-color: rgba(116, 241, 195, 0.075);
+}
+
+.screen-top-bar__icon,
+.app-icon-action,
+.ai-floating-companion,
+.app-small-link {
+  will-change: transform;
+}
+
+.screen-top-bar__icon {
+  animation: aiIconAppear 280ms var(--ai-ease-out) both;
+}
+
+.screen-top-bar__side--right .screen-top-bar__icon:nth-child(2) { animation-delay: 35ms; }
+.screen-top-bar__side--right .screen-top-bar__icon:nth-child(3) { animation-delay: 70ms; }
+
+.ai-floating-companion {
+  animation: aiCompanionFloatIn 420ms var(--ai-ease-out) both;
+}
+
+.ai-floating-companion::before {
+  content: '';
+  position: absolute;
+  inset: -14px;
+  z-index: -1;
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(116, 241, 195, 0.16), transparent 62%);
+  filter: blur(10px);
+  animation: aiSoftPulse 4.2s ease-in-out infinite;
+}
+
+[data-drawer-backdrop='true'] {
+  animation: aiBackdropIn 180ms ease-out both;
+}
+
+[data-drawer-backdrop='true'] > div {
+  animation: aiSheetRise 270ms var(--ai-ease-out) both;
+}
+
+[role='dialog'],
+.ai-any-modal-open [data-ai-core-modal='true'] > div {
+  backface-visibility: hidden;
+}
+
+@keyframes aiPageSettle {
+  from { opacity: 0.82; transform: translateY(12px) scale(0.992); filter: blur(1.5px); }
+  to { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+}
+
+@keyframes aiPageTurnLeft {
+  0% { opacity: 0.72; transform: translateX(26px) rotateY(-10deg) scale(0.982); filter: blur(1.8px); }
+  55% { opacity: 1; transform: translateX(-2px) rotateY(1.6deg) scale(1); filter: blur(0.3px); }
+  100% { opacity: 1; transform: translateX(0) rotateY(0) scale(1); filter: blur(0); }
+}
+
+@keyframes aiPageTurnRight {
+  0% { opacity: 0.72; transform: translateX(-26px) rotateY(10deg) scale(0.982); filter: blur(1.8px); }
+  55% { opacity: 1; transform: translateX(2px) rotateY(-1.6deg) scale(1); filter: blur(0.3px); }
+  100% { opacity: 1; transform: translateX(0) rotateY(0) scale(1); filter: blur(0); }
+}
+
+@keyframes aiCardEnter {
+  from { opacity: 0; transform: translateY(14px) scale(0.988); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes aiIconAppear {
+  from { opacity: 0; transform: translateY(-4px) scale(0.92); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes aiCompanionFloatIn {
+  from { opacity: 0; transform: translateY(14px) scale(0.88); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes aiSoftPulse {
+  0%, 100% { opacity: 0.35; transform: scale(0.92); }
+  50% { opacity: 0.82; transform: scale(1.08); }
+}
+
+@keyframes aiBackdropIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes aiSheetRise {
+  from { opacity: 0; transform: translateY(22px) scale(0.985); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 1ms !important;
+  }
+}
