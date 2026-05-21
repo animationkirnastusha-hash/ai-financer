@@ -32,6 +32,7 @@ export function useAICoreController() {
   const [isVoiceLocked, setIsVoiceLocked] = useState(false);
 
   const lastSpokenMessageIdRef = useRef<string | null>(null);
+  const voiceActionInFlightRef = useRef(false);
 
   const handleIntentOrMessage = useCallback(
     async (rawText: string) => {
@@ -187,11 +188,14 @@ export function useAICoreController() {
   }, [openCommandPanel, voice]);
 
   const handleOrbHoldStart = useCallback(() => {
+    if (voiceActionInFlightRef.current || voice.state === 'recording' || voice.state === 'uploading' || chat.isSending) return;
+
     if (!voiceEnabled || !voiceBetaEnabled) {
       openCommandPanel();
       return;
     }
 
+    voiceActionInFlightRef.current = true;
     telegramHaptic('medium');
     voice.stopSpeaking();
     setMode('voice');
@@ -200,23 +204,18 @@ export function useAICoreController() {
     setCoreState('listening');
 
     void voice.start().then((result) => {
-      if (result === 'permission-ready') {
-        telegramHaptic('light');
-        setMode('text');
-        setIsVoiceLocked(false);
-        setIsCommandPanelOpen(true);
-        setCoreState('expanded');
-        return;
-      }
-
-      if (result === 'error') {
+      if (result === 'permission-ready' || result === 'error') {
         setMode('text');
         setIsVoiceLocked(false);
         setIsCommandPanelOpen(true);
         setCoreState('expanded');
       }
+    }).finally(() => {
+      window.setTimeout(() => {
+        voiceActionInFlightRef.current = false;
+      }, 280);
     });
-  }, [openCommandPanel, voice, voiceBetaEnabled, voiceEnabled]);
+  }, [chat.isSending, openCommandPanel, voice, voiceBetaEnabled, voiceEnabled]);
 
   const handleOrbHoldEnd = useCallback(() => {
     if (!voiceEnabled || !voiceBetaEnabled) {
@@ -224,7 +223,7 @@ export function useAICoreController() {
       return;
     }
 
-    if (isVoiceLocked) return;
+    if (isVoiceLocked || voice.state !== 'recording') return;
 
     telegramHaptic('light');
     setCoreState('thinking');

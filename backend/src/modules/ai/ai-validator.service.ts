@@ -27,10 +27,11 @@ const DEFAULT_AUTO_TRANSACTION_LIMIT = 100000;
 export class AIValidatorService {
   private readonly entityResolver = new AIEntityResolverService();
   async validate(userId: string, plan: AIActionPlan): Promise<AIValidatedPlan> {
-    const [accounts, categories, sections, aiSettings] = await Promise.all([
+    const [accounts, categories, sections, goals, aiSettings] = await Promise.all([
       prisma.account.findMany({ where: { userId }, orderBy: { createdAt: 'asc' } }),
       prisma.category.findMany({ where: { userId }, orderBy: { createdAt: 'asc' } }),
       prisma.section.findMany({ where: { userId }, orderBy: { createdAt: 'asc' } }),
+      prisma.goal.findMany({ where: { userId }, orderBy: { createdAt: 'asc' } }),
       prisma.userAISettings.upsert({
         where: { userId },
         create: { userId },
@@ -104,6 +105,48 @@ export class AIValidatorService {
           if (balance !== null) input.balance = balance;
           else delete input.balance;
         }
+      }
+
+      if (action.tool === 'delete_accounts') {
+        const scope = this.cleanString(input.scope) === 'selected' ? 'selected' : 'all';
+        input.scope = scope;
+
+        if (scope === 'selected') {
+          const rawAccounts = Array.isArray(input.accounts) ? input.accounts : [];
+          const accountIds = rawAccounts
+            .map((value) => this.resolveAccount(accounts, this.cleanString(value))?.id)
+            .filter((value): value is string => Boolean(value));
+
+          if (accountIds.length === 0) {
+            issues.push({ code: 'accounts_not_found', message: 'Не нашёл счета для удаления.', actionIndex: index, field: 'accounts' });
+          }
+
+          resolved.accountIds = accountIds;
+          input.accounts = rawAccounts.map((value) => this.cleanString(value)).filter(Boolean);
+        } else {
+          if (accounts.length === 0) issues.push({ code: 'no_accounts', message: 'Счета уже отсутствуют.', actionIndex: index, field: 'accounts' });
+          resolved.accountIds = accounts.map((account) => account.id);
+          input.accounts = accounts.map((account) => account.name);
+        }
+      }
+
+      if (action.tool === 'set_primary_account') {
+        const accountName = this.cleanString(input.account || input.name);
+        const account = this.resolveAccount(accounts, accountName);
+        if (!account) {
+          issues.push({
+            code: 'account_not_found',
+            message: accountName ? `Не нашёл счёт: ${accountName}` : 'Не хватает счёта.',
+            actionIndex: index,
+            field: 'account',
+          });
+        } else {
+          resolved.accountId = account.id;
+          input.account = account.name;
+        }
+
+        const scope = this.cleanString(input.scope);
+        input.scope = scope === 'expense' || scope === 'income' || scope === 'both' ? scope : 'both';
       }
 
       if (action.tool === 'create_transaction') {
@@ -334,6 +377,60 @@ export class AIValidatorService {
       }
 
 
+      if (action.tool === 'show_goals') {
+        // No validation needed.
+      }
+
+      if (action.tool === 'create_goal') {
+        const title = this.cleanEntityName(input.title || input.name || input.goal);
+        const targetAmount = normalizeMoneyAmount(input.targetAmount || input.amount, userText);
+        const currentAmount = normalizeMoneyAmount(input.currentAmount, userText) ?? 0;
+        const currency = this.coerceCurrency(input.currency, userText, 'RUB') ?? 'RUB';
+        const accountName = this.cleanString(input.account);
+        const account = accountName ? this.resolveAccount(accounts, accountName) : null;
+
+        if (!title) issues.push({ code: 'missing_goal_title', message: 'Не хватает названия цели.', actionIndex: index, field: 'title' });
+        if (!targetAmount) issues.push({ code: 'missing_goal_target', message: 'Не хватает суммы цели.', actionIndex: index, field: 'targetAmount' });
+        if (accountName && !account) issues.push({ code: 'goal_account_not_found', message: `Не нашёл счёт для цели: ${accountName}`, actionIndex: index, field: 'account' });
+
+        input.title = title;
+        input.targetAmount = targetAmount ?? 0;
+        input.currentAmount = currentAmount;
+        input.currency = currency;
+        input.account = account?.name ?? null;
+        input.note = this.cleanEntityName(input.note);
+        if (account) resolved.accountId = account.id;
+      }
+
+      if (action.tool === 'update_goal' || action.tool === 'delete_goal') {
+        const goalName = this.cleanString(input.goal || input.title || input.name);
+        const goal = this.findGoalByName(goals, goalName);
+        if (!goal) {
+          issues.push({
+            code: 'goal_not_found',
+            message: goalName ? `Не нашёл цель: ${goalName}` : 'Не хватает цели.',
+            actionIndex: index,
+            field: 'goal',
+          });
+        } else {
+          resolved.goalId = goal.id;
+          input.goal = goal.title;
+        }
+
+        if (action.tool === 'update_goal') {
+          const title = this.cleanEntityName(input.title);
+          const targetAmount = normalizeMoneyAmount(input.targetAmount || input.amount, userText);
+          const currentAmount = normalizeMoneyAmount(input.currentAmount, userText);
+          const status = this.cleanString(input.status);
+
+          if (title) input.title = title; else delete input.title;
+          if (targetAmount !== null) input.targetAmount = targetAmount; else delete input.targetAmount;
+          if (currentAmount !== null) input.currentAmount = currentAmount; else delete input.currentAmount;
+          if (status === 'active' || status === 'completed' || status === 'archived') input.status = status; else delete input.status;
+          if (input.note !== null && input.note !== undefined) input.note = this.cleanEntityName(input.note); else delete input.note;
+        }
+      }
+
       if (action.tool === 'create_category') {
         const name = this.cleanEntityName(input.name);
         if (!name) issues.push({ code: 'missing_category_name', message: 'Не хватает названия категории.', actionIndex: index, field: 'name' });
@@ -374,10 +471,10 @@ export class AIValidatorService {
     defaultValue: boolean,
     settings: { autoConfirmExpenseLimit?: number | null; autoConfirmIncomeLimit?: number | null; autoConfirmTransferLimit?: number | null; requireConfirmForAccountActions?: boolean | null },
   ) {
-    if (tool === 'show_accounts' || tool === 'show_transactions' || tool === 'show_ai_settings') return false;
+    if (tool === 'show_accounts' || tool === 'show_transactions' || tool === 'show_ai_settings' || tool === 'show_goals') return false;
     if (tool === 'update_onboarding_state' || tool === 'restart_onboarding') return false;
 
-    if (tool === 'create_account' || tool === 'update_account' || tool === 'delete_account') {
+    if (tool === 'create_account' || tool === 'update_account' || tool === 'delete_account' || tool === 'delete_accounts' || tool === 'set_primary_account' || tool === 'create_goal' || tool === 'update_goal' || tool === 'delete_goal') {
       return settings.requireConfirmForAccountActions !== false;
     }
 
@@ -536,6 +633,14 @@ export class AIValidatorService {
     return this.entityResolver.resolveAccount(accounts, raw)?.item ?? null;
   }
 
+  private findGoalByName<T extends { id?: string | null; title: string }>(items: T[], raw: string) {
+    const ref = raw.trim().toLowerCase();
+    if (!ref) return null;
+    return items.find((item) => item.title.toLowerCase() === ref)
+      ?? items.find((item) => item.title.toLowerCase().includes(ref) || ref.includes(item.title.toLowerCase()))
+      ?? null;
+  }
+
   private findByName<T extends { id?: string | null; name: string }>(items: T[], raw: string) {
     const ref = raw.trim().toLowerCase();
     return items.find((item) => item.name.toLowerCase() === ref)
@@ -572,6 +677,36 @@ export class AIValidatorService {
     if (action.tool === 'transfer_money') {
       return `Перевод: ${input.amount ?? ''} ${input.currency ?? 'RUB'} со счёта ${input.fromAccount ?? '?'} на ${input.toAccount ?? '?'}.`;
     }
+
+    if (action.tool === 'update_account') {
+      return `Изменить счёт: ${this.cleanString(input.account) || this.cleanString(input.name) || 'счёт'}.`;
+    }
+
+    if (action.tool === 'delete_account') {
+      return `Удалить счёт: ${this.cleanString(input.account) || 'счёт'}.`;
+    }
+
+    if (action.tool === 'delete_accounts') {
+      return 'Удалить счета.';
+    }
+
+    if (action.tool === 'set_primary_account') {
+      return `Сделать основным счёт: ${this.cleanString(input.account) || 'счёт'}.`;
+    }
+
+    if (action.tool === 'create_goal') {
+      return `Создать цель: ${this.cleanString(input.title) || 'цель'} — ${input.targetAmount ?? ''} ${input.currency ?? 'RUB'}.`;
+    }
+
+    if (action.tool === 'update_goal') {
+      return `Изменить цель: ${this.cleanString(input.goal) || this.cleanString(input.title) || 'цель'}.`;
+    }
+
+    if (action.tool === 'delete_goal') {
+      return `Удалить цель: ${this.cleanString(input.goal) || 'цель'}.`;
+    }
+
+    if (action.tool === 'show_goals') return 'Показать цели.';
 
     if (action.tool === 'show_ai_settings') return 'Показать настройки ИИ.';
     if (action.tool === 'update_ai_settings') return 'Изменить настройки ИИ.';

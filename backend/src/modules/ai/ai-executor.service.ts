@@ -154,9 +154,36 @@ export class AIExecutorService {
 
     if (tool === 'delete_account') {
       const accountId = this.requireString(resolved.accountId, 'accountId');
+      const account = await this.deleteAccountsByIds(tx, userId, [accountId]);
+      return { tool, deleted: account };
+    }
+
+    if (tool === 'delete_accounts') {
+      const accountIds = Array.isArray(resolved.accountIds)
+        ? resolved.accountIds.filter((value): value is string => typeof value === 'string' && value.trim().length > 0)
+        : [];
+
+      if (accountIds.length === 0) throw new BadRequestError('No accounts selected for deletion');
+      const deleted = await this.deleteAccountsByIds(tx, userId, accountIds);
+      return { tool, deleted, count: deleted.length };
+    }
+
+    if (tool === 'set_primary_account') {
+      const accountId = this.requireString(resolved.accountId, 'accountId');
+      const scope = input.scope === 'expense' || input.scope === 'income' || input.scope === 'both' ? input.scope : 'both';
+      const data: Record<string, unknown> = {};
+
+      if (scope === 'expense' || scope === 'both') data.defaultExpenseAccountId = accountId;
+      if (scope === 'income' || scope === 'both') data.defaultIncomeAccountId = accountId;
+
+      const settings = await tx.userAISettings.upsert({
+        where: { userId },
+        create: { userId, ...data },
+        update: data,
+      });
+
       const account = await this.getAccount(tx, userId, accountId);
-      await tx.account.delete({ where: { id: accountId } });
-      return { tool, account };
+      return { tool, account, settings, scope };
     }
 
     if (tool === 'create_transaction') {
@@ -261,6 +288,60 @@ export class AIExecutorService {
       return { tool, section };
     }
 
+
+    if (tool === 'show_goals') {
+      const goals = await tx.goal.findMany({
+        where: { userId },
+        include: { account: { select: { id: true, name: true, currency: true, icon: true, color: true } } },
+        orderBy: [{ status: 'asc' }, { createdAt: 'desc' }],
+      });
+      return { tool, goals };
+    }
+
+    if (tool === 'create_goal') {
+      const title = this.cleanString(input.title);
+      const targetAmount = this.toInteger(input.targetAmount, 0);
+      if (!title) throw new BadRequestError('Goal title is required');
+      if (targetAmount <= 0) throw new BadRequestError('Goal target amount must be positive');
+
+      const existing = await tx.goal.findFirst({ where: { userId, title, status: { not: 'archived' } } });
+      if (existing) return { tool, goal: existing, skipped: true, reason: 'goal_already_exists' };
+
+      const goal = await tx.goal.create({
+        data: {
+          userId,
+          title,
+          targetAmount,
+          currentAmount: this.toInteger(input.currentAmount, 0),
+          currency: this.cleanString(input.currency).toUpperCase() || 'RUB',
+          accountId: typeof resolved.accountId === 'string' ? resolved.accountId : null,
+          note: typeof input.note === 'string' && input.note.trim() ? input.note.trim() : null,
+          status: 'active',
+        },
+      });
+      return { tool, goal };
+    }
+
+    if (tool === 'update_goal') {
+      const goalId = this.requireString(resolved.goalId, 'goalId');
+      const data: Record<string, unknown> = {};
+      if (typeof input.title === 'string' && input.title.trim()) data.title = input.title.trim();
+      if (input.targetAmount !== null && input.targetAmount !== undefined) data.targetAmount = this.toInteger(input.targetAmount, 0);
+      if (input.currentAmount !== null && input.currentAmount !== undefined) data.currentAmount = this.toInteger(input.currentAmount, 0);
+      if (typeof input.status === 'string' && ['active', 'completed', 'archived'].includes(input.status)) data.status = input.status;
+      if (input.note !== undefined) data.note = typeof input.note === 'string' && input.note.trim() ? input.note.trim() : null;
+
+      const goal = await tx.goal.update({ where: { id: goalId }, data });
+      return { tool, goal };
+    }
+
+    if (tool === 'delete_goal') {
+      const goalId = this.requireString(resolved.goalId, 'goalId');
+      const goal = await tx.goal.findFirst({ where: { id: goalId, userId } });
+      if (!goal) throw new NotFoundError('Goal not found');
+      await tx.goal.delete({ where: { id: goalId } });
+      return { tool, goal };
+    }
 
     if (tool === 'show_ai_settings') {
       const [settings, onboarding, accounts] = await Promise.all([
@@ -629,6 +710,36 @@ export class AIExecutorService {
       requireConfirmForAccountActions: true,
       companionTone: 'friendly',
     };
+  }
+
+  private async deleteAccountsByIds(tx: Prisma.TransactionClient, userId: string, accountIds: string[]) {
+    const uniqueIds = Array.from(new Set(accountIds));
+    const accounts = await tx.account.findMany({ where: { userId, id: { in: uniqueIds } } });
+
+    if (accounts.length === 0) throw new NotFoundError('Accounts not found');
+
+    await tx.userAISettings.updateMany({
+      where: {
+        userId,
+        OR: [
+          { defaultExpenseAccountId: { in: uniqueIds } },
+          { defaultIncomeAccountId: { in: uniqueIds } },
+        ],
+      },
+      data: { defaultExpenseAccountId: null, defaultIncomeAccountId: null },
+    });
+
+    await tx.recurringPayment.deleteMany({ where: { userId, accountId: { in: uniqueIds } } });
+    await tx.transaction.deleteMany({
+      where: {
+        userId,
+        OR: [{ accountId: { in: uniqueIds } }, { toAccountId: { in: uniqueIds } }],
+      },
+    });
+    await tx.goal.updateMany({ where: { userId, accountId: { in: uniqueIds } }, data: { accountId: null } });
+    await tx.account.deleteMany({ where: { userId, id: { in: uniqueIds } } });
+
+    return accounts;
   }
 
   private requireString(value: unknown, fieldName: string) {

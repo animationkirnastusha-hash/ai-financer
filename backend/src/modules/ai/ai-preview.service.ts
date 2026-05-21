@@ -4,10 +4,16 @@ const TOOL_LABELS: Record<string, string> = {
   create_account: 'создать счёт',
   update_account: 'изменить счёт',
   delete_account: 'удалить счёт',
+  delete_accounts: 'удалить счета',
   create_transaction: 'добавить операцию',
   transfer_money: 'перевести деньги',
   create_category: 'создать категорию',
   create_section: 'создать раздел',
+  show_goals: 'показать цели',
+  delete_goal: 'удалить цель',
+  update_goal: 'изменить цель',
+  create_goal: 'создать цель',
+  set_primary_account: 'сделать счёт основным',
   show_accounts: 'показать счета',
   show_transactions: 'показать операции',
   query_analytics: 'показать аналитику',
@@ -79,6 +85,40 @@ export class AIPreviewService {
       if (input.__skipCreate) return `счёт "${this.clean(input.name) || 'без названия'}" уже существует`;
       const initialBalance = Number(input.initialBalance ?? 0);
       return `создать счёт "${this.clean(input.name) || 'без названия'}"${initialBalance > 0 ? ` с балансом ${this.formatAmount(initialBalance, input.currency)}` : ''}`;
+    }
+
+    if (tool === 'update_account') {
+      const account = this.clean(input.account) || 'счёт';
+      const name = this.clean(input.name);
+      return name ? `переименовать счёт ${account} в ${name}` : `изменить счёт ${account}`;
+    }
+
+    if (tool === 'delete_account') {
+      return `удалить счёт ${this.clean(input.account) || ''}`.trim();
+    }
+
+    if (tool === 'delete_accounts') {
+      return input.scope === 'all' ? 'удалить все счета' : 'удалить выбранные счета';
+    }
+
+    if (tool === 'set_primary_account') {
+      return `сделать основным счёт ${this.clean(input.account) || ''}`.trim();
+    }
+
+    if (tool === 'create_goal') {
+      return `создать цель ${this.clean(input.title) || 'без названия'} на ${this.formatAmount(input.targetAmount, input.currency)}`;
+    }
+
+    if (tool === 'update_goal') {
+      return `изменить цель ${this.clean(input.goal) || this.clean(input.title) || ''}`.trim();
+    }
+
+    if (tool === 'delete_goal') {
+      return `удалить цель ${this.clean(input.goal) || ''}`.trim();
+    }
+
+    if (tool === 'show_goals') {
+      return 'показать цели';
     }
 
     if (tool === 'transfer_money') {

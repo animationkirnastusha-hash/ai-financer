@@ -29,6 +29,27 @@ export const navigationCommands: CommandCatalogItem[] = [
     group: 'money',
   },
   {
+    id: 'create-goal',
+    label: 'Создать цель',
+    description: 'Цели можно создать голосом или вручную.',
+    command: 'создай цель отпуск 120000',
+    group: 'organization',
+  },
+  {
+    id: 'rename-account',
+    label: 'Переименовать счёт',
+    description: 'AI изменит существующий счёт, а не создаст новый.',
+    command: 'переименуй счет карта в основная карта',
+    group: 'organization',
+  },
+  {
+    id: 'delete-all-accounts',
+    label: 'Удалить все счета',
+    description: 'Опасное действие. AI обязательно покажет подтверждение.',
+    command: 'удали все счета',
+    group: 'organization',
+  },
+  {
     id: 'create-account-travel',
     label: 'Создать счёт',
     description: 'Счета можно создавать через AI без поиска нужной формы.',

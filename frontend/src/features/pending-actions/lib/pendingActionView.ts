@@ -69,6 +69,8 @@ function intentLabel(intent?: string, type?: string) {
   if (normalized.includes('expense')) return 'Расход';
   if (normalized.includes('income')) return 'Доход';
   if (normalized.includes('transfer')) return 'Перевод';
+  if (normalized.includes('goal')) return 'Цель';
+  if (normalized.includes('primary')) return 'Основной счёт';
   if (normalized.includes('account')) return 'Счёт';
   if (normalized.includes('section')) return 'Раздел';
   if (normalized.includes('categor')) return 'Категория';
@@ -140,9 +142,9 @@ export function getPendingActionView(item: PendingActionItem): PendingActionView
   const isBatch = item.intent === 'batch' || Array.isArray(parsed?.actions);
   const actionTool = readString(action, ['tool', 'intent']) || readString(action, ['kind']) || item.intent || item.type;
   const currency = readString(action, ['currency', 'currencyCode']) || 'RUB';
-  const amount = readNumber(action, ['amount', 'value', 'sum', 'balance', 'initialBalance']);
+  const amount = readNumber(action, ['amount', 'value', 'sum', 'balance', 'initialBalance', 'targetAmount', 'currentAmount']);
   const amountLabel = formatAmount(amount, currency);
-  const description = readString(action, ['description', 'merchant', 'title', 'name']);
+  const description = readString(action, ['description', 'merchant', 'title', 'name', 'goal']);
   const category = readString(action, ['categoryName', 'category', 'rawCategory', 'categoryTitle']);
   const section = readString(action, ['sectionName', 'section', 'sectionTitle']);
   const kind = readString(action, ['kind', 'type']);
@@ -158,7 +160,8 @@ export function getPendingActionView(item: PendingActionItem): PendingActionView
         { label: 'Куда', value: toAccount },
         { label: 'Категория', value: category },
         { label: 'Раздел', value: section },
-        { label: 'Описание', value: description && description !== category ? description : undefined },
+        { label: 'Цель', value: actionTool?.includes('goal') ? description : undefined },
+        { label: 'Описание', value: description && description !== category && !actionTool?.includes('goal') ? description : undefined },
       ]);
 
   const label = intentLabel(actionTool, kind);

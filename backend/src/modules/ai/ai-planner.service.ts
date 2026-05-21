@@ -7,6 +7,8 @@ const TOOL_NAMES = new Set(AI_TOOL_REGISTRY.map((tool) => tool.name));
 type UserContext = {
   accounts?: Array<{ name?: string; type?: string; currency?: string }>;
   categories?: Array<{ name?: string; type?: string }>;
+  goals?: Array<{ title?: string; targetAmount?: number; currentAmount?: number; currency?: string; status?: string }>;
+  recentTransactions?: Array<{ description?: string | null; type?: string; amount?: number; account?: { name?: string }; category?: { name?: string } | null; section?: { name?: string } | null }>;
   memory?: {
     accountAliases?: Array<{ name?: string; type?: string; currency?: string; aliases?: string[] }>;
     preferences?: unknown[];
@@ -21,7 +23,7 @@ type UserContext = {
     autoConfirmTransferLimit?: number;
     companionTone?: string;
   } | null;
-  aiSessionState?: { pendingIntent?: string | null; pendingTool?: string | null; lastCommand?: string | null } | null;
+  aiSessionState?: { pendingIntent?: string | null; pendingTool?: string | null; lastCommand?: string | null; lastResult?: unknown } | null;
   onboardingState?: {
     status?: string;
     currentStep?: string | null;
@@ -40,8 +42,8 @@ export class AIPlannerService {
       prompt: this.buildPrompt(command, compactContext),
       temperature: 0,
       modelRole: 'fast',
-      timeoutMs: 8_000,
-      numPredict: 140,
+      timeoutMs: 10_000,
+      numPredict: 320,
     });
 
     const plan = this.normalizePlan(raw, command);
@@ -76,15 +78,22 @@ export class AIPlannerService {
       'Money commands must become create_transaction.',
       'Income/deposit/top-up/salary/put money onto account => create_transaction kind income.',
       'Expense/payment/purchase/item+amount => create_transaction kind expense.',
+      'For every transaction, infer human category and section from meaning; do not leave category/section empty when meaning is clear.',
       'Create account only creates account with initialBalance 0.',
       'Create account and put/add money => create_account initialBalance 0 + create_transaction income to that account.',
+      'Rename/change existing account => update_account, not create_account.',
+      'Make account main/default/primary => set_primary_account. If user does not specify income/expense, scope both.',
+      'Delete all accounts => delete_accounts scope all. Delete one account => delete_account.',
+      'Create/update/delete/show financial goals => create_goal/update_goal/delete_goal/show_goals.',
+      'If user command refers to previous command/result with words like it/this/that/его/этот/тот/там, use CTX.aiSessionState.lastCommand and CTX.aiSessionState.lastResult to resolve context.',
+      'If essential entity remains ambiguous after context, choose the safest action that asks clarification by leaving missing account/goal/account name rather than inventing.',
       'Preserve spoken amounts exactly as user wrote them.',
       'Use account names/aliases from CTX when present.',
       'If user asks to show/change AI settings, use show_ai_settings/update_ai_settings/apply_ai_settings_preset.',
       'If user asks to start/skip/finish tutorial/onboarding, use restart_onboarding/update_onboarding_state.',
       'If user asks for режим строгий/баланс/простой, use apply_ai_settings_preset.',
-      'If user sets default account, use update_ai_settings with natural account name.',
-      'If user says main/default/primary account, use account: "основной счет".',
+      'If user asks to show goals/цели, use show_goals.',
+      'If user sets default account, use set_primary_account with natural account name.',
       'For expense without account, leave account null; backend may use default account or ask clarification.',
       'CTX:', JSON.stringify(context),
       'USER:', command,
@@ -130,11 +139,31 @@ export class AIPlannerService {
           skipped: value.onboardingState.skipped,
         }
         : null,
+      goals: Array.isArray(value.goals)
+        ? value.goals.slice(0, 8).map((goal) => ({
+          title: goal.title,
+          targetAmount: goal.targetAmount,
+          currentAmount: goal.currentAmount,
+          currency: goal.currency,
+          status: goal.status,
+        }))
+        : [],
+      recentTransactions: Array.isArray(value.recentTransactions)
+        ? value.recentTransactions.slice(0, 6).map((item) => ({
+          type: item.type,
+          amount: item.amount,
+          description: item.description,
+          account: item.account?.name,
+          category: item.category?.name,
+          section: item.section?.name,
+        }))
+        : [],
       aiSessionState: value.aiSessionState
         ? {
           pendingIntent: value.aiSessionState.pendingIntent,
           pendingTool: value.aiSessionState.pendingTool,
           lastCommand: value.aiSessionState.lastCommand,
+          lastResult: value.aiSessionState.lastResult,
         }
         : null,
     };

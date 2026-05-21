@@ -34,6 +34,7 @@ model User {
   categories        Category[]
   sections          Section[]
   transactions      Transaction[]
+  goals             Goal[]
   budgets           Budget[]
   recurringPayments RecurringPayment[]
   notifications     Notification[]
@@ -80,6 +81,7 @@ model Account {
   transactionsFrom  Transaction[]       @relation("FromAccount")
   transactionsTo    Transaction[]       @relation("ToAccount")
   recurringPayments RecurringPayment[]
+  goals              Goal[]
 
   @@index([userId])
   @@index([type])
@@ -152,6 +154,27 @@ model Transaction {
   @@index([type])
   @@index([accountId])
   @@index([sectionId])
+}
+
+model Goal {
+  id            String   @id @default(cuid())
+  userId        String
+  title         String
+  targetAmount  Int
+  currentAmount Int      @default(0)
+  currency      String   @default("RUB")
+  accountId     String?
+  status        String   @default("active")
+  note          String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  account Account? @relation(fields: [accountId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([status])
+  @@index([accountId])
 }
 
 model Budget {

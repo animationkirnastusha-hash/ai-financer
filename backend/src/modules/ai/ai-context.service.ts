@@ -5,7 +5,7 @@ export class AIContextService {
   private readonly memory = new AIMemoryService();
 
   async buildUserContext(userId: string) {
-    const [accounts, categories, sections, recentTransactions, aiSettings, onboardingState, aiSessionState] = await Promise.all([
+    const [accounts, categories, sections, goals, recentTransactions, aiSettings, onboardingState, aiSessionState] = await Promise.all([
       prisma.account.findMany({
         where: { userId },
         select: { id: true, name: true, type: true, currency: true, balance: true },
@@ -20,6 +20,12 @@ export class AIContextService {
         where: { userId },
         select: { id: true, name: true },
         orderBy: { createdAt: 'asc' },
+      }),
+      prisma.goal.findMany({
+        where: { userId },
+        select: { id: true, title: true, targetAmount: true, currentAmount: true, currency: true, status: true },
+        orderBy: { createdAt: 'desc' },
+        take: 10,
       }),
       prisma.transaction.findMany({
         where: { userId },
@@ -43,6 +49,6 @@ export class AIContextService {
 
     const memory = await this.memory.buildUserMemory(userId, { accounts });
 
-    return { accounts, categories, sections, recentTransactions, memory, aiSettings, onboardingState, aiSessionState };
+    return { accounts, categories, sections, goals, recentTransactions, memory, aiSettings, onboardingState, aiSessionState };
   }
 }
