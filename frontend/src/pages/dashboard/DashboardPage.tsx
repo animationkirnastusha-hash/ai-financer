@@ -7,10 +7,10 @@ import { ScreenTopBar } from '@/shared/ui/ScreenTopBar';
 import { formatMoney, formatTransactionDate } from '@/shared/lib/money';
 
 const quickActions = [
-  { label: 'Расход', prompt: 'кофе 300' },
-  { label: 'Доход', prompt: 'доход 50000' },
-  { label: 'Перевод', prompt: 'переведи 1000 на карту' },
-  { label: 'AI', prompt: 'что изменилось за месяц?' },
+  { label: 'Расход', hint: 'Записать трату', prompt: 'кофе 300' },
+  { label: 'Доход', hint: 'Добавить деньги', prompt: 'доход 50000' },
+  { label: 'Перевод', hint: 'Между счетами', prompt: 'переведи 1000 на карту' },
+  { label: 'Спросить', hint: 'Вопрос к AI', prompt: 'что изменилось за месяц?' },
 ];
 
 const onboardingSteps = [
@@ -18,6 +18,13 @@ const onboardingSteps = [
   { label: 'Добавить деньги', prompt: 'доход 50000 на основной счет' },
   { label: 'Записать расход', prompt: 'кофе 300' },
   { label: 'Спросить аналитику', prompt: 'сколько я потратил за неделю' },
+];
+
+const secondaryLinks = [
+  { label: 'Счета', screen: 'accounts' as const },
+  { label: 'Цели', screen: 'goals' as const },
+  { label: 'Рефералы', screen: 'referral' as const },
+  { label: 'Премиум', screen: 'premium' as const },
 ];
 
 function isCurrentMonth(dateValue: string) {
@@ -62,56 +69,46 @@ export default function DashboardPage() {
       <div className="app-page__inner space-y-4">
         <ScreenTopBar title="Главная" right={['referral', 'history', 'settings']} />
 
-        <header className="app-card app-card--hero">
-          <div className="flex items-start justify-between gap-4">
-            <div className="min-w-0">
-              <div className="app-eyebrow">AI-Financer</div>
-              <h1 className="mt-3 text-[34px] font-semibold leading-none tracking-[-0.055em]">Главная</h1>
-            </div>
-            <button onClick={() => navigateTo('premium')} className="app-secondary-button shrink-0">Премиум</button>
-          </div>
-
-          <div className="mt-6 rounded-[28px] border border-emerald-300/12 bg-emerald-300/[0.08] p-5">
-            <div className="text-sm text-emerald-100/60">Общий баланс</div>
-            <div className="mt-2 text-[40px] font-semibold leading-none tracking-[-0.06em]">{formatMoney(data.totalRub, 'RUB')}</div>
-            <div className="mt-4 grid grid-cols-3 gap-2 text-xs text-white/58">
-              <span className="app-mini-pill">Доходы {formatMoney(data.income, 'RUB', { sign: 'plus' })}</span>
-              <span className="app-mini-pill">Расходы {formatMoney(data.expenses, 'RUB', { sign: 'minus' })}</span>
-              <span className="app-mini-pill">Итог {formatMoney(data.delta, 'RUB', { sign: 'auto' })}</span>
-            </div>
+        <header className="app-card app-card--hero app-home-hero">
+          <div className="app-eyebrow">Баланс</div>
+          <div className="mt-3 app-money-hero">{formatMoney(data.totalRub, 'RUB')}</div>
+          <div className="mt-4 grid grid-cols-3 gap-2">
+            <div className="app-home-metric"><span>Доходы</span><b>{formatMoney(data.income, 'RUB', { sign: 'plus' })}</b></div>
+            <div className="app-home-metric"><span>Расходы</span><b>{formatMoney(data.expenses, 'RUB', { sign: 'minus' })}</b></div>
+            <div className="app-home-metric"><span>Итог</span><b>{formatMoney(data.delta, 'RUB', { sign: 'auto' })}</b></div>
           </div>
         </header>
 
-        <section className="grid grid-cols-4 gap-2">
-          {quickActions.map((action) => (
-            <button
-              key={action.label}
-              type="button"
-              onClick={() => openAIWithCommand(action.prompt)}
-              className="rounded-[22px] border border-white/10 bg-white/[0.04] px-2 py-3 text-center text-sm text-white/78 active:scale-[0.98]"
-            >
-              {action.label}
-            </button>
-          ))}
+        <section className="app-section">
+          <div className="app-section-title">Что сделать</div>
+          <div className="grid grid-cols-2 gap-3">
+            {quickActions.map((action) => (
+              <button
+                key={action.label}
+                type="button"
+                onClick={() => openAIWithCommand(action.prompt)}
+                className="app-action-card"
+              >
+                <span>{action.label}</span>
+                <small>{action.hint}</small>
+              </button>
+            ))}
+          </div>
         </section>
 
         {isEmptyState ? (
           <section className="app-card">
-            <div className="app-eyebrow">Первый запуск</div>
-            <h2 className="mt-3 text-2xl font-semibold tracking-[-0.03em]">Начни с одного действия</h2>
-            <div className="mt-5 grid gap-2">
+            <div className="app-section-title">Быстрый старт</div>
+            <div className="mt-4 grid gap-2">
               {onboardingSteps.map((step, index) => (
                 <button
                   key={step.prompt}
                   type="button"
                   onClick={() => openAIWithCommand(step.prompt)}
-                  className="flex items-center justify-between gap-3 rounded-[22px] border border-white/8 bg-black/20 px-4 py-3 text-left transition active:scale-[0.99]"
+                  className="app-list-button"
                 >
-                  <div>
-                    <div className="text-sm font-medium text-white">{index + 1}. {step.label}</div>
-                    <div className="mt-1 text-xs text-emerald-100/66">“{step.prompt}”</div>
-                  </div>
-                  <span className="text-white/30">→</span>
+                  <span>{index + 1}. {step.label}</span>
+                  <small>{step.prompt}</small>
                 </button>
               ))}
             </div>
@@ -122,13 +119,13 @@ export default function DashboardPage() {
 
         <section className="app-card">
           <div className="flex items-center justify-between gap-3">
-            <div className="app-eyebrow">Недавнее</div>
+            <div className="app-section-title">Недавнее</div>
             <button type="button" onClick={() => navigateTo('transactions')} className="text-sm text-emerald-100/72">Все</button>
           </div>
 
           <div className="mt-4 space-y-2">
             {recent.length === 0 ? (
-              <div className="rounded-2xl border border-white/8 bg-black/18 p-4 text-sm text-white/50">Операций пока нет.</div>
+              <button type="button" onClick={() => openAIWithCommand('кофе 300')} className="app-empty-button">Добавь первую операцию через AI</button>
             ) : (
               recent.map((transaction) => {
                 const sign = transaction.type === 'income' ? 'plus' : transaction.type === 'expense' ? 'minus' : 'none';
@@ -137,7 +134,7 @@ export default function DashboardPage() {
                     key={transaction.id}
                     type="button"
                     onClick={() => navigateTo('transactions')}
-                    className="flex w-full items-center justify-between gap-3 rounded-2xl border border-white/8 bg-black/18 p-3 text-left"
+                    className="app-transaction-row"
                   >
                     <div className="min-w-0">
                       <div className="truncate text-sm font-medium text-white">{titleOf(transaction)}</div>
@@ -149,6 +146,14 @@ export default function DashboardPage() {
               })
             )}
           </div>
+        </section>
+
+        <section className="grid grid-cols-4 gap-2">
+          {secondaryLinks.map((item) => (
+            <button key={item.screen} type="button" onClick={() => navigateTo(item.screen)} className="app-small-link">
+              {item.label}
+            </button>
+          ))}
         </section>
       </div>
     </div>

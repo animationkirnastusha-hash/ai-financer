@@ -1,6 +1,5 @@
 import { prisma } from '../../lib/prisma';
 import { monitoringService } from '../monitoring/monitoring.instance';
-import { ensureProductAnalyticsSchema } from '../analytics/bootstrap';
 
 function startOfDay(daysAgo: number) {
   const date = new Date();
@@ -18,19 +17,8 @@ function parseEventData(data: string | null) {
   }
 }
 
-async function safeCount(label: string, count: () => Promise<number>) {
-  try {
-    return await count();
-  } catch (error) {
-    console.error(`[Admin] ${label} failed:`, error);
-    return 0;
-  }
-}
-
 export class AdminService {
   async getOverview() {
-    await ensureProductAnalyticsSchema();
-
     const now = new Date();
     const today = startOfDay(0);
     const sevenDaysAgo = startOfDay(7);
@@ -47,15 +35,15 @@ export class AdminService {
       pendingActions,
       premiumUsers,
     ] = await Promise.all([
-      safeCount('usersTotal', () => prisma.user.count()),
-      safeCount('usersToday', () => prisma.user.count({ where: { createdAt: { gte: today } } })),
-      safeCount('users7d', () => prisma.user.count({ where: { createdAt: { gte: sevenDaysAgo } } })),
-      safeCount('transactionsTotal', () => prisma.transaction.count()),
-      safeCount('transactionsToday', () => prisma.transaction.count({ where: { createdAt: { gte: today } } })),
-      safeCount('accountsTotal', () => prisma.account.count()),
-      safeCount('eventsToday', () => prisma.productEvent.count({ where: { createdAt: { gte: today } } })),
-      safeCount('pendingActions', () => prisma.aIPendingAction.count({ where: { status: 'pending' } })),
-      safeCount('premiumUsers', () => prisma.user.count({ where: { tier: { not: 'FREE' } } })),
+      prisma.user.count(),
+      prisma.user.count({ where: { createdAt: { gte: today } } }),
+      prisma.user.count({ where: { createdAt: { gte: sevenDaysAgo } } }),
+      prisma.transaction.count(),
+      prisma.transaction.count({ where: { createdAt: { gte: today } } }),
+      prisma.account.count(),
+      prisma.productEvent.count({ where: { createdAt: { gte: today } } }),
+      prisma.aIPendingAction.count({ where: { status: 'pending' } }),
+      prisma.user.count({ where: { tier: { not: 'FREE' } } }),
     ]);
 
     const events = await prisma.productEvent.findMany({
@@ -65,6 +53,7 @@ export class AdminService {
     });
 
     const screenViews = events.filter((event) => event.event === 'screen_view');
+    const screenLeaves = events.filter((event) => event.event === 'screen_leave' || event.event === 'session_pause');
     const sourceEvents = events.filter((event) => event.event === 'session_start');
 
     const screens = new Map<string, number>();
@@ -72,6 +61,15 @@ export class AdminService {
       const data = parseEventData(event.data);
       const screen = typeof data?.screen === 'string' ? data.screen : 'unknown';
       screens.set(screen, (screens.get(screen) ?? 0) + 1);
+    }
+
+    const exits = new Map<string, { exits: number; duration: number }>();
+    for (const event of screenLeaves) {
+      const data = parseEventData(event.data);
+      const screen = typeof data?.screen === 'string' ? data.screen : 'unknown';
+      const durationMs = typeof data?.durationMs === 'number' && Number.isFinite(data.durationMs) ? data.durationMs : 0;
+      const current = exits.get(screen) ?? { exits: 0, duration: 0 };
+      exits.set(screen, { exits: current.exits + 1, duration: current.duration + Math.max(0, durationMs) });
     }
 
     const sources = new Map<string, number>();
@@ -83,9 +81,9 @@ export class AdminService {
 
     const activeUserIds = new Set(events.map((event) => event.userId).filter(Boolean));
     const totalStarted = sourceEvents.length;
-    const didAction = new Set(
+    const didTransaction = new Set(
       events
-        .filter((event) => event.event === 'transaction_created' || event.event === 'ai_confirmed' || event.event === 'ai_command_submitted')
+        .filter((event) => event.event === 'transaction_created' || event.event === 'ai_confirmed')
         .map((event) => event.userId)
         .filter(Boolean),
     );
@@ -106,10 +104,17 @@ export class AdminService {
       },
       acquisition: Array.from(sources.entries()).map(([source, count]) => ({ source, count })).sort((a, b) => b.count - a.count),
       screens: Array.from(screens.entries()).map(([screen, count]) => ({ screen, count })).sort((a, b) => b.count - a.count),
+      dropoff: Array.from(exits.entries())
+        .map(([screen, value]) => ({
+          screen,
+          exits: value.exits,
+          avgDurationMs: value.exits ? Math.round(value.duration / value.exits) : 0,
+        }))
+        .sort((a, b) => b.exits - a.exits),
       funnel: [
         { step: 'Открыли приложение', count: totalStarted },
-        { step: 'Активные пользователи', count: activeUserIds.size },
-        { step: 'Выполнили действие', count: didAction.size },
+        { step: 'Авторизованы', count: activeUserIds.size },
+        { step: 'Создали действие', count: didTransaction.size },
       ],
       monitoring: monitoringService.getSnapshot(),
     };
@@ -151,20 +156,16 @@ export class AdminService {
   }
 
   async getEvents() {
-    await ensureProductAnalyticsSchema();
-
     const events = await prisma.productEvent.findMany({
       orderBy: { createdAt: 'desc' },
       take: 120,
     });
 
     const userIds = Array.from(new Set(events.map((event) => event.userId).filter((id): id is string => Boolean(id))));
-    const users = userIds.length
-      ? await prisma.user.findMany({
-          where: { id: { in: userIds } },
-          select: { id: true, firstName: true, username: true },
-        })
-      : [];
+    const users = await prisma.user.findMany({
+      where: { id: { in: userIds } },
+      select: { id: true, firstName: true, username: true },
+    });
     const usersById = new Map(users.map((user) => [user.id, user]));
 
     return events.map((event) => ({

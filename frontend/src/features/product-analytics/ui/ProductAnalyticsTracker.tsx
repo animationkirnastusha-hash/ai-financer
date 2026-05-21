@@ -35,20 +35,18 @@ function getSource() {
 }
 
 function fireAndForget(event: string, data?: Record<string, unknown>) {
-  void productAnalyticsApi.track(event, data).catch((error) => {
-    if (import.meta.env.DEV) console.warn('[analytics] event was not sent', event, error);
-  });
+  void productAnalyticsApi.track(event, data).catch(() => undefined);
 }
 
 export function ProductAnalyticsTracker() {
   const currentScreen = useNavigationStore((state) => state.currentScreen);
   const user = useAuthStore((state) => state.user);
-  const isReady = useAuthStore((state) => state.isReady);
   const startedRef = useRef(false);
   const lastScreenRef = useRef<string | null>(null);
+  const screenStartedAtRef = useRef(Date.now());
 
   useEffect(() => {
-    if (!isReady || !user || startedRef.current) return;
+    if (!user || startedRef.current) return;
     startedRef.current = true;
 
     const telegram = getTelegramTrackingData();
@@ -58,21 +56,51 @@ export function ProductAnalyticsTracker() {
       path: window.location.pathname,
       query: window.location.search,
       platform: telegram?.platform ?? 'web',
-      telegramVersion: telegram?.version ?? null,
+      telegramVersion: telegram?.version,
       language: navigator.language,
     });
-  }, [isReady, user]);
+  }, [user]);
 
   useEffect(() => {
-    if (!isReady || !user) return;
+    if (!user) return;
+
+    const now = Date.now();
+    const previousScreen = lastScreenRef.current;
+
+    if (previousScreen && previousScreen !== currentScreen) {
+      fireAndForget('screen_leave', {
+        screen: previousScreen,
+        nextScreen: currentScreen,
+        durationMs: Math.max(0, now - screenStartedAtRef.current),
+      });
+    }
+
     if (lastScreenRef.current === currentScreen) return;
     lastScreenRef.current = currentScreen;
+    screenStartedAtRef.current = now;
 
     fireAndForget('screen_view', {
       screen: currentScreen,
       source: getSource(),
     });
-  }, [currentScreen, isReady, user]);
+  }, [currentScreen, user]);
+
+  useEffect(() => {
+    if (!user) return;
+
+    const handleVisibility = () => {
+      if (document.visibilityState !== 'hidden') return;
+      const screen = lastScreenRef.current;
+      if (!screen) return;
+      fireAndForget('session_pause', {
+        screen,
+        durationMs: Math.max(0, Date.now() - screenStartedAtRef.current),
+      });
+    };
+
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
+  }, [user]);
 
   return null;
 }

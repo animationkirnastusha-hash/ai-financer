@@ -14,81 +14,70 @@ export default function SettingsPage() {
   const setVoiceBetaEnabled = useSettingsStore((state) => state.setVoiceBetaEnabled);
   const setAIInsightsEnabled = useSettingsStore((state) => state.setAIInsightsEnabled);
 
+  const navigationItems = [
+    { title: 'Счета', caption: 'Баланс и основные счета', screen: 'accounts' as const },
+    { title: 'Цели', caption: 'Накопления и планы', screen: 'goals' as const },
+    { title: 'Разделы', caption: 'Категории и структура', screen: 'taxonomy-settings' as const },
+    { title: 'Рефералы', caption: 'Код и приглашения', screen: 'referral' as const },
+    { title: 'Премиум', caption: 'Расширенные возможности', screen: 'premium' as const },
+    { title: 'Помощник', caption: 'Поведение companion', screen: 'companion' as const },
+  ];
+
   return (
-    <div className="h-full overflow-y-auto px-4 pb-28 pt-4 text-white">
-      <div className="mx-auto max-w-[620px] space-y-4">
+    <div className="app-page text-white">
+      <div className="app-page__inner space-y-4">
         <ScreenTopBar title="Настройки" left="back" right={['home']} />
 
-        <header className="rounded-[34px] border border-white/10 bg-white/[0.045] p-5">
-          <h1 className="text-3xl font-semibold tracking-[-0.04em]">Управление</h1>
-          <p className="mt-2 text-sm leading-6 text-white/55">
-            Язык, голос, поведение AI и структура финансов.
-          </p>
+        <header className="app-card app-card--hero">
+          <div className="app-eyebrow">Настройки</div>
+          <h1 className="mt-3 text-[32px] font-semibold leading-none tracking-[-0.055em]">Управление</h1>
+          <p className="mt-3 text-sm leading-6 text-white/50">Язык, голос, AI и структура финансов.</p>
         </header>
 
-        <section className="rounded-[30px] border border-white/10 bg-white/[0.04] p-5">
+        <section className="app-card">
           <div className="flex items-center justify-between gap-4">
             <div>
-              <div className="text-lg font-semibold">Язык</div>
-              <div className="mt-1 text-sm text-white/42">Сейчас доступны русский и английский.</div>
+              <div className="app-section-title">Язык</div>
+              <div className="mt-1 text-sm text-white/42">Русский или English.</div>
             </div>
             <LanguageSwitcher />
           </div>
         </section>
 
-        <section className="rounded-[30px] border border-white/10 bg-white/[0.04] p-5">
-          <div className="text-lg font-semibold">Режим AI</div>
-          <div className="mt-4 grid gap-3">
-            {[
-              ['Спокойный AI', 'Короткие ответы и минимум лишних подсказок.'],
-              ['Сбалансированный AI', 'Обычный режим для ежедневного учёта.'],
-              ['Строгий финансовый режим', 'Больше подтверждений для рискованных действий.'],
-            ].map(([title, description]) => (
-              <button key={title} className="rounded-[24px] border border-white/8 bg-black/18 p-4 text-left">
-                <div className="font-medium">{title}</div>
-                <div className="mt-1 text-sm text-white/42">{description}</div>
-              </button>
-            ))}
-          </div>
-        </section>
-
-        <section className="rounded-[30px] border border-white/10 bg-white/[0.04] p-5">
-          <div className="text-lg font-semibold">Голос и подсказки</div>
+        <section className="app-card">
+          <div className="app-section-title">Голос и AI</div>
           <div className="mt-4 space-y-3">
-            <label className="flex items-center justify-between gap-4 rounded-[24px] border border-white/8 bg-black/18 p-4">
-              <span><span className="block font-medium">Голосовой ввод</span><span className="text-sm text-white/42">Зажми помощника и говори.</span></span>
+            <label className="app-toggle-row">
+              <span><span>Голосовой ввод</span><small>Зажми помощника и говори.</small></span>
               <input type="checkbox" checked={voiceEnabled} onChange={(event) => setVoiceEnabled(event.target.checked)} />
             </label>
-            <label className="flex items-center justify-between gap-4 rounded-[24px] border border-white/8 bg-black/18 p-4">
-              <span><span className="block font-medium">Бета-режим голоса</span><span className="text-sm text-white/42">Экспериментальная обработка голосовых команд.</span></span>
+            <label className="app-toggle-row">
+              <span><span>Бета-режим голоса</span><small>Экспериментальная обработка команд.</small></span>
               <input type="checkbox" checked={voiceBetaEnabled} onChange={(event) => setVoiceBetaEnabled(event.target.checked)} />
             </label>
-            <label className="flex items-center justify-between gap-4 rounded-[24px] border border-white/8 bg-black/18 p-4">
-              <span><span className="block font-medium">Наблюдения AI</span><span className="text-sm text-white/42">Короткие выводы без лишних уведомлений.</span></span>
+            <label className="app-toggle-row">
+              <span><span>Наблюдения AI</span><small>Короткие выводы без лишнего шума.</small></span>
               <input type="checkbox" checked={aiInsightsEnabled} onChange={(event) => setAIInsightsEnabled(event.target.checked)} />
             </label>
           </div>
         </section>
 
-        <section className="grid grid-cols-2 gap-3">
-          <button onClick={() => navigateTo('taxonomy-settings')} className="rounded-[26px] border border-white/10 bg-white/[0.04] p-4 text-left">
-            <div className="font-semibold">Разделы</div>
-            <div className="mt-1 text-sm text-white/42">Категории и структура</div>
-          </button>
-          <button onClick={() => navigateTo('premium')} className="rounded-[26px] border border-white/10 bg-white/[0.04] p-4 text-left">
-            <div className="font-semibold">Премиум</div>
-            <div className="mt-1 text-sm text-white/42">Дополнительные возможности</div>
-          </button>
-          <button onClick={() => navigateTo('referral')} className="rounded-[26px] border border-white/10 bg-white/[0.04] p-4 text-left">
-            <div className="font-semibold">Рефералы</div>
-            <div className="mt-1 text-sm text-white/42">Код и приглашения</div>
-          </button>
-          {user?.isAdmin ? (
-            <button onClick={() => navigateTo('admin')} className="rounded-[26px] border border-emerald-300/20 bg-emerald-300/[0.06] p-4 text-left">
-              <div className="font-semibold">Админ</div>
-              <div className="mt-1 text-sm text-white/42">Статистика и сервер</div>
-            </button>
-          ) : null}
+        <section className="app-card">
+          <div className="app-section-title">Разделы приложения</div>
+          <div className="mt-4 grid grid-cols-2 gap-3">
+            {navigationItems.map((item) => (
+              <button key={item.screen} onClick={() => navigateTo(item.screen)} className="app-nav-card">
+                <div className="font-semibold">{item.title}</div>
+                <div className="mt-1 text-sm text-white/42">{item.caption}</div>
+              </button>
+            ))}
+            {user?.isAdmin ? (
+              <button onClick={() => navigateTo('admin')} className="app-nav-card border-emerald-300/20 bg-emerald-300/[0.06]">
+                <div className="font-semibold">Админ</div>
+                <div className="mt-1 text-sm text-white/42">Статистика и сервер</div>
+              </button>
+            ) : null}
+          </div>
         </section>
       </div>
     </div>

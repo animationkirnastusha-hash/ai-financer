@@ -58,12 +58,17 @@ export default function TransactionsPage({ onBack }: Props = {}) {
   return (
     <div className="app-page text-white">
       <div className="app-page__inner space-y-4">
-        <ScreenTopBar title="Операции" left={onBack ? 'back' : 'commands'} right={['history', 'settings']} />
+        <ScreenTopBar title="Операции" left={onBack ? 'back' : 'commands'} right={['settings']} />
 
         <header className="app-card app-card--hero">
-          <div className="app-eyebrow">Операции</div>
-          <h1 className="mt-3 text-[34px] font-semibold leading-none tracking-[-0.055em]">Лента</h1>
-          <p className="mt-3 text-sm leading-6 text-white/50">Доходы, расходы и переводы в одном списке.</p>
+          <div className="app-eyebrow">Лента</div>
+          <div className="mt-3 flex items-end justify-between gap-4">
+            <div>
+              <h1 className="text-[32px] font-semibold leading-none tracking-[-0.055em]">Операции</h1>
+              <p className="mt-2 text-sm text-white/46">Доходы, расходы и переводы.</p>
+            </div>
+            <button type="button" onClick={() => openAIWithCommand('кофе 300')} className="app-primary-button shrink-0">Добавить</button>
+          </div>
         </header>
 
         <TransactionsSummary
@@ -73,7 +78,7 @@ export default function TransactionsPage({ onBack }: Props = {}) {
 
         {summary.foreignCount > 0 ? (
           <div className="rounded-[24px] border border-amber-300/15 bg-amber-300/8 p-4 text-sm leading-6 text-amber-100/75">
-            Операции в другой валюте показаны отдельно и не включены в ₽-итоги.
+            Операции в другой валюте не включены в ₽-итоги.
           </div>
         ) : null}
 

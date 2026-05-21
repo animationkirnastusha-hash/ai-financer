@@ -17,6 +17,7 @@ export type AdminOverview = {
   acquisition: Array<{ source: string; count: number }>;
   screens: Array<{ screen: string; count: number }>;
   funnel: Array<{ step: string; count: number }>;
+  dropoff: Array<{ screen: string; exits: number; avgDurationMs: number }>;
   monitoring: AdminMonitoring;
 };
 
