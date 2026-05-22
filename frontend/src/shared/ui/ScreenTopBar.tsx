@@ -81,7 +81,7 @@ export function ScreenTopBar({ title, left = 'commands', right = ['history', 'se
           {left === 'commands' ? (
             <TextButton label="Команды" onClick={openGlobalCommandList}>
               <span className="screen-top-bar__command-mark">⌘</span>
-              Команды
+              <span>Команды</span>
             </TextButton>
           ) : null}
           {left === 'back' ? <TextButton label="Назад" onClick={goBack}>Назад</TextButton> : null}

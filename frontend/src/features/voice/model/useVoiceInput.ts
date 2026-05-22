@@ -33,6 +33,7 @@ export function useVoiceInput({
   const [permissionPrimed, setPermissionPrimed] = useState(false);
   const [permissionError, setPermissionError] = useState<string | null>(null);
   const permissionRequestInFlightRef = useRef(false);
+  const speechTimeoutRef = useRef<number | null>(null);
 
   const speech = useVoiceRecognition({
     lang,
@@ -46,6 +47,13 @@ export function useVoiceInput({
   const mode = useMemo<VoiceInputMode>(() => {
     return speech.isSupported ? 'speech' : 'recorder';
   }, [speech.isSupported]);
+
+  const clearSpeechTimeout = useCallback(() => {
+    if (speechTimeoutRef.current !== null) {
+      window.clearTimeout(speechTimeoutRef.current);
+      speechTimeoutRef.current = null;
+    }
+  }, []);
 
   const ensurePermissionBeforeRecording = useCallback(async (): Promise<boolean> => {
     setPermissionError(null);
@@ -107,7 +115,7 @@ export function useVoiceInput({
     }
 
     recorder.stopRecording();
-  }, [recorder, speech]);
+  }, [clearSpeechTimeout, recorder, speech]);
 
   const cancel = useCallback(() => {
     if (speech.isSupported) {
@@ -119,6 +127,7 @@ export function useVoiceInput({
   }, [recorder, speech]);
 
   const reset = useCallback(() => {
+    clearSpeechTimeout();
     window.speechSynthesis?.cancel();
     setIsSpeaking(false);
     setPermissionError(null);
@@ -140,19 +149,34 @@ export function useVoiceInput({
       utterance.rate = 1;
       utterance.pitch = 1;
 
-      utterance.onstart = () => setIsSpeaking(true);
-      utterance.onend = () => setIsSpeaking(false);
-      utterance.onerror = () => setIsSpeaking(false);
+      const finishSpeaking = () => {
+        clearSpeechTimeout();
+        setIsSpeaking(false);
+      };
+
+      utterance.onstart = () => {
+        setIsSpeaking(true);
+        clearSpeechTimeout();
+        const timeoutMs = Math.min(5200, Math.max(1800, cleanText.length * 65));
+        speechTimeoutRef.current = window.setTimeout(() => {
+          window.speechSynthesis?.cancel();
+          setIsSpeaking(false);
+          speechTimeoutRef.current = null;
+        }, timeoutMs);
+      };
+      utterance.onend = finishSpeaking;
+      utterance.onerror = finishSpeaking;
 
       window.speechSynthesis.speak(utterance);
     },
-    [lang],
+    [clearSpeechTimeout, lang],
   );
 
   const stopSpeaking = useCallback(() => {
+    clearSpeechTimeout();
     window.speechSynthesis?.cancel();
     setIsSpeaking(false);
-  }, []);
+  }, [clearSpeechTimeout]);
 
   const state = useMemo<VoiceInputState>(() => {
     if (isSpeaking) return 'speaking';
