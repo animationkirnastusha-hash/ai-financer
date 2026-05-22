@@ -1,0 +1,61 @@
+#!/usr/bin/env node
+import dotenv from 'dotenv';
+import jwt from 'jsonwebtoken';
+import { PrismaClient } from '@prisma/client';
+
+dotenv.config({ override: true });
+
+const prisma = new PrismaClient();
+
+function readTelegramId() {
+  const raw = process.env.TEST_TELEGRAM_ID || process.env.DEV_TELEGRAM_ID || process.env.ADMIN_TELEGRAM_ID || '1001';
+  const parsed = BigInt(String(raw));
+  if (parsed <= 0n) throw new Error('TEST_TELEGRAM_ID must be a positive integer');
+  return parsed;
+}
+
+function readAdminTelegramIds() {
+  const values = [process.env.ADMIN_TELEGRAM_ID, ...(process.env.ADMIN_TELEGRAM_IDS || '').split(',')]
+    .map((item) => String(item || '').trim())
+    .filter(Boolean);
+  return new Set(values);
+}
+
+async function main() {
+  const jwtSecret = process.env.JWT_SECRET || 'dev-secret';
+  const telegramId = readTelegramId();
+  const telegramIdText = telegramId.toString();
+  const adminIds = readAdminTelegramIds();
+  const isAdmin = process.env.TEST_ADMIN === '1' || adminIds.has(telegramIdText);
+
+  const user = await prisma.user.upsert({
+    where: { telegramId },
+    update: {
+      firstName: isAdmin ? 'Admin' : 'Test',
+      lastName: 'User',
+      username: isAdmin ? 'admin_test' : `test_${telegramIdText}`,
+      isAdmin,
+    },
+    create: {
+      telegramId,
+      firstName: isAdmin ? 'Admin' : 'Test',
+      lastName: 'User',
+      username: isAdmin ? 'admin_test' : `test_${telegramIdText}`,
+      isAdmin,
+    },
+  });
+
+  const token = jwt.sign({ userId: user.id }, jwtSecret, { expiresIn: '30d' });
+
+  console.log(token);
+  console.error(`Created/found test user: ${user.id} telegramId=${telegramIdText} admin=${user.isAdmin}`);
+}
+
+main()
+  .catch((error) => {
+    console.error(error);
+    process.exit(1);
+  })
+  .finally(async () => {
+    await prisma.$disconnect();
+  });

@@ -1,12 +1,13 @@
 import { NextFunction, Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
 import { env } from '../config/env';
+import { prisma } from '../lib/prisma';
 
 export interface AuthRequest extends Request {
   userId?: string;
 }
 
-export function authMiddleware(req: AuthRequest, res: Response, next: NextFunction) {
+export async function authMiddleware(req: AuthRequest, res: Response, next: NextFunction) {
   const authHeader = req.headers.authorization;
 
   if (!authHeader) {
@@ -30,15 +31,44 @@ export function authMiddleware(req: AuthRequest, res: Response, next: NextFuncti
   }
 
   try {
-    const decoded = jwt.verify(token, env.jwtSecret) as { userId: string };
-    req.userId = decoded.userId;
-    next();
-  } catch {
-    return res.status(401).json({
-      error: {
-        message: 'Invalid or expired token',
-        code: 'INVALID_TOKEN',
-      },
+    const decoded = jwt.verify(token, env.jwtSecret) as { userId?: string };
+    const userId = typeof decoded.userId === 'string' ? decoded.userId : '';
+
+    if (!userId) {
+      return res.status(401).json({
+        error: {
+          message: 'Invalid token payload',
+          code: 'INVALID_TOKEN_PAYLOAD',
+        },
+      });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true },
     });
+
+    if (!user) {
+      return res.status(401).json({
+        error: {
+          message: 'User not found. Generate a fresh token after database reset.',
+          code: 'USER_NOT_FOUND',
+        },
+      });
+    }
+
+    req.userId = user.id;
+    return next();
+  } catch (error) {
+    if (error instanceof jwt.JsonWebTokenError || error instanceof jwt.TokenExpiredError) {
+      return res.status(401).json({
+        error: {
+          message: 'Invalid or expired token',
+          code: 'INVALID_TOKEN',
+        },
+      });
+    }
+
+    return next(error);
   }
 }

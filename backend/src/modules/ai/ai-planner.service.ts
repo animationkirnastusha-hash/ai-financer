@@ -59,6 +59,12 @@ export class AIPlannerService {
 
     let plan = this.normalizePlan(raw, command);
 
+    if (!plan.actions.length) {
+      usedFallback = true;
+      console.warn('[AI] planner returned no actions, retrying focused planner once');
+      raw = await this.runFocusedPlanner(command, compactContext);
+      plan = this.normalizePlan(raw, command);
+    }
 
     console.log('[AI] planner normalized', {
       mode: plan.mode,
@@ -95,7 +101,6 @@ export class AIPlannerService {
       'For premium/tariff/capabilities, use show_premium_capabilities.',
       'Money commands must become create_transaction.',
       'Income/deposit/top-up/salary/put money onto account => create_transaction kind income.',
-      'If user says they have money in cash/наличными/наличка/налик, treat it as creating or using a cash account named Наличка and recording income/top-up there. Example: “у меня есть 10к наличными” => create_account Наличка + create_transaction income 10к to Наличка.',
       'Expense/payment/purchase/item+amount => create_transaction kind expense.',
       'For every transaction, infer human category and section from meaning; do not leave category/section empty when meaning is clear.',
       'Category/section management must use taxonomy tools: create_category, update_category, delete_category, create_section, update_section, delete_section, assign_category_to_section, show_taxonomy.',
@@ -132,7 +137,6 @@ export class AIPlannerService {
         'The current USER message is absolute source of truth.',
         'Do not reuse names from context, memory, or previous commands when USER gives a new exact name.',
         'If USER says create account and put/add money there, return exactly two actions: create_account and create_transaction income.',
-        'If USER says they have money in cash, return create_account name Наличка type cash and create_transaction income to Наличка. Do this by understanding the command, not by deterministic string extraction.',
       ].join(' '),
       prompt: [
         'TOOLS:',
@@ -144,7 +148,6 @@ export class AIPlannerService {
         'Exact quoted names must be copied exactly.',
         'Name after “с названием” must be copied exactly.',
         'For account creation, do not invent another account name.',
-        'For “у меня есть 10к наличными”, the account name is Наличка and amount is 10к.',
         'For income/top-up after account creation, create_transaction.input.account must equal create_account.input.name.',
         'For expense/income/transfer, use create_transaction/transfer_money.',
         'For goals, use create_goal/update_goal/delete_goal/show_goals.',
@@ -263,6 +266,7 @@ export class AIPlannerService {
     };
   }
 
+
   private normalizeAction(item: Record<string, unknown>, command: string): AIToolCall | null {
     const rawTool = typeof item.tool === 'string' ? item.tool : typeof item.name === 'string' ? item.name : '';
     const input = this.asRecord(item.input ?? item.params ?? item.args ?? item.arguments);
@@ -271,7 +275,6 @@ export class AIPlannerService {
     if (!alias) return null;
 
     const nextInput = { ...input, ...alias.extraInput };
-    nextInput.__userText = command;
 
     const reason = typeof item.reason === 'string' && item.reason.trim() ? item.reason.trim() : undefined;
     return reason ? { tool: alias.tool, input: nextInput, reason } : { tool: alias.tool, input: nextInput };
