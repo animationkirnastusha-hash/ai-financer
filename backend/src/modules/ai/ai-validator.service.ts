@@ -41,9 +41,10 @@ export class AIValidatorService {
 
     const issues: AIValidatedPlan['issues'] = [];
     const actions: AIValidatedAction[] = [];
+    const normalizedPlanActions = this.normalizeCrossActionAccountReferences(plan.actions, accounts);
     const plannedAccounts = new Map<string, { name: string; currency: AICurrency }>();
 
-    for (const [index, action] of plan.actions.entries()) {
+    for (const [index, action] of normalizedPlanActions.entries()) {
       const definition = getToolDefinition(action.tool);
       if (!definition) {
         issues.push({ code: 'unknown_tool', message: `Неизвестное действие: ${action.tool}`, actionIndex: index });
@@ -641,6 +642,50 @@ export class AIValidatorService {
       category: genericCategory ? (params.description || 'Расход') : params.category,
       section: params.section || 'Прочее',
     };
+  }
+
+  private normalizeCrossActionAccountReferences(actions: AIToolCall[], accounts: AccountLite[]): AIToolCall[] {
+    if (actions.length < 2) return actions;
+
+    const createIndexes = actions
+      .map((action, index) => ({ action, index }))
+      .filter((item) => item.action.tool === 'create_account');
+
+    if (createIndexes.length !== 1) return actions;
+
+    const transactionAccountNames = actions
+      .filter((action) => action.tool === 'create_transaction')
+      .map((action) => this.cleanEntityName(action.input?.account))
+      .filter(Boolean);
+
+    const uniqueTransactionAccountNames = Array.from(new Set(transactionAccountNames.map((name) => this.key(name))))
+      .map((key) => transactionAccountNames.find((name) => this.key(name) === key) || '')
+      .filter(Boolean);
+
+    if (uniqueTransactionAccountNames.length !== 1) return actions;
+
+    const transactionAccountName = uniqueTransactionAccountNames[0];
+    const existingTransactionAccount = this.resolveAccount(accounts, transactionAccountName);
+    if (existingTransactionAccount) return actions;
+
+    const createIndex = createIndexes[0].index;
+    const createAction = actions[createIndex];
+    const createName = this.cleanEntityName(createAction.input?.name);
+
+    if (!createName || this.key(createName) === this.key(transactionAccountName)) return actions;
+
+    return actions.map((action, index) => {
+      if (index === createIndex) {
+        return {
+          ...action,
+          input: {
+            ...action.input,
+            name: transactionAccountName,
+          },
+        };
+      }
+      return action;
+    });
   }
 
   private coerceAccountType(value: unknown, fallback: AIAccountType | null): AIAccountType | null {
