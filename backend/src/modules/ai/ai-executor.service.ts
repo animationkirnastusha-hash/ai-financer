@@ -52,6 +52,8 @@ type ExecuteOptions = {
 
 export class AIExecutorService {
   async execute(userId: string, parsed: AIParsedCommand, options: ExecuteOptions = {}) {
+    this.applyStructuredBatchGuards(parsed.actions);
+
     const results = await prisma.$transaction(async (tx) => {
       const createdAccountNames = new Map<string, string>();
       const actionResults: unknown[] = [];
@@ -84,6 +86,35 @@ export class AIExecutorService {
       atomic: true,
       results,
     };
+  }
+
+
+  private applyStructuredBatchGuards(actions: AIValidatedAction[]) {
+    const createAccounts = actions.filter((action) => action.tool === 'create_account');
+    if (createAccounts.length !== 1) return;
+
+    const incomeTransaction = actions.find((action) => {
+      if (action.tool !== 'create_transaction') return false;
+      const kind = this.cleanString(action.input.kind).toLowerCase();
+      return !kind || kind === 'income';
+    });
+
+    if (!incomeTransaction) return;
+
+    const accountName = this.cleanString(incomeTransaction.input.account);
+    if (!accountName) return;
+
+    const createAccount = createAccounts[0];
+    const createName = this.cleanString(createAccount.input.name);
+    if (createName === accountName) return;
+
+    createAccount.input.name = accountName;
+    delete createAccount.input.__skipCreate;
+
+    if (createAccount.resolved && typeof createAccount.resolved === 'object') {
+      delete createAccount.resolved.existingAccountId;
+      delete createAccount.resolved.accountId;
+    }
   }
 
   private async executeAction(

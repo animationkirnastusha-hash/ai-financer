@@ -37,39 +37,21 @@ export class AIPlannerService {
 
   async plan(command: string, context: unknown): Promise<AIPlan> {
     const compactContext = this.compactContext(context);
-    let raw: Record<string, unknown>;
-    let usedFallback = false;
 
-    try {
-      raw = await this.provider.generateJson<Record<string, unknown>>({
-        system: this.systemPrompt(),
-        prompt: this.buildPrompt(command, compactContext),
-        temperature: 0,
-        modelRole: 'fast',
-        timeoutMs: 12_000,
-        numPredict: 520,
-      });
-    } catch (error) {
-      usedFallback = true;
-      console.warn('[AI] planner primary failed, retrying focused planner', {
-        message: error instanceof Error ? error.message : String(error),
-      });
-      raw = await this.runFocusedPlanner(command, compactContext);
-    }
+    const raw = await this.provider.generateJson<Record<string, unknown>>({
+      system: this.systemPrompt(),
+      prompt: this.buildPrompt(command, compactContext),
+      temperature: 0,
+      modelRole: 'fast',
+      timeoutMs: 10_000,
+      numPredict: 320,
+    });
 
-    let plan = this.normalizePlan(raw, command);
-
-    if (!plan.actions.length && this.looksLikeOperationalCommand(command)) {
-      usedFallback = true;
-      console.warn('[AI] planner returned no actions for operational command, retrying focused planner');
-      raw = await this.runFocusedPlanner(command, compactContext);
-      plan = this.normalizePlan(raw, command);
-    }
+    const plan = this.normalizePlan(raw, command);
 
     console.log('[AI] planner normalized', {
       mode: plan.mode,
       actions: plan.actions.map((action) => action.tool),
-      usedFallback,
     });
 
     return plan;
@@ -125,61 +107,6 @@ export class AIPlannerService {
       'CTX:', JSON.stringify(context),
       'USER:', command,
     ].join('');
-  }
-
-  private async runFocusedPlanner(command: string, context: unknown): Promise<Record<string, unknown>> {
-    const focusedContext = this.focusContext(context);
-
-    return this.provider.generateJson<Record<string, unknown>>({
-      system: [
-        'Return ONLY strict JSON. No markdown. No prose.',
-        'Use only tool calls from the provided contract.',
-        'The current USER message is absolute source of truth.',
-        'Do not reuse names from context, memory, or previous commands when USER gives a new exact name.',
-        'If USER says create account and put/add money there, return exactly two actions: create_account and create_transaction income.',
-      ].join(' '),
-      prompt: [
-        'TOOLS:',
-        getPlannerToolContract(),
-        'OUTPUT EXAMPLES:',
-        '{"mode":"actions","summary":"Создать счёт и пополнить.","actions":[{"tool":"create_account","input":{"name":"Наличка","type":"cash","currency":"RUB"}},{"tool":"create_transaction","input":{"kind":"income","amount":1000,"currency":"RUB","account":"Наличка","description":"Пополнение счёта","category":"Пополнение","section":"Доходы"}}]}',
-        '{"mode":"reply","summary":"Короткий ответ по смыслу без финансового действия.","actions":[]}',
-        'RULES:',
-        'Exact quoted names must be copied exactly.',
-        'Name after “с названием” must be copied exactly.',
-        'For account creation, do not invent another account name.',
-        'For income/top-up after account creation, create_transaction.input.account must equal create_account.input.name.',
-        'For expense/income/transfer, use create_transaction/transfer_money.',
-        'For goals, use create_goal/update_goal/delete_goal/show_goals.',
-        'For categories/sections, use taxonomy tools.',
-        'For off-topic, return reply with empty actions.',
-        'CONTEXT:', JSON.stringify(focusedContext),
-        'USER:', command,
-      ].join('\n'),
-      temperature: 0,
-      modelRole: 'base',
-      timeoutMs: 18_000,
-      numPredict: 600,
-    });
-  }
-
-  private focusContext(context: unknown) {
-    const value = this.asRecord(context) as UserContext;
-    return {
-      accounts: Array.isArray(value.accounts) ? value.accounts.slice(0, 8).map((item) => item.name).filter(Boolean) : [],
-      categories: Array.isArray(value.categories) ? value.categories.slice(0, 12).map((item) => item.name).filter(Boolean) : [],
-      sections: Array.isArray(value.sections) ? value.sections.slice(0, 12).map((item) => item.name).filter(Boolean) : [],
-      goals: Array.isArray(value.goals) ? value.goals.slice(0, 8).map((item) => item.title).filter(Boolean) : [],
-    };
-  }
-
-  private looksLikeOperationalCommand(command: string) {
-    const lower = command.toLowerCase();
-    const markers = [
-      'создай', 'добавь', 'запиши', 'положи', 'пополн', 'доход', 'расход', 'переведи', 'сделай', 'переимен', 'измени', 'удали', 'цель', 'счёт', 'счет', 'категор', 'раздел',
-      'create', 'add', 'income', 'expense', 'transfer', 'rename', 'delete', 'goal', 'account', 'category', 'section',
-    ];
-    return markers.some((marker) => lower.includes(marker));
   }
 
   private compactContext(context: unknown) {
@@ -266,12 +193,58 @@ export class AIPlannerService {
       .map((item): AIToolCall | null => this.normalizeAction(item, command))
       .filter((action): action is AIToolCall => action !== null);
 
+    this.applyCurrentCommandEntityGuards(actions, command);
+
     return {
       mode: 'actions',
       language: this.asOptionalString(raw.language),
       summary: this.asOptionalString(raw.summary) ?? (actions.length ? 'Действие подготовлено.' : 'Я рядом. Могу ответить коротко и помочь с финансами.'),
       actions,
     };
+  }
+
+
+  private applyCurrentCommandEntityGuards(actions: AIToolCall[], command: string) {
+    const explicitAccountName = this.extractExplicitNewAccountName(command);
+    if (!explicitAccountName) return;
+
+    const createAccount = actions.find((action) => action.tool === 'create_account');
+    if (!createAccount) return;
+
+    createAccount.input.name = explicitAccountName;
+
+    for (const action of actions) {
+      if (action.tool !== 'create_transaction') continue;
+      const kind = this.asOptionalString(action.input.kind)?.toLowerCase();
+      if (kind && kind !== 'income') continue;
+
+      const currentAccount = this.asOptionalString(action.input.account);
+      const lowerCommand = command.toLowerCase();
+      const looksLikeOldMemory = Boolean(currentAccount && !lowerCommand.includes(currentAccount.toLowerCase()));
+      if (!currentAccount || looksLikeOldMemory) {
+        action.input.account = explicitAccountName;
+      }
+    }
+  }
+
+  private extractExplicitNewAccountName(command: string) {
+    const clean = command.trim().replace(/\s+/g, ' ');
+    if (!clean) return null;
+
+    const quoted = clean.match(/(?:сч[её]т|счет|кошел[её]к|кар(?:т[ау]|та)|account|wallet|card)[^"«»]{0,100}["«]([^"»]{2,100})["»]/iu)
+      ?? clean.match(/(?:названи(?:ем|е)|name)\s*["«]([^"»]{2,100})["»]/iu);
+    if (quoted?.[1]) return this.cleanEntityName(quoted[1]);
+
+    const named = clean.match(/(?:с\s+названи(?:ем|е)|назови(?:\s+его)?|name(?:d)?)\s+(.+?)(?=\s+(?:и\s+)?(?:с\s+балансом|балансом|положи|пополн|закинь|туда|на\s+\d|сумм(?:ой|а)|руб(?:\.|лей|ля|ль)?|₽|usd|eur|vnd)|$)/iu);
+    if (named?.[1]) return this.cleanEntityName(named[1]);
+
+    return null;
+  }
+
+  private cleanEntityName(value: unknown) {
+    return typeof value === 'string'
+      ? value.trim().replace(/\s+/g, ' ').replace(/^["'«»]+|["'«»]+$/g, '').trim()
+      : '';
   }
 
   private normalizeAction(item: Record<string, unknown>, command: string): AIToolCall | null {
