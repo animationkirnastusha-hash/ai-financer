@@ -46,6 +46,27 @@ function escapeRegExp(value: string) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
+
+function normalizeDecision(text: string) {
+  return normalizeForWake(text);
+}
+
+function isVoiceConfirm(text: string) {
+  const value = normalizeDecision(text);
+  return ['да', 'ага', 'угу', 'подтверди', 'подтверждаю', 'выполняй', 'сделай', 'ок', 'окей', 'yes', 'confirm'].includes(value);
+}
+
+function isVoiceCancel(text: string) {
+  const value = normalizeDecision(text);
+  return ['нет', 'не надо', 'отмена', 'отмени', 'отменить', 'cancel', 'no'].includes(value);
+}
+
+function pendingHasClarification(pending: unknown) {
+  if (!pending || typeof pending !== 'object') return false;
+  const parsed = (pending as { parsed?: unknown }).parsed;
+  return Boolean(parsed && typeof parsed === 'object' && !Array.isArray(parsed) && (parsed as { clarification?: unknown }).clarification);
+}
+
 function stripWakeWord(rawText: string, companionName: string) {
   const source = rawText.trim();
   const name = normalizeForWake(companionName || 'Фина');
@@ -122,7 +143,7 @@ export function VoiceFirstCompanionLayer() {
   const activeUntilRef = useRef(0);
   const lastHandledRef = useRef<{ text: string; at: number }>({ text: '', at: 0 });
   const handleTextRef = useRef<(text: string) => Promise<void> | void>(() => undefined);
-  const resumeAttemptsRef = useRef(0);
+  const startListeningRef = useRef<() => Promise<void> | void>(() => undefined);
 
   const activeWindowMs = Math.max(6000, Math.min(45000, (voiceActiveWindowSeconds || DEFAULT_ACTIVE_WINDOW_SECONDS) * 1000));
   const isCombatActive = !voiceWakeWordEnabled || activeUntil > Date.now();
@@ -171,12 +192,30 @@ export function VoiceFirstCompanionLayer() {
   const canUseVoiceFirst = voiceEnabled && voiceBetaEnabled && voice.isSupported && voice.mode === 'speech';
   const isActive = canUseVoiceFirst && voiceAlwaysOnEnabled && voicePermissionPrompted;
 
+  const resumeListeningSoon = useCallback((delayMs = RESUME_DELAY_MS) => {
+    clearRestartTimer();
+
+    restartTimerRef.current = window.setTimeout(() => {
+      if (!shouldResumeRef.current || !isActiveRef.current) return;
+      void startListeningRef.current?.();
+    }, delayMs);
+  }, [clearRestartTimer]);
+
   const startListening = useCallback(async () => {
-    if (!canUseVoiceFirst || isProcessingVoiceRef.current) return;
-    if (voice.state === 'recording' || voice.state === 'uploading' || voice.state === 'speaking') return;
+    if (!canUseVoiceFirst) return;
+
+    if (isProcessingVoiceRef.current || voice.state === 'uploading' || voice.state === 'speaking') {
+      if (shouldResumeRef.current && isActiveRef.current) resumeListeningSoon(260);
+      return;
+    }
+
+    if (voice.state === 'recording') return;
 
     const now = Date.now();
-    if (now - lastStartAtRef.current < 320) return;
+    if (now - lastStartAtRef.current < 260) {
+      if (shouldResumeRef.current && isActiveRef.current) resumeListeningSoon(260);
+      return;
+    }
     lastStartAtRef.current = now;
 
     if (voice.state === 'error') voice.reset();
@@ -184,41 +223,29 @@ export function VoiceFirstCompanionLayer() {
     const result = await voice.start();
     if (result === 'started') {
       shouldResumeRef.current = true;
-      resumeAttemptsRef.current = 0;
       if (voiceWakeWordEnabled && activeUntilRef.current <= Date.now()) {
-        showThought(`Скажи “${companionName || 'Фина'}”, и я начну слушать задачу.`, 'neutral', 2200);
+        showThought(`Скажи “${companionName || 'Фина'}”, и я начну слушать задачу.`, 'neutral', 1800);
       } else {
-        showThought('Слушаю задачу.', 'listening', 1500);
+        showThought('Слушаю задачу.', 'listening', 1300);
       }
+      return;
+    }
+
+    if (result === 'permission-ready') {
+      shouldResumeRef.current = true;
+      resumeListeningSoon(520);
+      return;
     }
 
     if (result === 'error') {
       shouldResumeRef.current = false;
       showThought('Микрофон недоступен. Можно написать команду текстом.', 'warning');
     }
-  }, [canUseVoiceFirst, companionName, showThought, voice, voiceWakeWordEnabled]);
+  }, [canUseVoiceFirst, companionName, resumeListeningSoon, showThought, voice, voiceWakeWordEnabled]);
 
-  const resumeListeningSoon = useCallback((delayMs = RESUME_DELAY_MS) => {
-    clearRestartTimer();
-
-    restartTimerRef.current = window.setTimeout(() => {
-      if (!shouldResumeRef.current || !isActiveRef.current) return;
-
-      const shouldWait = isProcessingVoiceRef.current
-        || voice.state === 'uploading'
-        || voice.state === 'speaking';
-
-      if (shouldWait) {
-        resumeAttemptsRef.current += 1;
-        const nextDelay = Math.min(1400, 360 + resumeAttemptsRef.current * 180);
-        resumeListeningSoon(nextDelay);
-        return;
-      }
-
-      resumeAttemptsRef.current = 0;
-      void startListening();
-    }, delayMs);
-  }, [clearRestartTimer, startListening, voice.state]);
+  useEffect(() => {
+    startListeningRef.current = startListening;
+  }, [startListening]);
 
   const stopListening = useCallback(() => {
     clearSilenceTimer();
@@ -263,7 +290,6 @@ export function VoiceFirstCompanionLayer() {
     }
     lastHandledRef.current = { text, at: now };
 
-    isProcessingVoiceRef.current = true;
     setIsProcessingVoice(true);
     clearSilenceTimer();
     showThought('Думаю...', 'thinking', 2000);
@@ -287,10 +313,24 @@ export function VoiceFirstCompanionLayer() {
         return;
       }
 
+      const latestPending = chat.pendingActions[0];
+      if (latestPending?.id && isVoiceCancel(text)) {
+        await chat.cancelAction(latestPending.id);
+        showThought('Отменил действие.', 'success', 1800);
+        armCombatMode(9000);
+        return;
+      }
+
+      if (latestPending?.id && !pendingHasClarification(latestPending) && isVoiceConfirm(text)) {
+        await chat.confirmAction(latestPending.id);
+        showThought('Подтвердил.', 'success', 1800);
+        armCombatMode(9000);
+        return;
+      }
+
       await chat.sendMessage(text);
       armCombatMode();
     } finally {
-      isProcessingVoiceRef.current = false;
       setIsProcessingVoice(false);
       resumeListeningSoon(RESUME_DELAY_MS);
     }
@@ -391,30 +431,32 @@ export function VoiceFirstCompanionLayer() {
     if (!lastMessage) return;
 
     if (lastMessage.kind === 'preview') {
-      armCombatMode(18000);
-      showThought('Проверь действие. Я ещё слушаю.', 'warning');
-      resumeListeningSoon(900);
+      armCombatMode(26000);
+      voice.stopSpeaking();
+      showThought('Проверь действие. Можешь сказать: да, отмени или уточнение.', 'warning', 3600);
+      resumeListeningSoon(380);
       return;
     }
 
     if (lastMessage.kind === 'error') {
-      armCombatMode(18000);
-      showThought(lastMessage.text || 'Нужно уточнение. Ответь коротко.', 'warning');
-      resumeListeningSoon(900);
+      armCombatMode(26000);
+      voice.stopSpeaking();
+      showThought(lastMessage.text || 'Нужно уточнение. Ответь коротко.', 'warning', 3600);
+      resumeListeningSoon(380);
       return;
     }
 
-    armCombatMode(11000);
+    armCombatMode(13000);
     showThought(lastMessage.text || 'Готово.', 'success');
 
-    if (voiceRepliesEnabled && lastMessage.text) {
-      voice.speak(lastMessage.text, { maxDurationMs: 2600 });
-      resumeListeningSoon(2800);
+    if (voiceRepliesEnabled && lastMessage.text && chat.pendingActions.length === 0) {
+      voice.speak(lastMessage.text, { maxDurationMs: 1800 });
+      resumeListeningSoon(2100);
       return;
     }
 
-    resumeListeningSoon(750);
-  }, [armCombatMode, chat.messages, resumeListeningSoon, showThought, voice, voiceRepliesEnabled]);
+    resumeListeningSoon(420);
+  }, [armCombatMode, chat.messages, chat.pendingActions.length, resumeListeningSoon, showThought, voice, voiceRepliesEnabled]);
 
   useEffect(() => () => {
     clearSilenceTimer();

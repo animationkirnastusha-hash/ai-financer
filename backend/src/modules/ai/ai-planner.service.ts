@@ -59,12 +59,6 @@ export class AIPlannerService {
 
     let plan = this.normalizePlan(raw, command);
 
-    if (!plan.actions.length && this.looksLikeOperationalCommand(command)) {
-      usedFallback = true;
-      console.warn('[AI] planner returned no actions for operational command, retrying focused planner');
-      raw = await this.runFocusedPlanner(command, compactContext);
-      plan = this.normalizePlan(raw, command);
-    }
 
     console.log('[AI] planner normalized', {
       mode: plan.mode,
@@ -101,6 +95,7 @@ export class AIPlannerService {
       'For premium/tariff/capabilities, use show_premium_capabilities.',
       'Money commands must become create_transaction.',
       'Income/deposit/top-up/salary/put money onto account => create_transaction kind income.',
+      'If user says they have money in cash/наличными/наличка/налик, treat it as creating or using a cash account named Наличка and recording income/top-up there. Example: “у меня есть 10к наличными” => create_account Наличка + create_transaction income 10к to Наличка.',
       'Expense/payment/purchase/item+amount => create_transaction kind expense.',
       'For every transaction, infer human category and section from meaning; do not leave category/section empty when meaning is clear.',
       'Category/section management must use taxonomy tools: create_category, update_category, delete_category, create_section, update_section, delete_section, assign_category_to_section, show_taxonomy.',
@@ -137,6 +132,7 @@ export class AIPlannerService {
         'The current USER message is absolute source of truth.',
         'Do not reuse names from context, memory, or previous commands when USER gives a new exact name.',
         'If USER says create account and put/add money there, return exactly two actions: create_account and create_transaction income.',
+        'If USER says they have money in cash, return create_account name Наличка type cash and create_transaction income to Наличка. Do this by understanding the command, not by deterministic string extraction.',
       ].join(' '),
       prompt: [
         'TOOLS:',
@@ -148,6 +144,7 @@ export class AIPlannerService {
         'Exact quoted names must be copied exactly.',
         'Name after “с названием” must be copied exactly.',
         'For account creation, do not invent another account name.',
+        'For “у меня есть 10к наличными”, the account name is Наличка and amount is 10к.',
         'For income/top-up after account creation, create_transaction.input.account must equal create_account.input.name.',
         'For expense/income/transfer, use create_transaction/transfer_money.',
         'For goals, use create_goal/update_goal/delete_goal/show_goals.',
@@ -171,15 +168,6 @@ export class AIPlannerService {
       sections: Array.isArray(value.sections) ? value.sections.slice(0, 12).map((item) => item.name).filter(Boolean) : [],
       goals: Array.isArray(value.goals) ? value.goals.slice(0, 8).map((item) => item.title).filter(Boolean) : [],
     };
-  }
-
-  private looksLikeOperationalCommand(command: string) {
-    const lower = command.toLowerCase();
-    const markers = [
-      'создай', 'добавь', 'запиши', 'положи', 'пополн', 'доход', 'расход', 'переведи', 'сделай', 'переимен', 'измени', 'удали', 'цель', 'счёт', 'счет', 'категор', 'раздел',
-      'create', 'add', 'income', 'expense', 'transfer', 'rename', 'delete', 'goal', 'account', 'category', 'section',
-    ];
-    return markers.some((marker) => lower.includes(marker));
   }
 
   private compactContext(context: unknown) {
@@ -266,7 +254,6 @@ export class AIPlannerService {
       .map((item): AIToolCall | null => this.normalizeAction(item, command))
       .filter((action): action is AIToolCall => action !== null);
 
-    this.applyCurrentCommandEntityGuards(actions, command);
 
     return {
       mode: 'actions',
@@ -274,50 +261,6 @@ export class AIPlannerService {
       summary: this.asOptionalString(raw.summary) ?? (actions.length ? 'Действие подготовлено.' : 'Я рядом. Могу ответить коротко и помочь с финансами.'),
       actions,
     };
-  }
-
-
-  private applyCurrentCommandEntityGuards(actions: AIToolCall[], command: string) {
-    const explicitAccountName = this.extractExplicitNewAccountName(command);
-    if (!explicitAccountName) return;
-
-    const createAccount = actions.find((action) => action.tool === 'create_account');
-    if (!createAccount) return;
-
-    createAccount.input.name = explicitAccountName;
-
-    for (const action of actions) {
-      if (action.tool !== 'create_transaction') continue;
-      const kind = this.asOptionalString(action.input.kind)?.toLowerCase();
-      if (kind && kind !== 'income') continue;
-
-      const currentAccount = this.asOptionalString(action.input.account);
-      const lowerCommand = command.toLowerCase();
-      const looksLikeOldMemory = Boolean(currentAccount && !lowerCommand.includes(currentAccount.toLowerCase()));
-      if (!currentAccount || looksLikeOldMemory) {
-        action.input.account = explicitAccountName;
-      }
-    }
-  }
-
-  private extractExplicitNewAccountName(command: string) {
-    const clean = command.trim().replace(/\s+/g, ' ');
-    if (!clean) return null;
-
-    const quoted = clean.match(/(?:сч[её]т|счет|кошел[её]к|кар(?:т[ау]|та)|account|wallet|card)[^"«»]{0,100}["«]([^"»]{2,100})["»]/iu)
-      ?? clean.match(/(?:названи(?:ем|е)|name)\s*["«]([^"»]{2,100})["»]/iu);
-    if (quoted?.[1]) return this.cleanEntityName(quoted[1]);
-
-    const named = clean.match(/(?:с\s+названи(?:ем|е)|назови(?:\s+его)?|name(?:d)?)\s+(.+?)(?=\s+(?:и\s+)?(?:с\s+балансом|балансом|положи|пополн|закинь|туда|на\s+\d|сумм(?:ой|а)|руб(?:\.|лей|ля|ль)?|₽|usd|eur|vnd)|$)/iu);
-    if (named?.[1]) return this.cleanEntityName(named[1]);
-
-    return null;
-  }
-
-  private cleanEntityName(value: unknown) {
-    return typeof value === 'string'
-      ? value.trim().replace(/\s+/g, ' ').replace(/^["'«»]+|["'«»]+$/g, '').trim()
-      : '';
   }
 
   private normalizeAction(item: Record<string, unknown>, command: string): AIToolCall | null {
