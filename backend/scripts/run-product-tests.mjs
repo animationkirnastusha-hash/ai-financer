@@ -266,6 +266,8 @@ function pendingIdFromAI(result) {
 }
 
 async function ai(command, options = {}) {
+  const shouldConfirm = options.confirm !== false;
+  const beforePendingIds = shouldConfirm ? await pendingIdsSafe() : new Set();
   const body = { command, execute: options.execute ?? true };
   const res = await api('/ai/parse', {
     method: 'POST',
@@ -274,18 +276,70 @@ async function ai(command, options = {}) {
   });
 
   let result = res.data;
-  const pendingActionId = pendingIdFromAI(result);
+  const pendingActionId = shouldConfirm
+    ? await resolvePendingActionId(result, command, beforePendingIds)
+    : pendingIdFromAI(result);
 
-  if (options.confirm !== false && pendingActionId) {
+  if (shouldConfirm && pendingActionId) {
     const confirmed = await api('/ai/confirm', {
       method: 'POST',
-      headers: { 'x-idempotency-key': `test-confirm:${pendingActionId}` },
+      headers: { 'x-idempotency-key': `test-confirm:${pendingActionId}:${Date.now()}` },
       body: { pendingActionId },
     });
     result = confirmed.data;
   }
 
   return result;
+}
+
+async function pendingIdsSafe() {
+  try {
+    const res = await api('/ai/pending-actions');
+    return new Set(listFrom(res.data, ['pendingActions', 'items', 'actions']).map((item) => item.id).filter(Boolean));
+  } catch {
+    return new Set();
+  }
+}
+
+function pendingSearchText(item) {
+  return [
+    item?.id,
+    item?.message,
+    item?.summary,
+    item?.previewText,
+    item?.status,
+    item?.riskLevel,
+    item?.parsed?.summary,
+    item?.parsed?.intent,
+    JSON.stringify(item?.parsed || {}),
+  ].filter(Boolean).join(' ').toLowerCase();
+}
+
+async function resolvePendingActionId(result, command, beforePendingIds = new Set()) {
+  const direct = pendingIdFromAI(result);
+  if (direct) return direct;
+
+  if (!result?.requiresConfirmation && result?.executed !== false) return '';
+
+  const res = await maybeApi('/ai/pending-actions');
+  if (res.error) return '';
+
+  const pending = listFrom(res.data, ['pendingActions', 'items', 'actions'])
+    .filter((item) => item?.id && !beforePendingIds.has(item.id))
+    .sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
+
+  if (!pending.length) return '';
+
+  const commandText = String(command || '').toLowerCase();
+  const prefixText = String(state.prefix || '').toLowerCase();
+  const matched = pending.find((item) => pendingSearchText(item).includes(prefixText))
+    || pending.find((item) => {
+      const text = pendingSearchText(item);
+      return commandText.split(/\s+/).filter((part) => part.length > 3).some((part) => text.includes(part));
+    })
+    || pending[0];
+
+  return matched?.id || '';
 }
 
 async function findAccountByName(name) {
@@ -503,10 +557,10 @@ async function run() {
   });
 
   await test('AI: create account through natural language', async () => {
-    const name = `${state.prefix} AI Счёт`;
-    const result = await ai(`создай счет ${name}`);
+    const name = `${state.prefix} AI Голосовой кошелёк`;
+    const result = await ai(`создай новый счёт с названием ${name} с балансом 1000 рублей`);
     const account = await findAccountByName(name);
-    assert(account?.id, 'AI did not create account', { result });
+    assert(account?.id, 'AI did not create account after preview/confirm flow', { result });
     state.createdByAI.push({ type: 'account', id: account.id, name });
     addCleanup(`ai-account:${name}`, async () => {
       const fresh = await findAccountByName(name);
@@ -516,13 +570,15 @@ async function run() {
   }, { skip: config.runAI ? '' : 'TEST_AI=0' });
 
   await test('AI: rename account and set primary account', async () => {
-    const oldName = `${state.prefix} AI Счёт`;
+    const oldName = `${state.prefix} AI Переименование`;
     const newName = `${state.prefix} AI Основной`;
-    const rename = await ai(`переименуй счет ${oldName} в ${newName}`);
-    const account = await findAccountByName(newName);
-    assert(account?.id, 'AI did not rename account', { rename });
+    const seed = await createAccount(oldName, 2_000, 'cash');
 
-    const primary = await ai(`сделай счет ${newName} основным`);
+    const rename = await ai(`переименуй счёт ${oldName} в ${newName}`);
+    const account = await findAccountByName(newName);
+    assert(account?.id, 'AI did not rename account after preview/confirm flow', { rename, seed });
+
+    const primary = await ai(`сделай счёт ${newName} основным`);
     const settings = await api('/ai-settings');
     const snapshot = settings.data?.settings ?? settings.data;
     const isPrimary = snapshot?.defaultExpenseAccountId === account.id || snapshot?.defaultIncomeAccountId === account.id;
