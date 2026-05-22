@@ -45,7 +45,7 @@ const config = {
 
 const state = {
   token: config.token,
-  prefix: `Автотест ${Date.now()}`,
+  prefix: `Автотест ${randomCyrillic(8)}`,
   accounts: [],
   transactions: [],
   sections: [],
@@ -73,6 +73,16 @@ function inferHealthUrl(baseUrl) {
 
 function nowMs() {
   return Math.round(performance.now());
+}
+
+
+function randomCyrillic(length = 8) {
+  const alphabet = 'абвгдежзиклмнопрстуфхцчшэюя';
+  let value = '';
+  for (let i = 0; i < length; i += 1) {
+    value += alphabet[Math.floor(Math.random() * alphabet.length)];
+  }
+  return value;
 }
 
 function short(value, length = 900) {
@@ -574,11 +584,11 @@ async function run() {
     const newName = `${state.prefix} AI Основной`;
     const seed = await createAccount(oldName, 2_000, 'cash');
 
-    const rename = await ai(`переименуй счёт "${oldName}" в "${newName}"`);
+    const rename = await ai(`переименуй счёт ${oldName} в ${newName}`);
     const account = await findAccountByName(newName);
     assert(account?.id, 'AI did not rename account after preview/confirm flow', { rename, seed });
 
-    const primary = await ai(`сделай счёт "${newName}" основным`);
+    const primary = await ai(`сделай счёт ${newName} основным`);
     const settings = await api('/ai-settings');
     const snapshot = settings.data?.settings ?? settings.data;
     const isPrimary = snapshot?.defaultExpenseAccountId === account.id || snapshot?.defaultIncomeAccountId === account.id;

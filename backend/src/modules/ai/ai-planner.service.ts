@@ -64,6 +64,8 @@ export class AIPlannerService {
       'For non-financial or philosophical small talk, return {"mode":"reply","summary":"short human answer, then gently return to finance context","actions":[]}.',
       'No prose. No markdown. No questions outside JSON.',
       'Never output accountId/categoryId/sectionId; backend resolves entities.',
+      'The current USER message is the primary source of truth. Context and memory are secondary only for pronouns or explicit continuations.',
+      'If USER gives an exact name in quotes or after words like с названием/name, copy it exactly. Do not replace it with any memory value or older command.',
     ].join(' ');
   }
 
@@ -85,7 +87,8 @@ export class AIPlannerService {
       'For every transaction, infer human category and section from meaning; do not leave category/section empty when meaning is clear.',
       'Category/section management must use taxonomy tools: create_category, update_category, delete_category, create_section, update_section, delete_section, assign_category_to_section, show_taxonomy.',
       'Create account only creates account with initialBalance 0.',
-      'Create account and put/add money => create_account initialBalance 0 + create_transaction income to that account.',
+      'Create account and put/add money => create_account initialBalance 0 + create_transaction income to that exact new account name.',
+      'For create_account + create_transaction in one plan, create_account.input.name and create_transaction.input.account must be exactly the same new account name from USER.',
       'Rename/change existing account => update_account, not create_account.',
       'Make account main/default/primary => set_primary_account. If user does not specify income/expense, scope both.',
       'Delete all accounts => delete_accounts scope all. Delete one account => delete_account.',
@@ -190,72 +193,12 @@ export class AIPlannerService {
       .map((item): AIToolCall | null => this.normalizeAction(item, command))
       .filter((action): action is AIToolCall => action !== null);
 
-    const guardedActions = this.applyCurrentCommandGuards(actions, command);
-
     return {
       mode: 'actions',
       language: this.asOptionalString(raw.language),
-      summary: this.asOptionalString(raw.summary) ?? (guardedActions.length ? 'Действие подготовлено.' : 'Я рядом. Могу ответить коротко и помочь с финансами.'),
-      actions: guardedActions,
+      summary: this.asOptionalString(raw.summary) ?? (actions.length ? 'Действие подготовлено.' : 'Я рядом. Могу ответить коротко и помочь с финансами.'),
+      actions,
     };
-  }
-
-
-  private applyCurrentCommandGuards(actions: AIToolCall[], command: string): AIToolCall[] {
-    if (!actions.length) return actions;
-
-    const next = actions.map((action) => ({ ...action, input: { ...(action.input ?? {}) } }));
-    this.reconcileCreateAccountIncomeBatch(next, command);
-    return next;
-  }
-
-  private reconcileCreateAccountIncomeBatch(actions: AIToolCall[], command: string) {
-    const createAccounts = actions.filter((action) => action.tool === 'create_account');
-    if (createAccounts.length !== 1) return;
-
-    const incomeTransactions = actions.filter((action) => action.tool === 'create_transaction' && action.input?.kind === 'income');
-    if (incomeTransactions.length !== 1) {
-      const explicitName = this.extractExplicitCreateAccountName(command);
-      if (explicitName) createAccounts[0].input.name = explicitName;
-      return;
-    }
-
-    const createInput = createAccounts[0].input;
-    const txInput = incomeTransactions[0].input;
-    const explicitName = this.extractExplicitCreateAccountName(command);
-    const txAccount = this.cleanEntityName(txInput.account);
-    const createName = this.cleanEntityName(createInput.name);
-
-    const targetName = explicitName || txAccount || createName;
-    if (!targetName) return;
-
-    createInput.name = targetName;
-    txInput.account = targetName;
-    createInput.initialBalance = 0;
-  }
-
-  private extractExplicitCreateAccountName(command: string) {
-    const text = this.cleanEntityName(command);
-    if (!text) return '';
-
-    if (!/(создай|добавь|открой).{0,24}(сч[её]т|кошел[её]к|карт|наличк)/iu.test(text)) return '';
-
-    const quoted = text.match(/[«"]([^«»"]{2,80})[»"]/u)?.[1];
-    if (quoted) return this.cleanEntityName(quoted);
-
-    const explicit = text.match(/(?:с\s+названием|под\s+названием|назови(?:\s+его)?|имя)\s+(.+?)(?=\s+(?:с\s+балансом|баланс(?:ом)?|и\s+(?:положи|добавь|пополн)|положи|добавь|пополн|на\s+\d|на\s+[а-яёa-z]+\s*(?:руб|₽|rub)|$))/iu)?.[1];
-    if (explicit) return this.cleanEntityName(explicit);
-
-    const afterAccountWord = text.match(/(?:создай|добавь|открой)\s+(?:новый\s+)?(?:сч[её]т|кошел[её]к|карту|наличку)\s+(.+?)(?=\s+(?:с\s+балансом|баланс(?:ом)?|и\s+(?:положи|добавь|пополн)|положи|добавь|пополн|на\s+\d|$))/iu)?.[1];
-    if (afterAccountWord) return this.cleanEntityName(afterAccountWord.replace(/^с\s+названием\s+/iu, ''));
-
-    return '';
-  }
-
-  private cleanEntityName(value: unknown) {
-    return typeof value === 'string'
-      ? value.trim().replace(/[«»"]/g, '').replace(/\s+/g, ' ')
-      : '';
   }
 
   private normalizeAction(item: Record<string, unknown>, command: string): AIToolCall | null {

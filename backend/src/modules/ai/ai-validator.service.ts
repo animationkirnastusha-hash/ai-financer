@@ -39,7 +39,7 @@ export class AIValidatorService {
       }),
     ]);
 
-    this.reconcileCreateAccountIncomeBatch(plan.actions);
+    this.applyCurrentCommandEntityGuards(plan.actions);
 
     const issues: AIValidatedPlan['issues'] = [];
     const actions: AIValidatedAction[] = [];
@@ -705,55 +705,50 @@ export class AIValidatorService {
       ?? null;
   }
 
-
-  private reconcileCreateAccountIncomeBatch(actions: AIToolCall[]) {
-    const createAccounts = actions.filter((action) => action.tool === 'create_account');
-    if (createAccounts.length !== 1) return;
-
-    const createInput = createAccounts[0].input ?? {};
-    const command = this.cleanString(createInput.__userText || actions.find((action) => this.cleanString(action.input?.__userText))?.input?.__userText);
-    const explicitName = this.extractExplicitCreateAccountName(command);
-
-    const incomeTransactions = actions.filter((action) => action.tool === 'create_transaction' && action.input?.kind === 'income');
-    if (incomeTransactions.length !== 1) {
-      if (explicitName) createInput.name = explicitName;
-      return;
-    }
-
-    const txInput = incomeTransactions[0].input ?? {};
-    const txAccount = this.cleanEntityName(txInput.account);
-    const createName = this.cleanEntityName(createInput.name);
-    const targetName = explicitName || txAccount || createName;
-
-    if (!targetName) return;
-
-    createInput.name = targetName;
-    createInput.initialBalance = 0;
-    txInput.account = targetName;
-  }
-
-  private extractExplicitCreateAccountName(command: string) {
-    const text = this.cleanEntityName(command);
-    if (!text) return '';
-
-    if (!/(создай|добавь|открой).{0,24}(сч[её]т|кошел[её]к|карт|наличк)/iu.test(text)) return '';
-
-    const quoted = text.match(/[«"]([^«»"]{2,80})[»"]/u)?.[1];
-    if (quoted) return this.cleanEntityName(quoted);
-
-    const explicit = text.match(/(?:с\s+названием|под\s+названием|назови(?:\s+его)?|имя)\s+(.+?)(?=\s+(?:с\s+балансом|баланс(?:ом)?|и\s+(?:положи|добавь|пополн)|положи|добавь|пополн|на\s+\d|на\s+[а-яёa-z]+\s*(?:руб|₽|rub)|$))/iu)?.[1];
-    if (explicit) return this.cleanEntityName(explicit);
-
-    const afterAccountWord = text.match(/(?:создай|добавь|открой)\s+(?:новый\s+)?(?:сч[её]т|кошел[её]к|карту|наличку)\s+(.+?)(?=\s+(?:с\s+балансом|баланс(?:ом)?|и\s+(?:положи|добавь|пополн)|положи|добавь|пополн|на\s+\d|$))/iu)?.[1];
-    if (afterAccountWord) return this.cleanEntityName(afterAccountWord.replace(/^с\s+названием\s+/iu, ''));
-
-    return '';
-  }
-
   private maxRisk(levels: AIRiskLevel[]): AIRiskLevel {
     if (levels.includes('high')) return 'high';
     if (levels.includes('medium')) return 'medium';
     return 'low';
+  }
+
+
+  private applyCurrentCommandEntityGuards(actions: AIToolCall[]) {
+    const createAccountAction = actions.find((action) => action.tool === 'create_account');
+    if (!createAccountAction) return;
+
+    const userText = this.cleanString(createAccountAction.input?.__userText);
+    const explicitName = this.extractExplicitNewAccountName(userText);
+    if (!explicitName) return;
+
+    createAccountAction.input.name = explicitName;
+
+    for (const action of actions) {
+      if (action.tool !== 'create_transaction') continue;
+      const kind = this.cleanString(action.input?.kind);
+      const text = this.cleanString(action.input?.__userText);
+      if (text !== userText) continue;
+      if (kind && kind !== 'income') continue;
+
+      const currentAccount = this.cleanString(action.input?.account);
+      const looksLikeMemoryLeak = currentAccount && !userText.toLowerCase().includes(currentAccount.toLowerCase());
+      if (!currentAccount || looksLikeMemoryLeak) {
+        action.input.account = explicitName;
+      }
+    }
+  }
+
+  private extractExplicitNewAccountName(text: string) {
+    const clean = this.cleanString(text);
+    if (!clean) return null;
+
+    const quoted = clean.match(/(?:сч[её]т|счет|кошел[её]к|кар(?:т[ау]|та)|account|wallet|card)[^"«»]{0,80}["«]([^"»]{2,80})["»]/iu)
+      ?? clean.match(/(?:названи(?:ем|е)|name)\s*["«]([^"»]{2,80})["»]/iu);
+    if (quoted?.[1]) return this.cleanEntityName(quoted[1]);
+
+    const named = clean.match(/(?:с\s+названи(?:ем|е)|назови(?:\s+его)?|name(?:d)?)\s+(.+?)(?=\s+(?:и\s+)?(?:с\s+балансом|балансом|положи|пополн|закинь|туда|на\s+\d|сумм(?:ой|а)|руб(?:\.|лей|ля|ль)?|₽|usd|eur|vnd)|$)/iu);
+    if (named?.[1]) return this.cleanEntityName(named[1]);
+
+    return null;
   }
 
   private buildSummary(actions: AIToolCall[]) {
