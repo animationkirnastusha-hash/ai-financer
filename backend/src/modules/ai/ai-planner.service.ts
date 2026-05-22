@@ -37,21 +37,39 @@ export class AIPlannerService {
 
   async plan(command: string, context: unknown): Promise<AIPlan> {
     const compactContext = this.compactContext(context);
+    let raw: Record<string, unknown>;
+    let usedFallback = false;
 
-    const raw = await this.provider.generateJson<Record<string, unknown>>({
-      system: this.systemPrompt(),
-      prompt: this.buildPrompt(command, compactContext),
-      temperature: 0,
-      modelRole: 'fast',
-      timeoutMs: 10_000,
-      numPredict: 320,
-    });
+    try {
+      raw = await this.provider.generateJson<Record<string, unknown>>({
+        system: this.systemPrompt(),
+        prompt: this.buildPrompt(command, compactContext),
+        temperature: 0,
+        modelRole: 'fast',
+        timeoutMs: 12_000,
+        numPredict: 520,
+      });
+    } catch (error) {
+      usedFallback = true;
+      console.warn('[AI] planner primary failed, retrying focused planner', {
+        message: error instanceof Error ? error.message : String(error),
+      });
+      raw = await this.runFocusedPlanner(command, compactContext);
+    }
 
-    const plan = this.normalizePlan(raw, command);
+    let plan = this.normalizePlan(raw, command);
+
+    if (!plan.actions.length && this.looksLikeOperationalCommand(command)) {
+      usedFallback = true;
+      console.warn('[AI] planner returned no actions for operational command, retrying focused planner');
+      raw = await this.runFocusedPlanner(command, compactContext);
+      plan = this.normalizePlan(raw, command);
+    }
 
     console.log('[AI] planner normalized', {
       mode: plan.mode,
       actions: plan.actions.map((action) => action.tool),
+      usedFallback,
     });
 
     return plan;
@@ -107,6 +125,61 @@ export class AIPlannerService {
       'CTX:', JSON.stringify(context),
       'USER:', command,
     ].join('');
+  }
+
+  private async runFocusedPlanner(command: string, context: unknown): Promise<Record<string, unknown>> {
+    const focusedContext = this.focusContext(context);
+
+    return this.provider.generateJson<Record<string, unknown>>({
+      system: [
+        'Return ONLY strict JSON. No markdown. No prose.',
+        'Use only tool calls from the provided contract.',
+        'The current USER message is absolute source of truth.',
+        'Do not reuse names from context, memory, or previous commands when USER gives a new exact name.',
+        'If USER says create account and put/add money there, return exactly two actions: create_account and create_transaction income.',
+      ].join(' '),
+      prompt: [
+        'TOOLS:',
+        getPlannerToolContract(),
+        'OUTPUT EXAMPLES:',
+        '{"mode":"actions","summary":"Создать счёт и пополнить.","actions":[{"tool":"create_account","input":{"name":"Наличка","type":"cash","currency":"RUB"}},{"tool":"create_transaction","input":{"kind":"income","amount":1000,"currency":"RUB","account":"Наличка","description":"Пополнение счёта","category":"Пополнение","section":"Доходы"}}]}',
+        '{"mode":"reply","summary":"Короткий ответ по смыслу без финансового действия.","actions":[]}',
+        'RULES:',
+        'Exact quoted names must be copied exactly.',
+        'Name after “с названием” must be copied exactly.',
+        'For account creation, do not invent another account name.',
+        'For income/top-up after account creation, create_transaction.input.account must equal create_account.input.name.',
+        'For expense/income/transfer, use create_transaction/transfer_money.',
+        'For goals, use create_goal/update_goal/delete_goal/show_goals.',
+        'For categories/sections, use taxonomy tools.',
+        'For off-topic, return reply with empty actions.',
+        'CONTEXT:', JSON.stringify(focusedContext),
+        'USER:', command,
+      ].join('\n'),
+      temperature: 0,
+      modelRole: 'base',
+      timeoutMs: 18_000,
+      numPredict: 600,
+    });
+  }
+
+  private focusContext(context: unknown) {
+    const value = this.asRecord(context) as UserContext;
+    return {
+      accounts: Array.isArray(value.accounts) ? value.accounts.slice(0, 8).map((item) => item.name).filter(Boolean) : [],
+      categories: Array.isArray(value.categories) ? value.categories.slice(0, 12).map((item) => item.name).filter(Boolean) : [],
+      sections: Array.isArray(value.sections) ? value.sections.slice(0, 12).map((item) => item.name).filter(Boolean) : [],
+      goals: Array.isArray(value.goals) ? value.goals.slice(0, 8).map((item) => item.title).filter(Boolean) : [],
+    };
+  }
+
+  private looksLikeOperationalCommand(command: string) {
+    const lower = command.toLowerCase();
+    const markers = [
+      'создай', 'добавь', 'запиши', 'положи', 'пополн', 'доход', 'расход', 'переведи', 'сделай', 'переимен', 'измени', 'удали', 'цель', 'счёт', 'счет', 'категор', 'раздел',
+      'create', 'add', 'income', 'expense', 'transfer', 'rename', 'delete', 'goal', 'account', 'category', 'section',
+    ];
+    return markers.some((marker) => lower.includes(marker));
   }
 
   private compactContext(context: unknown) {

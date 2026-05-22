@@ -44,7 +44,7 @@ function timeoutForRole(request: AIProviderJsonRequest, role: AIModelRole) {
 
 function maxTokensForRole(request: AIProviderJsonRequest, role: AIModelRole) {
   const requested = request.numPredict;
-  if (role === 'fast') return Math.max(64, Math.min(180, requested ?? 96));
+  if (role === 'fast') return Math.max(96, Math.min(420, requested ?? 220));
   if (role === 'premium') return Math.max(180, Math.min(900, requested ?? 500));
   return Math.max(128, Math.min(600, requested ?? 300));
 }
