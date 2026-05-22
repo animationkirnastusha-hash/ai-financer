@@ -39,12 +39,13 @@ export class AIValidatorService {
       }),
     ]);
 
+    this.reconcileCreateAccountIncomeBatch(plan.actions);
+
     const issues: AIValidatedPlan['issues'] = [];
     const actions: AIValidatedAction[] = [];
-    const normalizedPlanActions = this.normalizeCrossActionAccountReferences(plan.actions, accounts);
     const plannedAccounts = new Map<string, { name: string; currency: AICurrency }>();
 
-    for (const [index, action] of normalizedPlanActions.entries()) {
+    for (const [index, action] of plan.actions.entries()) {
       const definition = getToolDefinition(action.tool);
       if (!definition) {
         issues.push({ code: 'unknown_tool', message: `Неизвестное действие: ${action.tool}`, actionIndex: index });
@@ -96,7 +97,7 @@ export class AIValidatorService {
         if (action.tool === 'update_account') {
           const type = this.coerceAccountType(input.type, null);
           const currency = this.coerceCurrency(input.currency, userText, null);
-          const balance = input.balance !== null && input.balance !== undefined ? normalizeMoneyAmount(input.balance, userText) : null;
+          const balance = normalizeMoneyAmount(input.balance, userText);
 
           if (input.name !== null && input.name !== undefined) input.name = this.cleanEntityName(input.name);
           if (type) input.type = type;
@@ -384,9 +385,8 @@ export class AIValidatorService {
 
       if (action.tool === 'create_goal') {
         const title = this.cleanEntityName(input.title || input.name || input.goal);
-        const targetSource = input.targetAmount ?? input.amount;
-        const targetAmount = targetSource !== null && targetSource !== undefined ? normalizeMoneyAmount(targetSource, userText) : null;
-        const currentAmount = input.currentAmount !== null && input.currentAmount !== undefined ? normalizeMoneyAmount(input.currentAmount, userText) ?? 0 : 0;
+        const targetAmount = normalizeMoneyAmount(input.targetAmount || input.amount, userText);
+        const currentAmount = normalizeMoneyAmount(input.currentAmount, userText) ?? 0;
         const currency = this.coerceCurrency(input.currency, userText, 'RUB') ?? 'RUB';
         const accountName = this.cleanString(input.account);
         const account = accountName ? this.resolveAccount(accounts, accountName) : null;
@@ -421,9 +421,8 @@ export class AIValidatorService {
 
         if (action.tool === 'update_goal') {
           const title = this.cleanEntityName(input.title);
-          const targetSource = input.targetAmount ?? input.amount;
-          const targetAmount = targetSource !== null && targetSource !== undefined ? normalizeMoneyAmount(targetSource, userText) : null;
-          const currentAmount = input.currentAmount !== null && input.currentAmount !== undefined ? normalizeMoneyAmount(input.currentAmount, userText) : null;
+          const targetAmount = normalizeMoneyAmount(input.targetAmount || input.amount, userText);
+          const currentAmount = normalizeMoneyAmount(input.currentAmount, userText);
           const status = this.cleanString(input.status);
 
           if (title) input.title = title; else delete input.title;
@@ -644,50 +643,6 @@ export class AIValidatorService {
     };
   }
 
-  private normalizeCrossActionAccountReferences(actions: AIToolCall[], accounts: AccountLite[]): AIToolCall[] {
-    if (actions.length < 2) return actions;
-
-    const createIndexes = actions
-      .map((action, index) => ({ action, index }))
-      .filter((item) => item.action.tool === 'create_account');
-
-    if (createIndexes.length !== 1) return actions;
-
-    const transactionAccountNames = actions
-      .filter((action) => action.tool === 'create_transaction')
-      .map((action) => this.cleanEntityName(action.input?.account))
-      .filter(Boolean);
-
-    const uniqueTransactionAccountNames = Array.from(new Set(transactionAccountNames.map((name) => this.key(name))))
-      .map((key) => transactionAccountNames.find((name) => this.key(name) === key) || '')
-      .filter(Boolean);
-
-    if (uniqueTransactionAccountNames.length !== 1) return actions;
-
-    const transactionAccountName = uniqueTransactionAccountNames[0];
-    const existingTransactionAccount = this.resolveAccount(accounts, transactionAccountName);
-    if (existingTransactionAccount) return actions;
-
-    const createIndex = createIndexes[0].index;
-    const createAction = actions[createIndex];
-    const createName = this.cleanEntityName(createAction.input?.name);
-
-    if (!createName || this.key(createName) === this.key(transactionAccountName)) return actions;
-
-    return actions.map((action, index) => {
-      if (index === createIndex) {
-        return {
-          ...action,
-          input: {
-            ...action.input,
-            name: transactionAccountName,
-          },
-        };
-      }
-      return action;
-    });
-  }
-
   private coerceAccountType(value: unknown, fallback: AIAccountType | null): AIAccountType | null {
     if (typeof value !== 'string') return fallback;
     const raw = value.trim().toLowerCase();
@@ -748,6 +703,51 @@ export class AIValidatorService {
     return items.find((item) => item.name.toLowerCase() === ref)
       ?? items.find((item) => item.name.toLowerCase().includes(ref) || ref.includes(item.name.toLowerCase()))
       ?? null;
+  }
+
+
+  private reconcileCreateAccountIncomeBatch(actions: AIToolCall[]) {
+    const createAccounts = actions.filter((action) => action.tool === 'create_account');
+    if (createAccounts.length !== 1) return;
+
+    const createInput = createAccounts[0].input ?? {};
+    const command = this.cleanString(createInput.__userText || actions.find((action) => this.cleanString(action.input?.__userText))?.input?.__userText);
+    const explicitName = this.extractExplicitCreateAccountName(command);
+
+    const incomeTransactions = actions.filter((action) => action.tool === 'create_transaction' && action.input?.kind === 'income');
+    if (incomeTransactions.length !== 1) {
+      if (explicitName) createInput.name = explicitName;
+      return;
+    }
+
+    const txInput = incomeTransactions[0].input ?? {};
+    const txAccount = this.cleanEntityName(txInput.account);
+    const createName = this.cleanEntityName(createInput.name);
+    const targetName = explicitName || txAccount || createName;
+
+    if (!targetName) return;
+
+    createInput.name = targetName;
+    createInput.initialBalance = 0;
+    txInput.account = targetName;
+  }
+
+  private extractExplicitCreateAccountName(command: string) {
+    const text = this.cleanEntityName(command);
+    if (!text) return '';
+
+    if (!/(создай|добавь|открой).{0,24}(сч[её]т|кошел[её]к|карт|наличк)/iu.test(text)) return '';
+
+    const quoted = text.match(/[«"]([^«»"]{2,80})[»"]/u)?.[1];
+    if (quoted) return this.cleanEntityName(quoted);
+
+    const explicit = text.match(/(?:с\s+названием|под\s+названием|назови(?:\s+его)?|имя)\s+(.+?)(?=\s+(?:с\s+балансом|баланс(?:ом)?|и\s+(?:положи|добавь|пополн)|положи|добавь|пополн|на\s+\d|на\s+[а-яёa-z]+\s*(?:руб|₽|rub)|$))/iu)?.[1];
+    if (explicit) return this.cleanEntityName(explicit);
+
+    const afterAccountWord = text.match(/(?:создай|добавь|открой)\s+(?:новый\s+)?(?:сч[её]т|кошел[её]к|карту|наличку)\s+(.+?)(?=\s+(?:с\s+балансом|баланс(?:ом)?|и\s+(?:положи|добавь|пополн)|положи|добавь|пополн|на\s+\d|$))/iu)?.[1];
+    if (afterAccountWord) return this.cleanEntityName(afterAccountWord.replace(/^с\s+названием\s+/iu, ''));
+
+    return '';
   }
 
   private maxRisk(levels: AIRiskLevel[]): AIRiskLevel {

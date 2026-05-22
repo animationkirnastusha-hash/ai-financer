@@ -45,7 +45,7 @@ const config = {
 
 const state = {
   token: config.token,
-  prefix: `Автотест ${randomLetters(8)}`,
+  prefix: `Автотест ${Date.now()}`,
   accounts: [],
   transactions: [],
   sections: [],
@@ -56,16 +56,6 @@ const state = {
   results: [],
   warnings: [],
 };
-
-
-function randomLetters(length = 8) {
-  const alphabet = 'абвгдежзклмнопрстуфхцчшэюя';
-  let value = '';
-  for (let index = 0; index < length; index += 1) {
-    value += alphabet[Math.floor(Math.random() * alphabet.length)];
-  }
-  return value;
-}
 
 function bool(value, fallback) {
   if (value === undefined || value === '') return fallback;
@@ -568,7 +558,7 @@ async function run() {
 
   await test('AI: create account through natural language', async () => {
     const name = `${state.prefix} AI Голосовой кошелёк`;
-    const result = await ai(`создай новый счёт с названием "${name}" с балансом 1000 рублей`);
+    const result = await ai(`создай новый счёт с названием "${name}" и положи туда 1000 рублей`);
     const account = await findAccountByName(name);
     assert(account?.id, 'AI did not create account after preview/confirm flow', { result });
     state.createdByAI.push({ type: 'account', id: account.id, name });
@@ -603,7 +593,7 @@ async function run() {
 
   await test('AI: create goal through natural language', async () => {
     const title = `${state.prefix} AI Цель`;
-    const result = await ai(`создай цель "${title}" на 77000 рублей`);
+    const result = await ai(`создай цель ${title} 77000`);
     const created = await findGoalByTitle(title);
     assert(created?.id, 'AI did not create goal', { result });
     addCleanup(`ai-goal:${title}`, async () => {
@@ -616,8 +606,8 @@ async function run() {
   await test('AI: create section/category and show taxonomy', async () => {
     const sectionName = `${state.prefix} AI Раздел`;
     const categoryName = `${state.prefix} AI Категория`;
-    const sectionResult = await ai(`создай раздел "${sectionName}"`);
-    const categoryResult = await ai(`создай категорию "${categoryName}" в разделе "${sectionName}"`);
+    const sectionResult = await ai(`создай раздел ${sectionName}`);
+    const categoryResult = await ai(`создай категорию ${categoryName} в разделе ${sectionName}`);
     const section = await findSectionByName(sectionName);
     const category = await findCategoryByName(categoryName);
     assert(section?.id, 'AI did not create section', { sectionResult });

@@ -95,9 +95,6 @@ export class AIPlannerService {
       'If essential entity remains ambiguous after context, choose the safest action that asks clarification by leaving missing account/goal/category/section name rather than inventing.',
       'Preserve spoken amounts exactly as user wrote them.',
       'Use account names/aliases from CTX when present.',
-      'If the user gives an explicit quoted name/title, preserve it exactly for the entity being created or changed; never replace it with CTX.lastCommand, memory, or an old pending value.',
-      'If a command creates a new account and adds money to it, create_account.name and create_transaction.account must be the same explicit account name from the current USER command.',
-      'Do not use CTX.aiSessionState.lastCommand unless the current USER command clearly refers to previous context with pronouns or continuation words.',
       'If user asks to show/change AI settings, use show_ai_settings/update_ai_settings/apply_ai_settings_preset.',
       'If user asks to start/skip/finish tutorial/onboarding, use restart_onboarding/update_onboarding_state.',
       'If user asks for режим строгий/баланс/простой, use apply_ai_settings_preset.',
@@ -193,12 +190,72 @@ export class AIPlannerService {
       .map((item): AIToolCall | null => this.normalizeAction(item, command))
       .filter((action): action is AIToolCall => action !== null);
 
+    const guardedActions = this.applyCurrentCommandGuards(actions, command);
+
     return {
       mode: 'actions',
       language: this.asOptionalString(raw.language),
-      summary: this.asOptionalString(raw.summary) ?? (actions.length ? 'Действие подготовлено.' : 'Я рядом. Могу ответить коротко и помочь с финансами.'),
-      actions,
+      summary: this.asOptionalString(raw.summary) ?? (guardedActions.length ? 'Действие подготовлено.' : 'Я рядом. Могу ответить коротко и помочь с финансами.'),
+      actions: guardedActions,
     };
+  }
+
+
+  private applyCurrentCommandGuards(actions: AIToolCall[], command: string): AIToolCall[] {
+    if (!actions.length) return actions;
+
+    const next = actions.map((action) => ({ ...action, input: { ...(action.input ?? {}) } }));
+    this.reconcileCreateAccountIncomeBatch(next, command);
+    return next;
+  }
+
+  private reconcileCreateAccountIncomeBatch(actions: AIToolCall[], command: string) {
+    const createAccounts = actions.filter((action) => action.tool === 'create_account');
+    if (createAccounts.length !== 1) return;
+
+    const incomeTransactions = actions.filter((action) => action.tool === 'create_transaction' && action.input?.kind === 'income');
+    if (incomeTransactions.length !== 1) {
+      const explicitName = this.extractExplicitCreateAccountName(command);
+      if (explicitName) createAccounts[0].input.name = explicitName;
+      return;
+    }
+
+    const createInput = createAccounts[0].input;
+    const txInput = incomeTransactions[0].input;
+    const explicitName = this.extractExplicitCreateAccountName(command);
+    const txAccount = this.cleanEntityName(txInput.account);
+    const createName = this.cleanEntityName(createInput.name);
+
+    const targetName = explicitName || txAccount || createName;
+    if (!targetName) return;
+
+    createInput.name = targetName;
+    txInput.account = targetName;
+    createInput.initialBalance = 0;
+  }
+
+  private extractExplicitCreateAccountName(command: string) {
+    const text = this.cleanEntityName(command);
+    if (!text) return '';
+
+    if (!/(создай|добавь|открой).{0,24}(сч[её]т|кошел[её]к|карт|наличк)/iu.test(text)) return '';
+
+    const quoted = text.match(/[«"]([^«»"]{2,80})[»"]/u)?.[1];
+    if (quoted) return this.cleanEntityName(quoted);
+
+    const explicit = text.match(/(?:с\s+названием|под\s+названием|назови(?:\s+его)?|имя)\s+(.+?)(?=\s+(?:с\s+балансом|баланс(?:ом)?|и\s+(?:положи|добавь|пополн)|положи|добавь|пополн|на\s+\d|на\s+[а-яёa-z]+\s*(?:руб|₽|rub)|$))/iu)?.[1];
+    if (explicit) return this.cleanEntityName(explicit);
+
+    const afterAccountWord = text.match(/(?:создай|добавь|открой)\s+(?:новый\s+)?(?:сч[её]т|кошел[её]к|карту|наличку)\s+(.+?)(?=\s+(?:с\s+балансом|баланс(?:ом)?|и\s+(?:положи|добавь|пополн)|положи|добавь|пополн|на\s+\d|$))/iu)?.[1];
+    if (afterAccountWord) return this.cleanEntityName(afterAccountWord.replace(/^с\s+названием\s+/iu, ''));
+
+    return '';
+  }
+
+  private cleanEntityName(value: unknown) {
+    return typeof value === 'string'
+      ? value.trim().replace(/[«»"]/g, '').replace(/\s+/g, ' ')
+      : '';
   }
 
   private normalizeAction(item: Record<string, unknown>, command: string): AIToolCall | null {

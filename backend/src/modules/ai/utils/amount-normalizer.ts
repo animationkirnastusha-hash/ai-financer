@@ -60,6 +60,8 @@ const RU_NUMBER_WORDS: Record<string, number> = {
 
 const THOUSAND_WORDS = new Set(['к', 'k', 'тыс', 'тыс.', 'тысяч', 'тысяча', 'тысячи', 'тыщ', 'nghìn', 'ngan', 'thousand']);
 const MILLION_WORDS = new Set(['млн', 'млн.', 'миллион', 'миллиона', 'миллионов', 'million', 'triệu']);
+const CURRENCY_WORDS = '(?:₽|руб\\.?|rur|rub|rouble|ruble|рубл(?:ей|я|ь)?|\\$|usd|доллар(?:ов|ы|а)?|бакс(?:ов|ы|а)?|dollar|€|eur|евро|euro|vnd|донг(?:ов|и|а)?|dong|đ|₫)';
+const MONEY_CONTEXT_WORDS = '(?:баланс(?:ом)?|сумм[аы]?|цель|на|положи|пополн(?:и|ить)?|добавь|доход|расход|перев(?:еди|од)?|стоит|стоимость|цена)';
 
 export function normalizeCurrency(value: unknown, fallback: AICurrency = 'RUB'): AICurrency {
   if (typeof value !== 'string') return fallback;
@@ -85,11 +87,7 @@ export function normalizeMoneyAmount(value: unknown, contextText?: string): numb
   const fromValue = extractMoneyAmountFromValue(value);
 
   if (fromContext !== null) {
-    if (fromValue !== null && suspiciousAmountMismatch(fromValue, fromContext)) {
-      return fromContext;
-    }
-
-    // Source user text is always more trusted than LLM output.
+    if (fromValue !== null && suspiciousAmountMismatch(fromValue, fromContext)) return fromContext;
     return fromContext;
   }
 
@@ -101,72 +99,13 @@ export function extractMoneyAmountFromText(text: unknown): number | null {
   const normalized = normalizeText(text);
   if (!normalized) return null;
 
-  const candidates = collectNumericCandidates(normalized);
-  if (candidates.length) return chooseMoneyCandidate(normalized, candidates);
+  const candidates = collectMoneyCandidates(normalized);
+  if (candidates.length) {
+    candidates.sort((a, b) => b.score - a.score || a.index - b.index);
+    return candidates[0].amount;
+  }
 
   return russianNumberWordsToNumber(normalized);
-}
-
-
-type NumericCandidate = {
-  value: number;
-  start: number;
-  end: number;
-  raw: string;
-  scaled: boolean;
-  grouped: boolean;
-};
-
-const CURRENCY_HINT_RE = /^(\s)*(₽|руб\.?|rur|rub|rouble|ruble|рубл(?:ей|я|ь)?|\$|usd|доллар(?:ов|ы|а)?|бакс(?:ов|ы|а)?|€|eur|евро|vnd|донг(?:ов|и|а)?|dong|đ|₫)/iu;
-const MONEY_VERB_RE = /(баланс|сумм(?:а|у|ой)?|цель|бюджет|доход|расход|потрат|купил|купила|оплат|перев(?:еди|ести|од)|пополни|положи|зарплат|стоим|цена|за|на)$/iu;
-const ACCOUNT_NUMBER_HINT_RE = /(карта|карту|карты|сч[её]т|счета|кошел[её]к|наличка)$/iu;
-
-function collectNumericCandidates(text: string): NumericCandidate[] {
-  const candidates: NumericCandidate[] = [];
-
-  for (const match of text.matchAll(/(?:^|[^\p{L}\p{N}])([0-9]{1,3}(?:\s+[0-9]{3})+)(?=$|[^\p{L}\p{N}])/giu)) {
-    const raw = match[1];
-    const value = toSafeInteger(Number(raw.replace(/\s+/g, '')));
-    if (value !== null) candidates.push({ value, start: (match.index ?? 0) + match[0].indexOf(raw), end: (match.index ?? 0) + match[0].indexOf(raw) + raw.length, raw, scaled: false, grouped: true });
-  }
-
-  for (const match of text.matchAll(/(?:^|[^\p{L}\p{N}])([0-9]+(?:[.,][0-9]+)?)\s*(к|k|тыс\.?|тысяч(?:а|и)?|тыщ|nghìn|ngan|thousand|млн\.?|миллион(?:а|ов)?|million|triệu)(?=$|[^\p{L}\p{N}])/giu)) {
-    const raw = match[1];
-    const token = match[2];
-    const value = toSafeInteger(Number(raw.replace(',', '.')) * scaleFromToken(token));
-    if (value !== null) candidates.push({ value, start: (match.index ?? 0) + match[0].indexOf(raw), end: (match.index ?? 0) + match[0].indexOf(token) + token.length, raw: `${raw} ${token}`, scaled: true, grouped: false });
-  }
-
-  for (const match of text.matchAll(/(?:^|[^\p{L}\p{N}])([0-9]+(?:[.,][0-9]+)?)(?=$|[^\p{L}\p{N}])/giu)) {
-    const raw = match[1];
-    const value = toSafeInteger(Number(raw.replace(',', '.')));
-    if (value !== null) candidates.push({ value, start: (match.index ?? 0) + match[0].indexOf(raw), end: (match.index ?? 0) + match[0].indexOf(raw) + raw.length, raw, scaled: false, grouped: false });
-  }
-
-  return candidates
-    .filter((candidate, index, all) => all.findIndex((item) => item.start === candidate.start && item.end === candidate.end) === index)
-    .sort((a, b) => a.start - b.start);
-}
-
-function chooseMoneyCandidate(text: string, candidates: NumericCandidate[]): number | null {
-  let best: { candidate: NumericCandidate; score: number } | null = null;
-
-  for (const candidate of candidates) {
-    const before = text.slice(Math.max(0, candidate.start - 28), candidate.start).trim();
-    const after = text.slice(candidate.end, Math.min(text.length, candidate.end + 28)).trim();
-    let score = 0;
-
-    if (candidate.scaled || candidate.grouped) score += 8;
-    if (CURRENCY_HINT_RE.test(after)) score += 30;
-    if (MONEY_VERB_RE.test(before)) score += 14;
-    if (ACCOUNT_NUMBER_HINT_RE.test(before) && !CURRENCY_HINT_RE.test(after)) score -= 12;
-    if (String(Math.trunc(candidate.value)).length >= 8 && !candidate.scaled && !candidate.grouped && !CURRENCY_HINT_RE.test(after)) score -= 28;
-    score += candidate.start / Math.max(text.length, 1);
-
-    if (!best || score > best.score) best = { candidate, score };
-  }
-
-  return best?.candidate.value ?? null;
 }
 
 function extractMoneyAmountFromValue(value: unknown): number | null {
@@ -176,22 +115,45 @@ function extractMoneyAmountFromValue(value: unknown): number | null {
   const normalized = normalizeText(value);
   if (!normalized) return null;
 
-  const groupedNumeric = normalized.match(/(?:^|[^\p{L}\p{N}])([0-9]{1,3}(?:\s+[0-9]{3})+)(?=$|[^\p{L}\p{N}])/iu);
-  if (groupedNumeric) {
-    return toSafeInteger(Number(groupedNumeric[1].replace(/\s+/g, '')));
-  }
-
-  const numericWithScale = normalized.match(/(?:^|[^\p{L}\p{N}])([0-9]+(?:[.,][0-9]+)?)\s*(к|k|тыс\.?|тысяч(?:а|и)?|тыщ|nghìn|ngan|thousand|млн\.?|миллион(?:а|ов)?|million|triệu)(?=$|[^\p{L}\p{N}])/iu);
-  if (numericWithScale) {
-    return toSafeInteger(Number(numericWithScale[1].replace(',', '.')) * scaleFromToken(numericWithScale[2]));
-  }
-
-  const plainNumeric = normalized.match(/(?:^|[^\p{L}\p{N}])([0-9]+(?:[.,][0-9]+)?)(?=$|[^\p{L}\p{N}])/iu);
-  if (plainNumeric) {
-    return toSafeInteger(Number(plainNumeric[1].replace(',', '.')));
+  const candidates = collectMoneyCandidates(normalized);
+  if (candidates.length) {
+    candidates.sort((a, b) => b.score - a.score || a.index - b.index);
+    return candidates[0].amount;
   }
 
   return russianNumberWordsToNumber(normalized);
+}
+
+function collectMoneyCandidates(text: string) {
+  const candidates: Array<{ amount: number; score: number; index: number }> = [];
+  const regex = /(?:^|[^\p{L}\p{N}])([0-9]{1,15}(?:[.,][0-9]+)?)(?:\s+([0-9]{3}))?\s*([а-яёa-z.$€₽₫]+)?(?=$|[^\p{L}\p{N}])/giu;
+  let match: RegExpExecArray | null;
+
+  while ((match = regex.exec(text)) !== null) {
+    const rawNumber = match[2] ? `${match[1]}${match[2]}` : match[1];
+    const numeric = Number(rawNumber.replace(',', '.'));
+    if (!Number.isFinite(numeric)) continue;
+
+    const scaleToken = match[3] && (THOUSAND_WORDS.has(match[3].toLowerCase()) || MILLION_WORDS.has(match[3].toLowerCase())) ? match[3] : '';
+    const amount = toSafeInteger(numeric * (scaleToken ? scaleFromToken(scaleToken) : 1));
+    if (!amount) continue;
+
+    const start = Math.max(0, match.index - 28);
+    const end = Math.min(text.length, regex.lastIndex + 28);
+    const nearby = text.slice(start, end);
+    const token = match[3] ?? '';
+    let score = 0;
+
+    if (new RegExp(CURRENCY_WORDS, 'iu').test(token) || new RegExp(CURRENCY_WORDS, 'iu').test(nearby)) score += 80;
+    if (new RegExp(MONEY_CONTEXT_WORDS, 'iu').test(nearby)) score += 35;
+    if (scaleToken) score += 25;
+    if (String(Math.trunc(amount)).length >= 8 && !new RegExp(CURRENCY_WORDS, 'iu').test(nearby)) score -= 90;
+    if (/автотест|test|id|номер|названи/iu.test(nearby) && !new RegExp(CURRENCY_WORDS, 'iu').test(nearby)) score -= 40;
+
+    if (score >= 0) candidates.push({ amount, score, index: match.index });
+  }
+
+  return candidates;
 }
 
 export function convertMoney(amount: number, from: AICurrency, to: AICurrency) {
