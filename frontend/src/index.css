@@ -1378,7 +1378,7 @@ body.ai-screen-slide-right .ai-screen-transition {
   white-space: nowrap;
 }
 
-/* Patch 36 final pretest: reset controls */
+/* Patch 36/37: reset controls, visual-only append */
 .data-reset-card {
   border-color: rgba(251, 113, 133, 0.18);
   background: linear-gradient(180deg, rgba(255,255,255,0.075), rgba(255,255,255,0.035));
@@ -1396,8 +1396,7 @@ body.ai-screen-slide-right .ai-screen-transition {
   transition: transform 160ms ease, border-color 160ms ease, background 160ms ease;
 }
 
-.data-reset-button span,
-.admin-reset-button {
+.data-reset-button span {
   display: block;
   font-size: 13px;
   font-weight: 700;
@@ -1430,8 +1429,10 @@ body.ai-screen-slide-right .ai-screen-transition {
 }
 
 .admin-reset-button {
+  display: block;
   text-align: center;
   font-size: 12px;
+  font-weight: 700;
   padding: 10px 12px;
   border-radius: 16px;
 }

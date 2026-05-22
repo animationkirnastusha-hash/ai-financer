@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
@@ -27,33 +28,43 @@ async function del(label, action) {
   deleted[label] = result.count;
 }
 
-async function main() {
-  await prisma.$transaction(async (tx) => {
-    await del('aiPendingActions', () => tx.aIPendingAction.deleteMany({ where: byUser }));
-    await del('aiAuditLogs', () => tx.aIAuditLog.deleteMany({ where: byUser }));
-    await del('aiMessages', () => tx.aIMessage.deleteMany({ where: byUser }));
-    await del('aiTrainingExamples', () => tx.aITrainingExample.deleteMany({ where: byUser }));
-    await del('aiSessionState', () => tx.aISessionState.deleteMany({ where: byUser }));
-    await del('aiIdempotencyRecords', () => tx.aIIdempotencyRecord.deleteMany({ where: byUser }));
-    await del('aiOperationEvents', () => tx.aIOperationEvent.deleteMany({ where: byUser }));
+async function safeDel(label, action) {
+  try {
+    await del(label, action);
+  } catch (error) {
+    deleted[label] = 0;
+    console.warn(`Skipped ${label}: ${error?.message || error}`);
+  }
+}
 
-    await del('notifications', () => tx.notification.deleteMany({ where: byUser }));
-    await del('recurringPayments', () => tx.recurringPayment.deleteMany({ where: byUser }));
-    await del('budgets', () => tx.budget.deleteMany({ where: byUser }));
-    await del('transactions', () => tx.transaction.deleteMany({ where: byUser }));
-    await del('goals', () => tx.goal.deleteMany({ where: byUser }));
-    await del('categories', () => tx.category.deleteMany({ where: byUser }));
-    await del('sections', () => tx.section.deleteMany({ where: byUser }));
-    await del('accounts', () => tx.account.deleteMany({ where: byUser }));
+async function main() {
+  console.log(`Using DATABASE_URL=${process.env.DATABASE_URL || '(not set)'}`);
+  await prisma.$transaction(async (tx) => {
+    await safeDel('aiPendingActions', () => tx.aIPendingAction.deleteMany({ where: byUser }));
+    await safeDel('aiAuditLogs', () => tx.aIAuditLog.deleteMany({ where: byUser }));
+    await safeDel('aiMessages', () => tx.aIMessage.deleteMany({ where: byUser }));
+    await safeDel('aiTrainingExamples', () => tx.aITrainingExample.deleteMany({ where: byUser }));
+    await safeDel('aiSessionState', () => tx.aISessionState.deleteMany({ where: byUser }));
+    await safeDel('aiIdempotencyRecords', () => tx.aIIdempotencyRecord.deleteMany({ where: byUser }));
+    await safeDel('aiOperationEvents', () => tx.aIOperationEvent.deleteMany({ where: byUser }));
+
+    await safeDel('notifications', () => tx.notification.deleteMany({ where: byUser }));
+    await safeDel('recurringPayments', () => tx.recurringPayment.deleteMany({ where: byUser }));
+    await safeDel('budgets', () => tx.budget.deleteMany({ where: byUser }));
+    await safeDel('transactions', () => tx.transaction.deleteMany({ where: byUser }));
+    await safeDel('goals', () => tx.goal.deleteMany({ where: byUser }));
+    await safeDel('categories', () => tx.category.deleteMany({ where: byUser }));
+    await safeDel('sections', () => tx.section.deleteMany({ where: byUser }));
+    await safeDel('accounts', () => tx.account.deleteMany({ where: byUser }));
 
     if (mode === 'full') {
-      await del('userAchievements', () => tx.userAchievement.deleteMany({ where: byUser }));
-      await del('userActivities', () => tx.userActivity.deleteMany({ where: byUser }));
-      await del('progressionProfiles', () => tx.progressionProfile.deleteMany({ where: byUser }));
-      await del('companionEvents', () => tx.aICompanionEvent.deleteMany({ where: byUser }));
-      await del('aiSettings', () => tx.userAISettings.deleteMany({ where: byUser }));
-      await del('onboardingState', () => tx.onboardingState.deleteMany({ where: byUser }));
-      await del('premiumCapabilities', () => tx.aIPremiumCapability.deleteMany({ where: byUser }));
+      await safeDel('userAchievements', () => tx.userAchievement.deleteMany({ where: byUser }));
+      await safeDel('userActivities', () => tx.userActivity.deleteMany({ where: byUser }));
+      await safeDel('progressionProfiles', () => tx.progressionProfile.deleteMany({ where: byUser }));
+      await safeDel('companionEvents', () => tx.aICompanionEvent.deleteMany({ where: byUser }));
+      await safeDel('aiSettings', () => tx.userAISettings.deleteMany({ where: byUser }));
+      await safeDel('onboardingState', () => tx.onboardingState.deleteMany({ where: byUser }));
+      await safeDel('premiumCapabilities', () => tx.aIPremiumCapability.deleteMany({ where: byUser }));
 
       const result = await tx.user.updateMany({
         where: byId,
