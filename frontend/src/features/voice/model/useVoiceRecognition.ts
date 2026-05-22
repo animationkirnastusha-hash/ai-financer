@@ -156,9 +156,20 @@ export function useVoiceRecognition({
 
     recognition.onerror = (event) => {
       const nextError = event.error || event.message || 'speech-error';
+      const text = finalTranscriptRef.current.trim() || transcriptRef.current.trim();
 
       if (manualStopRef.current) {
-        finishCurrentSession({ emit: true, noSpeechError: nextError === 'no-speech' || nextError === 'aborted' });
+        finishCurrentSession({ emit: true, noSpeechError: nextError === 'no-speech' && !text });
+        return;
+      }
+
+      if (nextError === 'aborted') {
+        finishCurrentSession({ emit: Boolean(text), noSpeechError: false });
+        return;
+      }
+
+      if (nextError === 'no-speech') {
+        finishCurrentSession({ emit: false, noSpeechError: true });
         return;
       }
 

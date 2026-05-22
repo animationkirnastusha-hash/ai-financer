@@ -22,6 +22,7 @@ const RESUME_DELAY_MS = 520;
 const BUBBLE_TIMEOUT_MS = 4200;
 const DUPLICATE_WINDOW_MS = 800;
 const DEFAULT_ACTIVE_WINDOW_SECONDS = 16;
+const VOICE_WATCHDOG_MS = 850;
 
 function compactBubble(text: string) {
   return text
@@ -141,6 +142,8 @@ export function VoiceFirstCompanionLayer() {
   const isProcessingVoiceRef = useRef(false);
   const isActiveRef = useRef(false);
   const activeUntilRef = useRef(0);
+  const voiceStateRef = useRef<string>('idle');
+  const watchdogTimerRef = useRef<number | null>(null);
   const lastHandledRef = useRef<{ text: string; at: number }>({ text: '', at: 0 });
   const handleTextRef = useRef<(text: string) => Promise<void> | void>(() => undefined);
   const startListeningRef = useRef<() => Promise<void> | void>(() => undefined);
@@ -210,6 +213,10 @@ export function VoiceFirstCompanionLayer() {
     }
 
     if (voice.state === 'recording') return;
+
+    if (voice.state === 'error') {
+      voice.reset();
+    }
 
     const now = Date.now();
     if (now - lastStartAtRef.current < 260) {
@@ -332,7 +339,13 @@ export function VoiceFirstCompanionLayer() {
       armCombatMode();
     } finally {
       setIsProcessingVoice(false);
+      shouldResumeRef.current = true;
       resumeListeningSoon(RESUME_DELAY_MS);
+      window.setTimeout(() => {
+        if (shouldResumeRef.current && isActiveRef.current && !isProcessingVoiceRef.current && voiceStateRef.current !== 'recording') {
+          void startListeningRef.current?.();
+        }
+      }, RESUME_DELAY_MS + 900);
     }
   }, [armCombatMode, chat, clearSilenceTimer, companionName, goBack, navigateTo, resumeListeningSoon, showThought, voiceWakeWordEnabled]);
 
@@ -384,6 +397,40 @@ export function VoiceFirstCompanionLayer() {
   useEffect(() => {
     activeUntilRef.current = activeUntil;
   }, [activeUntil]);
+
+  useEffect(() => {
+    voiceStateRef.current = voice.state;
+  }, [voice.state]);
+
+  useEffect(() => {
+    if (!isActive) {
+      if (watchdogTimerRef.current !== null) {
+        window.clearInterval(watchdogTimerRef.current);
+        watchdogTimerRef.current = null;
+      }
+      return;
+    }
+
+    shouldResumeRef.current = true;
+
+    if (watchdogTimerRef.current !== null) {
+      window.clearInterval(watchdogTimerRef.current);
+    }
+
+    watchdogTimerRef.current = window.setInterval(() => {
+      if (!shouldResumeRef.current || !isActiveRef.current || isProcessingVoiceRef.current) return;
+      const state = voiceStateRef.current;
+      if (state === 'recording' || state === 'uploading' || state === 'speaking') return;
+      void startListeningRef.current?.();
+    }, VOICE_WATCHDOG_MS);
+
+    return () => {
+      if (watchdogTimerRef.current !== null) {
+        window.clearInterval(watchdogTimerRef.current);
+        watchdogTimerRef.current = null;
+      }
+    };
+  }, [isActive]);
 
   useEffect(() => {
     if (!isActive) {
@@ -461,6 +508,7 @@ export function VoiceFirstCompanionLayer() {
   useEffect(() => () => {
     clearSilenceTimer();
     clearRestartTimer();
+    if (watchdogTimerRef.current !== null) window.clearInterval(watchdogTimerRef.current);
     if (bubbleTimerRef.current !== null) window.clearTimeout(bubbleTimerRef.current);
   }, [clearRestartTimer, clearSilenceTimer]);
 

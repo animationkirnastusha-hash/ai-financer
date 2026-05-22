@@ -1,0 +1,383 @@
+/* Patch 46: mobile layout contracts. Keep this file last after legacy styles. */
+html,
+body,
+#root {
+  min-width: 0;
+  overflow-x: hidden;
+}
+
+.telegram-app-shell,
+.telegram-app-content,
+.app-page,
+.app-page__inner,
+.app-card,
+.app-section,
+.app-modal-sheet,
+.app-modal-body {
+  min-width: 0 !important;
+}
+
+.app-page {
+  height: 100dvh !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  padding: 12px 16px calc(env(safe-area-inset-bottom) + 260px) !important;
+  scroll-padding-bottom: calc(env(safe-area-inset-bottom) + 260px) !important;
+}
+
+.app-page__inner {
+  width: 100% !important;
+  max-width: 620px !important;
+  margin: 0 auto !important;
+}
+
+.app-card {
+  width: 100% !important;
+  min-width: 0 !important;
+  overflow: hidden !important;
+}
+
+.app-section-title {
+  display: block !important;
+  min-width: 0 !important;
+  margin: 0 !important;
+  overflow-wrap: normal !important;
+  word-break: normal !important;
+  white-space: normal !important;
+  font-size: clamp(19px, 5vw, 24px) !important;
+  line-height: 1.12 !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.035em !important;
+  color: rgba(255, 255, 255, 0.94) !important;
+}
+
+.app-eyebrow {
+  display: block !important;
+  min-width: 0 !important;
+  white-space: normal !important;
+  overflow-wrap: normal !important;
+}
+
+.app-money-hero {
+  display: block !important;
+  min-width: 0 !important;
+  overflow-wrap: anywhere !important;
+  font-size: clamp(34px, 12vw, 58px) !important;
+  line-height: 0.95 !important;
+  font-weight: 750 !important;
+  letter-spacing: -0.07em !important;
+}
+
+.app-home-hero,
+.app-home-hero > * {
+  min-width: 0 !important;
+}
+
+.app-home-metric {
+  display: grid !important;
+  grid-template-rows: auto auto !important;
+  gap: 5px !important;
+  min-width: 0 !important;
+}
+
+.app-home-metric span,
+.app-home-metric b {
+  display: block !important;
+  min-width: 0 !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+.app-home-metric span {
+  font-size: 12px !important;
+  line-height: 1.15 !important;
+  color: rgba(255,255,255,.46) !important;
+}
+
+.app-home-metric b {
+  font-size: clamp(16px, 4vw, 23px) !important;
+  line-height: 1.05 !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.04em !important;
+  color: rgba(255,255,255,.95) !important;
+}
+
+.app-action-card {
+  display: grid !important;
+  grid-template-rows: auto auto !important;
+  align-content: start !important;
+  gap: 6px !important;
+  min-width: 0 !important;
+  min-height: 76px !important;
+  text-align: left !important;
+}
+
+.app-action-card > span,
+.app-action-card > b,
+.app-action-card > small {
+  display: block !important;
+  min-width: 0 !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+.app-action-card > span:first-child,
+.app-action-card > b:first-child {
+  font-size: 16px !important;
+  line-height: 1.15 !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.025em !important;
+}
+
+.app-action-card > small,
+.app-action-card > span:last-child,
+.app-action-card > b:last-child {
+  font-size: 12px !important;
+  line-height: 1.25 !important;
+  font-weight: 450 !important;
+  color: rgba(255,255,255,.48) !important;
+}
+
+.app-list-button,
+.app-transaction-row {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto !important;
+  align-items: center !important;
+  gap: 12px !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  text-align: left !important;
+}
+
+.app-list-button > *,
+.app-transaction-row > * {
+  min-width: 0 !important;
+}
+
+.app-list-button > span,
+.app-list-button > small {
+  display: block !important;
+  min-width: 0 !important;
+}
+
+.app-list-button > span {
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+  font-size: 14px !important;
+  line-height: 1.2 !important;
+  font-weight: 650 !important;
+}
+
+.app-list-button > small {
+  overflow-wrap: anywhere !important;
+  white-space: normal !important;
+  font-size: 12px !important;
+  line-height: 1.35 !important;
+  color: rgba(255,255,255,.46) !important;
+}
+
+.app-empty-button {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 100% !important;
+  min-height: 56px !important;
+  text-align: center !important;
+  white-space: normal !important;
+  overflow-wrap: normal !important;
+}
+
+.app-small-link {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-width: 0 !important;
+  min-height: 48px !important;
+  padding: 10px 8px !important;
+  text-align: center !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+.app-secondary-links {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 10px !important;
+  min-width: 0 !important;
+}
+
+.app-toggle-row {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) 28px !important;
+  align-items: center !important;
+  gap: 14px !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  text-align: left !important;
+}
+
+.app-toggle-row > span {
+  display: grid !important;
+  gap: 5px !important;
+  min-width: 0 !important;
+}
+
+.app-toggle-row > span > span,
+.app-toggle-row small {
+  display: block !important;
+  min-width: 0 !important;
+  white-space: normal !important;
+  word-break: normal !important;
+  overflow-wrap: normal !important;
+}
+
+.app-toggle-row > span > span {
+  font-size: 14px !important;
+  line-height: 1.25 !important;
+  font-weight: 650 !important;
+  letter-spacing: -0.012em !important;
+  color: rgba(255,255,255,.9) !important;
+}
+
+.app-toggle-row small {
+  font-size: 12px !important;
+  line-height: 1.42 !important;
+  color: rgba(255,255,255,.48) !important;
+}
+
+.app-toggle-row input[type='checkbox'] {
+  width: 22px !important;
+  height: 22px !important;
+  justify-self: end !important;
+  flex: none !important;
+}
+
+.app-companion-presence {
+  position: relative !important;
+  overflow: hidden !important;
+}
+
+.app-companion-presence__main {
+  display: grid !important;
+  grid-template-columns: 84px minmax(0, 1fr) !important;
+  align-items: center !important;
+  gap: 14px !important;
+  min-width: 0 !important;
+}
+
+.app-companion-presence__avatar {
+  display: grid !important;
+  place-items: center !important;
+  width: 84px !important;
+  height: 84px !important;
+  min-width: 0 !important;
+  flex: none !important;
+  overflow: visible !important;
+}
+
+.app-companion-presence__avatar .ai-companion-control {
+  width: 76px !important;
+  height: 76px !important;
+}
+
+.app-companion-presence__avatar .ai-companion-avatar {
+  width: 68px !important;
+  height: 68px !important;
+}
+
+.app-companion-presence__content {
+  min-width: 0 !important;
+  overflow: hidden !important;
+}
+
+.app-companion-presence__content .text-xl {
+  display: block !important;
+  min-width: 0 !important;
+  overflow-wrap: normal !important;
+  word-break: normal !important;
+  white-space: normal !important;
+  font-size: clamp(18px, 5vw, 22px) !important;
+  line-height: 1.12 !important;
+}
+
+.app-companion-presence__content p,
+.app-xp-panel__caption {
+  min-width: 0 !important;
+  overflow-wrap: normal !important;
+  word-break: normal !important;
+  white-space: normal !important;
+}
+
+.app-companion-presence__actions {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 10px !important;
+  margin-top: 16px !important;
+}
+
+.app-companion-presence__actions > button {
+  min-width: 0 !important;
+}
+
+.voice-settings-card,
+.voice-window-control {
+  min-width: 0 !important;
+}
+
+.voice-settings-field,
+.voice-first-intro__field {
+  display: grid !important;
+  gap: 8px !important;
+  min-width: 0 !important;
+}
+
+.voice-settings-field span,
+.voice-first-intro__field span {
+  display: block !important;
+  white-space: normal !important;
+}
+
+@media (max-width: 420px) {
+  .app-page {
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+    padding-bottom: calc(env(safe-area-inset-bottom) + 280px) !important;
+  }
+
+  .app-card {
+    border-radius: 26px !important;
+    padding: 16px !important;
+  }
+
+  .app-secondary-links {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .app-companion-presence__main {
+    grid-template-columns: 72px minmax(0, 1fr) !important;
+    gap: 12px !important;
+  }
+
+  .app-companion-presence__avatar {
+    width: 72px !important;
+    height: 72px !important;
+  }
+
+  .app-companion-presence__avatar .ai-companion-control {
+    width: 64px !important;
+    height: 64px !important;
+  }
+
+  .app-companion-presence__avatar .ai-companion-avatar {
+    width: 58px !important;
+    height: 58px !important;
+  }
+
+  .app-companion-presence__actions {
+    grid-template-columns: 1fr !important;
+  }
+}
