@@ -7,6 +7,7 @@ type Props = { compact?: boolean };
 
 export function CompanionPresence({ compact = false }: Props) {
   const navigateTo = useNavigationStore((state) => state.navigateTo);
+  const openAIWithCommand = useNavigationStore((state) => state.openAIWithCommand);
   const [state, setState] = useState<CompanionStateDto | null>(null);
 
   useEffect(() => {
@@ -20,9 +21,12 @@ export function CompanionPresence({ compact = false }: Props) {
   }, []);
 
   const message = state?.message || 'Готов помочь с расходами, доходами и вопросами по деньгам.';
+  const xp = state?.xp ?? 0;
+  const nextXp = Math.max(1000, Math.ceil((xp + 1) / 1000) * 1000);
+  const progress = Math.min(100, Math.max(6, Math.round((xp / nextXp) * 100)));
 
   if (compact) {
-    return <CompanionButton mood={state?.mood ?? 'idle'} onClick={() => navigateTo('companion')} label="Открыть помощника" />;
+    return <CompanionButton mood={state?.mood ?? 'idle'} onClick={() => openAIWithCommand()} label="Открыть AI" />;
   }
 
   return (
@@ -31,13 +35,19 @@ export function CompanionPresence({ compact = false }: Props) {
         <CompanionButton size="lg" mood={state?.mood ?? 'idle'} onClick={() => navigateTo('companion')} label="Открыть помощника" />
       </div>
 
-      <div className="app-companion-card__body">
+      <div className="app-companion-card__content">
+        <div className="app-companion-card__kicker">Помощник</div>
         <div className="app-companion-card__title">Финансовый помощник</div>
-        <p className="app-companion-card__text">{message}</p>
-        <div className="app-companion-card__meta">
-          <span className="app-mini-pill">Уровень {state?.level ?? 1}</span>
-          <span className="app-mini-pill">Серия {state?.streakDays ?? 0} дн.</span>
-          <span className="app-mini-pill">Опыт {state?.xp ?? 0}</span>
+        <p className="app-companion-card__message">{message}</p>
+
+        <div className="app-companion-card__stats">
+          <span>Уровень {state?.level ?? 1}</span>
+          <span>Серия {state?.streakDays ?? 0} дн.</span>
+          <span>{xp} XP</span>
+        </div>
+
+        <div className="app-companion-card__xp" aria-label={`Опыт ${xp} из ${nextXp}`}>
+          <div style={{ width: `${progress}%` }} />
         </div>
       </div>
     </section>

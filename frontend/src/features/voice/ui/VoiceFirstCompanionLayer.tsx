@@ -8,7 +8,6 @@ import { CompanionButton } from '@/shared/ui/CompanionButton';
 import { telegramHaptic } from '@/shared/lib/telegram';
 
 type CompanionMood = 'idle' | 'listening' | 'thinking' | 'confirm' | 'success' | 'warning';
-
 type BubbleTone = 'neutral' | 'listening' | 'thinking' | 'success' | 'warning';
 
 type Thought = {
@@ -17,9 +16,10 @@ type Thought = {
   tone: BubbleTone;
 };
 
-const SILENCE_SUBMIT_MS = 1150;
-const RESUME_DELAY_MS = 650;
-const BUBBLE_TIMEOUT_MS = 4800;
+const SILENCE_SUBMIT_MS = 1050;
+const RESUME_DELAY_MS = 520;
+const BUBBLE_TIMEOUT_MS = 4200;
+const DUPLICATE_GUARD_MS = 1800;
 
 function compactBubble(text: string) {
   return text
@@ -28,7 +28,7 @@ function compactBubble(text: string) {
     .split(/(?<=[.!?。！？])\s+/)
     .slice(0, 2)
     .join(' ')
-    .slice(0, 170);
+    .slice(0, 150);
 }
 
 export function VoiceFirstCompanionLayer() {
@@ -51,15 +51,16 @@ export function VoiceFirstCompanionLayer() {
   const [thought, setThought] = useState<Thought | null>(null);
   const [isProcessingVoice, setIsProcessingVoice] = useState(false);
   const [isPriming, setIsPriming] = useState(false);
-  const [resumeNonce, setResumeNonce] = useState(0);
-  const lastHandledRef = useRef<{ text: string; at: number }>({ text: '', at: 0 });
 
   const silenceTimerRef = useRef<number | null>(null);
   const restartTimerRef = useRef<number | null>(null);
   const bubbleTimerRef = useRef<number | null>(null);
-  const forceResumeTimerRef = useRef<number | null>(null);
   const lastStartAtRef = useRef(0);
   const shouldResumeRef = useRef(false);
+  const isActiveRef = useRef(false);
+  const isProcessingRef = useRef(false);
+  const voiceStateRef = useRef('idle');
+  const lastHandledRef = useRef<{ text: string; at: number }>({ text: '', at: 0 });
 
   const clearSilenceTimer = useCallback(() => {
     if (silenceTimerRef.current !== null) {
@@ -72,13 +73,6 @@ export function VoiceFirstCompanionLayer() {
     if (restartTimerRef.current !== null) {
       window.clearTimeout(restartTimerRef.current);
       restartTimerRef.current = null;
-    }
-  }, []);
-
-  const clearForceResumeTimer = useCallback(() => {
-    if (forceResumeTimerRef.current !== null) {
-      window.clearTimeout(forceResumeTimerRef.current);
-      forceResumeTimerRef.current = null;
     }
   }, []);
 
@@ -98,27 +92,15 @@ export function VoiceFirstCompanionLayer() {
     }, timeoutMs);
   }, []);
 
-  const resumeListeningSoon = useCallback((delayMs = RESUME_DELAY_MS) => {
-    clearForceResumeTimer();
-    shouldResumeRef.current = true;
-
-    forceResumeTimerRef.current = window.setTimeout(() => {
-      forceResumeTimerRef.current = null;
-      setResumeNonce((value) => value + 1);
-    }, delayMs);
-  }, [clearForceResumeTimer]);
-
   const handleText = useCallback(async (rawText: string) => {
     const text = rawText.trim();
-    if (!text || isProcessingVoice) return;
+    if (!text || isProcessingRef.current) return;
 
     const now = Date.now();
-    if (text === lastHandledRef.current.text && now - lastHandledRef.current.at < 2400) {
-      resumeListeningSoon(360);
-      return;
-    }
-
+    const lastHandled = lastHandledRef.current;
+    if (lastHandled.text === text && now - lastHandled.at < DUPLICATE_GUARD_MS) return;
     lastHandledRef.current = { text, at: now };
+
     setIsProcessingVoice(true);
     clearSilenceTimer();
     showThought('Думаю...', 'thinking', 2200);
@@ -143,9 +125,8 @@ export function VoiceFirstCompanionLayer() {
       await chat.sendMessage(text);
     } finally {
       setIsProcessingVoice(false);
-      resumeListeningSoon(520);
     }
-  }, [chat, clearSilenceTimer, goBack, isProcessingVoice, navigateTo, resumeListeningSoon, showThought]);
+  }, [chat, clearSilenceTimer, goBack, navigateTo, showThought]);
 
   const voice = useVoiceInput({
     lang: appLanguage === 'en' ? 'en-US' : 'ru-RU',
@@ -156,33 +137,33 @@ export function VoiceFirstCompanionLayer() {
   const isActive = canUseVoiceFirst && voiceAlwaysOnEnabled && voicePermissionPrompted;
 
   const startListening = useCallback(async () => {
-    if (!canUseVoiceFirst || isProcessingVoice) return;
-    if (voice.state === 'recording' || voice.state === 'uploading') return;
+    if (!canUseVoiceFirst || isProcessingRef.current) return;
+    if (voiceStateRef.current === 'recording' || voiceStateRef.current === 'uploading' || voiceStateRef.current === 'speaking') return;
 
     const now = Date.now();
-    if (now - lastStartAtRef.current < 420) return;
+    if (now - lastStartAtRef.current < 360) return;
     lastStartAtRef.current = now;
-
-    voice.stopSpeaking();
 
     const result = await voice.start();
     if (result === 'started') {
       shouldResumeRef.current = true;
-      showThought('Слушаю.', 'listening', 1800);
+      showThought('Слушаю.', 'listening', 1200);
     }
 
     if (result === 'error') {
       shouldResumeRef.current = false;
       showThought('Микрофон недоступен. Можно написать команду текстом.', 'warning');
     }
-  }, [canUseVoiceFirst, isProcessingVoice, showThought, voice]);
+  }, [canUseVoiceFirst, showThought, voice]);
 
-  useEffect(() => {
-    if (resumeNonce === 0) return;
-    if (!isActive || !shouldResumeRef.current) return;
-
-    void startListening();
-  }, [isActive, resumeNonce, startListening]);
+  const resumeListeningSoon = useCallback((delayMs = RESUME_DELAY_MS) => {
+    clearRestartTimer();
+    restartTimerRef.current = window.setTimeout(() => {
+      if (!isActiveRef.current || !shouldResumeRef.current || isProcessingRef.current) return;
+      if (voiceStateRef.current !== 'idle') return;
+      void startListening();
+    }, delayMs);
+  }, [clearRestartTimer, startListening]);
 
   const stopListening = useCallback(() => {
     clearSilenceTimer();
@@ -195,11 +176,11 @@ export function VoiceFirstCompanionLayer() {
     setIsPriming(true);
     setVoicePermissionPrompted(true);
     setVoiceAlwaysOnEnabled(true);
+    shouldResumeRef.current = true;
 
     try {
       const result = await voice.start();
       if (result === 'started') {
-        shouldResumeRef.current = true;
         showThought('Голос включён. Просто говори финансовые команды.', 'success');
       } else {
         showThought('Разрешение сохранено. Если микрофон не включился, проверь доступ в Telegram.', 'warning');
@@ -215,8 +196,21 @@ export function VoiceFirstCompanionLayer() {
     clearSilenceTimer();
     clearRestartTimer();
     voice.cancel();
-    showThought('Голосовой режим выключен.', 'neutral');
+    voice.stopSpeaking();
+    showThought('Микрофон выключен.', 'neutral');
   }, [clearRestartTimer, clearSilenceTimer, setVoiceAlwaysOnEnabled, showThought, voice]);
+
+  useEffect(() => {
+    isActiveRef.current = isActive;
+  }, [isActive]);
+
+  useEffect(() => {
+    isProcessingRef.current = isProcessingVoice;
+  }, [isProcessingVoice]);
+
+  useEffect(() => {
+    voiceStateRef.current = voice.state;
+  }, [voice.state]);
 
   useEffect(() => {
     if (!isActive) {
@@ -229,14 +223,11 @@ export function VoiceFirstCompanionLayer() {
     shouldResumeRef.current = true;
 
     if (voice.state === 'idle' && !isProcessingVoice) {
-      clearRestartTimer();
-      restartTimerRef.current = window.setTimeout(() => {
-        void startListening();
-      }, RESUME_DELAY_MS);
+      resumeListeningSoon(RESUME_DELAY_MS);
     }
 
     return clearRestartTimer;
-  }, [clearRestartTimer, clearSilenceTimer, isActive, isProcessingVoice, startListening, voice.state]);
+  }, [clearRestartTimer, clearSilenceTimer, isActive, isProcessingVoice, resumeListeningSoon, voice.state]);
 
   useEffect(() => {
     if (!isActive || voice.state !== 'recording') return;
@@ -256,12 +247,14 @@ export function VoiceFirstCompanionLayer() {
     if (!voice.error) return;
 
     if (voice.error === 'no-speech') {
-      showThought('Я рядом.', 'neutral', 1800);
+      showThought('Я рядом.', 'neutral', 1200);
+      resumeListeningSoon(650);
       return;
     }
 
     showThought('Голос не прошёл. Можно повторить или написать текстом.', 'warning');
-  }, [showThought, voice.error]);
+    resumeListeningSoon(900);
+  }, [resumeListeningSoon, showThought, voice.error]);
 
   useEffect(() => {
     const lastMessage = chat.messages.filter((message) => message.role === 'assistant').at(-1);
@@ -269,29 +262,33 @@ export function VoiceFirstCompanionLayer() {
 
     if (lastMessage.kind === 'preview') {
       showThought('Проверь действие.', 'warning');
+      resumeListeningSoon(850);
       return;
     }
 
     if (lastMessage.kind === 'error') {
       showThought(lastMessage.text || 'Нужно уточнение.', 'warning');
+      resumeListeningSoon(850);
       return;
     }
 
-    showThought(lastMessage.text || 'Готово.', 'success');
+    const text = lastMessage.text || 'Готово.';
+    showThought(text, 'success');
 
     if (voiceRepliesEnabled && lastMessage.text) {
-      voice.speak(lastMessage.text);
+      voice.speak(lastMessage.text, { maxDurationMs: 1800 });
+      resumeListeningSoon(1900);
+      return;
     }
 
-    resumeListeningSoon(1450);
+    resumeListeningSoon(900);
   }, [chat.messages, resumeListeningSoon, showThought, voice, voiceRepliesEnabled]);
 
   useEffect(() => () => {
     clearSilenceTimer();
     clearRestartTimer();
     if (bubbleTimerRef.current !== null) window.clearTimeout(bubbleTimerRef.current);
-    clearForceResumeTimer();
-  }, [clearForceResumeTimer, clearRestartTimer, clearSilenceTimer]);
+  }, [clearRestartTimer, clearSilenceTimer]);
 
   const mood = useMemo<CompanionMood>(() => {
     if (chat.pendingActions.length > 0) return 'confirm';
