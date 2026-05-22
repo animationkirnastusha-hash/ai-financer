@@ -8,7 +8,7 @@ type OnboardingState = {
   reset: () => void;
 };
 
-const STORAGE_KEY = 'ai-financer-onboarding-seen';
+const STORAGE_KEY = 'ai-financer-onboarding-seen:v2';
 
 function getInitialSeenState() {
   return localStorage.getItem(STORAGE_KEY) === 'true';

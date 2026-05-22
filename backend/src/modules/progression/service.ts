@@ -200,6 +200,68 @@ export class ProgressionService {
     return this.addXP({ userId, type, rule, payload });
   }
 
+
+  async rollbackTransactionActivities(userId: string, transactionIds: string[]) {
+    const ids = new Set(transactionIds.filter(Boolean));
+    if (ids.size === 0) return { revertedActivities: 0, revertedXP: 0 };
+
+    const activities = await prisma.userActivity.findMany({
+      where: {
+        userId,
+        type: { in: ['expense_created', 'income_created', 'transfer_created'] },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 200,
+    });
+
+    const matched = activities.filter((activity) => {
+      const payload = parsePayload(activity.payload) as any;
+      const transactionId = payload?.transactionId
+        ?? payload?.result?.transactionId
+        ?? payload?.result?.transaction?.id;
+      return typeof transactionId === 'string' && ids.has(transactionId);
+    });
+
+    if (matched.length === 0) return { revertedActivities: 0, revertedXP: 0 };
+
+    const revertedXP = matched.reduce((sum, activity) => sum + Math.max(0, Number(activity.xpEarned) || 0), 0);
+    const activityIds = matched.map((activity) => activity.id);
+
+    const result = await prisma.$transaction(async (tx) => {
+      await tx.userActivity.deleteMany({ where: { id: { in: activityIds }, userId } });
+
+      const user = await tx.user.findUnique({ where: { id: userId }, select: { xp: true } });
+      const nextXP = Math.max(0, (user?.xp ?? 0) - revertedXP);
+      const nextLevel = levelFromXP(nextXP);
+      const nextCompanionLevel = companionLevelFromXP(nextXP);
+
+      await tx.user.update({
+        where: { id: userId },
+        data: {
+          xp: nextXP,
+          level: nextLevel,
+          progressionProfile: {
+            upsert: {
+              create: {
+                totalXP: nextXP,
+                companionLevel: nextCompanionLevel,
+                companionMood: 'neutral',
+              },
+              update: {
+                totalXP: nextXP,
+                companionLevel: nextCompanionLevel,
+              },
+            },
+          },
+        },
+      });
+
+      return { revertedActivities: activityIds.length, revertedXP };
+    });
+
+    return result;
+  }
+
   async ensureProfile(userId: string) {
     const user = await prisma.user.findUnique({
       where: { id: userId },

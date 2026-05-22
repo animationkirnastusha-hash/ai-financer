@@ -1,27 +1,48 @@
+import { useState } from 'react';
 import { useOnboardingStore } from '@/features/onboarding/model/onboarding.store';
 import { useNavigationStore } from '@/features/navigation/model/navigation.store';
+import { useSettingsStore } from '@/features/settings/model/settings.store';
 
 const examples = [
-  'я купил кофе за 350 с карты',
-  'мне пришла зарплата 50000 на основной счёт',
-  'переведи 3000 с карты на накопительный',
+  'Фина, кофе 300',
+  'Фина, создай цель отпуск 120000',
+  'Фина, сделай карту основной',
 ];
 
 export function LaunchOnboardingSheet() {
   const isOpen = useOnboardingStore((state) => state.isOpen);
   const close = useOnboardingStore((state) => state.close);
-  const navigateTo = useNavigationStore((state) => state.navigateTo);
   const openAIWithCommand = useNavigationStore((state) => state.openAIWithCommand);
+  const companionName = useSettingsStore((state) => state.companionName);
+  const setCompanionName = useSettingsStore((state) => state.setCompanionName);
+  const setVoicePermissionPrompted = useSettingsStore((state) => state.setVoicePermissionPrompted);
+  const setVoiceAlwaysOnEnabled = useSettingsStore((state) => state.setVoiceAlwaysOnEnabled);
+  const setVoiceEnabled = useSettingsStore((state) => state.setVoiceEnabled);
+  const setVoiceBetaEnabled = useSettingsStore((state) => state.setVoiceBetaEnabled);
+  const [draftName, setDraftName] = useState(companionName || 'Фина');
 
   if (!isOpen) return null;
 
-  const runExample = (command: string) => {
+  const normalizedName = draftName.trim() || 'Фина';
+
+  const finish = (enableVoice: boolean) => {
+    setCompanionName(normalizedName);
+    setVoiceEnabled(true);
+    setVoiceBetaEnabled(true);
+    if (enableVoice) {
+      setVoiceAlwaysOnEnabled(true);
+      setVoicePermissionPrompted(false);
+    }
     close();
-    openAIWithCommand(command);
+  };
+
+  const runExample = (command: string) => {
+    finish(false);
+    openAIWithCommand(command.replace(/^Фина/i, normalizedName));
   };
 
   return (
-    <div className="fixed inset-0 z-[140] bg-black/70 px-3 backdrop-blur-sm">
+    <div className="fixed inset-0 z-[140] bg-black/72 px-3 backdrop-blur-sm" data-no-swipe="true">
       <div className="flex h-full items-end">
         <div className="mx-auto mb-3 flex max-h-[92dvh] w-full max-w-[560px] flex-col rounded-[34px] border border-white/10 bg-[#0b1016] text-white shadow-2xl">
           <div className="shrink-0 px-4 pt-4">
@@ -29,89 +50,58 @@ export function LaunchOnboardingSheet() {
           </div>
 
           <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4">
-            <div className="rounded-[30px] border border-emerald-300/15 bg-[radial-gradient(circle_at_top,rgba(16,185,129,0.18),transparent_48%),rgba(255,255,255,0.04)] p-5">
-              <div className="text-[11px] uppercase tracking-[0.2em] text-emerald-200/70">
-                AI-financer
-              </div>
-
-              <h2 className="mt-3 text-3xl font-semibold leading-tight">
-                Управляй деньгами через AI
+            <div className="rounded-[30px] border border-emerald-200/10 bg-emerald-200/[0.04] p-4">
+              <div className="text-xs uppercase tracking-[0.22em] text-emerald-100/55">Первый запуск</div>
+              <h2 className="mt-3 text-2xl font-semibold leading-tight tracking-[-0.04em]">
+                Это голосовое финансовое приложение.
               </h2>
-
-              <p className="mt-3 text-sm leading-6 text-white/62">
-                Пиши или говори обычными словами. AI поймёт доход, расход,
-                перевод, счёт или статистику — и покажет безопасное подтверждение.
+              <p className="mt-3 text-sm leading-6 text-white/58">
+                Сначала скажи имя помощника, потом команду. Приложение подготовит действие, покажет подтверждение или задаст короткий вопрос.
               </p>
             </div>
 
             <div className="mt-4 grid gap-3">
-              {[
-                ['1', 'Скажи или напиши действие', 'Не нужно помнить шаблоны.'],
-                ['2', 'AI покажет превью', 'Деньги не меняются без проверки.'],
-                ['3', 'Подтверди результат', 'После подтверждения обновятся счета и история.'],
-              ].map(([step, title, description]) => (
-                <div
-                  key={step}
-                  className="flex gap-3 rounded-2xl border border-white/8 bg-white/[0.04] p-4"
-                >
-                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-emerald-300/20 bg-emerald-300/10 text-sm text-emerald-100">
-                    {step}
-                  </div>
-
-                  <div>
-                    <div className="text-sm font-medium text-white">{title}</div>
-                    <div className="mt-1 text-xs leading-5 text-white/45">
-                      {description}
-                    </div>
-                  </div>
-                </div>
-              ))}
+              <div className="app-check-row">
+                <b>1. Имя помощника</b>
+                <span>По умолчанию — Фина. Можно изменить сейчас или позже в настройках.</span>
+              </div>
+              <div className="app-check-row">
+                <b>2. Команда обычным языком</b>
+                <span>Например: “{normalizedName}, кофе 300” или “{normalizedName}, создай цель отпуск 120000”.</span>
+              </div>
+              <div className="app-check-row">
+                <b>3. Проверка перед действием</b>
+                <span>Если действие рискованное или неполное, помощник ждёт подтверждение или уточнение и продолжает слушать.</span>
+              </div>
             </div>
 
-            <div className="mt-4 rounded-[24px] border border-white/8 bg-black/20 p-4">
-              <div className="text-[11px] uppercase tracking-[0.16em] text-white/35">
-                Попробуй так
-              </div>
+            <label className="voice-first-intro__field">
+              <span>Имя помощника</span>
+              <input
+                value={draftName}
+                onChange={(event) => setDraftName(event.target.value)}
+                placeholder="Фина"
+                maxLength={24}
+              />
+            </label>
 
-              <div className="mt-3 space-y-2">
-                {examples.map((example) => (
-                  <button
-                    key={example}
-                    type="button"
-                    onClick={() => runExample(example)}
-                    className="w-full rounded-2xl border border-white/8 bg-white/[0.04] px-3 py-2 text-left text-xs leading-5 text-emerald-100/90 transition active:scale-[0.99]"
-                  >
-                    {example}
-                  </button>
-                ))}
-              </div>
+            <div className="mt-4 grid gap-2">
+              {examples.map((example) => (
+                <button key={example} type="button" className="app-list-button" onClick={() => runExample(example)}>
+                  <span>{example.replace(/^Фина/i, normalizedName)}</span>
+                  <small>Нажми, чтобы попробовать текстом</small>
+                </button>
+              ))}
             </div>
           </div>
 
-          <div className="shrink-0 border-t border-white/8 bg-[#0b1016]/95 px-4 pb-[calc(env(safe-area-inset-bottom)+16px)] pt-4 backdrop-blur-xl">
-            <div className="grid gap-3">
-              <button
-                type="button"
-                onClick={() => {
-                  close();
-                  openAIWithCommand('создай первый счет');
-                }}
-                className="rounded-2xl border border-emerald-300/20 bg-emerald-400/16 px-4 py-4 text-sm font-medium text-white"
-              >
-                Начать с первого счёта
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  close();
-                  navigateTo('dashboard');
-                }}
-                className="rounded-2xl border border-white/10 bg-white/6 px-4 py-3 text-sm text-white/55"
-              >
-                Сначала посмотреть Dashboard
-              </button>
-            </div>
+          <div className="grid gap-2 border-t border-white/10 p-4">
+            <button type="button" className="app-primary-button w-full" onClick={() => finish(true)}>
+              Продолжить и включить голос
+            </button>
+            <button type="button" className="app-secondary-button w-full" onClick={() => finish(false)}>
+              Продолжить без микрофона
+            </button>
           </div>
         </div>
       </div>

@@ -122,6 +122,7 @@ export function VoiceFirstCompanionLayer() {
   const activeUntilRef = useRef(0);
   const lastHandledRef = useRef<{ text: string; at: number }>({ text: '', at: 0 });
   const handleTextRef = useRef<(text: string) => Promise<void> | void>(() => undefined);
+  const resumeAttemptsRef = useRef(0);
 
   const activeWindowMs = Math.max(6000, Math.min(45000, (voiceActiveWindowSeconds || DEFAULT_ACTIVE_WINDOW_SECONDS) * 1000));
   const isCombatActive = !voiceWakeWordEnabled || activeUntil > Date.now();
@@ -183,6 +184,7 @@ export function VoiceFirstCompanionLayer() {
     const result = await voice.start();
     if (result === 'started') {
       shouldResumeRef.current = true;
+      resumeAttemptsRef.current = 0;
       if (voiceWakeWordEnabled && activeUntilRef.current <= Date.now()) {
         showThought(`Скажи “${companionName || 'Фина'}”, и я начну слушать задачу.`, 'neutral', 2200);
       } else {
@@ -200,10 +202,23 @@ export function VoiceFirstCompanionLayer() {
     clearRestartTimer();
 
     restartTimerRef.current = window.setTimeout(() => {
-      if (!shouldResumeRef.current || !isActiveRef.current || isProcessingVoiceRef.current) return;
+      if (!shouldResumeRef.current || !isActiveRef.current) return;
+
+      const shouldWait = isProcessingVoiceRef.current
+        || voice.state === 'uploading'
+        || voice.state === 'speaking';
+
+      if (shouldWait) {
+        resumeAttemptsRef.current += 1;
+        const nextDelay = Math.min(1400, 360 + resumeAttemptsRef.current * 180);
+        resumeListeningSoon(nextDelay);
+        return;
+      }
+
+      resumeAttemptsRef.current = 0;
       void startListening();
     }, delayMs);
-  }, [clearRestartTimer, startListening]);
+  }, [clearRestartTimer, startListening, voice.state]);
 
   const stopListening = useCallback(() => {
     clearSilenceTimer();
@@ -248,6 +263,7 @@ export function VoiceFirstCompanionLayer() {
     }
     lastHandledRef.current = { text, at: now };
 
+    isProcessingVoiceRef.current = true;
     setIsProcessingVoice(true);
     clearSilenceTimer();
     showThought('Думаю...', 'thinking', 2000);
@@ -274,6 +290,7 @@ export function VoiceFirstCompanionLayer() {
       await chat.sendMessage(text);
       armCombatMode();
     } finally {
+      isProcessingVoiceRef.current = false;
       setIsProcessingVoice(false);
       resumeListeningSoon(RESUME_DELAY_MS);
     }

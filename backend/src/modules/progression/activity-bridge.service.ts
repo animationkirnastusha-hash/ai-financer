@@ -25,11 +25,8 @@ export class ProgressionActivityBridge {
     const mutationActions = parsed.actions.filter((action) => !this.isReadOnlyAction(action.tool));
     if (mutationActions.length === 0) return;
 
-    await this.safeTrack(userId, 'ai_action_confirmed', {
-      summary: parsed.summary,
-      actionsCount: mutationActions.length,
-      tools: mutationActions.map((action) => action.tool),
-    });
+    // XP is awarded only for actions that were really executed below.
+    // Pending previews, clarification requests and cancelled actions must not increase XP.
 
     for (let index = 0; index < mutationActions.length; index += 1) {
       const action = mutationActions[index];

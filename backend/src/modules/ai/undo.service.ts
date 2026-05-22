@@ -1,5 +1,6 @@
 import { prisma } from '../../lib/prisma';
 import { BadRequestError, NotFoundError } from '../../shared/core/errors';
+import { progressionService } from '../progression/service';
 
 export class AIUndoService {
   async undoByAuditLog(userId: string, auditLogId: string) {
@@ -43,12 +44,18 @@ export class AIUndoService {
 
     if (undone.length === 0) throw new BadRequestError('Nothing was undone');
 
+    const progressionRollback = await progressionService.rollbackTransactionActivities(
+      userId,
+      undone.map((item) => item.id),
+    );
+
     return {
       success: true,
       message: `Отменено операций: ${undone.length}`,
       auditLogId,
       parsed,
       undone,
+      progressionRollback,
     };
   }
 
