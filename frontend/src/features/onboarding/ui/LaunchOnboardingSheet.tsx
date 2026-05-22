@@ -1,10 +1,16 @@
+import { useEffect } from 'react';
 import { useOnboardingStore } from '@/features/onboarding/model/onboarding.store';
 import { useNavigationStore } from '@/features/navigation/model/navigation.store';
-import { useSettingsStore } from '@/features/settings/model/settings.store';
+
+const steps = [
+  ['1', 'Позови помощника', 'Скажи “Фина”, затем обычную финансовую команду.'],
+  ['2', 'Проверь превью', 'Деньги, счета и цели не меняются без подтверждения.'],
+  ['3', 'Подтверди или уточни', 'Можно ответить коротко: “да”, “нет”, “отмени”, “на карту”.'],
+];
 
 const examples = [
-  'Фина, у меня есть 10000 наличными',
-  'Фина, кофе 300',
+  'Фина, у меня есть 10к наличными',
+  'Фина, кофе 350 с карты',
   'Фина, создай цель отпуск 120000',
 ];
 
@@ -13,74 +19,95 @@ export function LaunchOnboardingSheet() {
   const close = useOnboardingStore((state) => state.close);
   const navigateTo = useNavigationStore((state) => state.navigateTo);
   const openAIWithCommand = useNavigationStore((state) => state.openAIWithCommand);
-  const companionName = useSettingsStore((state) => state.companionName) || 'Фина';
+
+  useEffect(() => {
+    if (!isOpen) return;
+    document.body.classList.add('ai-any-modal-open');
+    document.documentElement.classList.add('ai-any-modal-open');
+    return () => {
+      document.body.classList.remove('ai-any-modal-open');
+      document.documentElement.classList.remove('ai-any-modal-open');
+    };
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
   const runExample = (command: string) => {
     close();
-    openAIWithCommand(command.replace(/^Фина/i, companionName));
+    openAIWithCommand(command);
   };
 
   return (
-    <div className="app-onboarding" data-no-swipe="true">
-      <div className="app-onboarding__sheet">
-        <div className="app-onboarding__handle" />
+    <div className="app-modal-backdrop px-3" data-no-swipe="true" data-ai-core-modal="true">
+      <div className="app-modal-sheet max-w-[560px]" data-no-swipe="true" data-ai-core-modal="true">
+        <div className="app-modal-handle" />
 
-        <div className="app-onboarding__hero">
-          <div className="app-onboarding__badge">Первый запуск</div>
-          <h2>Финансы голосом, без сложных меню</h2>
-          <p>
-            Скажи имя помощника, потом обычную команду. Я покажу действие перед изменением денег, а спорные моменты уточню коротким вопросом.
-          </p>
+        <div className="app-modal-body space-y-4">
+          <section className="rounded-[30px] border border-emerald-300/15 bg-[radial-gradient(circle_at_top,rgba(16,185,129,0.18),transparent_48%),rgba(255,255,255,0.04)] p-5">
+            <div className="app-eyebrow">Первый запуск</div>
+            <h2 className="mt-3 text-[30px] font-semibold leading-none tracking-[-0.055em] text-white">
+              Голосовые финансы без лишних кнопок
+            </h2>
+            <p className="mt-3 text-sm leading-6 text-white/60">
+              Основной сценарий простой: позови помощника, скажи задачу, проверь действие и подтверди. Текстовый ввод останется запасным вариантом.
+            </p>
+          </section>
+
+          <section className="grid gap-3">
+            {steps.map(([step, title, description]) => (
+              <div key={step} className="grid grid-cols-[34px_minmax(0,1fr)] gap-3 rounded-[22px] border border-white/8 bg-white/[0.04] p-4">
+                <div className="grid h-8 w-8 place-items-center rounded-full border border-emerald-300/20 bg-emerald-300/10 text-sm font-semibold text-emerald-100">
+                  {step}
+                </div>
+                <div className="min-w-0">
+                  <div className="text-sm font-semibold leading-snug text-white">{title}</div>
+                  <div className="mt-1 text-xs leading-5 text-white/45">{description}</div>
+                </div>
+              </div>
+            ))}
+          </section>
+
+          <section className="rounded-[26px] border border-white/8 bg-black/20 p-4">
+            <div className="app-eyebrow">Примеры</div>
+            <div className="mt-3 grid gap-2">
+              {examples.map((example) => (
+                <button
+                  key={example}
+                  type="button"
+                  onClick={() => runExample(example)}
+                  className="rounded-[18px] border border-emerald-300/15 bg-emerald-300/[0.06] px-3 py-3 text-left text-xs leading-5 text-emerald-100/90 transition active:scale-[0.99]"
+                >
+                  {example}
+                </button>
+              ))}
+            </div>
+          </section>
         </div>
 
-        <div className="app-onboarding__steps">
-          <div className="app-onboarding__step">
-            <span>1</span>
-            <div><b>Позови помощника</b><small>По умолчанию: “{companionName}”.</small></div>
-          </div>
-          <div className="app-onboarding__step">
-            <span>2</span>
-            <div><b>Скажи задачу</b><small>Например: “у меня есть 10к наличными”.</small></div>
-          </div>
-          <div className="app-onboarding__step">
-            <span>3</span>
-            <div><b>Подтверди или уточни</b><small>После вопроса микрофон продолжит слушать.</small></div>
-          </div>
-        </div>
-
-        <div className="app-onboarding__examples">
-          <div className="app-onboarding__caption">Можно попробовать</div>
-          {examples.map((example) => (
-            <button key={example} type="button" onClick={() => runExample(example)}>
-              {example.replace(/^Фина/i, companionName)}
+        <footer className="app-modal-footer">
+          <div className="grid gap-3">
+            <button
+              type="button"
+              onClick={() => {
+                close();
+                openAIWithCommand('Фина, создай первый счет');
+              }}
+              className="app-primary-button w-full"
+            >
+              Начать с первого счёта
             </button>
-          ))}
-        </div>
-
-        <div className="app-onboarding__actions">
-          <button
-            type="button"
-            className="app-onboarding__primary"
-            onClick={() => {
-              close();
-              openAIWithCommand(`${companionName}, у меня есть 10000 наличными`);
-            }}
-          >
-            Настроить первый баланс
-          </button>
-          <button
-            type="button"
-            className="app-onboarding__secondary"
-            onClick={() => {
-              close();
-              navigateTo('dashboard');
-            }}
-          >
-            Перейти на главную
-          </button>
-        </div>
+            <button
+              type="button"
+              onClick={() => {
+                close();
+                navigateTo('dashboard');
+              }}
+              className="app-secondary-button w-full"
+            >
+              Сначала посмотреть главную
+            </button>
+          </div>
+        </footer>
       </div>
     </div>
   );
