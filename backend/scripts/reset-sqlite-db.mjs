@@ -32,7 +32,7 @@ if (fs.existsSync(dbPath)) {
   fs.copyFileSync(dbPath, backupPath);
   fs.unlinkSync(dbPath);
   console.log(`Backup created: ${backupPath}`);
-  console.log('Database file removed. Run: npx prisma migrate deploy');
+  console.log('Database file removed. Run: npm run db:sync');
 } else {
-  console.log('Database file does not exist. Nothing removed. Run: npx prisma migrate deploy');
+  console.log('Database file does not exist. Nothing removed. Run: npm run db:sync');
 }

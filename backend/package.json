@@ -18,7 +18,9 @@
     "test:product": "node scripts/run-product-tests.mjs",
     "test:product:report": "node scripts/run-product-tests.mjs --report-only",
     "reset:data": "node scripts/reset-app-data.mjs",
-    "reset:sqlite": "node scripts/reset-sqlite-db.mjs"
+    "reset:sqlite": "node scripts/reset-sqlite-db.mjs",
+    "db:sync": "prisma db push --accept-data-loss && prisma generate",
+    "db:recover": "npm run db:sync"
   },
   "keywords": [],
   "author": "",
