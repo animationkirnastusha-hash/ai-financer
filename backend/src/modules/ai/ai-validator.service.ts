@@ -447,6 +447,61 @@ export class AIValidatorService {
         input.name = name;
       }
 
+      if (action.tool === 'show_taxonomy') {
+        // No validation needed.
+      }
+
+      if (action.tool === 'update_category' || action.tool === 'delete_category' || action.tool === 'assign_category_to_section') {
+        const categoryName = this.cleanEntityName(input.category || input.name);
+        const category = this.findByName(categories, categoryName);
+        if (!category) {
+          issues.push({ code: 'category_not_found', message: categoryName ? `Не нашёл категорию: ${categoryName}` : 'Не хватает категории.', actionIndex: index, field: 'category' });
+        } else {
+          resolved.categoryId = category.id;
+          input.category = category.name;
+        }
+
+        if (action.tool === 'update_category') {
+          const nextName = this.cleanEntityName(input.name);
+          const type = this.cleanString(input.type);
+          const sectionName = this.cleanEntityName(input.section);
+          if (nextName) input.name = nextName; else delete input.name;
+          if (type === 'income' || type === 'expense') input.type = type; else delete input.type;
+          if (sectionName) {
+            input.section = sectionName;
+            const section = this.findByName(sections, sectionName);
+            if (section) resolved.sectionId = section.id;
+          } else {
+            delete input.section;
+          }
+        }
+
+        if (action.tool === 'assign_category_to_section') {
+          const sectionName = this.cleanEntityName(input.section);
+          if (!sectionName) issues.push({ code: 'missing_section_name', message: 'Не хватает раздела.', actionIndex: index, field: 'section' });
+          input.section = sectionName;
+          const section = this.findByName(sections, sectionName);
+          if (section) resolved.sectionId = section.id;
+        }
+      }
+
+      if (action.tool === 'update_section' || action.tool === 'delete_section') {
+        const sectionName = this.cleanEntityName(input.section || input.name);
+        const section = this.findByName(sections, sectionName);
+        if (!section) {
+          issues.push({ code: 'section_not_found', message: sectionName ? `Не нашёл раздел: ${sectionName}` : 'Не хватает раздела.', actionIndex: index, field: 'section' });
+        } else {
+          resolved.sectionId = section.id;
+          input.section = section.name;
+        }
+
+        if (action.tool === 'update_section') {
+          const nextName = this.cleanEntityName(input.name);
+          if (!nextName) issues.push({ code: 'missing_section_name', message: 'Не хватает нового названия раздела.', actionIndex: index, field: 'name' });
+          input.name = nextName;
+        }
+      }
+
       const riskLevel = definition.risk as AIRiskLevel;
       const requiresConfirmation = this.resolveRequiresConfirmation(action.tool, input, resolved, definition.requiresConfirmation, aiSettings);
       actions.push({ ...action, input, resolved, riskLevel, requiresConfirmation });
@@ -471,10 +526,10 @@ export class AIValidatorService {
     defaultValue: boolean,
     settings: { autoConfirmExpenseLimit?: number | null; autoConfirmIncomeLimit?: number | null; autoConfirmTransferLimit?: number | null; requireConfirmForAccountActions?: boolean | null },
   ) {
-    if (tool === 'show_accounts' || tool === 'show_transactions' || tool === 'show_ai_settings' || tool === 'show_goals') return false;
+    if (tool === 'show_accounts' || tool === 'show_transactions' || tool === 'show_ai_settings' || tool === 'show_goals' || tool === 'show_taxonomy') return false;
     if (tool === 'update_onboarding_state' || tool === 'restart_onboarding') return false;
 
-    if (tool === 'create_account' || tool === 'update_account' || tool === 'delete_account' || tool === 'delete_accounts' || tool === 'set_primary_account' || tool === 'create_goal' || tool === 'update_goal' || tool === 'delete_goal') {
+    if (tool === 'create_account' || tool === 'update_account' || tool === 'delete_account' || tool === 'delete_accounts' || tool === 'set_primary_account' || tool === 'create_category' || tool === 'update_category' || tool === 'delete_category' || tool === 'create_section' || tool === 'update_section' || tool === 'delete_section' || tool === 'assign_category_to_section' || tool === 'create_goal' || tool === 'update_goal' || tool === 'delete_goal') {
       return settings.requireConfirmForAccountActions !== false;
     }
 
@@ -707,6 +762,14 @@ export class AIValidatorService {
     }
 
     if (action.tool === 'show_goals') return 'Показать цели.';
+    if (action.tool === 'show_taxonomy') return 'Показать категории и разделы.';
+    if (action.tool === 'create_category') return `Создать категорию: ${this.cleanString(input.name) || 'категория'}.`;
+    if (action.tool === 'update_category') return `Изменить категорию: ${this.cleanString(input.category) || 'категория'}.`;
+    if (action.tool === 'delete_category') return `Удалить категорию: ${this.cleanString(input.category) || 'категория'}.`;
+    if (action.tool === 'create_section') return `Создать раздел: ${this.cleanString(input.name) || 'раздел'}.`;
+    if (action.tool === 'update_section') return `Изменить раздел: ${this.cleanString(input.section) || 'раздел'}.`;
+    if (action.tool === 'delete_section') return `Удалить раздел: ${this.cleanString(input.section) || 'раздел'}.`;
+    if (action.tool === 'assign_category_to_section') return `Переместить категорию ${this.cleanString(input.category) || 'категория'} в раздел ${this.cleanString(input.section) || 'раздел'}.`;
 
     if (action.tool === 'show_ai_settings') return 'Показать настройки ИИ.';
     if (action.tool === 'update_ai_settings') return 'Изменить настройки ИИ.';

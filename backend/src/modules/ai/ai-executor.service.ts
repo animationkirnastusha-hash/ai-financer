@@ -268,14 +268,45 @@ export class AIExecutorService {
       if (!name) throw new BadRequestError('Category name is required');
       const existing = await tx.category.findFirst({ where: { userId, name } });
       if (existing) return { tool, category: existing, skipped: true, reason: 'category_already_exists' };
+      const sectionName = typeof input.section === 'string' ? input.section : '';
+      const sectionId = typeof resolved.sectionId === 'string'
+        ? resolved.sectionId
+        : sectionName
+          ? await this.findOrCreateSectionId(tx, userId, sectionName)
+          : null;
       const category = await tx.category.create({
         data: {
           userId,
           name,
           type: input.type === 'income' ? 'income' : 'expense',
-          sectionId: typeof resolved.sectionId === 'string' ? resolved.sectionId : null,
+          sectionId,
         },
       });
+      return { tool, category };
+    }
+
+    if (tool === 'update_category') {
+      const categoryId = this.requireString(resolved.categoryId, 'categoryId');
+      const data: Record<string, unknown> = {};
+      const name = this.cleanString(input.name);
+      if (name) data.name = name;
+      if (input.type === 'income' || input.type === 'expense') data.type = input.type;
+      if (typeof input.section === 'string' && input.section.trim()) {
+        data.sectionId = typeof resolved.sectionId === 'string'
+          ? resolved.sectionId
+          : await this.findOrCreateSectionId(tx, userId, input.section);
+      }
+      const category = await tx.category.update({ where: { id: categoryId }, data });
+      return { tool, category };
+    }
+
+    if (tool === 'delete_category') {
+      const categoryId = this.requireString(resolved.categoryId, 'categoryId');
+      const category = await tx.category.findFirst({ where: { id: categoryId, userId } });
+      if (!category) throw new NotFoundError('Category not found');
+      await tx.budget.deleteMany({ where: { userId, categoryId } });
+      await tx.transaction.updateMany({ where: { userId, categoryId }, data: { categoryId: null } });
+      await tx.category.delete({ where: { id: categoryId } });
       return { tool, category };
     }
 
@@ -286,6 +317,45 @@ export class AIExecutorService {
       if (existing) return { tool, section: existing, skipped: true, reason: 'section_already_exists' };
       const section = await tx.section.create({ data: { userId, name } });
       return { tool, section };
+    }
+
+    if (tool === 'update_section') {
+      const sectionId = this.requireString(resolved.sectionId, 'sectionId');
+      const name = this.cleanString(input.name);
+      if (!name) throw new BadRequestError('Section name is required');
+      const section = await tx.section.update({ where: { id: sectionId }, data: { name } });
+      return { tool, section };
+    }
+
+    if (tool === 'delete_section') {
+      const sectionId = this.requireString(resolved.sectionId, 'sectionId');
+      const section = await tx.section.findFirst({ where: { id: sectionId, userId } });
+      if (!section) throw new NotFoundError('Section not found');
+      await tx.category.updateMany({ where: { userId, sectionId }, data: { sectionId: null } });
+      await tx.transaction.updateMany({ where: { userId, sectionId }, data: { sectionId: null } });
+      await tx.section.delete({ where: { id: sectionId } });
+      return { tool, section };
+    }
+
+    if (tool === 'assign_category_to_section') {
+      const categoryId = this.requireString(resolved.categoryId, 'categoryId');
+      const sectionName = this.cleanString(input.section);
+      if (!sectionName) throw new BadRequestError('Section name is required');
+      const sectionId = typeof resolved.sectionId === 'string'
+        ? resolved.sectionId
+        : await this.findOrCreateSectionId(tx, userId, sectionName);
+      if (!sectionId) throw new BadRequestError('Section name is required');
+      const category = await tx.category.update({ where: { id: categoryId }, data: { sectionId } });
+      const section = await tx.section.findFirst({ where: { id: sectionId, userId } });
+      return { tool, category, section };
+    }
+
+    if (tool === 'show_taxonomy') {
+      const [sections, categories] = await Promise.all([
+        tx.section.findMany({ where: { userId }, include: { categories: true }, orderBy: { createdAt: 'asc' } }),
+        tx.category.findMany({ where: { userId }, orderBy: { createdAt: 'asc' } }),
+      ]);
+      return { tool, sections, categories };
     }
 
 

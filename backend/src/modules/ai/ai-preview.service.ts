@@ -8,7 +8,13 @@ const TOOL_LABELS: Record<string, string> = {
   create_transaction: 'добавить операцию',
   transfer_money: 'перевести деньги',
   create_category: 'создать категорию',
+  update_category: 'изменить категорию',
+  delete_category: 'удалить категорию',
   create_section: 'создать раздел',
+  update_section: 'изменить раздел',
+  delete_section: 'удалить раздел',
+  assign_category_to_section: 'переместить категорию',
+  show_taxonomy: 'показать категории и разделы',
   show_goals: 'показать цели',
   delete_goal: 'удалить цель',
   update_goal: 'изменить цель',
@@ -103,6 +109,38 @@ export class AIPreviewService {
 
     if (tool === 'set_primary_account') {
       return `сделать основным счёт ${this.clean(input.account) || ''}`.trim();
+    }
+
+    if (tool === 'create_category') {
+      return `создать категорию ${this.clean(input.name) || 'без названия'}${this.clean(input.section) ? ` в разделе ${this.clean(input.section)}` : ''}`;
+    }
+
+    if (tool === 'update_category') {
+      return `изменить категорию ${this.clean(input.category) || ''}`.trim();
+    }
+
+    if (tool === 'delete_category') {
+      return `удалить категорию ${this.clean(input.category) || ''}`.trim();
+    }
+
+    if (tool === 'create_section') {
+      return `создать раздел ${this.clean(input.name) || 'без названия'}`;
+    }
+
+    if (tool === 'update_section') {
+      return `переименовать раздел ${this.clean(input.section) || ''} в ${this.clean(input.name) || ''}`.trim();
+    }
+
+    if (tool === 'delete_section') {
+      return `удалить раздел ${this.clean(input.section) || ''}`.trim();
+    }
+
+    if (tool === 'assign_category_to_section') {
+      return `переместить категорию ${this.clean(input.category) || ''} в раздел ${this.clean(input.section) || ''}`.trim();
+    }
+
+    if (tool === 'show_taxonomy') {
+      return 'показать категории и разделы';
     }
 
     if (tool === 'create_goal') {

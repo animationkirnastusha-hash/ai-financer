@@ -10,9 +10,9 @@ type Options = {
 
 export const MAIN_SWIPE_SCREENS: AppScreen[] = ['transactions', 'dashboard', 'analytics'];
 
-const MIN_SWIPE_DISTANCE = 22;
-const MAX_VERTICAL_DRIFT = 120;
-const MIN_HORIZONTAL_RATIO = 0.82;
+const MIN_SWIPE_DISTANCE = 14;
+const MAX_VERTICAL_DRIFT = 180;
+const MIN_HORIZONTAL_RATIO = 0.42;
 
 function isInteractiveTarget(target: EventTarget | null) {
   if (!(target instanceof HTMLElement)) return false;

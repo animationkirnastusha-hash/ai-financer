@@ -1,20 +1,26 @@
 import { useEffect } from 'react';
 import type React from 'react';
-import type { PropsWithChildren } from 'react';
+import type { PropsWithChildren, ReactNode } from 'react';
 import { cn } from '@/shared/lib/cn';
 
 type DrawerProps = PropsWithChildren<{
   open: boolean;
   onClose: () => void;
   title?: string;
+  subtitle?: string;
+  footer?: ReactNode;
   className?: string;
+  bodyClassName?: string;
 }>;
 
 export function Drawer({
   open,
   onClose,
   title,
+  subtitle,
+  footer,
   className,
+  bodyClassName,
   children,
 }: DrawerProps) {
   useEffect(() => {
@@ -22,11 +28,18 @@ export function Drawer({
     document.body.classList.add('ai-any-modal-open', 'ai-core-modal-open');
     document.documentElement.classList.add('ai-any-modal-open');
 
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose();
+    };
+
+    window.addEventListener('keydown', onKeyDown);
+
     return () => {
+      window.removeEventListener('keydown', onKeyDown);
       document.body.classList.remove('ai-any-modal-open', 'ai-core-modal-open');
       document.documentElement.classList.remove('ai-any-modal-open');
     };
-  }, [open]);
+  }, [open, onClose]);
 
   if (!open) return null;
 
@@ -36,7 +49,7 @@ export function Drawer({
 
   return (
     <div
-      className="fixed inset-0 z-[120] bg-black/60 backdrop-blur-sm"
+      className="app-modal-backdrop"
       data-no-swipe="true"
       data-ai-core-modal="true"
       data-drawer-backdrop="true"
@@ -44,16 +57,25 @@ export function Drawer({
       onTouchMove={(event) => event.stopPropagation()}
     >
       <div
-        className={cn(
-          'absolute bottom-0 left-0 right-0 rounded-t-[28px] border border-white/10 bg-[#0d1218] p-4 shadow-2xl',
-          className,
-        )}
+        className={cn('app-modal-sheet', className)}
         data-no-swipe="true"
         data-ai-core-modal="true"
         onPointerDown={(event) => event.stopPropagation()}
       >
-        {title ? <div className="mb-4 text-sm font-semibold text-white">{title}</div> : null}
-        {children}
+        <div className="app-modal-handle" />
+        {(title || subtitle) ? (
+          <header className="app-modal-header">
+            <div className="min-w-0">
+              {title ? <h2 className="app-modal-title">{title}</h2> : null}
+              {subtitle ? <p className="app-modal-subtitle">{subtitle}</p> : null}
+            </div>
+            <button type="button" onClick={onClose} className="app-icon-button" aria-label="Закрыть">
+              ×
+            </button>
+          </header>
+        ) : null}
+        <div className={cn('app-modal-body', bodyClassName)}>{children}</div>
+        {footer ? <footer className="app-modal-footer">{footer}</footer> : null}
       </div>
     </div>
   );

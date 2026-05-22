@@ -12,7 +12,13 @@ export type AIToolName =
   | 'create_transaction'
   | 'transfer_money'
   | 'create_category'
+  | 'update_category'
+  | 'delete_category'
   | 'create_section'
+  | 'update_section'
+  | 'delete_section'
+  | 'assign_category_to_section'
+  | 'show_taxonomy'
   | 'create_goal'
   | 'update_goal'
   | 'delete_goal'
@@ -68,8 +74,8 @@ export interface AIValidatedPlan {
 }
 
 export interface AIClarificationRequest {
-  type: 'account';
-  field: 'account';
+  type: 'account' | 'goal' | 'category' | 'section';
+  field: 'account' | 'goal' | 'category' | 'section' | string;
   actionIndex: number;
   question: string;
   createdAt: string;

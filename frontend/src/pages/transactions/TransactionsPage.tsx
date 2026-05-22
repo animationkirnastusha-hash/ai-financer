@@ -1,8 +1,9 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import { useNavigationStore } from '@/features/navigation/model/navigation.store';
 import { useTransactionsStore } from '@/features/transactions/model/transactions.store';
 import { TransactionEditSheet } from '@/features/transactions/ui/TransactionEditSheet';
+import { TransactionCreateSheet } from '@/features/transactions/ui/TransactionCreateSheet';
 import { TransactionsTimeline } from '@/features/transactions/ui/TransactionsTimeline';
 import { TransactionsSummary } from '@/features/transactions/ui/TransactionsSummary';
 import { ScreenTopBar } from '@/shared/ui/ScreenTopBar';
@@ -19,6 +20,7 @@ function isCurrentMonth(dateValue: string) {
 }
 
 export default function TransactionsPage({ onBack }: Props = {}) {
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
   const navigateTo = useNavigationStore((state) => state.navigateTo);
   const openAIWithCommand = useNavigationStore((state) => state.openAIWithCommand);
 
@@ -31,6 +33,7 @@ export default function TransactionsPage({ onBack }: Props = {}) {
   const openEdit = useTransactionsStore((state) => state.openEdit);
   const closeEdit = useTransactionsStore((state) => state.closeEdit);
   const saveEdit = useTransactionsStore((state) => state.saveEdit);
+  const createItem = useTransactionsStore((state) => state.createItem);
   const deleteItem = useTransactionsStore((state) => state.deleteItem);
 
   useEffect(() => {
@@ -67,7 +70,7 @@ export default function TransactionsPage({ onBack }: Props = {}) {
               <h1 className="text-[32px] font-semibold leading-none tracking-[-0.055em]">Операции</h1>
               <p className="mt-2 text-sm text-white/46">Доходы, расходы и переводы.</p>
             </div>
-            <button type="button" onClick={() => openAIWithCommand('кофе 300')} className="app-primary-button shrink-0">Добавить</button>
+            <button type="button" onClick={() => setIsCreateOpen(true)} className="app-primary-button shrink-0">Добавить</button>
           </div>
         </header>
 
@@ -96,6 +99,16 @@ export default function TransactionsPage({ onBack }: Props = {}) {
           <TransactionsTimeline transactions={transactions} isLoading={isLoading} error={error} onRefresh={() => void loadTransactions(true)} onOpenTransaction={openEdit} />
         )}
       </div>
+
+      <TransactionCreateSheet
+        open={isCreateOpen}
+        isSaving={isMutating}
+        onClose={() => setIsCreateOpen(false)}
+        onSave={async (payload) => {
+          await createItem(payload);
+          setIsCreateOpen(false);
+        }}
+      />
 
       <TransactionEditSheet
         open={Boolean(editing)}

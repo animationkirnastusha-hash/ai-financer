@@ -2,14 +2,18 @@ import { create } from 'zustand';
 import {
   createCategory,
   createSection,
+  deleteCategory,
   deleteSection,
   fetchCategories,
   fetchSections,
+  updateCategory,
   updateSection,
   type CategoryDto,
   type CreateCategoryPayload,
   type CreateSectionPayload,
   type SectionDto,
+  type UpdateCategoryPayload,
+  type UpdateSectionPayload,
 } from '@/features/sections/api/sections.api';
 
 type SectionsState = {
@@ -18,13 +22,16 @@ type SectionsState = {
   selectedSectionId: string | null;
   isLoading: boolean;
   isCreating: boolean;
+  isMutating: boolean;
   error: string | null;
 
   loadAll: (force?: boolean) => Promise<void>;
   createSection: (payload: CreateSectionPayload) => Promise<SectionDto>;
-  updateSection: (id: string, payload: Partial<CreateSectionPayload>) => Promise<SectionDto>;
+  updateSection: (id: string, payload: UpdateSectionPayload) => Promise<SectionDto>;
   deleteSection: (id: string) => Promise<void>;
   createCategory: (payload: CreateCategoryPayload) => Promise<CategoryDto>;
+  updateCategory: (id: string, payload: UpdateCategoryPayload) => Promise<CategoryDto>;
+  deleteCategory: (id: string) => Promise<void>;
   selectSection: (id: string | null) => void;
 };
 
@@ -39,6 +46,7 @@ export const useSectionsStore = create<SectionsState>((set, get) => ({
   selectedSectionId: null,
   isLoading: false,
   isCreating: false,
+  isMutating: false,
   error: null,
 
   loadAll: async (force = false) => {
@@ -63,11 +71,8 @@ export const useSectionsStore = create<SectionsState>((set, get) => ({
 
     try {
       const section = await createSection(payload);
-      set({
-        sections: [section, ...get().sections.filter((item) => item.id !== section.id)],
-        selectedSectionId: section.id,
-        isCreating: false,
-      });
+      await get().loadAll(true);
+      set({ selectedSectionId: section.id, isCreating: false });
       return section;
     } catch (error) {
       console.error(error);
@@ -77,29 +82,34 @@ export const useSectionsStore = create<SectionsState>((set, get) => ({
   },
 
   updateSection: async (id, payload) => {
+    set({ isMutating: true, error: null });
     const previous = get().sections;
     set({ sections: previous.map((item) => (item.id === id ? { ...item, ...payload } : item)) });
 
     try {
       const section = await updateSection(id, payload);
-      set({ sections: get().sections.map((item) => (item.id === id ? section : item)) });
+      await get().loadAll(true);
+      set({ isMutating: false });
       return section;
     } catch (error) {
       console.error(error);
-      set({ sections: previous, error: getErrorMessage(error) });
+      set({ sections: previous, isMutating: false, error: getErrorMessage(error) });
       throw error;
     }
   },
 
   deleteSection: async (id) => {
+    set({ isMutating: true, error: null });
     const previous = get().sections;
     set({ sections: previous.filter((item) => item.id !== id) });
 
     try {
       await deleteSection(id);
+      await get().loadAll(true);
+      set({ isMutating: false, selectedSectionId: get().selectedSectionId === id ? null : get().selectedSectionId });
     } catch (error) {
       console.error(error);
-      set({ sections: previous, error: getErrorMessage(error) });
+      set({ sections: previous, isMutating: false, error: getErrorMessage(error) });
       throw error;
     }
   },
@@ -109,12 +119,45 @@ export const useSectionsStore = create<SectionsState>((set, get) => ({
 
     try {
       const category = await createCategory(payload);
-      set({ categories: [category, ...get().categories], isCreating: false });
       await get().loadAll(true);
+      set({ isCreating: false });
       return category;
     } catch (error) {
       console.error(error);
       set({ isCreating: false, error: getErrorMessage(error) });
+      throw error;
+    }
+  },
+
+  updateCategory: async (id, payload) => {
+    set({ isMutating: true, error: null });
+    const previous = get().categories;
+    set({ categories: previous.map((item) => (item.id === id ? { ...item, ...payload } : item)) });
+
+    try {
+      const category = await updateCategory(id, payload);
+      await get().loadAll(true);
+      set({ isMutating: false });
+      return category;
+    } catch (error) {
+      console.error(error);
+      set({ categories: previous, isMutating: false, error: getErrorMessage(error) });
+      throw error;
+    }
+  },
+
+  deleteCategory: async (id) => {
+    set({ isMutating: true, error: null });
+    const previous = get().categories;
+    set({ categories: previous.filter((item) => item.id !== id) });
+
+    try {
+      await deleteCategory(id);
+      await get().loadAll(true);
+      set({ isMutating: false });
+    } catch (error) {
+      console.error(error);
+      set({ categories: previous, isMutating: false, error: getErrorMessage(error) });
       throw error;
     }
   },

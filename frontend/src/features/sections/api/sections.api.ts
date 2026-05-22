@@ -44,6 +44,8 @@ export type CreateSectionPayload = {
   color?: string | null;
 };
 
+export type UpdateSectionPayload = Partial<CreateSectionPayload>;
+
 export type CreateCategoryPayload = {
   name: string;
   type?: 'income' | 'expense' | 'both';
@@ -51,6 +53,8 @@ export type CreateCategoryPayload = {
   icon?: string | null;
   color?: string | null;
 };
+
+export type UpdateCategoryPayload = Partial<CreateCategoryPayload>;
 
 type SectionsResponse = SectionDto[] | { sections?: SectionDto[] };
 type CategoriesResponse = CategoryDto[] | { categories?: CategoryDto[] };
@@ -89,9 +93,9 @@ export async function createSection(payload: CreateSectionPayload): Promise<Sect
 
 export async function updateSection(
   sectionId: string,
-  payload: Partial<CreateSectionPayload>,
+  payload: UpdateSectionPayload,
 ): Promise<SectionDto> {
-  const response = await apiClient.patch<SectionResponse>(`/sections/${sectionId}`, payload);
+  const response = await apiClient.put<SectionResponse>(`/sections/${sectionId}`, payload);
   return extractSection(response);
 }
 
@@ -107,4 +111,16 @@ export async function fetchCategories(): Promise<CategoryDto[]> {
 export async function createCategory(payload: CreateCategoryPayload): Promise<CategoryDto> {
   const response = await apiClient.post<CategoryResponse>('/categories', payload);
   return extractCategory(response);
+}
+
+export async function updateCategory(
+  categoryId: string,
+  payload: UpdateCategoryPayload,
+): Promise<CategoryDto> {
+  const response = await apiClient.put<CategoryResponse>(`/categories/${categoryId}`, payload);
+  return extractCategory(response);
+}
+
+export async function deleteCategory(categoryId: string): Promise<void> {
+  await apiClient.delete(`/categories/${categoryId}`);
 }

@@ -6,7 +6,8 @@ const TOOL_NAMES = new Set(AI_TOOL_REGISTRY.map((tool) => tool.name));
 
 type UserContext = {
   accounts?: Array<{ name?: string; type?: string; currency?: string }>;
-  categories?: Array<{ name?: string; type?: string }>;
+  categories?: Array<{ name?: string; type?: string; sectionId?: string | null }>;
+  sections?: Array<{ id?: string; name?: string }>;
   goals?: Array<{ title?: string; targetAmount?: number; currentAmount?: number; currency?: string; status?: string }>;
   recentTransactions?: Array<{ description?: string | null; type?: string; amount?: number; account?: { name?: string }; category?: { name?: string } | null; section?: { name?: string } | null }>;
   memory?: {
@@ -82,14 +83,16 @@ export class AIPlannerService {
       'Income/deposit/top-up/salary/put money onto account => create_transaction kind income.',
       'Expense/payment/purchase/item+amount => create_transaction kind expense.',
       'For every transaction, infer human category and section from meaning; do not leave category/section empty when meaning is clear.',
+      'Category/section management must use taxonomy tools: create_category, update_category, delete_category, create_section, update_section, delete_section, assign_category_to_section, show_taxonomy.',
       'Create account only creates account with initialBalance 0.',
       'Create account and put/add money => create_account initialBalance 0 + create_transaction income to that account.',
       'Rename/change existing account => update_account, not create_account.',
       'Make account main/default/primary => set_primary_account. If user does not specify income/expense, scope both.',
       'Delete all accounts => delete_accounts scope all. Delete one account => delete_account.',
       'Create/update/delete/show financial goals => create_goal/update_goal/delete_goal/show_goals.',
+      'Show categories/sections/list of spending structure => show_taxonomy.',
       'If user command refers to previous command/result with words like it/this/that/его/этот/тот/там, use CTX.aiSessionState.lastCommand and CTX.aiSessionState.lastResult to resolve context.',
-      'If essential entity remains ambiguous after context, choose the safest action that asks clarification by leaving missing account/goal/account name rather than inventing.',
+      'If essential entity remains ambiguous after context, choose the safest action that asks clarification by leaving missing account/goal/category/section name rather than inventing.',
       'Preserve spoken amounts exactly as user wrote them.',
       'Use account names/aliases from CTX when present.',
       'If user asks to show/change AI settings, use show_ai_settings/update_ai_settings/apply_ai_settings_preset.',
@@ -118,7 +121,10 @@ export class AIPlannerService {
         }))
         : [],
       categories: Array.isArray(value.categories)
-        ? value.categories.slice(0, 8).map((category) => category.name).filter(Boolean)
+        ? value.categories.slice(0, 12).map((category) => category.name).filter(Boolean)
+        : [],
+      sections: Array.isArray(value.sections)
+        ? value.sections.slice(0, 12).map((section) => section.name).filter(Boolean)
         : [],
       preferences: Array.isArray(memory.preferences) ? memory.preferences.slice(0, 6) : [],
       recentSuccessfulCommands: Array.isArray(memory.recentSuccessfulCommands)

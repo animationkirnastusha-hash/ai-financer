@@ -8,6 +8,7 @@ import { AIAnswerService } from './ai-answer.service';
 import { AIAuditService } from './audit.service';
 import { AIPendingActionService } from './pending-action.service';
 import { aiSessionService } from './ai-session.service';
+import { AIMemoryService } from './ai-memory.service';
 import { AIActionPlan, AIClarificationRequest, AIHandleOptions, AIParsedCommand, AIResult, AIRiskLevel, AIValidatedPlan } from './types';
 
 export class AIOrchestratorService {
@@ -19,6 +20,7 @@ export class AIOrchestratorService {
   private readonly pending = new AIPendingActionService();
   private readonly audit = new AIAuditService();
   private readonly answer = new AIAnswerService();
+  private readonly memory = new AIMemoryService();
 
   async handleCommand(userId: string, command: string, _options: AIHandleOptions = {}): Promise<AIResult> {
     const trimmed = command.trim();
@@ -60,7 +62,7 @@ export class AIOrchestratorService {
       const parsed = this.preview.buildParsed(validated.summary, validated.actions);
 
       if (!validated.ok) {
-        const clarification = this.buildAccountClarification(validated);
+        const clarification = this.buildClarification(validated);
         if (clarification) {
           const parsedWithClarification = { ...parsed, clarification };
           const pending = await this.pending.create({
@@ -125,6 +127,7 @@ export class AIOrchestratorService {
         const result = await this.executor.execute(userId, parsed);
         await aiSessionService.clear(userId);
         await aiSessionService.rememberResult(userId, { command: trimmed, intent: parsed.intent, tool: parsed.actions[0]?.tool, result });
+        await this.memory.rememberFinancialResult(userId, { command: trimmed, intent: parsed.intent, tools: parsed.actions.map((action) => action.tool), result });
 
         const audit = await this.audit.create({
           userId,
@@ -218,6 +221,7 @@ export class AIOrchestratorService {
 
       await aiSessionService.clear(userId);
       await aiSessionService.rememberResult(userId, { command: pending.command, intent: parsed.intent, tool: parsed.actions[0]?.tool, result });
+      await this.memory.rememberFinancialResult(userId, { command: pending.command, intent: parsed.intent, tools: parsed.actions.map((action) => action.tool), result });
 
       const riskLevel = this.normalizeRisk(pending.riskLevel);
       const audit = await this.audit.create({
@@ -316,8 +320,6 @@ export class AIOrchestratorService {
     const clarification = parsed?.clarification;
 
     if (!parsed || parsed.intent !== 'batch' || !Array.isArray(parsed.actions) || !clarification) return null;
-    if (clarification.type !== 'account') return null;
-
     const action = parsed.actions[clarification.actionIndex];
     if (!action) return null;
 
@@ -326,11 +328,12 @@ export class AIOrchestratorService {
 
     const nextActions = parsed.actions.map((item, index) => {
       if (index !== clarification.actionIndex) return item;
+      const field = clarification.field || 'account';
       return {
         ...item,
         input: {
           ...item.input,
-          account: candidate,
+          [field]: candidate,
           __userText: `${pending.command} ${candidate}`,
         },
       };
@@ -346,9 +349,9 @@ export class AIOrchestratorService {
     const nextParsed = this.preview.buildParsed(validated.summary, validated.actions);
 
     if (!validated.ok) {
-      const stillNeedsAccount = this.buildAccountClarification(validated);
-      const message = stillNeedsAccount
-        ? `Не нашёл счёт "${candidate}". Назови другой счёт.`
+      const stillNeedsEntity = this.buildClarification(validated);
+      const message = stillNeedsEntity
+        ? `${stillNeedsEntity.question} Я не нашёл: ${candidate}.`
         : validated.issues.map((issue) => issue.message).join('\n') || 'Не удалось применить уточнение.';
 
       const audit = await this.audit.create({
@@ -381,6 +384,7 @@ export class AIOrchestratorService {
       const result = await this.executor.execute(userId, nextParsed, { pendingActionId: pending.id });
       await aiSessionService.clear(userId);
       await aiSessionService.rememberResult(userId, { command: `${pending.command} / ${candidate}`, intent: nextParsed.intent, tool: nextParsed.actions[0]?.tool, result });
+      await this.memory.rememberFinancialResult(userId, { command: `${pending.command} / ${candidate}`, intent: nextParsed.intent, tools: nextParsed.actions.map((action) => action.tool), result });
 
       const audit = await this.audit.create({
         userId,
@@ -430,17 +434,40 @@ export class AIOrchestratorService {
     };
   }
 
-  private buildAccountClarification(validated: AIValidatedPlan): AIClarificationRequest | null {
-    const issue = validated.issues.find((item) => item.code === 'needs_account_clarification' && typeof item.actionIndex === 'number');
+  private buildClarification(validated: AIValidatedPlan): AIClarificationRequest | null {
+    const issue = validated.issues.find((item) => [
+      'needs_account_clarification',
+      'account_not_found',
+      'from_account_not_found',
+      'to_account_not_found',
+      'goal_not_found',
+      'category_not_found',
+      'section_not_found',
+    ].includes(item.code) && typeof item.actionIndex === 'number');
+
     if (!issue || typeof issue.actionIndex !== 'number') return null;
 
-    return {
-      type: 'account',
-      field: 'account',
-      actionIndex: issue.actionIndex,
-      question: 'С какого счёта списать?',
-      createdAt: new Date().toISOString(),
-    };
+    if (issue.code === 'goal_not_found') {
+      return { type: 'goal', field: 'goal', actionIndex: issue.actionIndex, question: 'Какую цель нужно изменить?', createdAt: new Date().toISOString() };
+    }
+
+    if (issue.code === 'category_not_found') {
+      return { type: 'category', field: 'category', actionIndex: issue.actionIndex, question: 'Какую категорию использовать?', createdAt: new Date().toISOString() };
+    }
+
+    if (issue.code === 'section_not_found') {
+      return { type: 'section', field: 'section', actionIndex: issue.actionIndex, question: 'Какой раздел использовать?', createdAt: new Date().toISOString() };
+    }
+
+    if (issue.code === 'from_account_not_found') {
+      return { type: 'account', field: 'fromAccount', actionIndex: issue.actionIndex, question: 'С какого счёта перевести?', createdAt: new Date().toISOString() };
+    }
+
+    if (issue.code === 'to_account_not_found') {
+      return { type: 'account', field: 'toAccount', actionIndex: issue.actionIndex, question: 'На какой счёт перевести?', createdAt: new Date().toISOString() };
+    }
+
+    return { type: 'account', field: 'account', actionIndex: issue.actionIndex, question: 'Какой счёт использовать?', createdAt: new Date().toISOString() };
   }
 
   private asResultObject(value: unknown): Record<string, unknown> {

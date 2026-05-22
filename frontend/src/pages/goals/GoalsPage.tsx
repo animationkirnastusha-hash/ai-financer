@@ -1,57 +1,134 @@
+import { useEffect, useMemo, useState } from 'react';
+import { goalsApi, type GoalDto } from '@/features/goals/api/goals.api';
+import { GoalEditSheet } from '@/features/goals/ui/GoalEditSheet';
 import { useNavigationStore } from '@/features/navigation/model/navigation.store';
-import { PageHeader } from '@/shared/ui/PageHeader';
+import { ScreenTopBar } from '@/shared/ui/ScreenTopBar';
+import { EmptyState } from '@/shared/ui/EmptyState';
+import { formatMoney } from '@/shared/lib/money';
 
-const goals = [
-  { title: 'Подушка безопасности', value: '50 000 ₽', progress: 42, note: 'Запас на спокойный месяц.' },
-  { title: 'Переезд', value: '180 000 ₽', progress: 18, note: 'Длинная цель без давления.' },
-  { title: 'Инвестиционный старт', value: '30 000 ₽', progress: 7, note: 'После стабилизации расходов.' },
-];
+function clampProgress(value: number) {
+  if (!Number.isFinite(value)) return 0;
+  return Math.max(0, Math.min(100, Math.round(value)));
+}
 
 export default function GoalsPage() {
   const openAIWithCommand = useNavigationStore((state) => state.openAIWithCommand);
+  const [goals, setGoals] = useState<GoalDto[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [sheet, setSheet] = useState<{ mode: 'create' } | { mode: 'edit'; goal: GoalDto } | null>(null);
+
+  const loadGoals = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      setGoals(await goalsApi.list());
+    } catch (error) {
+      console.error(error);
+      setError(error instanceof Error ? error.message : 'Цели не загрузились');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    void loadGoals();
+  }, []);
+
+  const activeGoals = useMemo(() => goals.filter((goal) => goal.status !== 'archived'), [goals]);
+
+  const saveGoal = async (payload: { title: string; targetAmount: number; currentAmount?: number; currency?: string; note?: string | null }) => {
+    setIsSaving(true);
+    try {
+      if (sheet?.mode === 'edit') await goalsApi.update(sheet.goal.id, payload);
+      else await goalsApi.create(payload);
+      await loadGoals();
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const deleteGoal = async (goal: GoalDto) => {
+    setIsSaving(true);
+    try {
+      await goalsApi.delete(goal.id);
+      await loadGoals();
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   return (
-    <div className="flex h-dvh flex-col bg-[linear-gradient(180deg,#0b1016_0%,#090d13_100%)] text-white">
-      <PageHeader title="Цели" subtitle="Финансовый рост" />
+    <div className="app-page text-white">
+      <div className="app-page__inner space-y-4">
+        <ScreenTopBar title="Цели" left="back" right={['home']} />
 
-      <div className="flex-1 overflow-y-auto px-4 pb-32">
-        <div className="mx-auto max-w-[620px] space-y-4">
-          <header className="rounded-[34px] border border-white/10 bg-white/[0.045] p-5">
-            <div className="text-[11px] uppercase tracking-[0.2em] text-emerald-200/60">Цели</div>
-            <h1 className="mt-3 text-3xl font-semibold tracking-[-0.04em]">Финансовые цели</h1>
-            <p className="mt-2 text-sm leading-6 text-white/55">
-              Сохраняй деньги на важные вещи и следи за прогрессом без лишнего давления.
-            </p>
-          </header>
-
-          <div className="space-y-3">
-            {goals.map((goal) => (
-              <section key={goal.title} className="rounded-[30px] border border-white/10 bg-white/[0.04] p-5">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <div className="text-lg font-semibold">{goal.title}</div>
-                    <div className="mt-1 text-sm text-white/45">{goal.note}</div>
-                  </div>
-                  <div className="text-sm text-emerald-100/80">{goal.value}</div>
-                </div>
-                <div className="mt-4 h-2 rounded-full bg-white/8">
-                  <div className="h-2 rounded-full bg-emerald-200/70" style={{ width: `${goal.progress}%` }} />
-                </div>
-                <div className="mt-2 text-xs text-white/42">{goal.progress}%</div>
-              </section>
-            ))}
+        <header className="app-card app-card--hero">
+          <div className="app-eyebrow">Прогресс</div>
+          <div className="mt-3 flex items-end justify-between gap-4">
+            <div>
+              <h1 className="text-[32px] font-semibold leading-none tracking-[-0.055em]">Цели</h1>
+              <p className="mt-2 text-sm text-white/46">Крупные покупки и накопления.</p>
+            </div>
+            <button type="button" onClick={() => setSheet({ mode: 'create' })} className="app-primary-button shrink-0">+ Цель</button>
           </div>
+        </header>
 
-          <button
-            type="button"
-            onClick={() => openAIWithCommand('создай цель ноутбук 120000')}
-            className="w-full rounded-[26px] border border-emerald-300/14 bg-emerald-300/10 p-4 text-left"
-          >
-            <div className="font-semibold text-emerald-50">Создать цель через AI</div>
-            <div className="mt-1 text-sm text-emerald-50/55">Например: «создай цель ноутбук 120000».</div>
-          </button>
-        </div>
+        <button type="button" onClick={() => openAIWithCommand('создай цель ноутбук 120000')} className="app-card w-full p-4 text-left active:scale-[0.99]">
+          <div className="text-sm font-semibold text-white">Создать голосом</div>
+          <div className="mt-1 text-xs text-white/42">Например: “создай цель ноутбук 120000”.</div>
+        </button>
+
+        {error ? <div className="app-error-box">{error}</div> : null}
+
+        {isLoading ? (
+          <div className="app-card p-5 text-sm text-white/55">Загружаю цели...</div>
+        ) : activeGoals.length === 0 ? (
+          <EmptyState
+            eyebrow="Цели"
+            title="Целей пока нет"
+            description="Создай первую цель вручную или скажи AI: “создай цель отпуск 120000”."
+            actionLabel="Создать цель"
+            onAction={() => setSheet({ mode: 'create' })}
+          />
+        ) : (
+          <div className="space-y-3">
+            {activeGoals.map((goal) => {
+              const progress = clampProgress(goal.progress ?? (goal.currentAmount / Math.max(goal.targetAmount, 1)) * 100);
+              return (
+                <button key={goal.id} type="button" onClick={() => setSheet({ mode: 'edit', goal })} className="app-card w-full p-5 text-left active:scale-[0.99]">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="truncate text-lg font-semibold text-white">{goal.title}</div>
+                      {goal.note ? <div className="mt-1 line-clamp-1 text-sm text-white/42">{goal.note}</div> : null}
+                    </div>
+                    <div className="shrink-0 text-right text-sm text-emerald-100/85">
+                      {formatMoney(goal.targetAmount, goal.currency)}
+                    </div>
+                  </div>
+                  <div className="mt-4 h-2 rounded-full bg-white/8">
+                    <div className="h-2 rounded-full bg-emerald-200/70" style={{ width: `${progress}%` }} />
+                  </div>
+                  <div className="mt-2 flex justify-between text-xs text-white/42">
+                    <span>{formatMoney(goal.currentAmount, goal.currency)}</span>
+                    <span>{progress}%</span>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        )}
       </div>
+
+      <GoalEditSheet
+        open={!!sheet}
+        goal={sheet?.mode === 'edit' ? sheet.goal : null}
+        isSaving={isSaving}
+        onClose={() => setSheet(null)}
+        onSave={saveGoal}
+        onDelete={deleteGoal}
+      />
     </div>
   );
 }
