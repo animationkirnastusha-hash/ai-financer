@@ -101,22 +101,72 @@ export function extractMoneyAmountFromText(text: unknown): number | null {
   const normalized = normalizeText(text);
   if (!normalized) return null;
 
-  const groupedNumeric = normalized.match(/(?:^|[^\p{L}\p{N}])([0-9]{1,3}(?:\s+[0-9]{3})+)(?=$|[^\p{L}\p{N}])/iu);
-  if (groupedNumeric) {
-    return toSafeInteger(Number(groupedNumeric[1].replace(/\s+/g, '')));
-  }
-
-  const numericWithScale = normalized.match(/(?:^|[^\p{L}\p{N}])([0-9]+(?:[.,][0-9]+)?)\s*(к|k|тыс\.?|тысяч(?:а|и)?|тыщ|nghìn|ngan|thousand|млн\.?|миллион(?:а|ов)?|million|triệu)(?=$|[^\p{L}\p{N}])/iu);
-  if (numericWithScale) {
-    return toSafeInteger(Number(numericWithScale[1].replace(',', '.')) * scaleFromToken(numericWithScale[2]));
-  }
-
-  const plainNumeric = normalized.match(/(?:^|[^\p{L}\p{N}])([0-9]+(?:[.,][0-9]+)?)(?=$|[^\p{L}\p{N}])/iu);
-  if (plainNumeric) {
-    return toSafeInteger(Number(plainNumeric[1].replace(',', '.')));
-  }
+  const candidates = collectNumericCandidates(normalized);
+  if (candidates.length) return chooseMoneyCandidate(normalized, candidates);
 
   return russianNumberWordsToNumber(normalized);
+}
+
+
+type NumericCandidate = {
+  value: number;
+  start: number;
+  end: number;
+  raw: string;
+  scaled: boolean;
+  grouped: boolean;
+};
+
+const CURRENCY_HINT_RE = /^(\s)*(₽|руб\.?|rur|rub|rouble|ruble|рубл(?:ей|я|ь)?|\$|usd|доллар(?:ов|ы|а)?|бакс(?:ов|ы|а)?|€|eur|евро|vnd|донг(?:ов|и|а)?|dong|đ|₫)/iu;
+const MONEY_VERB_RE = /(баланс|сумм(?:а|у|ой)?|цель|бюджет|доход|расход|потрат|купил|купила|оплат|перев(?:еди|ести|од)|пополни|положи|зарплат|стоим|цена|за|на)$/iu;
+const ACCOUNT_NUMBER_HINT_RE = /(карта|карту|карты|сч[её]т|счета|кошел[её]к|наличка)$/iu;
+
+function collectNumericCandidates(text: string): NumericCandidate[] {
+  const candidates: NumericCandidate[] = [];
+
+  for (const match of text.matchAll(/(?:^|[^\p{L}\p{N}])([0-9]{1,3}(?:\s+[0-9]{3})+)(?=$|[^\p{L}\p{N}])/giu)) {
+    const raw = match[1];
+    const value = toSafeInteger(Number(raw.replace(/\s+/g, '')));
+    if (value !== null) candidates.push({ value, start: (match.index ?? 0) + match[0].indexOf(raw), end: (match.index ?? 0) + match[0].indexOf(raw) + raw.length, raw, scaled: false, grouped: true });
+  }
+
+  for (const match of text.matchAll(/(?:^|[^\p{L}\p{N}])([0-9]+(?:[.,][0-9]+)?)\s*(к|k|тыс\.?|тысяч(?:а|и)?|тыщ|nghìn|ngan|thousand|млн\.?|миллион(?:а|ов)?|million|triệu)(?=$|[^\p{L}\p{N}])/giu)) {
+    const raw = match[1];
+    const token = match[2];
+    const value = toSafeInteger(Number(raw.replace(',', '.')) * scaleFromToken(token));
+    if (value !== null) candidates.push({ value, start: (match.index ?? 0) + match[0].indexOf(raw), end: (match.index ?? 0) + match[0].indexOf(token) + token.length, raw: `${raw} ${token}`, scaled: true, grouped: false });
+  }
+
+  for (const match of text.matchAll(/(?:^|[^\p{L}\p{N}])([0-9]+(?:[.,][0-9]+)?)(?=$|[^\p{L}\p{N}])/giu)) {
+    const raw = match[1];
+    const value = toSafeInteger(Number(raw.replace(',', '.')));
+    if (value !== null) candidates.push({ value, start: (match.index ?? 0) + match[0].indexOf(raw), end: (match.index ?? 0) + match[0].indexOf(raw) + raw.length, raw, scaled: false, grouped: false });
+  }
+
+  return candidates
+    .filter((candidate, index, all) => all.findIndex((item) => item.start === candidate.start && item.end === candidate.end) === index)
+    .sort((a, b) => a.start - b.start);
+}
+
+function chooseMoneyCandidate(text: string, candidates: NumericCandidate[]): number | null {
+  let best: { candidate: NumericCandidate; score: number } | null = null;
+
+  for (const candidate of candidates) {
+    const before = text.slice(Math.max(0, candidate.start - 28), candidate.start).trim();
+    const after = text.slice(candidate.end, Math.min(text.length, candidate.end + 28)).trim();
+    let score = 0;
+
+    if (candidate.scaled || candidate.grouped) score += 8;
+    if (CURRENCY_HINT_RE.test(after)) score += 30;
+    if (MONEY_VERB_RE.test(before)) score += 14;
+    if (ACCOUNT_NUMBER_HINT_RE.test(before) && !CURRENCY_HINT_RE.test(after)) score -= 12;
+    if (String(Math.trunc(candidate.value)).length >= 8 && !candidate.scaled && !candidate.grouped && !CURRENCY_HINT_RE.test(after)) score -= 28;
+    score += candidate.start / Math.max(text.length, 1);
+
+    if (!best || score > best.score) best = { candidate, score };
+  }
+
+  return best?.candidate.value ?? null;
 }
 
 function extractMoneyAmountFromValue(value: unknown): number | null {

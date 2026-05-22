@@ -95,7 +95,7 @@ export class AIValidatorService {
         if (action.tool === 'update_account') {
           const type = this.coerceAccountType(input.type, null);
           const currency = this.coerceCurrency(input.currency, userText, null);
-          const balance = normalizeMoneyAmount(input.balance, userText);
+          const balance = input.balance !== null && input.balance !== undefined ? normalizeMoneyAmount(input.balance, userText) : null;
 
           if (input.name !== null && input.name !== undefined) input.name = this.cleanEntityName(input.name);
           if (type) input.type = type;
@@ -383,8 +383,9 @@ export class AIValidatorService {
 
       if (action.tool === 'create_goal') {
         const title = this.cleanEntityName(input.title || input.name || input.goal);
-        const targetAmount = normalizeMoneyAmount(input.targetAmount || input.amount, userText);
-        const currentAmount = normalizeMoneyAmount(input.currentAmount, userText) ?? 0;
+        const targetSource = input.targetAmount ?? input.amount;
+        const targetAmount = targetSource !== null && targetSource !== undefined ? normalizeMoneyAmount(targetSource, userText) : null;
+        const currentAmount = input.currentAmount !== null && input.currentAmount !== undefined ? normalizeMoneyAmount(input.currentAmount, userText) ?? 0 : 0;
         const currency = this.coerceCurrency(input.currency, userText, 'RUB') ?? 'RUB';
         const accountName = this.cleanString(input.account);
         const account = accountName ? this.resolveAccount(accounts, accountName) : null;
@@ -419,8 +420,9 @@ export class AIValidatorService {
 
         if (action.tool === 'update_goal') {
           const title = this.cleanEntityName(input.title);
-          const targetAmount = normalizeMoneyAmount(input.targetAmount || input.amount, userText);
-          const currentAmount = normalizeMoneyAmount(input.currentAmount, userText);
+          const targetSource = input.targetAmount ?? input.amount;
+          const targetAmount = targetSource !== null && targetSource !== undefined ? normalizeMoneyAmount(targetSource, userText) : null;
+          const currentAmount = input.currentAmount !== null && input.currentAmount !== undefined ? normalizeMoneyAmount(input.currentAmount, userText) : null;
           const status = this.cleanString(input.status);
 
           if (title) input.title = title; else delete input.title;

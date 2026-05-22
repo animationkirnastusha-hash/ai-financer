@@ -135,11 +135,12 @@ export class AIExecutorService {
 
       this.rememberAccount(createdAccountNames, name, account.id);
       this.rememberAccount(createdAccountNames, account.name, account.id);
+      this.rememberLastCreatedAccount(createdAccountNames, account.id);
       return { tool, account };
     }
 
     if (tool === 'update_account') {
-      const accountId = this.requireString(resolved.accountId, 'accountId');
+      const accountId = await this.resolveAccountIdForAction(tx, userId, input, resolved, createdAccountNames, 'accountId');
       const account = await tx.account.update({
         where: { id: accountId },
         data: {
@@ -169,7 +170,7 @@ export class AIExecutorService {
     }
 
     if (tool === 'set_primary_account') {
-      const accountId = this.requireString(resolved.accountId, 'accountId');
+      const accountId = await this.resolveAccountIdForAction(tx, userId, input, resolved, createdAccountNames, 'accountId');
       const scope = input.scope === 'expense' || input.scope === 'income' || input.scope === 'both' ? input.scope : 'both';
       const data: Record<string, unknown> = {};
 
@@ -598,6 +599,9 @@ export class AIExecutorService {
       if (account) return account.id;
     }
 
+    const onlyCreatedId = this.getOnlyCreatedAccountId(createdAccountNames);
+    if (onlyCreatedId) return onlyCreatedId;
+
     throw new Error('Cannot execute transaction: account was not resolved');
   }
 
@@ -717,6 +721,31 @@ export class AIExecutorService {
     }
   }
 
+  private async resolveAccountIdForAction(
+    tx: Prisma.TransactionClient,
+    userId: string,
+    input: Record<string, unknown>,
+    resolved: Record<string, unknown>,
+    createdAccountNames: Map<string, string>,
+    fieldName: string,
+  ) {
+    if (typeof resolved.accountId === 'string' && resolved.accountId.trim()) return resolved.accountId;
+
+    const accountRef = this.cleanString(input.account || input.accountName || input.name);
+    if (accountRef) {
+      const createdId = createdAccountNames.get(this.key(accountRef));
+      if (createdId) return createdId;
+
+      const account = await this.resolveAccount(tx, userId, accountRef);
+      if (account) return account.id;
+    }
+
+    const onlyCreatedId = this.getOnlyCreatedAccountId(createdAccountNames);
+    if (onlyCreatedId) return onlyCreatedId;
+
+    return this.requireString(resolved.accountId, fieldName);
+  }
+
   private async getAccount(tx: Prisma.TransactionClient, userId: string, accountId: string) {
     const account = await tx.account.findFirst({ where: { id: accountId, userId } });
     if (!account) throw new NotFoundError('Account not found');
@@ -736,6 +765,20 @@ export class AIExecutorService {
   private rememberAccount(map: Map<string, string>, name: string, id: string) {
     const key = this.key(name);
     if (key) map.set(key, id);
+  }
+
+  private rememberLastCreatedAccount(map: Map<string, string>, id: string) {
+    map.set('__last_created_account__', id);
+  }
+
+  private getOnlyCreatedAccountId(map: Map<string, string>) {
+    const ids = Array.from(new Set(Array.from(map.entries())
+      .filter(([key]) => key !== '__last_created_account__')
+      .map(([, id]) => id)
+      .filter(Boolean)));
+
+    if (ids.length === 1) return ids[0];
+    return map.get('__last_created_account__') ?? '';
   }
 
   private key(value: string) {
