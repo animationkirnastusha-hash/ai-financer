@@ -1,9 +1,14 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { CompanionButton } from '@/shared/ui/CompanionButton';
 import { companionApi, type CompanionStateDto } from '@/shared/api/companion.api';
 import { useNavigationStore } from '@/features/navigation/model/navigation.store';
 
 type Props = { compact?: boolean };
+
+function clampPercent(value: number) {
+  if (!Number.isFinite(value)) return 0;
+  return Math.max(4, Math.min(100, Math.round(value)));
+}
 
 export function CompanionPresence({ compact = false }: Props) {
   const navigateTo = useNavigationStore((state) => state.navigateTo);
@@ -20,35 +25,50 @@ export function CompanionPresence({ compact = false }: Props) {
     };
   }, []);
 
-  const message = state?.message || 'Готов помочь с расходами, доходами и вопросами по деньгам.';
-  const xp = state?.xp ?? 0;
-  const nextXp = Math.max(1000, Math.ceil((xp + 1) / 1000) * 1000);
-  const progress = Math.min(100, Math.max(6, Math.round((xp / nextXp) * 100)));
+  const xp = Number(state?.xp ?? 0);
+  const level = Number(state?.level ?? 1);
+  const currentLevelBase = Math.max(0, (level - 1) * 100);
+  const nextLevelBase = level * 100;
+  const progress = clampPercent(((xp - currentLevelBase) / Math.max(1, nextLevelBase - currentLevelBase)) * 100);
+  const message = state?.message || 'Готов помогать с расходами, счетами, целями и привычками.';
+
+  const status = useMemo(() => {
+    const streak = Number(state?.streakDays ?? 0);
+    if (streak >= 7) return `Серия ${streak} дней. Хороший темп.`;
+    if (xp > 0) return `Опыт ${xp}. До следующего уровня осталось немного.`;
+    return 'Начни с первой операции или цели.';
+  }, [state?.streakDays, xp]);
 
   if (compact) {
-    return <CompanionButton mood={state?.mood ?? 'idle'} onClick={() => openAIWithCommand()} label="Открыть AI" />;
+    return <CompanionButton mood={state?.mood ?? 'idle'} onClick={() => navigateTo('companion')} label="Помощник" />;
   }
 
   return (
-    <section className="app-card app-companion-card" data-no-swipe="true">
-      <div className="app-companion-card__avatar">
-        <CompanionButton size="lg" mood={state?.mood ?? 'idle'} onClick={() => navigateTo('companion')} label="Открыть помощника" />
+    <section className="app-card app-companion-presence" data-no-swipe="true">
+      <div className="app-companion-presence__main">
+        <button type="button" className="app-companion-presence__avatar" onClick={() => navigateTo('companion')} aria-label="Открыть помощника">
+          <CompanionButton size="lg" mood={state?.mood ?? 'idle'} label="Помощник" />
+        </button>
+
+        <div className="app-companion-presence__content">
+          <div className="app-eyebrow">Помощник</div>
+          <div className="mt-1 text-xl font-semibold tracking-[-0.035em] text-white">Финансовый компаньон</div>
+          <p className="mt-2 text-sm leading-6 text-white/58">{message}</p>
+
+          <div className="mt-4 app-xp-panel">
+            <div className="app-xp-panel__top">
+              <span>Уровень {level}</span>
+              <b>{xp} XP</b>
+            </div>
+            <div className="app-xp-panel__track"><i style={{ width: `${progress}%` }} /></div>
+            <div className="app-xp-panel__caption">{status}</div>
+          </div>
+        </div>
       </div>
 
-      <div className="app-companion-card__content">
-        <div className="app-companion-card__kicker">Помощник</div>
-        <div className="app-companion-card__title">Финансовый помощник</div>
-        <p className="app-companion-card__message">{message}</p>
-
-        <div className="app-companion-card__stats">
-          <span>Уровень {state?.level ?? 1}</span>
-          <span>Серия {state?.streakDays ?? 0} дн.</span>
-          <span>{xp} XP</span>
-        </div>
-
-        <div className="app-companion-card__xp" aria-label={`Опыт ${xp} из ${nextXp}`}>
-          <div style={{ width: `${progress}%` }} />
-        </div>
+      <div className="app-companion-presence__actions">
+        <button type="button" onClick={() => openAIWithCommand()} className="app-secondary-button">Спросить AI</button>
+        <button type="button" onClick={() => navigateTo('companion')} className="app-secondary-button">Прогресс</button>
       </div>
     </section>
   );

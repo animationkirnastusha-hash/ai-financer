@@ -23,6 +23,7 @@ const onboardingSteps = [
 const secondaryLinks = [
   { label: 'Счета', screen: 'accounts' as const },
   { label: 'Цели', screen: 'goals' as const },
+  { label: 'Помощник', screen: 'companion' as const },
   { label: 'Рефералы', screen: 'referral' as const },
   { label: 'Премиум', screen: 'premium' as const },
 ];
@@ -148,7 +149,7 @@ export default function DashboardPage() {
           </div>
         </section>
 
-        <section className="grid grid-cols-4 gap-2">
+        <section className="app-secondary-links">
           {secondaryLinks.map((item) => (
             <button key={item.screen} type="button" onClick={() => navigateTo(item.screen)} className="app-small-link">
               {item.label}

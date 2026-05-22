@@ -651,6 +651,45 @@ async function run() {
     return { transactionId: created?.id, result: compactAI(result) };
   }, { skip: config.runAI ? '' : 'TEST_AI=0' });
 
+
+  await test('AI: transfer through natural language', async () => {
+    const from = await createAccount(`${state.prefix} AI Перевод Откуда`, 5_000, 'card');
+    const to = await createAccount(`${state.prefix} AI Перевод Куда`, 1_000, 'cash');
+    const before = await api('/transactions?limit=250');
+    const beforeIds = new Set(listFrom(before.data, ['transactions']).map((item) => item.id).filter(Boolean));
+    const result = await ai(`переведи 777 рублей со счёта "${from.name}" на счёт "${to.name}"`);
+    const after = await api('/transactions?limit=250');
+    const transactions = listFrom(after.data, ['transactions']);
+    const created = transactions.find((item) => !beforeIds.has(item.id) && item.type === 'transfer' && Number(item.amount) === 777);
+    assert(created?.id, 'AI did not create transfer transaction', { result, after: after.data });
+    state.transactions.push(created.id);
+    addCleanup(`ai-transfer:${created.id}`, async () => maybeApi(`/transactions/${created.id}`, { method: 'DELETE' }));
+    return { transactionId: created.id, result: compactAI(result) };
+  }, { skip: config.runAI ? '' : 'TEST_AI=0' });
+
+  await test('AI: update and delete goal lifecycle', async () => {
+    const title = `${state.prefix} AI Цель Жизненный цикл`;
+    const seed = await createGoal(title);
+    const update = await ai(`измени цель "${title}" поставь сумму 88000 рублей`);
+    const updated = await findGoalByTitle(title);
+    assert(updated?.id, 'Goal disappeared after AI update', { update, seed });
+    assert(Number(updated.targetAmount ?? updated.target ?? 0) === 88000, 'AI did not update goal target amount', { update, updated });
+
+    const remove = await ai(`удали цель "${title}"`);
+    const removed = await findGoalByTitle(title);
+    assert(!removed?.id, 'AI did not delete goal', { remove, removed });
+    return { goalId: seed.id, update: compactAI(update), remove: compactAI(remove) };
+  }, { skip: config.runAI ? '' : 'TEST_AI=0' });
+
+  await test('AI: delete one account through natural language', async () => {
+    const name = `${state.prefix} AI Удалить Один Счёт`;
+    const seed = await createAccount(name, 100, 'cash');
+    const result = await ai(`удали счёт "${name}"`);
+    const fresh = await findAccountByName(name);
+    assert(!fresh?.id, 'AI did not delete the selected account', { result, seed, fresh });
+    return { accountId: seed.id, result: compactAI(result) };
+  }, { skip: config.runAI ? '' : 'TEST_AI=0' });
+
   await test('AI: off-topic gets answer, no financial action required', async () => {
     const result = await ai('как думаешь, люди вообще меняются?', { execute: true, confirm: false });
     const pendingActionId = pendingIdFromAI(result);
