@@ -146,7 +146,7 @@ export default function SettingsPage() {
         </section>
 
 
-        <section className="app-card data-reset-card">
+        <section className="app-card border-rose-400/20 bg-white/[0.055]">
           <div className="app-section-title">Очистка данных</div>
           <p className="mt-2 text-sm leading-6 text-white/48">
             Для тестов можно начать заново. Финансовая очистка не трогает XP, уровень, серию, рефералы и профиль.
@@ -154,21 +154,21 @@ export default function SettingsPage() {
           <div className="mt-4 grid gap-3">
             <button
               type="button"
-              className="data-reset-button"
+              className="w-full rounded-[18px] border border-white/10 bg-white/[0.055] px-3.5 py-3 text-left text-white/88 transition active:scale-[0.985] disabled:cursor-not-allowed disabled:opacity-55"
               disabled={resetMode !== null}
               onClick={() => handleReset('finance')}
             >
-              <span>Очистить финансы</span>
-              <small>Счета, операции, цели, категории, разделы и AI-контекст</small>
+              <span className="block text-[13px] font-bold">Очистить финансы</span>
+              <small className="mt-1 block text-[11px] leading-snug text-white/42">Счета, операции, цели, категории, разделы и AI-контекст</small>
             </button>
             <button
               type="button"
-              className="data-reset-button data-reset-button--danger"
+              className="w-full rounded-[18px] border border-rose-300/25 bg-rose-500/10 px-3.5 py-3 text-left text-rose-100 transition active:scale-[0.985] disabled:cursor-not-allowed disabled:opacity-55"
               disabled={resetMode !== null}
               onClick={() => handleReset('full')}
             >
-              <span>Сбросить всё</span>
-              <small>Финансы, XP, уровень, достижения и companion-прогресс</small>
+              <span className="block text-[13px] font-bold">Сбросить всё</span>
+              <small className="mt-1 block text-[11px] leading-snug text-white/42">Финансы, XP, уровень, достижения и companion-прогресс</small>
             </button>
           </div>
           {resetStatus ? <div className="mt-3 text-sm text-white/60">{resetStatus}</div> : null}

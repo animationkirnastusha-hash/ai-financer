@@ -259,7 +259,7 @@ export default function AdminPage() {
                 <div className="mt-3 grid grid-cols-2 gap-2">
                   <button
                     type="button"
-                    className="admin-reset-button"
+                    className="block w-full rounded-2xl border border-white/10 bg-white/[0.055] px-3 py-2.5 text-center text-xs font-bold text-white/88 transition active:scale-[0.985] disabled:cursor-not-allowed disabled:opacity-55"
                     disabled={resettingUserId !== null}
                     onClick={() => handleResetUser(item.id, 'finance')}
                   >
@@ -267,7 +267,7 @@ export default function AdminPage() {
                   </button>
                   <button
                     type="button"
-                    className="admin-reset-button admin-reset-button--danger"
+                    className="block w-full rounded-2xl border border-rose-300/25 bg-rose-500/10 px-3 py-2.5 text-center text-xs font-bold text-rose-100 transition active:scale-[0.985] disabled:cursor-not-allowed disabled:opacity-55"
                     disabled={resettingUserId !== null}
                     onClick={() => handleResetUser(item.id, 'full')}
                   >
