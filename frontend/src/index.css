@@ -1290,3 +1290,158 @@ body.ai-screen-slide-right .ai-screen-transition {
     margin-bottom: 8px;
   }
 }
+
+/* Patch-35: wake-word companion mode */
+.voice-first-intro__field {
+  display: grid;
+  gap: 8px;
+  margin-top: 16px;
+  text-align: left;
+}
+
+.voice-first-intro__field span {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.52);
+}
+
+.voice-first-intro__field input,
+.voice-settings-field input {
+  width: 100%;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  background: rgba(255, 255, 255, 0.06);
+  padding: 13px 14px;
+  color: white;
+  outline: none;
+}
+
+.voice-first-intro__field input:focus,
+.voice-settings-field input:focus {
+  border-color: rgba(110, 231, 183, 0.36);
+  box-shadow: 0 0 0 3px rgba(110, 231, 183, 0.08);
+}
+
+.voice-first-intro__hint,
+.voice-settings-example {
+  margin-top: 12px;
+  border-radius: 18px;
+  border: 1px solid rgba(110, 231, 183, 0.14);
+  background: rgba(110, 231, 183, 0.07);
+  padding: 12px;
+  font-size: 12px;
+  line-height: 1.55;
+  color: rgba(215, 255, 242, 0.78);
+}
+
+.voice-settings-card {
+  border-radius: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.035);
+  padding: 14px;
+}
+
+.voice-settings-field {
+  display: grid;
+  gap: 8px;
+}
+
+.voice-settings-field span {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.52);
+}
+
+.voice-window-control {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  border-radius: 22px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.035);
+  padding: 14px;
+}
+
+.voice-window-control select {
+  min-width: 96px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  background: #111923;
+  padding: 10px 12px;
+  color: white;
+  outline: none;
+}
+
+.voice-first-status {
+  max-width: 190px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Patch 36 final pretest: reset controls */
+.data-reset-card {
+  border-color: rgba(251, 113, 133, 0.18);
+  background: linear-gradient(180deg, rgba(255,255,255,0.075), rgba(255,255,255,0.035));
+}
+
+.data-reset-button,
+.admin-reset-button {
+  width: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.055);
+  color: rgba(255, 255, 255, 0.88);
+  padding: 12px 14px;
+  text-align: left;
+  transition: transform 160ms ease, border-color 160ms ease, background 160ms ease;
+}
+
+.data-reset-button span,
+.admin-reset-button {
+  display: block;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.data-reset-button small {
+  display: block;
+  margin-top: 4px;
+  color: rgba(255, 255, 255, 0.42);
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.data-reset-button:active,
+.admin-reset-button:active {
+  transform: scale(0.985);
+}
+
+.data-reset-button:disabled,
+.admin-reset-button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.data-reset-button--danger,
+.admin-reset-button--danger {
+  border-color: rgba(251, 113, 133, 0.22);
+  background: rgba(244, 63, 94, 0.11);
+  color: rgb(255, 205, 213);
+}
+
+.admin-reset-button {
+  text-align: center;
+  font-size: 12px;
+  padding: 10px 12px;
+  border-radius: 16px;
+}
+
+.voice-first-intro__card {
+  max-width: min(420px, calc(100vw - 28px));
+}
+
+.voice-first-bubble {
+  backdrop-filter: blur(22px) saturate(1.25);
+  -webkit-backdrop-filter: blur(22px) saturate(1.25);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+}

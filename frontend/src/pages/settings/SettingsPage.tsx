@@ -1,18 +1,28 @@
+import { useState } from 'react';
 import { useSettingsStore } from '@/features/settings/model/settings.store';
 import { useNavigationStore } from '@/features/navigation/model/navigation.store';
 import { LanguageSwitcher } from '@/shared/ui/LanguageSwitcher';
 import { ScreenTopBar } from '@/shared/ui/ScreenTopBar';
 import { useAuthStore } from '@/features/auth/model/auth.store';
+import { dataResetApi, type DataResetMode } from '@/features/data-reset/api/dataReset.api';
 
 export default function SettingsPage() {
+  const [resetStatus, setResetStatus] = useState<string | null>(null);
+  const [resetMode, setResetMode] = useState<DataResetMode | null>(null);
   const navigateTo = useNavigationStore((state) => state.navigateTo);
   const user = useAuthStore((state) => state.user);
+  const companionName = useSettingsStore((state) => state.companionName);
+  const voiceWakeWordEnabled = useSettingsStore((state) => state.voiceWakeWordEnabled);
+  const voiceActiveWindowSeconds = useSettingsStore((state) => state.voiceActiveWindowSeconds);
   const voiceEnabled = useSettingsStore((state) => state.voiceEnabled);
   const voiceBetaEnabled = useSettingsStore((state) => state.voiceBetaEnabled);
   const voiceRepliesEnabled = useSettingsStore((state) => state.voiceRepliesEnabled);
   const voiceAlwaysOnEnabled = useSettingsStore((state) => state.voiceAlwaysOnEnabled);
   const textInputEnabled = useSettingsStore((state) => state.textInputEnabled);
   const aiInsightsEnabled = useSettingsStore((state) => state.aiInsightsEnabled);
+  const setCompanionName = useSettingsStore((state) => state.setCompanionName);
+  const setVoiceWakeWordEnabled = useSettingsStore((state) => state.setVoiceWakeWordEnabled);
+  const setVoiceActiveWindowSeconds = useSettingsStore((state) => state.setVoiceActiveWindowSeconds);
   const setVoiceEnabled = useSettingsStore((state) => state.setVoiceEnabled);
   const setVoiceBetaEnabled = useSettingsStore((state) => state.setVoiceBetaEnabled);
   const setVoiceRepliesEnabled = useSettingsStore((state) => state.setVoiceRepliesEnabled);
@@ -20,10 +30,32 @@ export default function SettingsPage() {
   const setTextInputEnabled = useSettingsStore((state) => state.setTextInputEnabled);
   const setAIInsightsEnabled = useSettingsStore((state) => state.setAIInsightsEnabled);
 
+
+  const handleReset = async (mode: DataResetMode) => {
+    const text = mode === 'finance'
+      ? 'Очистить все финансовые данные? XP, уровень и прогресс останутся.'
+      : 'Сбросить всё по аккаунту? Финансы, XP, уровень, достижения и прогресс будут обнулены. Профиль останется.';
+
+    if (!window.confirm(text)) return;
+
+    setResetMode(mode);
+    setResetStatus(null);
+
+    try {
+      await dataResetApi.resetMe(mode);
+      setResetStatus(mode === 'finance' ? 'Финансовые данные очищены.' : 'Аккаунт обнулён.');
+      window.setTimeout(() => window.location.reload(), 700);
+    } catch (error) {
+      setResetStatus(error instanceof Error ? error.message : 'Не удалось выполнить сброс.');
+    } finally {
+      setResetMode(null);
+    }
+  };
+
   const navigationItems = [
     { title: 'Счета', caption: 'Баланс и основные счета', screen: 'accounts' as const },
     { title: 'Цели', caption: 'Накопления и планы', screen: 'goals' as const },
-    { title: 'Companion', caption: 'Голос, реакции и прогресс', screen: 'companion' as const },
+    { title: 'Помощник', caption: 'Голос, реакции и прогресс', screen: 'companion' as const },
     { title: 'Разделы', caption: 'Категории и структура', screen: 'taxonomy-settings' as const },
     { title: 'Рефералы', caption: 'Код и приглашения', screen: 'referral' as const },
     { title: 'Премиум', caption: 'Расширенные возможности', screen: 'premium' as const },
@@ -52,21 +84,41 @@ export default function SettingsPage() {
 
         <section className="app-card">
           <div className="app-section-title">Голос и AI</div>
+
+          <div className="voice-settings-card mt-4">
+            <label className="voice-settings-field">
+              <span>Имя помощника</span>
+              <input
+                value={companionName}
+                onChange={(event) => setCompanionName(event.target.value)}
+                placeholder="Фина"
+                maxLength={24}
+              />
+            </label>
+            <div className="voice-settings-example">
+              Скажи: “{companionName || 'Фина'}, кофе 300”. Без имени команда не уйдёт в AI.
+            </div>
+          </div>
+
           <div className="mt-4 space-y-3">
             <label className="app-toggle-row">
-              <span><span>Голосовой ввод</span><small>Разрешает управление через companion.</small></span>
+              <span><span>Голосовой ввод</span><small>Разрешает управление через помощника.</small></span>
               <input type="checkbox" checked={voiceEnabled} onChange={(event) => setVoiceEnabled(event.target.checked)} />
             </label>
             <label className="app-toggle-row">
-              <span><span>Голос всегда готов</span><small>Пока приложение открыто, companion слушает короткие фразы.</small></span>
+              <span><span>Микрофон включён</span><small>Пока приложение открыто, помощник ждёт имя.</small></span>
               <input type="checkbox" checked={voiceAlwaysOnEnabled} onChange={(event) => setVoiceAlwaysOnEnabled(event.target.checked)} />
+            </label>
+            <label className="app-toggle-row">
+              <span><span>Ключевая фраза</span><small>Боевой режим начинается только после имени помощника.</small></span>
+              <input type="checkbox" checked={voiceWakeWordEnabled} onChange={(event) => setVoiceWakeWordEnabled(event.target.checked)} />
             </label>
             <label className="app-toggle-row">
               <span><span>Бета-режим голоса</span><small>Включает экспериментальную обработку голосовых команд.</small></span>
               <input type="checkbox" checked={voiceBetaEnabled} onChange={(event) => setVoiceBetaEnabled(event.target.checked)} />
             </label>
             <label className="app-toggle-row">
-              <span><span>Ответы голосом</span><small>Companion может коротко озвучивать ответ.</small></span>
+              <span><span>Ответы голосом</span><small>Помощник может коротко озвучивать ответ.</small></span>
               <input type="checkbox" checked={voiceRepliesEnabled} onChange={(event) => setVoiceRepliesEnabled(event.target.checked)} />
             </label>
             <label className="app-toggle-row">
@@ -78,6 +130,48 @@ export default function SettingsPage() {
               <input type="checkbox" checked={aiInsightsEnabled} onChange={(event) => setAIInsightsEnabled(event.target.checked)} />
             </label>
           </div>
+
+          <div className="voice-window-control mt-4">
+            <div>
+              <div className="text-sm font-medium text-white">Время после имени</div>
+              <div className="mt-1 text-xs text-white/45">Сколько секунд помощник слушает без повторного имени.</div>
+            </div>
+            <select value={voiceActiveWindowSeconds} onChange={(event) => setVoiceActiveWindowSeconds(Number(event.target.value))}>
+              <option value={8}>8 сек</option>
+              <option value={16}>16 сек</option>
+              <option value={25}>25 сек</option>
+              <option value={40}>40 сек</option>
+            </select>
+          </div>
+        </section>
+
+
+        <section className="app-card data-reset-card">
+          <div className="app-section-title">Очистка данных</div>
+          <p className="mt-2 text-sm leading-6 text-white/48">
+            Для тестов можно начать заново. Финансовая очистка не трогает XP, уровень, серию, рефералы и профиль.
+          </p>
+          <div className="mt-4 grid gap-3">
+            <button
+              type="button"
+              className="data-reset-button"
+              disabled={resetMode !== null}
+              onClick={() => handleReset('finance')}
+            >
+              <span>Очистить финансы</span>
+              <small>Счета, операции, цели, категории, разделы и AI-контекст</small>
+            </button>
+            <button
+              type="button"
+              className="data-reset-button data-reset-button--danger"
+              disabled={resetMode !== null}
+              onClick={() => handleReset('full')}
+            >
+              <span>Сбросить всё</span>
+              <small>Финансы, XP, уровень, достижения и companion-прогресс</small>
+            </button>
+          </div>
+          {resetStatus ? <div className="mt-3 text-sm text-white/60">{resetStatus}</div> : null}
         </section>
 
         <section className="app-card">

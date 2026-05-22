@@ -7,6 +7,10 @@ export type AppLanguage = 'ru' | 'en';
 export type AppSettings = {
   appLanguage: AppLanguage;
 
+  companionName: string;
+  voiceWakeWordEnabled: boolean;
+  voiceActiveWindowSeconds: number;
+
   voiceEnabled: boolean;
   voiceBetaEnabled: boolean;
   voiceRepliesEnabled: boolean;

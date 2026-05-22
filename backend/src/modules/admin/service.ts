@@ -1,5 +1,6 @@
 import { prisma } from '../../lib/prisma';
 import { monitoringService } from '../monitoring/monitoring.instance';
+import { dataResetService } from '../data-reset/service';
 
 function startOfDay(daysAgo: number) {
   const date = new Date();
@@ -180,4 +181,13 @@ export class AdminService {
   getMonitoring() {
     return monitoringService.getSnapshot();
   }
+
+  async resetUser(userId: string, mode: unknown) {
+    return dataResetService.reset({ userId }, mode);
+  }
+
+  async resetAllUsers(mode: unknown) {
+    return dataResetService.reset({ allUsers: true }, mode);
+  }
 }
+

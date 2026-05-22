@@ -9,6 +9,10 @@ import type {
 type SettingsState = AppSettings & {
   setAppLanguage: (language: AppLanguage) => void;
 
+  setCompanionName: (name: string) => void;
+  setVoiceWakeWordEnabled: (value: boolean) => void;
+  setVoiceActiveWindowSeconds: (seconds: number) => void;
+
   setVoiceEnabled: (value: boolean) => void;
   setVoiceBetaEnabled: (value: boolean) => void;
   setVoiceRepliesEnabled: (value: boolean) => void;
@@ -29,9 +33,14 @@ type SettingsState = AppSettings & {
 };
 
 const STORAGE_KEY = 'ai-financer-settings';
+const DEFAULT_COMPANION_NAME = 'Фина';
 
 const defaultSettings: AppSettings = {
   appLanguage: 'ru',
+
+  companionName: DEFAULT_COMPANION_NAME,
+  voiceWakeWordEnabled: true,
+  voiceActiveWindowSeconds: 16,
 
   voiceEnabled: true,
   voiceBetaEnabled: true,
@@ -52,6 +61,17 @@ const defaultSettings: AppSettings = {
   rubToEurRate: 100,
 };
 
+function normalizeCompanionName(value: unknown) {
+  if (typeof value !== 'string') return DEFAULT_COMPANION_NAME;
+  const next = value.replace(/\s+/g, ' ').trim().slice(0, 24);
+  return next || DEFAULT_COMPANION_NAME;
+}
+
+function normalizeActiveWindow(value: unknown) {
+  if (typeof value !== 'number' || Number.isNaN(value)) return defaultSettings.voiceActiveWindowSeconds;
+  return Math.min(45, Math.max(6, Math.round(value)));
+}
+
 function loadSettings(): AppSettings {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -63,6 +83,9 @@ function loadSettings(): AppSettings {
       ...defaultSettings,
       ...parsed,
       appLanguage: parsed.appLanguage === 'en' ? 'en' : 'ru',
+      companionName: normalizeCompanionName(parsed.companionName),
+      voiceWakeWordEnabled: parsed.voiceWakeWordEnabled === false ? false : true,
+      voiceActiveWindowSeconds: normalizeActiveWindow(parsed.voiceActiveWindowSeconds),
       voiceAlwaysOnEnabled: Boolean(parsed.voiceAlwaysOnEnabled),
       voicePermissionPrompted: Boolean(parsed.voicePermissionPrompted),
       textInputEnabled: parsed.textInputEnabled === false ? false : true,
@@ -77,6 +100,9 @@ function saveSettings(state: AppSettings) {
     STORAGE_KEY,
     JSON.stringify({
       appLanguage: state.appLanguage,
+      companionName: normalizeCompanionName(state.companionName),
+      voiceWakeWordEnabled: state.voiceWakeWordEnabled,
+      voiceActiveWindowSeconds: normalizeActiveWindow(state.voiceActiveWindowSeconds),
       voiceEnabled: state.voiceEnabled,
       voiceBetaEnabled: state.voiceBetaEnabled,
       voiceRepliesEnabled: state.voiceRepliesEnabled,
@@ -101,6 +127,21 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
 
   setAppLanguage: (appLanguage) => {
     set({ appLanguage });
+    saveSettings(get());
+  },
+
+  setCompanionName: (companionName) => {
+    set({ companionName: normalizeCompanionName(companionName) });
+    saveSettings(get());
+  },
+
+  setVoiceWakeWordEnabled: (voiceWakeWordEnabled) => {
+    set({ voiceWakeWordEnabled });
+    saveSettings(get());
+  },
+
+  setVoiceActiveWindowSeconds: (voiceActiveWindowSeconds) => {
+    set({ voiceActiveWindowSeconds: normalizeActiveWindow(voiceActiveWindowSeconds) });
     saveSettings(get());
   },
 

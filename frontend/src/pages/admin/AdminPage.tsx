@@ -56,6 +56,7 @@ export default function AdminPage() {
   const [events, setEvents] = useState<AdminEvent[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<LoadError>({});
+  const [resettingUserId, setResettingUserId] = useState<string | null>(null);
 
   const isAdmin = Boolean(user?.isAdmin);
 
@@ -96,6 +97,29 @@ export default function AdminPage() {
   }, [isAdmin]);
 
   const monitoring = overview?.monitoring;
+
+  const reloadUsers = async () => {
+    const payload = await adminApi.users();
+    setUsers(payload.users);
+  };
+
+  const handleResetUser = async (userId: string, mode: 'finance' | 'full') => {
+    const text = mode === 'finance'
+      ? 'Очистить финансы этого пользователя? Прогресс останется.'
+      : 'Полностью обнулить тестера? Профиль останется, но прогресс будет сброшен.';
+
+    if (!window.confirm(text)) return;
+
+    setResettingUserId(userId + ':' + mode);
+    try {
+      await adminApi.resetUser(userId, mode);
+      await reloadUsers();
+      if (overview) setOverview(await adminApi.overview());
+    } finally {
+      setResettingUserId(null);
+    }
+  };
+
   const tabs = useMemo<Array<{ id: Tab; title: string }>>(
     () => [
       { id: 'overview', title: 'Обзор' },
@@ -232,6 +256,24 @@ export default function AdminPage() {
                   <div className="rounded-[16px] bg-black/18 p-2">Рефералы<br /><b className="text-white">{item._count.referrals}</b></div>
                 </div>
                 <div className="mt-3 text-xs text-white/38">Создан: {formatDate(item.createdAt)} · активность: {formatDate(item.lastActiveAt)}</div>
+                <div className="mt-3 grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    className="admin-reset-button"
+                    disabled={resettingUserId !== null}
+                    onClick={() => handleResetUser(item.id, 'finance')}
+                  >
+                    {resettingUserId === item.id + ':finance' ? 'Сбрасываю…' : 'Сбросить финансы'}
+                  </button>
+                  <button
+                    type="button"
+                    className="admin-reset-button admin-reset-button--danger"
+                    disabled={resettingUserId !== null}
+                    onClick={() => handleResetUser(item.id, 'full')}
+                  >
+                    {resettingUserId === item.id + ':full' ? 'Обнуляю…' : 'Обнулить всё'}
+                  </button>
+                </div>
               </div>
             ))}
           </section>

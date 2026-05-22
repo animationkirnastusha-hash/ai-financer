@@ -16,7 +16,8 @@
     "test:ai": "node scripts/run-ai-tests.mjs",
     "test:ai:compiled": "node --test dist/modules/ai/__tests__/*.test.js",
     "test:product": "node scripts/run-product-tests.mjs",
-    "test:product:report": "node scripts/run-product-tests.mjs --report-only"
+    "test:product:report": "node scripts/run-product-tests.mjs --report-only",
+    "reset:data": "node scripts/reset-app-data.mjs"
   },
   "keywords": [],
   "author": "",

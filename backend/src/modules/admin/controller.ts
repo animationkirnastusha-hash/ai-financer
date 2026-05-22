@@ -1,4 +1,4 @@
-import { Response } from 'express';
+import { Request, Response } from 'express';
 import { asyncHandler } from '../../shared/utils/asyncHandler';
 import type { AuthRequest } from '../../middleware/auth';
 import { AdminService } from './service';
@@ -19,4 +19,17 @@ export const getAdminEvents = asyncHandler(async (_req: AuthRequest, res: Respon
 
 export const getAdminMonitoring = asyncHandler(async (_req: AuthRequest, res: Response) => {
   res.json(adminService.getMonitoring());
+});
+
+export const resetAdminUser = asyncHandler(async (req: Request, res: Response) => {
+  const rawUserId = req.params.userId;
+  const userId = Array.isArray(rawUserId) ? rawUserId[0] : rawUserId;
+
+  const result = await adminService.resetUser(userId, req.body?.mode);
+  res.json({ success: true, result });
+});
+
+export const resetAdminAllUsers = asyncHandler(async (req: Request, res: Response) => {
+  const result = await adminService.resetAllUsers(req.body?.mode);
+  res.json({ success: true, result });
 });

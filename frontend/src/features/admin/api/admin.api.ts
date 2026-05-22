@@ -77,9 +77,13 @@ export type AdminEvent = {
   } | null;
 };
 
+export type AdminResetMode = 'finance' | 'full';
+
 export const adminApi = {
   overview: () => apiClient.get<AdminOverview>('/admin/overview'),
   users: () => apiClient.get<{ users: AdminUser[] }>('/admin/users'),
   events: () => apiClient.get<{ events: AdminEvent[] }>('/admin/events'),
   monitoring: () => apiClient.get<AdminMonitoring>('/admin/monitoring'),
+  resetUser: (userId: string, mode: AdminResetMode) => apiClient.post<{ success: boolean }>('/admin/users/' + userId + '/reset', { mode }),
+  resetAll: (mode: AdminResetMode) => apiClient.post<{ success: boolean }>('/admin/reset', { mode }),
 };
