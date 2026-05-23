@@ -68,6 +68,7 @@ function intentLabel(intent?: string, type?: string) {
   const normalized = (intent || type || '').toLowerCase();
   if (normalized.includes('expense')) return 'Расход';
   if (normalized.includes('income')) return 'Доход';
+  if (normalized.includes('update_transaction') || normalized.includes('transaction')) return 'Операция';
   if (normalized.includes('transfer')) return 'Перевод';
   if (normalized.includes('goal')) return 'Цель';
   if (normalized.includes('primary')) return 'Основной счёт';

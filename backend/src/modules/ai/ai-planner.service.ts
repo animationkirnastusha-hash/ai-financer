@@ -9,7 +9,7 @@ type UserContext = {
   categories?: Array<{ name?: string; type?: string; sectionId?: string | null }>;
   sections?: Array<{ id?: string; name?: string }>;
   goals?: Array<{ title?: string; targetAmount?: number; currentAmount?: number; currency?: string; status?: string }>;
-  recentTransactions?: Array<{ description?: string | null; type?: string; amount?: number; account?: { name?: string }; category?: { name?: string } | null; section?: { name?: string } | null }>;
+  recentTransactions?: Array<{ id?: string; description?: string | null; type?: string; amount?: number; createdAt?: string; account?: { name?: string }; category?: { name?: string } | null; section?: { name?: string } | null }>;
   memory?: {
     accountAliases?: Array<{ name?: string; type?: string; currency?: string; aliases?: string[] }>;
     preferences?: unknown[];
@@ -105,6 +105,7 @@ export class AIPlannerService {
       'For companion/reactions, use show_companion_reactions.',
       'For premium/tariff/capabilities, use show_premium_capabilities.',
       'For financial mutations, choose the relevant financial tool from the contract: transactions, transfers, accounts, goals, taxonomy, settings, or onboarding.',
+      'If the user asks to change, edit, fix, correct, rename or update an existing operation/transaction, use update_transaction. Do not create a new transaction for corrections to existing records.',
       'For every transaction, provide category and section when the meaning is clear from the whole request; leave them absent only when genuinely unclear.',
       'If several actions are needed to satisfy one user request, return several tool calls in the correct order.',
       'If user command refers to previous command/result with pronouns or continuation words, use CTX.aiSessionState.lastCommand and CTX.aiSessionState.lastResult only as supporting context.',
@@ -141,6 +142,7 @@ export class AIPlannerService {
         'No hard-coded phrase handling. No financial command-parser behavior.',
         'Exact quoted names must be copied exactly.',
         'For account operations, goals, taxonomy, transactions, transfers, analytics, settings, onboarding: choose the matching tool from the contract.',
+        'Edits to existing operations must use update_transaction, not create_transaction.',
         'For off-topic, return reply with empty actions.',
         'Pass user-provided natural names and amounts through as tool input values; do not manually normalize them with custom rules.',
         'CONTEXT:', JSON.stringify(focusedContext),
@@ -215,13 +217,15 @@ export class AIPlannerService {
         }))
         : [],
       recentTransactions: Array.isArray(value.recentTransactions)
-        ? value.recentTransactions.slice(0, 6).map((item) => ({
+        ? value.recentTransactions.slice(0, 8).map((item) => ({
+          id: item.id,
           type: item.type,
           amount: item.amount,
           description: item.description,
           account: item.account?.name,
           category: item.category?.name,
           section: item.section?.name,
+          createdAt: item.createdAt,
         }))
         : [],
       aiSessionState: value.aiSessionState
@@ -289,6 +293,10 @@ export class AIPlannerService {
 
     if (lower === 'transfer_between_accounts' || lower === 'transfer') {
       return { tool: 'transfer_money', extraInput: {} };
+    }
+
+    if (lower === 'edit_transaction' || lower === 'change_transaction' || lower === 'update_operation' || lower === 'edit_operation') {
+      return { tool: 'update_transaction', extraInput: {} };
     }
 
     return null;

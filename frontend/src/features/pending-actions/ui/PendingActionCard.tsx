@@ -66,6 +66,7 @@ const editableFieldsByIntent: Record<string, string[]> = {
   income: ['amount', 'account', 'category', 'section', 'description'],
   expense: ['amount', 'account', 'category', 'section', 'description'],
   create_transaction: ['amount', 'account', 'category', 'section', 'description'],
+  update_transaction: ['amount', 'account', 'category', 'section', 'description'],
   transfer_money: ['amount', 'fromAccount', 'toAccount'],
   transfer: ['amount', 'fromAccount', 'toAccount'],
   create_category: ['name', 'type', 'sectionName'],

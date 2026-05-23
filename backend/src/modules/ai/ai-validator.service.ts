@@ -20,6 +20,23 @@ interface AccountLite {
   balance: number;
 }
 
+interface TransactionLite {
+  id: string;
+  type: string;
+  amount: number;
+  description: string | null;
+  accountId: string;
+  toAccountId: string | null;
+  categoryId: string | null;
+  sectionId: string | null;
+  date: Date;
+  createdAt: Date;
+  account?: { id: string; name: string; currency: string } | null;
+  toAccount?: { id: string; name: string; currency: string } | null;
+  category?: { id: string; name: string; type: string; sectionId?: string | null } | null;
+  section?: { id: string; name: string } | null;
+}
+
 const ACCOUNT_TYPES: AIAccountType[] = ['cash', 'card', 'savings', 'investment'];
 const CURRENCIES: AICurrency[] = ['RUB', 'USD', 'EUR', 'VND'];
 const DEFAULT_AUTO_TRANSACTION_LIMIT = 100000;
@@ -27,11 +44,22 @@ const DEFAULT_AUTO_TRANSACTION_LIMIT = 100000;
 export class AIValidatorService {
   private readonly entityResolver = new AIEntityResolverService();
   async validate(userId: string, plan: AIActionPlan): Promise<AIValidatedPlan> {
-    const [accounts, categories, sections, goals, aiSettings] = await Promise.all([
+    const [accounts, categories, sections, goals, transactions, aiSettings] = await Promise.all([
       prisma.account.findMany({ where: { userId }, orderBy: { createdAt: 'asc' } }),
       prisma.category.findMany({ where: { userId }, orderBy: { createdAt: 'asc' } }),
       prisma.section.findMany({ where: { userId }, orderBy: { createdAt: 'asc' } }),
       prisma.goal.findMany({ where: { userId }, orderBy: { createdAt: 'asc' } }),
+      prisma.transaction.findMany({
+        where: { userId },
+        include: {
+          account: { select: { id: true, name: true, currency: true } },
+          toAccount: { select: { id: true, name: true, currency: true } },
+          category: { select: { id: true, name: true, type: true, sectionId: true } },
+          section: { select: { id: true, name: true } },
+        },
+        orderBy: [{ date: 'desc' }, { createdAt: 'desc' }],
+        take: 30,
+      }),
       prisma.userAISettings.upsert({
         where: { userId },
         create: { userId },
@@ -55,7 +83,7 @@ export class AIValidatorService {
       const resolved: Record<string, unknown> = {};
       delete input.__userText;
 
-      if (action.tool === 'create_account') {
+    if (action.tool === 'create_account') {
         const fallbackName = `Счёт ${plannedAccounts.size + accounts.length + 1}`;
         const name = this.cleanEntityName(input.name) || fallbackName;
         const type = this.coerceAccountType(input.type, 'cash');
@@ -189,21 +217,14 @@ export class AIValidatorService {
         const rawCategory = this.cleanEntityName(input.category);
         const rawSection = this.cleanEntityName(input.section);
         const rawDescription = this.cleanEntityName(input.description);
-        const taxonomy = this.inferTransactionTaxonomy({
-          kind: kind ?? 'expense',
-          category: rawCategory,
-          section: rawSection,
-          description: rawDescription,
-        });
-        const description = rawDescription || taxonomy.category;
 
         input.kind = kind ?? 'expense';
         input.amount = amount ?? 0;
         input.account = accountRef || input.account || null;
         input.currency = moneyCurrency;
-        input.category = taxonomy.category;
-        input.section = taxonomy.section;
-        input.description = description;
+        input.category = rawCategory || null;
+        input.section = rawSection || null;
+        input.description = rawDescription || rawCategory || (kind === 'income' ? 'Доход' : 'Расход');
 
         const amountInAccountCurrency = amount ? convertMoney(amount, moneyCurrency, targetCurrency) : 0;
 
@@ -228,13 +249,93 @@ export class AIValidatorService {
           resolved.amountInAccountCurrency = convertMoney(amount, moneyCurrency, plannedAccount.currency);
         }
 
-        const existingCategory = taxonomy.category ? this.findByName(categories, taxonomy.category) : null;
-        const existingSection = taxonomy.section ? this.findByName(sections, taxonomy.section) : null;
+        const existingCategory = rawCategory ? this.findByName(categories, rawCategory) : null;
+        const existingSection = rawSection ? this.findByName(sections, rawSection) : null;
         if (existingCategory) {
           resolved.categoryId = existingCategory.id;
           if (typeof existingCategory.sectionId === 'string') resolved.sectionId = existingCategory.sectionId;
         }
         if (existingSection) resolved.sectionId = existingSection.id;
+      }
+
+      if (action.tool === 'update_transaction') {
+        const transaction = this.resolveTransaction(transactions as TransactionLite[], input);
+        if (!transaction) {
+          issues.push({
+            code: 'transaction_not_found',
+            message: 'Не нашёл операцию для изменения.',
+            actionIndex: index,
+            field: 'transaction',
+          });
+        } else {
+          resolved.transactionId = transaction.id;
+          input.transaction = this.transactionLabel(transaction);
+        }
+
+        const nextKind = this.cleanString(input.kind || input.type).toLowerCase();
+        if (nextKind === 'income' || nextKind === 'expense' || nextKind === 'transfer') input.kind = nextKind;
+        else delete input.kind;
+
+        const amount = normalizeMoneyAmount(input.amount);
+        if (amount !== null) input.amount = amount;
+        else delete input.amount;
+
+        const accountName = this.cleanString(input.account);
+        if (accountName) {
+          const account = this.resolveAccount(accounts, accountName);
+          if (!account) {
+            issues.push({ code: 'account_not_found', message: `Не нашёл счёт: ${accountName}`, actionIndex: index, field: 'account' });
+          } else {
+            resolved.accountId = account.id;
+            input.account = account.name;
+          }
+        } else {
+          delete input.account;
+        }
+
+        const toAccountName = this.cleanString(input.toAccount);
+        if (toAccountName) {
+          const toAccount = this.resolveAccount(accounts, toAccountName);
+          if (!toAccount) {
+            issues.push({ code: 'to_account_not_found', message: `Не нашёл счёт пополнения: ${toAccountName}`, actionIndex: index, field: 'toAccount' });
+          } else {
+            resolved.toAccountId = toAccount.id;
+            input.toAccount = toAccount.name;
+          }
+        } else {
+          delete input.toAccount;
+        }
+
+        const categoryName = this.cleanEntityName(input.category);
+        if (categoryName) {
+          input.category = categoryName;
+          const category = this.findByName(categories, categoryName);
+          if (category) {
+            resolved.categoryId = category.id;
+            if (typeof category.sectionId === 'string') resolved.sectionId = category.sectionId;
+          }
+        } else {
+          delete input.category;
+        }
+
+        const sectionName = this.cleanEntityName(input.section);
+        if (sectionName) {
+          input.section = sectionName;
+          const section = this.findByName(sections, sectionName);
+          if (section) resolved.sectionId = section.id;
+        } else {
+          delete input.section;
+        }
+
+        if (input.description !== null && input.description !== undefined) input.description = this.cleanEntityName(input.description);
+        else delete input.description;
+
+        const currency = this.coerceCurrency(input.currency, '', null);
+        if (currency) input.currency = currency;
+        else delete input.currency;
+
+        if (input.date !== null && input.date !== undefined) input.date = this.cleanString(input.date);
+        else delete input.date;
       }
 
       if (action.tool === 'transfer_money') {
@@ -528,7 +629,7 @@ export class AIValidatorService {
     if (tool === 'show_accounts' || tool === 'show_transactions' || tool === 'show_ai_settings' || tool === 'show_goals' || tool === 'show_taxonomy') return false;
     if (tool === 'update_onboarding_state' || tool === 'restart_onboarding') return false;
 
-    if (tool === 'create_account' || tool === 'update_account' || tool === 'delete_account' || tool === 'delete_accounts' || tool === 'set_primary_account' || tool === 'create_category' || tool === 'update_category' || tool === 'delete_category' || tool === 'create_section' || tool === 'update_section' || tool === 'delete_section' || tool === 'assign_category_to_section' || tool === 'create_goal' || tool === 'update_goal' || tool === 'delete_goal') {
+    if (tool === 'create_account' || tool === 'update_account' || tool === 'update_transaction' || tool === 'delete_account' || tool === 'delete_accounts' || tool === 'set_primary_account' || tool === 'create_category' || tool === 'update_category' || tool === 'delete_category' || tool === 'create_section' || tool === 'update_section' || tool === 'delete_section' || tool === 'assign_category_to_section' || tool === 'create_goal' || tool === 'update_goal' || tool === 'delete_goal') {
       return settings.requireConfirmForAccountActions !== false;
     }
 
@@ -579,66 +680,6 @@ export class AIValidatorService {
     return fallback;
   }
 
-  private inferTransactionTaxonomy(params: {
-    kind: 'income' | 'expense';
-    category: string;
-    section: string;
-    description: string;
-  }) {
-    const haystack = `${params.category} ${params.description}`.toLowerCase();
-    const genericCategory = !params.category || ['расход', 'доход', 'операция', 'покупка'].includes(params.category.toLowerCase());
-
-    if (params.kind === 'income') {
-      if (haystack.includes('зарплат') || haystack.includes('salary')) {
-        return {
-          category: genericCategory ? 'Зарплата' : params.category,
-          section: params.section || 'Доходы',
-        };
-      }
-
-      if (haystack.includes('кэшбек') || haystack.includes('cashback')) {
-        return {
-          category: genericCategory ? 'Кэшбек' : params.category,
-          section: params.section || 'Доходы',
-        };
-      }
-
-      return {
-        category: genericCategory ? 'Доход' : params.category,
-        section: params.section || 'Доходы',
-      };
-    }
-
-    const rules: Array<{ section: string; category: string; match: string[] }> = [
-      { section: 'Еда и напитки', category: 'Кофе', match: ['кофе', 'coffee', 'капучино', 'латте', 'эспрессо'] },
-      { section: 'Еда и напитки', category: 'Рестораны', match: ['ресторан', 'кафе', 'ужин', 'обед', 'доставка', 'еда', 'food'] },
-      { section: 'Продукты', category: 'Продукты', match: ['продукты', 'магазин', 'супермаркет', 'пятерочка', 'перекресток', 'магнит', 'grocery'] },
-      { section: 'Транспорт', category: 'Такси', match: ['такси', 'uber', 'яндекс go', 'яндекс такси'] },
-      { section: 'Транспорт', category: 'Транспорт', match: ['метро', 'автобус', 'транспорт', 'бензин', 'парковка'] },
-      { section: 'Дом', category: 'Жильё', match: ['аренда', 'квартира', 'жилье', 'жильё', 'коммунал', 'интернет'] },
-      { section: 'Подписки', category: 'Подписки', match: ['подписка', 'netflix', 'spotify', 'apple', 'icloud', 'telegram premium'] },
-      { section: 'Здоровье', category: 'Здоровье', match: ['аптека', 'врач', 'медицина', 'лекар', 'здоров'] },
-      { section: 'Покупки', category: 'Одежда', match: ['одежда', 'обувь', 'футболка', 'куртка'] },
-      { section: 'Покупки', category: 'Покупки', match: ['покупка', 'маркет', 'wildberries', 'ozon', 'amazon'] },
-      { section: 'Развлечения', category: 'Развлечения', match: ['кино', 'бар', 'игра', 'театр', 'развлеч'] },
-      { section: 'Образование', category: 'Образование', match: ['курс', 'книга', 'обучение', 'образование'] },
-    ];
-
-    const matched = rules.find((rule) => rule.match.some((token) => haystack.includes(token)));
-
-    if (matched) {
-      return {
-        category: genericCategory ? matched.category : params.category,
-        section: params.section || matched.section,
-      };
-    }
-
-    return {
-      category: genericCategory ? (params.description || 'Расход') : params.category,
-      section: params.section || 'Прочее',
-    };
-  }
-
   private coerceAccountType(value: unknown, fallback: AIAccountType | null): AIAccountType | null {
     if (typeof value !== 'string') return fallback;
     const raw = value.trim().toLowerCase();
@@ -686,6 +727,54 @@ export class AIValidatorService {
     return this.entityResolver.resolveAccount(accounts, raw)?.item ?? null;
   }
 
+
+  private resolveTransaction(transactions: TransactionLite[], input: Record<string, unknown>) {
+    const rawId = this.cleanString(input.transactionId || input.id);
+    if (rawId) {
+      const byId = transactions.find((item) => item.id === rawId);
+      if (byId) return byId;
+    }
+
+    const target = this.cleanString(input.target).toLowerCase();
+    const kind = this.cleanString(input.kind || input.type).toLowerCase();
+    if (target === 'last_income') return transactions.find((item) => item.type === 'income') ?? null;
+    if (target === 'last_expense') return transactions.find((item) => item.type === 'expense') ?? null;
+    if (target === 'last_transfer') return transactions.find((item) => item.type === 'transfer') ?? null;
+    if (target === 'last' && (kind === 'income' || kind === 'expense' || kind === 'transfer')) {
+      return transactions.find((item) => item.type === kind) ?? null;
+    }
+    if (target === 'last') return transactions[0] ?? null;
+
+    const rawTransaction = this.cleanString(input.transaction);
+    if (rawTransaction) {
+      const byId = transactions.find((item) => item.id === rawTransaction);
+      if (byId) return byId;
+
+      const resolvedByDescription = this.findTransactionByText(transactions, rawTransaction);
+      if (resolvedByDescription) return resolvedByDescription;
+    }
+
+    if (kind === 'income' || kind === 'expense' || kind === 'transfer') {
+      return transactions.find((item) => item.type === kind) ?? null;
+    }
+
+    return null;
+  }
+
+  private findTransactionByText(transactions: TransactionLite[], raw: string) {
+    const ref = this.key(raw);
+    if (!ref) return null;
+    return transactions.find((item) => this.key(item.description ?? '') === ref)
+      ?? transactions.find((item) => this.key(item.description ?? '').includes(ref) || ref.includes(this.key(item.description ?? '')))
+      ?? null;
+  }
+
+  private transactionLabel(transaction: TransactionLite) {
+    const type = transaction.type === 'income' ? 'доход' : transaction.type === 'expense' ? 'расход' : 'перевод';
+    const description = this.cleanString(transaction.description) || transaction.category?.name || 'операция';
+    return `последний ${type}: ${description}`;
+  }
+
   private findGoalByName<T extends { id?: string | null; title: string }>(items: T[], raw: string) {
     const ref = raw.trim().toLowerCase();
     if (!ref) return null;
@@ -722,6 +811,18 @@ export class AIValidatorService {
       const description = this.cleanString(input.description || input.category) || 'операция';
       const account = this.cleanString(input.account);
       return `${kind}: ${description} — ${amount} ${currency}${account ? `, счёт: ${account}` : ''}.`;
+    }
+
+    if (action.tool === 'update_transaction') {
+      const target = this.cleanString(input.transaction) || this.cleanString(input.target) || 'операцию';
+      const changes = [
+        input.amount !== undefined ? `сумма ${input.amount}` : '',
+        input.description !== undefined ? `описание ${this.cleanString(input.description)}` : '',
+        input.account !== undefined ? `счёт ${this.cleanString(input.account)}` : '',
+        input.category !== undefined ? `категория ${this.cleanString(input.category)}` : '',
+        input.section !== undefined ? `раздел ${this.cleanString(input.section)}` : '',
+      ].filter(Boolean).join(', ');
+      return `Изменить ${target}${changes ? `: ${changes}` : ''}.`;
     }
 
     if (action.tool === 'create_account') {

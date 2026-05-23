@@ -10,6 +10,7 @@ export type AIToolName =
   | 'delete_accounts'
   | 'set_primary_account'
   | 'create_transaction'
+  | 'update_transaction'
   | 'transfer_money'
   | 'create_category'
   | 'update_category'
@@ -74,8 +75,8 @@ export interface AIValidatedPlan {
 }
 
 export interface AIClarificationRequest {
-  type: 'account' | 'goal' | 'category' | 'section';
-  field: 'account' | 'goal' | 'category' | 'section' | string;
+  type: 'account' | 'goal' | 'category' | 'section' | 'transaction';
+  field: 'account' | 'goal' | 'category' | 'section' | 'transaction' | string;
   actionIndex: number;
   question: string;
   createdAt: string;

@@ -44,6 +44,13 @@ export const AI_TOOL_REGISTRY: AIToolDefinition[] = [
     input: { kind: 'income|expense', amount: 'number|string', currency: 'RUB|USD|EUR|VND|null', account: 'string|null', category: 'string|null', section: 'string|null', description: 'string|null' },
   },
   {
+    name: 'update_transaction',
+    description: 'Edit an existing income/expense/transfer operation. Use for corrections to amount, description, account, category, section, type or date. Never use create_transaction when the user asks to change, fix, correct, rename or edit an existing operation.',
+    risk: 'medium',
+    requiresConfirmation: true,
+    input: { transaction: 'string|null', target: 'last|last_income|last_expense|last_transfer|null', kind: 'income|expense|transfer|null', amount: 'number|string|null', currency: 'RUB|USD|EUR|VND|null', account: 'string|null', toAccount: 'string|null', category: 'string|null', section: 'string|null', description: 'string|null', date: 'string|null' },
+  },
+  {
     name: 'transfer_money',
     description: 'Move money between two accounts.',
     risk: 'high',
@@ -235,6 +242,7 @@ export function getToolDefinition(name: string) {
 export function getPlannerToolContract() {
   return [
     'create_transaction{kind:income|expense,amount,account,category,section,description,currency} // account/category/section are natural names, never ids',
+    'update_transaction{transaction,target:last|last_income|last_expense|last_transfer,kind,amount,account,toAccount,category,section,description,date,currency} // edit existing operation; use for corrections, never create a duplicate',
     'create_account{name,type:cash|card|savings|investment,currency,initialBalance} // initialBalance 0 when money is added by transaction',
     'update_account{account,name,type,currency,balance} // rename/change existing account; account is current account name',
     'delete_account{account} // delete one account by name',

@@ -263,6 +263,89 @@ export class AIExecutorService {
       return { tool, transaction };
     }
 
+    if (tool === 'update_transaction') {
+      const transactionId = this.requireString(resolved.transactionId, 'transactionId');
+      const current = await tx.transaction.findFirst({
+        where: { id: transactionId, userId },
+        include: transactionInclude,
+      });
+      if (!current) throw new NotFoundError('Transaction not found');
+
+      const nextType = input.kind === 'income' || input.kind === 'expense' || input.kind === 'transfer'
+        ? String(input.kind)
+        : current.type;
+      const nextAmount = input.amount !== null && input.amount !== undefined
+        ? this.toInteger(input.amount, current.amount)
+        : current.amount;
+      if (nextAmount <= 0) throw new BadRequestError('Transaction amount must be positive');
+
+      const nextAccountId = typeof resolved.accountId === 'string' ? resolved.accountId : current.accountId;
+      const nextToAccountId = nextType === 'transfer'
+        ? (typeof resolved.toAccountId === 'string' ? resolved.toAccountId : current.toAccountId)
+        : null;
+
+      if (nextType === 'transfer' && !nextToAccountId) {
+        throw new BadRequestError('Transfer requires destination account');
+      }
+
+      await this.applyBalanceEffect(tx, {
+        type: current.type as 'income' | 'expense' | 'transfer',
+        amount: current.amount,
+        accountId: current.accountId,
+        toAccountId: current.toAccountId,
+        direction: 'revert',
+      });
+
+      await this.applyBalanceEffect(tx, {
+        type: nextType as 'income' | 'expense' | 'transfer',
+        amount: nextAmount,
+        accountId: nextAccountId,
+        toAccountId: nextToAccountId,
+        direction: 'apply',
+      });
+
+      const sectionId = input.section !== undefined
+        ? (typeof resolved.sectionId === 'string'
+          ? resolved.sectionId
+          : await this.findOrCreateSectionId(tx, userId, typeof input.section === 'string' ? input.section : ''))
+        : current.sectionId;
+
+      const categoryId = input.category !== undefined && nextType !== 'transfer'
+        ? await this.findOrCreateCategoryId(tx, userId, {
+          name: typeof input.category === 'string' ? input.category : '',
+          type: nextType === 'income' ? 'income' : 'expense',
+          sectionId,
+        })
+        : nextType === 'transfer'
+          ? null
+          : current.categoryId;
+
+      const description = input.description !== undefined
+        ? (typeof input.description === 'string' && input.description.trim() ? input.description.trim() : null)
+        : current.description;
+
+      const date = typeof input.date === 'string' && input.date.trim()
+        ? this.safeDate(input.date, current.date)
+        : current.date;
+
+      const transaction = await tx.transaction.update({
+        where: { id: current.id },
+        data: {
+          accountId: nextAccountId,
+          toAccountId: nextToAccountId,
+          categoryId,
+          sectionId,
+          amount: nextAmount,
+          type: nextType,
+          description,
+          date,
+        },
+        include: transactionInclude,
+      });
+
+      return { tool, transaction, previous: current };
+    }
+
     if (tool === 'transfer_money') {
       const fromAccountId = this.requireString(resolved.fromAccountId, 'fromAccountId');
       const toAccountId = this.requireString(resolved.toAccountId, 'toAccountId');
@@ -824,6 +907,11 @@ export class AIExecutorService {
     const parsed = Number(value);
     if (!Number.isFinite(parsed) || !Number.isInteger(parsed)) return fallback;
     return parsed;
+  }
+
+  private safeDate(value: string, fallback: Date) {
+    const parsed = new Date(value);
+    return Number.isFinite(parsed.getTime()) ? parsed : fallback;
   }
 
   private presetConfig(preset: string) {

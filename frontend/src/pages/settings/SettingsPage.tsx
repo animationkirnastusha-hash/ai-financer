@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { useSettingsStore } from '@/features/settings/model/settings.store';
 import { useNavigationStore } from '@/features/navigation/model/navigation.store';
 import { LanguageSwitcher } from '@/shared/ui/LanguageSwitcher';
@@ -6,11 +6,49 @@ import { ScreenTopBar } from '@/shared/ui/ScreenTopBar';
 import { useAuthStore } from '@/features/auth/model/auth.store';
 import { dataResetApi, type DataResetMode } from '@/features/data-reset/api/dataReset.api';
 
+type SettingsModal = 'voice' | 'assistant' | 'ai' | 'data' | null;
+
+function SettingsModalShell({ title, subtitle, children, onClose }: { title: string; subtitle?: string; children: ReactNode; onClose: () => void }) {
+  return (
+    <div className="app-modal-backdrop" data-no-swipe="true" onClick={onClose}>
+      <div className="app-modal-sheet" data-no-swipe="true" onClick={(event) => event.stopPropagation()}>
+        <div className="app-modal-handle" />
+        <div className="app-modal-body space-y-4">
+          <div>
+            <div className="app-eyebrow">Настройки</div>
+            <h2 className="mt-2 text-2xl font-semibold tracking-[-0.045em] text-white">{title}</h2>
+            {subtitle ? <p className="mt-2 text-sm leading-6 text-white/50">{subtitle}</p> : null}
+          </div>
+          {children}
+        </div>
+        <footer className="app-modal-footer">
+          <button type="button" onClick={onClose} className="app-primary-button w-full">Готово</button>
+        </footer>
+      </div>
+    </div>
+  );
+}
+
+function SettingButton({ title, caption, icon, onClick }: { title: string; caption: string; icon: string; onClick: () => void }) {
+  return (
+    <button type="button" onClick={onClick} className="app-settings-card-button">
+      <span>
+        <b>{title}</b>
+        <small>{caption}</small>
+      </span>
+      <i aria-hidden="true">{icon}</i>
+    </button>
+  );
+}
+
 export default function SettingsPage() {
   const [resetStatus, setResetStatus] = useState<string | null>(null);
   const [resetMode, setResetMode] = useState<DataResetMode | null>(null);
+  const [modal, setModal] = useState<SettingsModal>(null);
+
   const navigateTo = useNavigationStore((state) => state.navigateTo);
   const user = useAuthStore((state) => state.user);
+
   const voiceWakeWordEnabled = useSettingsStore((state) => state.voiceWakeWordEnabled);
   const voiceActiveWindowSeconds = useSettingsStore((state) => state.voiceActiveWindowSeconds);
   const voiceEnabled = useSettingsStore((state) => state.voiceEnabled);
@@ -19,6 +57,7 @@ export default function SettingsPage() {
   const voiceAlwaysOnEnabled = useSettingsStore((state) => state.voiceAlwaysOnEnabled);
   const textInputEnabled = useSettingsStore((state) => state.textInputEnabled);
   const aiInsightsEnabled = useSettingsStore((state) => state.aiInsightsEnabled);
+
   const setVoiceWakeWordEnabled = useSettingsStore((state) => state.setVoiceWakeWordEnabled);
   const setVoiceActiveWindowSeconds = useSettingsStore((state) => state.setVoiceActiveWindowSeconds);
   const setVoiceEnabled = useSettingsStore((state) => state.setVoiceEnabled);
@@ -27,7 +66,6 @@ export default function SettingsPage() {
   const setVoiceAlwaysOnEnabled = useSettingsStore((state) => state.setVoiceAlwaysOnEnabled);
   const setTextInputEnabled = useSettingsStore((state) => state.setTextInputEnabled);
   const setAIInsightsEnabled = useSettingsStore((state) => state.setAIInsightsEnabled);
-
 
   const handleReset = async (mode: DataResetMode) => {
     const text = mode === 'finance'
@@ -53,8 +91,8 @@ export default function SettingsPage() {
   const navigationItems = [
     { title: 'Счета', caption: 'Баланс и основные счета', screen: 'accounts' as const },
     { title: 'Цели', caption: 'Накопления и планы', screen: 'goals' as const },
-    { title: 'Помощник', caption: 'Голос, реакции и прогресс', screen: 'companion' as const },
-    { title: 'Разделы', caption: 'Категории и структура', screen: 'taxonomy-settings' as const },
+    { title: 'Фина', caption: 'Прогресс и привычки', screen: 'companion' as const },
+    { title: 'Категории', caption: 'Разделы и структура', screen: 'sections' as const },
     { title: 'Рефералы', caption: 'Код и приглашения', screen: 'referral' as const },
     { title: 'Премиум', caption: 'Расширенные возможности', screen: 'premium' as const },
   ];
@@ -67,113 +105,27 @@ export default function SettingsPage() {
         <header className="app-card app-card--hero">
           <div className="app-eyebrow">Настройки</div>
           <h1 className="mt-3 text-[32px] font-semibold leading-none tracking-[-0.055em]">Управление</h1>
-          <p className="mt-3 text-sm leading-6 text-white/50">Голос, язык, AI и структура приложения.</p>
+          <p className="mt-3 text-sm leading-6 text-white/50">Язык, голос, данные и основные разделы приложения.</p>
         </header>
 
         <section className="app-card">
           <div className="flex items-center justify-between gap-4">
             <div>
               <div className="app-section-title">Язык</div>
-              <div className="mt-1 text-sm text-white/42">Русский или English.</div>
+              <div className="mt-1 text-sm text-white/42">Интерфейс приложения</div>
             </div>
             <LanguageSwitcher />
           </div>
         </section>
 
         <section className="app-card">
-          <div className="app-section-title">Голос и AI</div>
-
-          <div className="voice-settings-card mt-4">
-            <div className="voice-settings-card__head">
-              <span className="voice-settings-card__badge">Фина</span>
-              <div>
-                <div className="text-sm font-semibold text-white">Имя помощника фиксировано</div>
-                <div className="mt-1 text-xs leading-5 text-white/46">Пользователь всегда зовёт Фину. Так меньше путаницы в обучении, голосе и подсказках.</div>
-              </div>
-            </div>
-            <div className="voice-settings-example">
-              Схема простая: скажи “Фина”, затем задачу. После ответа можно продолжить без повторного имени несколько секунд.
-            </div>
+          <div className="app-section-title">Основные настройки</div>
+          <div className="app-settings-grid mt-4">
+            <SettingButton title="Голос" caption={voiceAlwaysOnEnabled ? 'Микрофон включён' : 'Микрофон выключен'} icon="◉" onClick={() => setModal('voice')} />
+            <SettingButton title="Фина" caption="Ответы, окно прослушивания и текстовый ввод" icon="◌" onClick={() => setModal('assistant')} />
+            <SettingButton title="AI" caption={aiInsightsEnabled ? 'Короткие выводы включены' : 'Выводы выключены'} icon="✦" onClick={() => setModal('ai')} />
+            <SettingButton title="Данные" caption="Очистка финансов или полный сброс" icon="⌫" onClick={() => setModal('data')} />
           </div>
-
-          <div className="mt-4 space-y-3">
-            <label className="app-toggle-row">
-              <span><span>Голосовой ввод</span><small>Разрешает управление через помощника.</small></span>
-              <input type="checkbox" checked={voiceEnabled} onChange={(event) => setVoiceEnabled(event.target.checked)} />
-            </label>
-            <label className="app-toggle-row">
-              <span><span>Микрофон включён</span><small>Пока приложение открыто, помощник ждёт имя.</small></span>
-              <input type="checkbox" checked={voiceAlwaysOnEnabled} onChange={(event) => setVoiceAlwaysOnEnabled(event.target.checked)} />
-            </label>
-            <label className="app-toggle-row">
-              <span><span>Ключевая фраза</span><small>Боевой режим начинается только после имени помощника.</small></span>
-              <input type="checkbox" checked={voiceWakeWordEnabled} onChange={(event) => setVoiceWakeWordEnabled(event.target.checked)} />
-            </label>
-            <label className="app-toggle-row">
-              <span><span>Бета-режим голоса</span><small>Включает экспериментальную обработку голосовых команд.</small></span>
-              <input type="checkbox" checked={voiceBetaEnabled} onChange={(event) => setVoiceBetaEnabled(event.target.checked)} />
-            </label>
-            <label className="app-toggle-row">
-              <span><span>Ответы голосом</span><small>Помощник может коротко озвучивать ответ.</small></span>
-              <input type="checkbox" checked={voiceRepliesEnabled} onChange={(event) => setVoiceRepliesEnabled(event.target.checked)} />
-            </label>
-            <label className="app-toggle-row">
-              <span><span>Текстовое поле</span><small>Оставить ручной ввод, если говорить неудобно.</small></span>
-              <input type="checkbox" checked={textInputEnabled} onChange={(event) => setTextInputEnabled(event.target.checked)} />
-            </label>
-            <label className="app-toggle-row">
-              <span><span>Наблюдения AI</span><small>Короткие выводы без лишнего шума.</small></span>
-              <input type="checkbox" checked={aiInsightsEnabled} onChange={(event) => setAIInsightsEnabled(event.target.checked)} />
-            </label>
-          </div>
-
-          <div className="voice-window-control voice-window-control--number mt-4">
-            <div>
-              <div className="text-sm font-medium text-white">Сколько слушать после команды</div>
-              <div className="mt-1 text-xs text-white/45">Можно поставить любое значение от 2 до 120 секунд. Для быстрого режима удобно 5–8 сек.</div>
-            </div>
-            <label className="voice-window-control__input">
-              <input
-                type="number"
-                min={2}
-                max={120}
-                step={1}
-                inputMode="numeric"
-                value={voiceActiveWindowSeconds}
-                onChange={(event) => setVoiceActiveWindowSeconds(Number(event.target.value))}
-              />
-              <span>сек</span>
-            </label>
-          </div>
-        </section>
-
-
-        <section className="app-card border-rose-400/20 bg-white/[0.055]">
-          <div className="app-section-title">Очистка данных</div>
-          <p className="mt-2 text-sm leading-6 text-white/48">
-            Для тестов можно начать заново. Финансовая очистка не трогает XP, уровень, серию, рефералы и профиль.
-          </p>
-          <div className="mt-4 grid gap-3">
-            <button
-              type="button"
-              className="w-full rounded-[18px] border border-white/10 bg-white/[0.055] px-3.5 py-3 text-left text-white/88 transition active:scale-[0.985] disabled:cursor-not-allowed disabled:opacity-55"
-              disabled={resetMode !== null}
-              onClick={() => handleReset('finance')}
-            >
-              <span className="block text-[13px] font-bold">Очистить финансы</span>
-              <small className="mt-1 block text-[11px] leading-snug text-white/42">Счета, операции, цели, категории, разделы и AI-контекст</small>
-            </button>
-            <button
-              type="button"
-              className="w-full rounded-[18px] border border-rose-300/25 bg-rose-500/10 px-3.5 py-3 text-left text-rose-100 transition active:scale-[0.985] disabled:cursor-not-allowed disabled:opacity-55"
-              disabled={resetMode !== null}
-              onClick={() => handleReset('full')}
-            >
-              <span className="block text-[13px] font-bold">Сбросить всё</span>
-              <small className="mt-1 block text-[11px] leading-snug text-white/42">Финансы, XP, уровень, достижения и companion-прогресс</small>
-            </button>
-          </div>
-          {resetStatus ? <div className="mt-3 text-sm text-white/60">{resetStatus}</div> : null}
         </section>
 
         <section className="app-card">
@@ -194,6 +146,79 @@ export default function SettingsPage() {
           </div>
         </section>
       </div>
+
+      {modal === 'voice' ? (
+        <SettingsModalShell title="Голос" subtitle="Настройки микрофона и запуска голосового управления." onClose={() => setModal(null)}>
+          <div className="app-settings-modal-grid">
+            <label className="app-toggle-row">
+              <span><span>Голосовой ввод</span><small>Разрешить управление голосом.</small></span>
+              <input type="checkbox" checked={voiceEnabled} onChange={(event) => setVoiceEnabled(event.target.checked)} />
+            </label>
+            <label className="app-toggle-row">
+              <span><span>Микрофон включён</span><small>Фина будет ждать обращение, пока приложение открыто.</small></span>
+              <input type="checkbox" checked={voiceAlwaysOnEnabled} onChange={(event) => setVoiceAlwaysOnEnabled(event.target.checked)} />
+            </label>
+            <label className="app-toggle-row">
+              <span><span>Запуск по имени</span><small>Команды выполняются только после обращения к Фине.</small></span>
+              <input type="checkbox" checked={voiceWakeWordEnabled} onChange={(event) => setVoiceWakeWordEnabled(event.target.checked)} />
+            </label>
+            <label className="app-toggle-row">
+              <span><span>Бета-режим</span><small>Улучшенный цикл голосового ввода.</small></span>
+              <input type="checkbox" checked={voiceBetaEnabled} onChange={(event) => setVoiceBetaEnabled(event.target.checked)} />
+            </label>
+          </div>
+        </SettingsModalShell>
+      ) : null}
+
+      {modal === 'assistant' ? (
+        <SettingsModalShell title="Фина" subtitle="Как Фина отвечает и сколько времени слушает продолжение." onClose={() => setModal(null)}>
+          <div className="app-settings-modal-grid">
+            <label className="app-toggle-row">
+              <span><span>Ответы голосом</span><small>Коротко озвучивать результат.</small></span>
+              <input type="checkbox" checked={voiceRepliesEnabled} onChange={(event) => setVoiceRepliesEnabled(event.target.checked)} />
+            </label>
+            <label className="app-toggle-row">
+              <span><span>Текстовый ввод</span><small>Оставить запасной способ ввода.</small></span>
+              <input type="checkbox" checked={textInputEnabled} onChange={(event) => setTextInputEnabled(event.target.checked)} />
+            </label>
+            <div className="voice-window-control voice-window-control--number">
+              <div>
+                <div className="text-sm font-medium text-white">Слушать продолжение</div>
+                <div className="mt-1 text-xs text-white/45">После ответа Фина ждёт следующую фразу заданное число секунд.</div>
+              </div>
+              <label className="voice-window-control__input">
+                <input type="number" min={2} max={120} step={1} inputMode="numeric" value={voiceActiveWindowSeconds} onChange={(event) => setVoiceActiveWindowSeconds(Number(event.target.value))} />
+                <span>сек</span>
+              </label>
+            </div>
+          </div>
+        </SettingsModalShell>
+      ) : null}
+
+      {modal === 'ai' ? (
+        <SettingsModalShell title="AI" subtitle="Короткие подсказки и выводы по финансовому состоянию." onClose={() => setModal(null)}>
+          <label className="app-toggle-row">
+            <span><span>Наблюдения</span><small>Показывать короткие финансовые выводы.</small></span>
+            <input type="checkbox" checked={aiInsightsEnabled} onChange={(event) => setAIInsightsEnabled(event.target.checked)} />
+          </label>
+        </SettingsModalShell>
+      ) : null}
+
+      {modal === 'data' ? (
+        <SettingsModalShell title="Данные" subtitle="Для тестов можно быстро начать заново." onClose={() => setModal(null)}>
+          <div className="grid gap-3">
+            <button type="button" className="w-full rounded-[18px] border border-white/10 bg-white/[0.055] px-3.5 py-3 text-left text-white/88 transition active:scale-[0.985] disabled:cursor-not-allowed disabled:opacity-55" disabled={resetMode !== null} onClick={() => handleReset('finance')}>
+              <span className="block text-[13px] font-bold">Очистить финансы</span>
+              <small className="mt-1 block text-[11px] leading-snug text-white/42">Счета, операции, цели, категории и историю AI</small>
+            </button>
+            <button type="button" className="w-full rounded-[18px] border border-rose-300/25 bg-rose-500/10 px-3.5 py-3 text-left text-rose-100 transition active:scale-[0.985] disabled:cursor-not-allowed disabled:opacity-55" disabled={resetMode !== null} onClick={() => handleReset('full')}>
+              <span className="block text-[13px] font-bold">Сбросить всё</span>
+              <small className="mt-1 block text-[11px] leading-snug text-white/42">Финансы, XP, уровень, достижения и прогресс</small>
+            </button>
+            {resetStatus ? <div className="text-sm text-white/60">{resetStatus}</div> : null}
+          </div>
+        </SettingsModalShell>
+      ) : null}
     </div>
   );
 }

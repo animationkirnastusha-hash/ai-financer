@@ -73,12 +73,37 @@ export class ProgressionService {
       where: { userId, createdAt: { gte: today } },
     });
 
+    const computedLevel = levelFromXP(user.xp);
+    const computedCompanionLevel = companionLevelFromXP(user.xp);
+
+    if (user.level !== computedLevel || user.progressionProfile?.companionLevel !== computedCompanionLevel) {
+      await prisma.user.update({
+        where: { id: userId },
+        data: {
+          level: computedLevel,
+          progressionProfile: {
+            upsert: {
+              create: {
+                totalXP: user.xp,
+                companionLevel: computedCompanionLevel,
+                companionMood: user.progressionProfile?.companionMood ?? 'neutral',
+              },
+              update: {
+                totalXP: user.xp,
+                companionLevel: computedCompanionLevel,
+              },
+            },
+          },
+        },
+      });
+    }
+
     return {
       xp: user.xp,
-      level: user.level,
+      level: computedLevel,
       streakDays: user.streakDays,
       lastActiveAt: user.lastActiveAt?.toISOString() ?? null,
-      companionLevel: user.progressionProfile?.companionLevel ?? companionLevelFromXP(user.xp),
+      companionLevel: computedCompanionLevel,
       companionMood: user.progressionProfile?.companionMood ?? 'neutral',
       referralCode: user.referralCode,
       referralBalance: user.referralBalance,

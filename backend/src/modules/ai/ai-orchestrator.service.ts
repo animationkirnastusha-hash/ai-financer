@@ -443,9 +443,14 @@ export class AIOrchestratorService {
       'goal_not_found',
       'category_not_found',
       'section_not_found',
+      'transaction_not_found',
     ].includes(item.code) && typeof item.actionIndex === 'number');
 
     if (!issue || typeof issue.actionIndex !== 'number') return null;
+
+    if (issue.code === 'transaction_not_found') {
+      return { type: 'transaction', field: 'transaction', actionIndex: issue.actionIndex, question: 'Какую операцию нужно изменить?', createdAt: new Date().toISOString() };
+    }
 
     if (issue.code === 'goal_not_found') {
       return { type: 'goal', field: 'goal', actionIndex: issue.actionIndex, question: 'Какую цель нужно изменить?', createdAt: new Date().toISOString() };

@@ -11,7 +11,7 @@ const quickActions = [
   { label: 'Расход', hint: 'Записать трату', prompt: 'кофе 300' },
   { label: 'Доход', hint: 'Добавить деньги', prompt: 'доход 50000' },
   { label: 'Перевод', hint: 'Между счетами', prompt: 'переведи 1000 на карту' },
-  { label: 'Спросить', hint: 'Вопрос к AI', prompt: 'что изменилось за месяц?' },
+  { label: 'Спросить', hint: 'Вопрос к Фине', prompt: 'что изменилось за месяц?' },
 ];
 
 const onboardingSteps = [
@@ -129,7 +129,7 @@ export default function DashboardPage() {
 
           <div className="mt-4 space-y-2">
             {recent.length === 0 ? (
-              <button type="button" onClick={() => openAIWithCommand('кофе 300')} className="app-empty-button">Добавь первую операцию через AI</button>
+              <button type="button" onClick={() => openAIWithCommand('кофе 300')} className="app-empty-button">Добавь первую операцию через Фину</button>
             ) : (
               recent.map((transaction) => {
                 const sign = transaction.type === 'income' ? 'plus' : transaction.type === 'expense' ? 'minus' : 'none';

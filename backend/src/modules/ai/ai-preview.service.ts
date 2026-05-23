@@ -6,6 +6,7 @@ const TOOL_LABELS: Record<string, string> = {
   delete_account: 'удалить счёт',
   delete_accounts: 'удалить счета',
   create_transaction: 'добавить операцию',
+  update_transaction: 'изменить операцию',
   transfer_money: 'перевести деньги',
   create_category: 'создать категорию',
   update_category: 'изменить категорию',
@@ -85,6 +86,19 @@ export class AIPreviewService {
       const name = this.clean(input.description || input.category) || (input.kind === 'income' ? 'Доход' : 'Расход');
       const account = this.clean(input.account);
       return `${kind} ${amount}: ${name}${account ? `, счёт ${account}` : ''}`;
+    }
+
+    if (tool === 'update_transaction') {
+      const target = this.clean(input.transaction) || this.clean(input.target) || 'операцию';
+      const changes = [
+        input.amount !== undefined ? `сумма ${this.formatAmount(input.amount, input.currency)}` : '',
+        input.description !== undefined ? `описание: ${this.clean(input.description) || 'пусто'}` : '',
+        input.account !== undefined ? `счёт: ${this.clean(input.account)}` : '',
+        input.category !== undefined ? `категория: ${this.clean(input.category)}` : '',
+        input.section !== undefined ? `раздел: ${this.clean(input.section)}` : '',
+        input.kind !== undefined ? `тип: ${input.kind === 'income' ? 'доход' : input.kind === 'expense' ? 'расход' : 'перевод'}` : '',
+      ].filter(Boolean).join(', ');
+      return `изменить ${target}${changes ? ` — ${changes}` : ''}`;
     }
 
     if (tool === 'create_account') {

@@ -5,6 +5,16 @@ import { useNavigationStore } from '@/features/navigation/model/navigation.store
 import { ScreenTopBar } from '@/shared/ui/ScreenTopBar';
 import { useSettingsStore } from '@/features/settings/model/settings.store';
 
+
+function moodLabel(value?: string | null) {
+  if (value === 'positive') return 'хороший';
+  if (value === 'focused') return 'в фокусе';
+  if (value === 'social') return 'общительный';
+  if (value === 'proud') return 'гордый';
+  if (value === 'motivated') return 'мотивирует';
+  return 'спокойный';
+}
+
 function progressPercent(xp: number, level: number) {
   const base = Math.max(0, (level - 1) * 100);
   const next = Math.max(100, level * 100);
@@ -57,7 +67,7 @@ export default function CompanionPage() {
           <div className="app-companion-page-hero__avatar">
             <CompanionButton size="lg" mood={state?.mood ?? 'idle'} label="Помощник" />
           </div>
-          <div className="app-eyebrow">Companion</div>
+          <div className="app-eyebrow">Фина</div>
           <h1 className="mt-3 text-[34px] font-semibold leading-none tracking-[-0.06em]">Финансовый компаньон</h1>
           <p className="mt-3 text-sm leading-6 text-white/58">
             {state?.message || 'Помогает записывать действия, держать ритм и видеть финансовое состояние без лишнего шума.'}
@@ -79,7 +89,7 @@ export default function CompanionPage() {
           <div className="mt-5 grid grid-cols-3 gap-2">
             <div className="app-mini-stat"><span>Уровень</span><b>{level}</b></div>
             <div className="app-mini-stat"><span>Серия</span><b>{streak} дн.</b></div>
-            <div className="app-mini-stat"><span>Статус</span><b>{state?.mood ?? 'idle'}</b></div>
+            <div className="app-mini-stat"><span>Настрой</span><b>{moodLabel(state?.mood)}</b></div>
           </div>
 
           <div className="mt-5 app-xp-panel app-xp-panel--large">
@@ -93,7 +103,7 @@ export default function CompanionPage() {
           <div className="app-section-title">Голос</div>
           <div className="mt-4 space-y-3">
             <label className="app-toggle-row">
-              <span><span>Голос всегда готов</span><small>Companion слушает короткие команды, пока приложение открыто.</small></span>
+              <span><span>Голос всегда готов</span><small>Фина ждёт обращение, пока приложение открыто.</small></span>
               <input type="checkbox" checked={voiceAlwaysOnEnabled} onChange={(event) => setVoiceAlwaysOnEnabled(event.target.checked)} />
             </label>
             <label className="app-toggle-row">
@@ -117,7 +127,7 @@ export default function CompanionPage() {
 
         <section className="grid grid-cols-2 gap-3">
           <button type="button" className="app-action-card" onClick={() => openAIWithCommand('что изменилось за месяц?')}>
-            <span>Спросить AI</span>
+            <span>Спросить Фину</span>
             <small>Короткий финансовый вопрос</small>
           </button>
           <button type="button" className="app-action-card" onClick={() => navigateTo('goals')}>

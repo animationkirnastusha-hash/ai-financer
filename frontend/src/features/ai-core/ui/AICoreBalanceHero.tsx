@@ -139,7 +139,7 @@ export function AICoreBalanceHero() {
 
             <div className="mt-3 flex flex-wrap items-center gap-2 text-sm text-white/62">
               <span className="rounded-full border border-emerald-300/20 bg-emerald-300/12 px-2.5 py-1 text-emerald-100">
-                AI готов
+                Фина готова
               </span>
 
               <span className="truncate">

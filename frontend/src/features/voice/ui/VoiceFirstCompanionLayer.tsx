@@ -23,7 +23,6 @@ const WATCHDOG_INTERVAL_MS = 1350;
 const BUBBLE_TIMEOUT_MS = 2800;
 const DUPLICATE_WINDOW_MS = 850;
 const DEFAULT_ACTIVE_WINDOW_SECONDS = 7;
-const WAKE_PROMPT_THROTTLE_MS = 9000;
 const FIXED_COMPANION_NAME = 'Фина';
 
 function compactBubble(text: string) {
@@ -154,7 +153,6 @@ export function VoiceFirstCompanionLayer() {
   const handleTextRef = useRef<(text: string) => Promise<void> | void>(() => undefined);
   const startListeningRef = useRef<() => Promise<void> | void>(() => undefined);
   const lastWatchdogKickRef = useRef(0);
-  const lastWakePromptAtRef = useRef(0);
   const lastAssistantMessageKeyRef = useRef('');
   const lastWakeAcceptedAtRef = useRef(0);
   const lastThoughtRef = useRef<{ text: string; tone: BubbleTone; at: number }>({ text: '', tone: 'neutral', at: 0 });
@@ -246,12 +244,6 @@ export function VoiceFirstCompanionLayer() {
 
       if (hasCombatWindow) {
         showThought('Слушаю задачу.', 'listening', 900);
-      } else {
-        const now = Date.now();
-        if (now - lastWakePromptAtRef.current > WAKE_PROMPT_THROTTLE_MS) {
-          lastWakePromptAtRef.current = now;
-          showThought('Жду “Фина”.', 'neutral', 1200);
-        }
       }
       return;
     }
@@ -287,6 +279,8 @@ export function VoiceFirstCompanionLayer() {
 
     if (voiceWakeWordEnabled && !isWithinCombatWindow) {
       if (!wake.hasWakeWord) {
+        // Wake-word discipline: microphone stays technically active, but Fina is silent
+        // and does not react to random speech until her name is heard.
         resumeListeningSoon(120);
         return;
       }
@@ -525,8 +519,6 @@ export function VoiceFirstCompanionLayer() {
 
   const needsIntro = canUseVoiceFirst && !voicePermissionPrompted;
   const showLayer = currentScreen !== 'ai-core';
-  const displayName = FIXED_COMPANION_NAME;
-
   if (!showLayer) return null;
 
   return (
@@ -576,11 +568,11 @@ export function VoiceFirstCompanionLayer() {
                 ? voice.state === 'recording'
                   ? isCombatActive
                     ? 'Слушаю задачу'
-                    : `Жду “${displayName}”`
+                    : 'Готова'
                   : chat.isSending || isProcessingVoice || voice.state === 'speaking'
                     ? 'Думаю'
                     : voiceWakeWordEnabled
-                      ? `Скажи “${displayName}”`
+                      ? 'Готова'
                       : 'Голос включён'
                 : 'Микрофон выключен'}
             </div>

@@ -1,5 +1,5 @@
 import { prisma } from '../../lib/prisma';
-import { companionLevelFromXP } from '../progression/xp-rules';
+import { companionLevelFromXP, levelFromXP } from '../progression/xp-rules';
 import { aiCompanionService } from '../ai/ai-companion.service';
 
 function parse(value: string | null) {
@@ -36,15 +36,32 @@ export class CompanionFacadeService {
     ]);
 
     const xp = user?.xp ?? 0;
+    const userLevel = levelFromXP(xp);
+    const companionLevel = companionLevelFromXP(xp);
     const mood = profile?.companionMood ?? this.resolveMood(user?.streakDays ?? 0);
-    const companionLevel = profile?.companionLevel ?? companionLevelFromXP(xp);
     const tone = settings?.companionTone ?? 'friendly';
+
+    if (user && (user.level !== userLevel || profile?.companionLevel !== companionLevel)) {
+      await prisma.user.update({
+        where: { id: userId },
+        data: {
+          level: userLevel,
+          progressionProfile: {
+            upsert: {
+              create: { totalXP: xp, companionLevel, companionMood: mood },
+              update: { totalXP: xp, companionLevel },
+            },
+          },
+        },
+      }).catch(() => null);
+    }
 
     return {
       mood,
       tone,
+      level: userLevel,
       companionLevel,
-      userLevel: user?.level ?? 1,
+      userLevel,
       xp,
       streakDays: user?.streakDays ?? 0,
       tier: user?.tier ?? 'FREE',
