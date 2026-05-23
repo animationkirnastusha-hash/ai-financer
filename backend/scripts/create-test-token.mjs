@@ -1,8 +1,6 @@
 #!/usr/bin/env node
 import dotenv from 'dotenv';
 import jwt from 'jsonwebtoken';
-import { writeFileSync } from 'node:fs';
-import { join } from 'node:path';
 import { PrismaClient } from '@prisma/client';
 
 dotenv.config({ override: true });
@@ -49,16 +47,8 @@ async function main() {
 
   const token = jwt.sign({ userId: user.id }, jwtSecret, { expiresIn: '30d' });
 
-  const tokenPath = join(process.cwd(), '.test-auth-token');
-  const envPath = join(process.cwd(), '.test-auth-token.env');
-  writeFileSync(tokenPath, `${token}\n`, 'utf8');
-  writeFileSync(envPath, `TEST_AUTH_TOKEN=${token}\nTEST_TELEGRAM_ID=${telegramIdText}\nTEST_ADMIN=${isAdmin ? '1' : '0'}\n`, 'utf8');
-
   console.log(token);
   console.error(`Created/found test user: ${user.id} telegramId=${telegramIdText} admin=${user.isAdmin}`);
-  console.error(`Saved token to: ${tokenPath}`);
-  console.error(`Saved env snippet to: ${envPath}`);
-  console.error('Run without pasting token: TEST_ADMIN=1 npm run test:base-ai');
 }
 
 main()

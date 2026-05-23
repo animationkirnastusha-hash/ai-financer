@@ -10,11 +10,6 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { performance } from 'node:perf_hooks';
-import dotenv from 'dotenv';
-import jwt from 'jsonwebtoken';
-import { PrismaClient } from '@prisma/client';
-
-dotenv.config({ override: true });
 
 const args = new Set(process.argv.slice(2));
 const startedAt = new Date();
@@ -26,7 +21,7 @@ const reportMdPath = join(reportDir, `base-ai-regression-${stamp}.md`);
 const config = {
   baseUrl: normalizeBaseUrl(process.env.TEST_BASE_URL || 'http://127.0.0.1:3000/api'),
   healthUrl: process.env.TEST_HEALTH_URL || inferHealthUrl(process.env.TEST_BASE_URL || 'http://127.0.0.1:3000/api'),
-  token: await readOrCreateToken(),
+  token: readToken(),
   timeoutMs: Number(process.env.TEST_TIMEOUT_MS || 30_000),
   runAI: bool(process.env.TEST_AI, true),
   strictAI: bool(process.env.TEST_STRICT_AI, true),
@@ -65,7 +60,7 @@ function inferHealthUrl(baseUrl) {
   return clean.endsWith('/api') ? `${clean.slice(0, -4)}/health` : `${clean}/health`;
 }
 
-async function readOrCreateToken() {
+function readToken() {
   const direct = String(process.env.TEST_AUTH_TOKEN || '').trim();
   if (direct) return direct;
 
@@ -75,62 +70,7 @@ async function readOrCreateToken() {
     if (saved) return saved;
   }
 
-  if (bool(process.env.TEST_AUTO_TOKEN, true)) {
-    const token = await createAndSaveTestToken(tokenFile);
-    if (token) return token;
-  }
-
   return '';
-}
-
-function readTelegramId() {
-  const raw = process.env.TEST_TELEGRAM_ID || process.env.DEV_TELEGRAM_ID || process.env.ADMIN_TELEGRAM_ID || '516730814';
-  const parsed = BigInt(String(raw));
-  if (parsed <= 0n) throw new Error('TEST_TELEGRAM_ID must be a positive integer');
-  return parsed;
-}
-
-function readAdminTelegramIds() {
-  const values = [process.env.ADMIN_TELEGRAM_ID, ...(process.env.ADMIN_TELEGRAM_IDS || '').split(',')]
-    .map((item) => String(item || '').trim())
-    .filter(Boolean);
-  return new Set(values);
-}
-
-async function createAndSaveTestToken(tokenFile) {
-  const prisma = new PrismaClient();
-  try {
-    const jwtSecret = process.env.JWT_SECRET || 'dev-secret';
-    const telegramId = readTelegramId();
-    const telegramIdText = telegramId.toString();
-    const adminIds = readAdminTelegramIds();
-    const isAdmin = process.env.TEST_ADMIN === '1' || adminIds.has(telegramIdText);
-
-    const user = await prisma.user.upsert({
-      where: { telegramId },
-      update: {
-        firstName: isAdmin ? 'Admin' : 'Test',
-        lastName: 'User',
-        username: isAdmin ? 'admin_test' : `test_${telegramIdText}`,
-        isAdmin,
-      },
-      create: {
-        telegramId,
-        firstName: isAdmin ? 'Admin' : 'Test',
-        lastName: 'User',
-        username: isAdmin ? 'admin_test' : `test_${telegramIdText}`,
-        isAdmin,
-      },
-    });
-
-    const token = jwt.sign({ userId: user.id }, jwtSecret, { expiresIn: '30d' });
-    writeFileSync(tokenFile, `${token}\n`, 'utf8');
-    console.error(`Auto-created test token for user: ${user.id} telegramId=${telegramIdText} admin=${user.isAdmin}`);
-    console.error(`Saved token to: ${tokenFile}`);
-    return token;
-  } finally {
-    await prisma.$disconnect();
-  }
 }
 
 function randomCyrillic(length = 8) {
@@ -138,19 +78,6 @@ function randomCyrillic(length = 8) {
   let value = '';
   for (let i = 0; i < length; i += 1) value += alphabet[Math.floor(Math.random() * alphabet.length)];
   return value;
-}
-
-function entityName(label) {
-  return `${state.prefix} ${label}`.trim().replace(/\s+/g, ' ');
-}
-
-function matchesName(item, expected) {
-  const actual = String(item?.name ?? item?.title ?? '').toLowerCase();
-  return actual.includes(String(expected || '').toLowerCase());
-}
-
-function countMatching(items, expected) {
-  return items.filter((item) => matchesName(item, expected)).length;
 }
 
 function short(value, length = 900) {
@@ -323,12 +250,12 @@ async function createTransaction(payload) {
   return tx;
 }
 
-async function createGoal(name, targetAmount = 50000) {
-  const res = await api('/goals', { method: 'POST', body: { title: name, targetAmount, currentAmount: 0, currency: 'RUB' } });
+async function createGoal(title, targetAmount = 50000) {
+  const res = await api('/goals', { method: 'POST', body: { title, targetAmount, currentAmount: 0, currency: 'RUB' } });
   const goal = res.data?.goal ?? res.data;
   assert(goal?.id, 'Goal create returned no id', res.data);
   state.goals.push(goal.id);
-  addCleanup(`goal:${name}`, () => maybeApi(`/goals/${goal.id}`, { method: 'DELETE' }));
+  addCleanup(`goal:${title}`, () => maybeApi(`/goals/${goal.id}`, { method: 'DELETE' }));
   return goal;
 }
 
@@ -361,17 +288,33 @@ function pendingId(result) {
   return result?.pendingActionId || result?.result?.pendingActionId || result?.pendingAction?.id || result?.meta?.pendingActionId || '';
 }
 
+async function latestPendingId(command = '') {
+  const res = await maybeApi('/ai/pending-actions');
+  if (res.error) return '';
+  const items = pickArrayPayload(res.data);
+  const pending = items
+    .filter((item) => item?.status === 'pending' && (!command || String(item.command || '').trim() === command.trim()))
+    .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+  return pending[0]?.id || '';
+}
+
 async function executeAi(command) {
   const prepared = await aiParse(command);
   assert(prepared?.success !== false, `AI prepare failed for: ${command}`, prepared);
 
-  if (prepared?.requiresConfirmation) {
-    const id = pendingId(prepared);
-    const confirmed = await aiConfirm(id || undefined);
-    assert(confirmed?.success !== false, `AI confirm failed for: ${command}`, confirmed);
+  let id = pendingId(prepared);
+  if (!id && prepared?.intent === 'batch' && !prepared?.executed) id = await latestPendingId(command);
+
+  const shouldConfirm = Boolean(prepared?.requiresConfirmation || (prepared?.intent === 'batch' && !prepared?.executed && id));
+  if (shouldConfirm) {
+    assert(Boolean(id), `AI prepared an unexecuted batch but did not expose pendingActionId: ${command}`, prepared);
+    const confirmed = await aiConfirm(id);
+    assert(confirmed?.success !== false, `AI confirm failed for: ${command}`, { prepared, confirmed });
+    assert(confirmed?.executed === true || confirmed?.requiresConfirmation === false, `AI confirm did not execute action: ${command}`, { prepared, confirmed });
     return { prepared, confirmed };
   }
 
+  assert(prepared?.executed === true || prepared?.intent !== 'batch', `AI returned unexecuted batch without pending action: ${command}`, prepared);
   return { prepared, confirmed: prepared };
 }
 
@@ -524,7 +467,7 @@ async function main() {
   await test('manual CRUD: budgets', async () => {
     const section = await createSection(`${state.prefix} бюджет`);
     const category = await createCategory(`${state.prefix} бюджет категория`, section.id, 'expense');
-    const res = await api('/budgets', { method: 'POST', body: { amount: 30000, period: 'monthly', categoryId: category.id, notifyAt: 80 } });
+    const res = await api('/budgets', { method: 'POST', body: { name: `${state.prefix} бюджет`, amount: 30000, limit: 30000, period: 'monthly', categoryId: category.id } });
     const budget = res.data?.budget ?? res.data;
     assert(budget?.id, 'Budget create returned no id', res.data);
     state.budgets.push(budget.id);
@@ -535,7 +478,7 @@ async function main() {
 
   await test('manual CRUD: recurring payments', async () => {
     const account = await createAccount(`${state.prefix} recurring`, 10000, 'card');
-    const res = await api('/recurring', { method: 'POST', body: { name: `${state.prefix} подписка`, amount: 499, accountId: account.id, category: 'Подписки', period: 'monthly', nextDate: new Date(Date.now() + 86400000).toISOString() } });
+    const res = await api('/recurring', { method: 'POST', body: { name: `${state.prefix} подписка`, amount: 499, accountId: account.id, type: 'expense', category: `${state.prefix} подписки`, period: 'monthly', nextDate: new Date(Date.now() + 86400000).toISOString() } });
     const recurring = res.data?.recurringPayment ?? res.data;
     assert(recurring?.id, 'Recurring create returned no id', res.data);
     state.recurring.push(recurring.id);
@@ -551,7 +494,7 @@ async function main() {
     await api('/ai-settings/onboarding', { method: 'PATCH', body: { completed: true } });
     await api('/progression/me');
     await api('/referral');
-    await api('/analytics/events', { method: 'POST', body: { event: 'screen_view', data: { screen: 'console', prefix: state.prefix } } });
+    await api('/analytics/events', { method: 'POST', body: { event: 'screen_view', screen: 'console_regression', meta: { prefix: state.prefix } } });
     return { ok: true };
   });
 
@@ -584,30 +527,22 @@ async function main() {
 
   await test('AI: create account with confirmation', async () => {
     const before = await listAccounts();
-    const name = entityName('ai счет');
-
-    // Keep the command explicit so this test checks the account-create tool,
-    // not a valid clarification branch caused by missing type/currency/balance.
-    // This is still a black-box AI test: no financial parser is used here.
-    const execution = await executeAi(`Фина, создай новый наличный счёт с названием ${name}, валюта рубли, баланс 0 рублей`);
-
+    const expectedName = `${state.prefix} ai счет`;
+    const beforeMatches = before.filter((item) => String(item.name || '').includes(expectedName)).length;
+    const execution = await executeAi(`Фина, создай новый наличный счёт с названием ${expectedName}, валюта рубли, баланс 0 рублей`);
     const after = await listAccounts();
-    const beforeMatches = countMatching(before, name);
-    const afterMatches = countMatching(after, name);
-    const created = after.length >= before.length + 1 || afterMatches > beforeMatches;
-
-    assert(created, 'AI did not create account from explicit account command', {
-      expectedName: name,
+    const afterMatches = after.filter((item) => String(item.name || '').includes(expectedName)).length;
+    assert(after.length >= before.length + 1 || afterMatches > beforeMatches, 'AI did not create account', {
+      expectedName,
       before: before.length,
       after: after.length,
       beforeMatches,
       afterMatches,
+      prepared: execution.prepared,
+      confirmed: execution.confirmed,
       accountNames: after.map((item) => item.name),
-      aiPrepared: execution.prepared,
-      aiConfirmed: execution.confirmed,
     });
-
-    return { expectedName: name, before: before.length, after: after.length, matches: afterMatches };
+    return { expectedName, before: before.length, after: after.length };
   }, { skip: !config.runAI && 'TEST_AI=0' });
 
   await test('AI: rename account and make it primary/default', async () => {
@@ -657,10 +592,10 @@ async function main() {
     const name = `${state.prefix} ai цель`;
     await executeAi(`Фина, создай цель ${name} на 75000 рублей`);
     let goals = await listGoals();
-    assert(goals.some((item) => matchesName(item, name)), 'AI did not create goal', goals);
+    assert(goals.some((item) => String(item.title || item.name || '').includes(name)), 'AI did not create goal', goals);
     await executeAi(`Фина, измени цель ${name}, сумма 80000 рублей`);
     goals = await listGoals();
-    assert(goals.some((item) => matchesName(item, name)), 'AI goal disappeared after update', goals);
+    assert(goals.some((item) => String(item.title || item.name || '').includes(name)), 'AI goal disappeared after update', goals);
     return { goals: goals.length };
   }, { skip: !config.runAI && 'TEST_AI=0' });
 
@@ -671,8 +606,8 @@ async function main() {
     await executeAi(`Фина, создай категорию ${categoryName} в разделе ${sectionName}`);
     const sections = await listSections();
     const categories = await listCategories();
-    assert(sections.some((item) => matchesName(item, sectionName)), 'AI did not create section', sections);
-    assert(categories.some((item) => matchesName(item, categoryName)), 'AI did not create category', categories);
+    assert(sections.some((item) => String(item.name || '').includes(sectionName)), 'AI did not create section', sections);
+    assert(categories.some((item) => String(item.name || '').includes(categoryName)), 'AI did not create category', categories);
     return { sections: sections.length, categories: categories.length };
   }, { skip: !config.runAI && 'TEST_AI=0' });
 

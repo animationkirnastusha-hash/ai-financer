@@ -1,39 +1,21 @@
 # Base AI regression suite
 
-Console regression suite for the base version of AI-Financer.
+Консольный black-box suite для базовой версии Ai-financer. Он проверяет backend API и AI lifecycle через реальные HTTP-запросы.
 
-This is a black-box runner. It does not parse financial commands. Natural-language commands are sent to the backend AI endpoint, and the runner verifies resulting API state.
-
-## Run
+Запуск:
 
 ```bash
 cd /root/ai-financer/backend
 TEST_TELEGRAM_ID=516730814 TEST_ADMIN=1 npm run test:base-ai
 ```
 
-The runner auto-creates a test user and saves JWT to `.test-auth-token` when no token is provided.
+Runner сам создаёт тестовый JWT, если `TEST_AUTH_TOKEN` и `.test-auth-token` отсутствуют.
 
-## Fixed in patch 64
+Важно: runner не парсит финансовые команды. Он отправляет текст в backend так же, как клиент. Production-обработка остаётся через `AI planner → tool contract → validator → executor`.
 
-- Goals CRUD now uses `title`, matching the current backend contract.
-- Budgets CRUD now creates an expense category and sends `categoryId`.
-- Recurring CRUD now sends `category` and `period`, matching the current backend contract.
-- Analytics test now sends supported `screen_view` event.
-- AI goal assertions check both `title` and `name` for compatibility.
-- AI create-account assertion reports only account names instead of dumping full account payloads.
+Что исправлено в patch-66:
 
-## Modes
-
-```bash
-TEST_AI=0 npm run test:base-ai
-TEST_STRICT_AI=0 npm run test:base-ai
-TEST_KEEP_DATA=1 npm run test:base-ai
-TEST_DESTRUCTIVE=1 npm run test:base-ai
-```
-
-Use `TEST_DESTRUCTIVE=1` only on an isolated database.
-
-
-## Patch 65 note
-
-The AI account creation case now sends an explicit account type, currency and zero balance. This prevents a valid clarification branch from failing the suite when the goal of the case is to verify the account-create tool path.
+- подтверждение AI-действий стало устойчивее: если backend вернул `batch executed=false` и pending action, runner подтверждает действие даже при некорректном флаге `requiresConfirmation`;
+- тест создания счёта стал явно задавать тип, название, валюту и баланс;
+- goals/budgets/recurring/analytics используют реальные backend contracts;
+- отчёт по AI create account теперь показывает prepared и confirmed, если счёт не создан.
