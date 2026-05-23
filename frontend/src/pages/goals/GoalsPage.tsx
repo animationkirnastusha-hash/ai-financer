@@ -32,17 +32,22 @@ export default function GoalsPage() {
     }
   };
 
-  useEffect(() => {
-    void loadGoals();
-  }, []);
+  useEffect(() => { void loadGoals(); }, []);
 
   const activeGoals = useMemo(() => goals.filter((goal) => goal.status !== 'archived'), [goals]);
+  const totals = useMemo(() => activeGoals.reduce((acc, goal) => {
+    acc.current += Number(goal.currentAmount) || 0;
+    acc.target += Number(goal.targetAmount) || 0;
+    return acc;
+  }, { current: 0, target: 0 }), [activeGoals]);
+  const totalProgress = clampProgress((totals.current / Math.max(totals.target, 1)) * 100);
 
   const saveGoal = async (payload: { title: string; targetAmount: number; currentAmount?: number; currency?: string; note?: string | null }) => {
     setIsSaving(true);
     try {
       if (sheet?.mode === 'edit') await goalsApi.update(sheet.goal.id, payload);
       else await goalsApi.create(payload);
+      setSheet(null);
       await loadGoals();
     } finally {
       setIsSaving(false);
@@ -53,6 +58,7 @@ export default function GoalsPage() {
     setIsSaving(true);
     try {
       await goalsApi.delete(goal.id);
+      setSheet(null);
       await loadGoals();
     } finally {
       setIsSaving(false);
@@ -60,24 +66,29 @@ export default function GoalsPage() {
   };
 
   return (
-    <div className="app-page text-white">
+    <div className="app-page app-goals-page text-white">
       <div className="app-page__inner space-y-4">
         <ScreenTopBar title="Цели" left="back" right={['home']} />
 
         <header className="app-card app-card--hero">
           <div className="app-eyebrow">Прогресс</div>
-          <div className="mt-3 flex items-end justify-between gap-4">
-            <div>
-              <h1 className="text-[32px] font-semibold leading-none tracking-[-0.055em]">Цели</h1>
-              <p className="mt-2 text-sm text-white/46">Крупные покупки и накопления.</p>
+          <div className="app-goals-hero__top mt-3">
+            <div className="min-w-0">
+              <h1 className="app-hero-title">Цели</h1>
+              <p className="app-hero-caption">Накопления, крупные покупки и понятный путь к ним.</p>
             </div>
             <button type="button" onClick={() => setSheet({ mode: 'create' })} className="app-primary-button shrink-0">+ Цель</button>
+          </div>
+          <div className="app-goals-summary">
+            <div><strong>{activeGoals.length}</strong><small>активных</small></div>
+            <div><strong>{totalProgress}%</strong><small>общий прогресс</small></div>
+            <div><strong>{formatMoney(Math.max(totals.target - totals.current, 0), 'RUB')}</strong><small>осталось</small></div>
           </div>
         </header>
 
         <button type="button" onClick={() => openAIWithCommand('создай цель ноутбук 120000')} className="app-card w-full p-4 text-left active:scale-[0.99]">
           <div className="text-sm font-semibold text-white">Создать голосом</div>
-          <div className="mt-1 text-xs text-white/42">Например: “создай цель ноутбук 120000”.</div>
+          <div className="mt-1 text-xs text-white/42">Скажи Фине цель, сумму и при необходимости заметку.</div>
         </button>
 
         {error ? <div className="app-error-box">{error}</div> : null}
@@ -88,7 +99,7 @@ export default function GoalsPage() {
           <EmptyState
             eyebrow="Цели"
             title="Целей пока нет"
-            description="Создай первую цель вручную или скажи AI: “создай цель отпуск 120000”."
+            description="Создай первую цель вручную или скажи Фине, что хочешь накопить."
             actionLabel="Создать цель"
             onAction={() => setSheet({ mode: 'create' })}
           />
@@ -96,23 +107,20 @@ export default function GoalsPage() {
           <div className="space-y-3">
             {activeGoals.map((goal) => {
               const progress = clampProgress(goal.progress ?? (goal.currentAmount / Math.max(goal.targetAmount, 1)) * 100);
+              const left = Math.max((Number(goal.targetAmount) || 0) - (Number(goal.currentAmount) || 0), 0);
               return (
-                <button key={goal.id} type="button" onClick={() => setSheet({ mode: 'edit', goal })} className="app-card w-full p-5 text-left active:scale-[0.99]">
-                  <div className="flex items-start justify-between gap-3">
+                <button key={goal.id} type="button" onClick={() => setSheet({ mode: 'edit', goal })} className="app-goal-card">
+                  <div className="app-goal-card__head">
                     <div className="min-w-0">
-                      <div className="truncate text-lg font-semibold text-white">{goal.title}</div>
-                      {goal.note ? <div className="mt-1 line-clamp-1 text-sm text-white/42">{goal.note}</div> : null}
+                      <div className="app-goal-card__title">{goal.title}</div>
+                      {goal.note ? <div className="app-goal-card__note">{goal.note}</div> : <div className="app-goal-card__note">Нажми, чтобы изменить цель или прогресс.</div>}
                     </div>
-                    <div className="shrink-0 text-right text-sm text-emerald-100/85">
-                      {formatMoney(goal.targetAmount, goal.currency)}
-                    </div>
+                    <div className="app-goal-card__money">{formatMoney(goal.targetAmount, goal.currency)}</div>
                   </div>
-                  <div className="mt-4 h-2 rounded-full bg-white/8">
-                    <div className="h-2 rounded-full bg-emerald-200/70" style={{ width: `${progress}%` }} />
-                  </div>
-                  <div className="mt-2 flex justify-between text-xs text-white/42">
-                    <span>{formatMoney(goal.currentAmount, goal.currency)}</span>
-                    <span>{progress}%</span>
+                  <div className="app-goal-progress"><span style={{ width: `${progress}%` }} /></div>
+                  <div className="mt-2 flex justify-between gap-3 text-xs text-white/42">
+                    <span>{formatMoney(goal.currentAmount, goal.currency)} собрано</span>
+                    <span>{formatMoney(left, goal.currency)} осталось · {progress}%</span>
                   </div>
                 </button>
               );

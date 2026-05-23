@@ -12,6 +12,7 @@ import { ErrorState } from '@/shared/ui/ErrorState';
 import { formatMoney } from '@/shared/lib/money';
 
 type Props = { onBack?: () => void };
+type Filter = 'all' | 'expense' | 'income' | 'transfer';
 
 function isCurrentMonth(dateValue: string) {
   const date = new Date(dateValue);
@@ -19,8 +20,16 @@ function isCurrentMonth(dateValue: string) {
   return date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth();
 }
 
+function filterLabel(filter: Filter) {
+  if (filter === 'expense') return 'Расходы';
+  if (filter === 'income') return 'Доходы';
+  if (filter === 'transfer') return 'Переводы';
+  return 'Все';
+}
+
 export default function TransactionsPage({ onBack }: Props = {}) {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [filter, setFilter] = useState<Filter>('all');
   const navigateTo = useNavigationStore((state) => state.navigateTo);
   const openAIWithCommand = useNavigationStore((state) => state.openAIWithCommand);
 
@@ -52,23 +61,36 @@ export default function TransactionsPage({ onBack }: Props = {}) {
         }
         if (item.type === 'income') acc.income += amount;
         if (item.type === 'expense') acc.expenses += amount;
+        if (item.type === 'transfer') acc.transfers += 1;
         return acc;
       },
-      { income: 0, expenses: 0, foreignCount: 0 },
+      { income: 0, expenses: 0, transfers: 0, foreignCount: 0 },
     );
   }, [transactions]);
 
+  const filteredTransactions = useMemo(() => {
+    if (filter === 'all') return transactions;
+    return transactions.filter((transaction) => transaction.type === filter);
+  }, [filter, transactions]);
+
+  const balance = summary.income - summary.expenses;
+  const insight = transactions.length === 0
+    ? 'Добавь первую операцию голосом или вручную — здесь появится лента.'
+    : balance >= 0
+      ? `За месяц плюс ${formatMoney(balance, 'RUB')}. Следи, чтобы регулярные расходы не съедали запас.`
+      : `За месяц минус ${formatMoney(Math.abs(balance), 'RUB')}. Проверь крупные категории расходов.`;
+
   return (
-    <div className="app-page text-white">
+    <div className="app-page app-operations-page text-white">
       <div className="app-page__inner space-y-4">
         <ScreenTopBar title="Операции" left={onBack ? 'back' : 'commands'} right={['settings']} />
 
         <header className="app-card app-card--hero">
           <div className="app-eyebrow">Лента</div>
-          <div className="mt-3 flex items-end justify-between gap-4">
-            <div>
-              <h1 className="text-[32px] font-semibold leading-none tracking-[-0.055em]">Операции</h1>
-              <p className="mt-2 text-sm text-white/46">Доходы, расходы и переводы.</p>
+          <div className="app-operations-hero__top mt-3">
+            <div className="min-w-0">
+              <h1 className="app-hero-title">Операции</h1>
+              <p className="app-hero-caption">Доходы, расходы и переводы в одном месте.</p>
             </div>
             <button type="button" onClick={() => setIsCreateOpen(true)} className="app-primary-button shrink-0">Добавить</button>
           </div>
@@ -78,6 +100,19 @@ export default function TransactionsPage({ onBack }: Props = {}) {
           expenses={formatMoney(summary.expenses, 'RUB', { sign: 'minus' })}
           income={formatMoney(summary.income, 'RUB', { sign: 'plus' })}
         />
+
+        <section className="app-operations-insight">
+          <b>Короткий итог</b>
+          <span>{insight}</span>
+        </section>
+
+        <div className="app-operations-filters" data-no-swipe="true">
+          {(['all', 'expense', 'income', 'transfer'] as Filter[]).map((item) => (
+            <button key={item} type="button" onClick={() => setFilter(item)} className={filter === item ? 'app-filter-pill app-filter-pill--active' : 'app-filter-pill'}>
+              {filterLabel(item)}
+            </button>
+          ))}
+        </div>
 
         {summary.foreignCount > 0 ? (
           <div className="rounded-[24px] border border-amber-300/15 bg-amber-300/8 p-4 text-sm leading-6 text-amber-100/75">
@@ -91,12 +126,12 @@ export default function TransactionsPage({ onBack }: Props = {}) {
           <EmptyState
             eyebrow="Операции"
             title="История пока пустая"
-            description="Добавь первую операцию через AI: расход, доход или перевод."
-            actionLabel="Открыть AI"
+            description="Добавь первую операцию через Фину: расход, доход или перевод."
+            actionLabel="Открыть Фину"
             onAction={() => openAIWithCommand()}
           />
         ) : (
-          <TransactionsTimeline transactions={transactions} isLoading={isLoading} error={error} onRefresh={() => void loadTransactions(true)} onOpenTransaction={openEdit} />
+          <TransactionsTimeline transactions={filteredTransactions} isLoading={isLoading} error={error} onRefresh={() => void loadTransactions(true)} onOpenTransaction={openEdit} />
         )}
       </div>
 

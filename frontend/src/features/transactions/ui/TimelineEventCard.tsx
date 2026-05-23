@@ -62,7 +62,7 @@ export function TimelineEventCard({ transaction, onClick }: Props) {
 
             {isAiGenerated ? (
               <span className="rounded-full border border-violet-300/15 bg-violet-300/10 px-2.5 py-1 text-[11px] font-medium text-violet-100/80">
-                AI
+                Фина
               </span>
             ) : null}
           </div>
