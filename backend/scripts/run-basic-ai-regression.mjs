@@ -10,6 +10,11 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { performance } from 'node:perf_hooks';
+import dotenv from 'dotenv';
+import jwt from 'jsonwebtoken';
+import { PrismaClient } from '@prisma/client';
+
+dotenv.config({ override: true });
 
 const args = new Set(process.argv.slice(2));
 const startedAt = new Date();
@@ -21,7 +26,7 @@ const reportMdPath = join(reportDir, `base-ai-regression-${stamp}.md`);
 const config = {
   baseUrl: normalizeBaseUrl(process.env.TEST_BASE_URL || 'http://127.0.0.1:3000/api'),
   healthUrl: process.env.TEST_HEALTH_URL || inferHealthUrl(process.env.TEST_BASE_URL || 'http://127.0.0.1:3000/api'),
-  token: readToken(),
+  token: await readOrCreateToken(),
   timeoutMs: Number(process.env.TEST_TIMEOUT_MS || 30_000),
   runAI: bool(process.env.TEST_AI, true),
   strictAI: bool(process.env.TEST_STRICT_AI, true),
@@ -60,7 +65,7 @@ function inferHealthUrl(baseUrl) {
   return clean.endsWith('/api') ? `${clean.slice(0, -4)}/health` : `${clean}/health`;
 }
 
-function readToken() {
+async function readOrCreateToken() {
   const direct = String(process.env.TEST_AUTH_TOKEN || '').trim();
   if (direct) return direct;
 
@@ -70,7 +75,62 @@ function readToken() {
     if (saved) return saved;
   }
 
+  if (bool(process.env.TEST_AUTO_TOKEN, true)) {
+    const token = await createAndSaveTestToken(tokenFile);
+    if (token) return token;
+  }
+
   return '';
+}
+
+function readTelegramId() {
+  const raw = process.env.TEST_TELEGRAM_ID || process.env.DEV_TELEGRAM_ID || process.env.ADMIN_TELEGRAM_ID || '516730814';
+  const parsed = BigInt(String(raw));
+  if (parsed <= 0n) throw new Error('TEST_TELEGRAM_ID must be a positive integer');
+  return parsed;
+}
+
+function readAdminTelegramIds() {
+  const values = [process.env.ADMIN_TELEGRAM_ID, ...(process.env.ADMIN_TELEGRAM_IDS || '').split(',')]
+    .map((item) => String(item || '').trim())
+    .filter(Boolean);
+  return new Set(values);
+}
+
+async function createAndSaveTestToken(tokenFile) {
+  const prisma = new PrismaClient();
+  try {
+    const jwtSecret = process.env.JWT_SECRET || 'dev-secret';
+    const telegramId = readTelegramId();
+    const telegramIdText = telegramId.toString();
+    const adminIds = readAdminTelegramIds();
+    const isAdmin = process.env.TEST_ADMIN === '1' || adminIds.has(telegramIdText);
+
+    const user = await prisma.user.upsert({
+      where: { telegramId },
+      update: {
+        firstName: isAdmin ? 'Admin' : 'Test',
+        lastName: 'User',
+        username: isAdmin ? 'admin_test' : `test_${telegramIdText}`,
+        isAdmin,
+      },
+      create: {
+        telegramId,
+        firstName: isAdmin ? 'Admin' : 'Test',
+        lastName: 'User',
+        username: isAdmin ? 'admin_test' : `test_${telegramIdText}`,
+        isAdmin,
+      },
+    });
+
+    const token = jwt.sign({ userId: user.id }, jwtSecret, { expiresIn: '30d' });
+    writeFileSync(tokenFile, `${token}\n`, 'utf8');
+    console.error(`Auto-created test token for user: ${user.id} telegramId=${telegramIdText} admin=${user.isAdmin}`);
+    console.error(`Saved token to: ${tokenFile}`);
+    return token;
+  } finally {
+    await prisma.$disconnect();
+  }
 }
 
 function randomCyrillic(length = 8) {
