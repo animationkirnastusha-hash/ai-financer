@@ -21,7 +21,9 @@
     "reset:sqlite": "node scripts/reset-sqlite-db.mjs",
     "db:sync": "prisma db push --accept-data-loss && prisma generate",
     "db:recover": "npm run db:sync",
-    "test:token": "node scripts/create-test-token.mjs"
+    "test:token": "node scripts/create-test-token.mjs",
+    "test:base-ai": "node scripts/run-basic-ai-regression.mjs",
+    "test:base-ai:report": "node scripts/run-basic-ai-regression.mjs --report-only"
   },
   "keywords": [],
   "author": "",
