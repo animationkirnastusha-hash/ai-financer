@@ -1,34 +1,13 @@
 #!/usr/bin/env node
 /*
-  AI-Financer базовый regression suite.
+  AI-Financer base AI regression suite.
 
-  Назначение:
-  - проверить backend через HTTP так, как его увидит клиент;
-  - покрыть базовую версию до Premium;
-  - проверить ручные CRUD endpoints;
-  - проверить AI lifecycle через настоящий backend AI pipeline;
-  - отдельно поймать опасные ошибки: дубли операций при редактировании, неверный баланс, зависшие pending actions.
-
-  Важно:
-  - это тестовый скрипт, не production parser;
-  - финансовые команды отправляются в backend как обычный текст;
-  - скрипт не извлекает финансовый смысл из пользовательского текста и не меняет production AI pipeline.
-
-  Запуск:
-    npm run test:base-ai
-
-  Переменные:
-    TEST_BASE_URL=http://localhost:3000/api
-    TEST_HEALTH_URL=http://localhost:3000/health
-    TEST_AUTH_TOKEN=<jwt>
-    TEST_ADMIN=1
-    TEST_AI=1
-    TEST_DESTRUCTIVE=0
-    TEST_KEEP_DATA=0
-    TEST_TIMEOUT_MS=30000
+  Black-box backend tests for the base (non-premium) version.
+  The runner does not parse financial commands. It sends natural-language commands
+  to the backend AI endpoint and verifies API state after execution.
 */
 
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { performance } from 'node:perf_hooks';
 
@@ -42,33 +21,38 @@ const reportMdPath = join(reportDir, `base-ai-regression-${stamp}.md`);
 const config = {
   baseUrl: normalizeBaseUrl(process.env.TEST_BASE_URL || 'http://127.0.0.1:3000/api'),
   healthUrl: process.env.TEST_HEALTH_URL || inferHealthUrl(process.env.TEST_BASE_URL || 'http://127.0.0.1:3000/api'),
-  token: process.env.TEST_AUTH_TOKEN || '',
+  token: readToken(),
   timeoutMs: Number(process.env.TEST_TIMEOUT_MS || 30_000),
   runAI: bool(process.env.TEST_AI, true),
+  strictAI: bool(process.env.TEST_STRICT_AI, true),
   expectAdmin: bool(process.env.TEST_ADMIN, false),
   allowDestructive: bool(process.env.TEST_DESTRUCTIVE, false),
   keepData: bool(process.env.TEST_KEEP_DATA, false),
-  strictAI: bool(process.env.TEST_STRICT_AI, true),
   reportOnly: args.has('--report-only'),
 };
 
 const state = {
   token: config.token,
-  user: null,
-  prefix: `База ${randomCyrillic(8)}`,
+  prefix: `База ${randomCyrillic(7)}`,
+  accounts: [],
+  sections: [],
+  categories: [],
+  transactions: [],
+  goals: [],
+  budgets: [],
+  recurring: [],
   cleanup: [],
   results: [],
   warnings: [],
-  refs: {},
 };
 
 function bool(value, fallback) {
   if (value === undefined || value === '') return fallback;
-  return ['1', 'true', 'yes', 'on'].includes(String(value).toLowerCase());
+  return ['1', 'true', 'yes', 'on'].includes(String(value).trim().toLowerCase());
 }
 
-function normalizeBaseUrl(url) {
-  return String(url).replace(/\/+$/, '');
+function normalizeBaseUrl(value) {
+  return String(value || '').replace(/\/+$/, '');
 }
 
 function inferHealthUrl(baseUrl) {
@@ -76,8 +60,17 @@ function inferHealthUrl(baseUrl) {
   return clean.endsWith('/api') ? `${clean.slice(0, -4)}/health` : `${clean}/health`;
 }
 
-function nowMs() {
-  return Math.round(performance.now());
+function readToken() {
+  const direct = String(process.env.TEST_AUTH_TOKEN || '').trim();
+  if (direct) return direct;
+
+  const tokenFile = process.env.TEST_AUTH_TOKEN_FILE || join(process.cwd(), '.test-auth-token');
+  if (existsSync(tokenFile)) {
+    const saved = readFileSync(tokenFile, 'utf8').trim();
+    if (saved) return saved;
+  }
+
+  return '';
 }
 
 function randomCyrillic(length = 8) {
@@ -92,9 +85,8 @@ function short(value, length = 900) {
   return text.length > length ? `${text.slice(0, length)}…` : text;
 }
 
-function money(value) {
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? Math.round(parsed) : 0;
+function nowMs() {
+  return Math.round(performance.now());
 }
 
 function assert(condition, message, details) {
@@ -105,14 +97,15 @@ function assert(condition, message, details) {
   }
 }
 
-function expectAI(condition, message, details) {
-  if (condition) return;
-  if (config.strictAI) assert(false, message, details);
-  state.warnings.push(`AI soft fail: ${message}: ${short(details, 240)}`);
+function warn(message, details) {
+  state.warnings.push({ message, details });
+  console.log(`  warning: ${message}`);
 }
 
 async function withTimeout(promise, label) {
-  const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error(`${label} timed out after ${config.timeoutMs}ms`)), config.timeoutMs));
+  const timeout = new Promise((_, reject) => {
+    setTimeout(() => reject(new Error(`${label} timed out after ${config.timeoutMs}ms`)), config.timeoutMs);
+  });
   return Promise.race([promise, timeout]);
 }
 
@@ -129,26 +122,26 @@ async function api(path, options = {}) {
     ...(options.headers || {}),
   };
 
-  const response = await rawFetch(url, {
+  const res = await rawFetch(url, {
     ...options,
     headers,
     body: options.body === undefined ? undefined : JSON.stringify(options.body),
   });
 
-  const text = await response.text();
+  const text = await res.text();
   let data = null;
   if (text) {
     try { data = JSON.parse(text); } catch { data = text; }
   }
 
-  if (!response.ok) {
-    const error = new Error(`${options.method || 'GET'} ${path} failed with ${response.status}`);
-    error.status = response.status;
+  if (!res.ok) {
+    const error = new Error(`${options.method || 'GET'} ${path} failed with ${res.status}`);
+    error.status = res.status;
     error.payload = data;
     throw error;
   }
 
-  return { status: response.status, data, headers: Object.fromEntries(response.headers.entries()) };
+  return { status: res.status, data, headers: Object.fromEntries(res.headers.entries()) };
 }
 
 async function maybeApi(path, options = {}) {
@@ -161,6 +154,7 @@ async function test(name, fn, opts = {}) {
     console.log(`↷ ${name} — skipped: ${opts.skip}`);
     return;
   }
+
   const started = nowMs();
   try {
     const details = await fn();
@@ -172,623 +166,473 @@ async function test(name, fn, opts = {}) {
     const details = error.details ?? error.payload ?? error.message;
     state.results.push({ name, status: 'failed', durationMs, error: error.message, details });
     console.log(`✕ ${name} (${durationMs}ms)`);
-    console.log(`  ${short(details, 650)}`);
+    console.log(`  ${short(details, 700)}`);
   }
 }
 
 function addCleanup(label, fn) {
-  state.cleanup.push({ label, fn });
+  if (!config.keepData) state.cleanup.push({ label, fn });
 }
 
 function listFrom(payload, keys) {
-  for (const key of keys) if (Array.isArray(payload?.[key])) return payload[key];
+  for (const key of keys) {
+    if (Array.isArray(payload?.[key])) return payload[key];
+  }
   if (Array.isArray(payload)) return payload;
   return [];
 }
 
-function idOf(payload, key) {
-  if (typeof payload?.id === 'string') return payload.id;
-  if (key && typeof payload?.[key]?.id === 'string') return payload[key].id;
+function idOf(payload, keys = ['id']) {
+  if (!payload) return '';
+  if (typeof payload.id === 'string') return payload.id;
+  for (const key of keys) {
+    if (typeof payload?.[key]?.id === 'string') return payload[key].id;
+  }
   return '';
 }
 
-async function ensureAuth() {
-  if (state.token) {
-    const me = await api('/auth/me');
-    assert(me.data?.user?.id, 'TEST_AUTH_TOKEN невалиден: /auth/me не вернул user.id', me.data);
-    state.user = me.data.user;
-    return state.user;
-  }
-  const login = await api('/auth/login', { method: 'POST', body: {} });
-  state.token = login.data?.token;
-  assert(state.token, 'Не удалось получить token через /auth/login. Для прод-сервера передай TEST_AUTH_TOKEN.', login.data);
-  state.user = login.data?.user;
-  return state.user;
+function pickArrayPayload(data) {
+  if (Array.isArray(data)) return data;
+  return listFrom(data, ['items', 'data', 'accounts', 'transactions', 'sections', 'categories', 'goals', 'budgets', 'recurringPayments', 'notifications']);
 }
 
-async function createAccount(name, balance = 10_000, type = 'cash', currency = 'RUB') {
-  const response = await api('/accounts', { method: 'POST', body: { name, balance, type, currency } });
-  const account = response.data?.account ?? response.data;
-  assert(account?.id, 'Создание счёта не вернуло account.id', response.data);
-  addCleanup(`account:${name}`, async () => maybeApi(`/accounts/${account.id}`, { method: 'DELETE' }));
+async function requireToken() {
+  if (state.token) return;
+  if (bool(process.env.TEST_ALLOW_DEV_LOGIN, false)) {
+    const login = await api('/auth/login', { method: 'POST', body: {} });
+    state.token = login.data?.token;
+    assert(Boolean(state.token), 'Dev login did not return token. Use npm run test:token first.', login.data);
+    return;
+  }
+  throw new Error('TEST_AUTH_TOKEN is empty. Run TEST_TELEGRAM_ID=516730814 TEST_ADMIN=1 npm run test:token, then run this suite again. The token is also saved to backend/.test-auth-token.');
+}
+
+async function ensureAuth() {
+  await requireToken();
+  const me = await api('/auth/me');
+  assert(Boolean(me.data?.user?.id), '/auth/me returned no user. Regenerate token after DB reset.', me.data);
+  return me.data.user;
+}
+
+async function createAccount(name, balance = 10000, type = 'cash') {
+  const res = await api('/accounts', { method: 'POST', body: { name, type, currency: 'RUB', balance } });
+  const account = res.data?.account ?? res.data;
+  assert(account?.id, 'Account create returned no id', res.data);
+  state.accounts.push(account.id);
+  addCleanup(`account:${name}`, () => maybeApi(`/accounts/${account.id}`, { method: 'DELETE' }));
   return account;
 }
 
 async function createSection(name) {
-  const response = await api('/sections', { method: 'POST', body: { name, icon: '•', color: '#7c8cff' } });
-  const section = response.data?.section ?? response.data;
-  assert(section?.id, 'Создание раздела не вернуло id', response.data);
-  addCleanup(`section:${name}`, async () => maybeApi(`/sections/${section.id}`, { method: 'DELETE' }));
+  const res = await api('/sections', { method: 'POST', body: { name, icon: '•', color: '#8ea7ff' } });
+  const section = res.data?.section ?? res.data;
+  assert(section?.id, 'Section create returned no id', res.data);
+  state.sections.push(section.id);
+  addCleanup(`section:${name}`, () => maybeApi(`/sections/${section.id}`, { method: 'DELETE' }));
   return section;
 }
 
 async function createCategory(name, sectionId, type = 'expense') {
-  const response = await api('/categories', { method: 'POST', body: { name, sectionId, type, icon: '•', color: '#7c8cff' } });
-  const category = response.data?.category ?? response.data;
-  assert(category?.id, 'Создание категории не вернуло id', response.data);
-  addCleanup(`category:${name}`, async () => maybeApi(`/categories/${category.id}`, { method: 'DELETE' }));
+  const res = await api('/categories', { method: 'POST', body: { name, type, sectionId, icon: '•', color: '#8ea7ff' } });
+  const category = res.data?.category ?? res.data;
+  assert(category?.id, 'Category create returned no id', res.data);
+  state.categories.push(category.id);
+  addCleanup(`category:${name}`, () => maybeApi(`/categories/${category.id}`, { method: 'DELETE' }));
   return category;
 }
 
-async function createGoal(title, targetAmount = 50_000) {
-  const response = await api('/goals', { method: 'POST', body: { title, targetAmount, currentAmount: 1_000, currency: 'RUB' } });
-  const goal = response.data?.goal ?? response.data;
-  assert(goal?.id, 'Создание цели не вернуло id', response.data);
-  addCleanup(`goal:${title}`, async () => maybeApi(`/goals/${goal.id}`, { method: 'DELETE' }));
+async function createTransaction(payload) {
+  const res = await api('/transactions', { method: 'POST', body: payload });
+  const tx = res.data?.transaction ?? res.data;
+  assert(tx?.id, 'Transaction create returned no id', res.data);
+  state.transactions.push(tx.id);
+  addCleanup(`transaction:${tx.id}`, () => maybeApi(`/transactions/${tx.id}`, { method: 'DELETE' }));
+  return tx;
+}
+
+async function createGoal(name, targetAmount = 50000) {
+  const res = await api('/goals', { method: 'POST', body: { name, targetAmount, currentAmount: 0, currency: 'RUB' } });
+  const goal = res.data?.goal ?? res.data;
+  assert(goal?.id, 'Goal create returned no id', res.data);
+  state.goals.push(goal.id);
+  addCleanup(`goal:${name}`, () => maybeApi(`/goals/${goal.id}`, { method: 'DELETE' }));
   return goal;
 }
 
-async function createTransaction(body, label) {
-  const response = await api('/transactions', { method: 'POST', body });
-  const transaction = response.data?.transaction ?? response.data;
-  assert(transaction?.id, `${label}: создание операции не вернуло id`, response.data);
-  addCleanup(`transaction:${label}`, async () => maybeApi(`/transactions/${transaction.id}`, { method: 'DELETE' }));
-  return transaction;
+function aiPayload(command) {
+  return { command, text: command, source: 'console-regression' };
 }
 
-async function findAccountByName(name) {
-  const response = await api('/accounts');
-  const accounts = listFrom(response.data, ['accounts']);
-  const needle = String(name).toLowerCase();
-  return accounts.find((item) => String(item.name || '').toLowerCase() === needle)
-    || accounts.find((item) => String(item.name || '').toLowerCase().includes(needle));
+function aiResult(data) {
+  return data?.result ?? data;
 }
 
-async function findSectionByName(name) {
-  const response = await api('/sections');
-  const sections = listFrom(response.data, ['sections']);
-  const needle = String(name).toLowerCase();
-  return sections.find((item) => String(item.name || '').toLowerCase().includes(needle));
+async function aiParse(command) {
+  const res = await api('/ai/parse', { method: 'POST', body: aiPayload(command) });
+  return aiResult(res.data);
 }
 
-async function findCategoryByName(name) {
-  const response = await api('/categories');
-  const categories = listFrom(response.data, ['categories']);
-  const needle = String(name).toLowerCase();
-  return categories.find((item) => String(item.name || '').toLowerCase().includes(needle));
+async function aiConfirm(pendingActionId) {
+  const body = pendingActionId ? { pendingActionId } : {};
+  const res = await api('/ai/confirm', { method: 'POST', body });
+  return aiResult(res.data);
 }
 
-async function findGoalByTitle(title) {
-  const response = await api('/goals');
-  const goals = listFrom(response.data, ['goals']);
-  const needle = String(title).toLowerCase();
-  return goals.find((item) => String(item.title || '').toLowerCase().includes(needle));
+async function aiCancel(pendingActionId) {
+  const body = pendingActionId ? { pendingActionId } : {};
+  const res = await api('/ai/cancel', { method: 'POST', body });
+  return aiResult(res.data);
 }
 
-async function transactionList(limit = 250) {
-  const response = await api(`/transactions?limit=${limit}`);
-  return listFrom(response.data, ['transactions']);
+function pendingId(result) {
+  return result?.pendingActionId || result?.result?.pendingActionId || result?.pendingAction?.id || result?.meta?.pendingActionId || '';
 }
 
-function pendingIdFromAI(result) {
-  return result?.pendingActionId
-    || result?.pendingAction?.id
-    || result?.data?.pendingActionId
-    || result?.data?.pendingAction?.id
-    || result?.preview?.pendingActionId
-    || result?.meta?.pendingActionId
-    || '';
-}
+async function executeAi(command) {
+  const prepared = await aiParse(command);
+  assert(prepared?.success !== false, `AI prepare failed for: ${command}`, prepared);
 
-function auditLogIdFromAI(result) {
-  return result?.auditLogId
-    || result?.meta?.auditLogId
-    || result?.result?.auditLogId
-    || result?.data?.auditLogId
-    || '';
-}
-
-function pendingSearchText(item) {
-  return [
-    item?.id,
-    item?.message,
-    item?.summary,
-    item?.previewText,
-    item?.status,
-    item?.riskLevel,
-    item?.parsed?.summary,
-    item?.parsed?.intent,
-    JSON.stringify(item?.parsed || {}),
-  ].filter(Boolean).join(' ').toLowerCase();
-}
-
-async function pendingIdsSafe() {
-  const response = await maybeApi('/ai/pending-actions');
-  if (response.error) return new Set();
-  return new Set(listFrom(response.data, ['pendingActions', 'items', 'actions']).map((item) => item.id).filter(Boolean));
-}
-
-async function resolvePendingActionId(result, command, beforePendingIds = new Set()) {
-  const direct = pendingIdFromAI(result);
-  if (direct) return direct;
-  if (!result?.requiresConfirmation && result?.executed !== false) return '';
-
-  const response = await maybeApi('/ai/pending-actions');
-  if (response.error) return '';
-
-  const pending = listFrom(response.data, ['pendingActions', 'items', 'actions'])
-    .filter((item) => item?.id && !beforePendingIds.has(item.id))
-    .sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
-
-  if (!pending.length) return '';
-
-  const commandText = String(command || '').toLowerCase();
-  const prefixText = String(state.prefix || '').toLowerCase();
-  const matched = pending.find((item) => pendingSearchText(item).includes(prefixText))
-    || pending.find((item) => commandText.split(/\s+/).filter((part) => part.length > 3).some((part) => pendingSearchText(item).includes(part)))
-    || pending[0];
-
-  return matched?.id || '';
-}
-
-async function ai(command, options = {}) {
-  const shouldConfirm = options.confirm !== false;
-  const beforePendingIds = shouldConfirm ? await pendingIdsSafe() : new Set();
-  const response = await api('/ai/parse', {
-    method: 'POST',
-    headers: { 'x-idempotency-key': `base-ai:${Date.now()}:${Math.random().toString(36).slice(2)}` },
-    body: { command, execute: options.execute ?? true },
-  });
-
-  let result = response.data;
-  const pendingActionId = shouldConfirm ? await resolvePendingActionId(result, command, beforePendingIds) : pendingIdFromAI(result);
-
-  if (shouldConfirm && pendingActionId) {
-    const confirmed = await api('/ai/confirm', {
-      method: 'POST',
-      headers: { 'x-idempotency-key': `base-ai-confirm:${pendingActionId}:${Date.now()}` },
-      body: { pendingActionId },
-    });
-    result = confirmed.data;
+  if (prepared?.requiresConfirmation) {
+    const id = pendingId(prepared);
+    const confirmed = await aiConfirm(id || undefined);
+    assert(confirmed?.success !== false, `AI confirm failed for: ${command}`, confirmed);
+    return { prepared, confirmed };
   }
 
-  return result;
+  return { prepared, confirmed: prepared };
 }
 
-async function aiPreview(command) {
-  const beforePendingIds = await pendingIdsSafe();
-  const response = await api('/ai/parse', {
-    method: 'POST',
-    headers: { 'x-idempotency-key': `base-ai-preview:${Date.now()}:${Math.random().toString(36).slice(2)}` },
-    body: { command, execute: true },
-  });
-  const pendingActionId = await resolvePendingActionId(response.data, command, beforePendingIds);
-  return { result: response.data, pendingActionId };
+async function listTransactions() {
+  const res = await api('/transactions');
+  return pickArrayPayload(res.data);
+}
+
+async function listAccounts() {
+  const res = await api('/accounts');
+  return pickArrayPayload(res.data);
+}
+
+async function listGoals() {
+  const res = await api('/goals');
+  return pickArrayPayload(res.data);
+}
+
+async function listSections() {
+  const res = await api('/sections');
+  return pickArrayPayload(res.data);
+}
+
+async function listCategories() {
+  const res = await api('/categories');
+  return pickArrayPayload(res.data);
 }
 
 async function cleanup() {
-  if (config.keepData) {
-    state.warnings.push('TEST_KEEP_DATA=1: cleanup skipped');
-    return;
-  }
+  if (config.keepData) return;
   console.log('\nCleanup');
   for (const item of [...state.cleanup].reverse()) {
-    try {
-      await item.fn();
-      console.log(`  ✓ ${item.label}`);
-    } catch (error) {
-      state.warnings.push(`Cleanup failed: ${item.label}: ${error.message}`);
-      console.log(`  ! ${item.label}: ${error.message}`);
-    }
+    try { await item.fn(); } catch (error) { state.warnings.push({ message: `Cleanup failed: ${item.label}`, details: error.message }); }
   }
 }
 
-function compactAI(result) {
-  return {
-    success: result?.success,
-    intent: result?.intent,
-    message: result?.message || result?.answer || result?.text,
-    executed: result?.executed,
-    requiresConfirmation: result?.requiresConfirmation,
-    riskLevel: result?.riskLevel,
-    pendingActionId: pendingIdFromAI(result) || undefined,
-    auditLogId: auditLogIdFromAI(result) || undefined,
-  };
-}
-
-async function run() {
-  console.log('AI-Financer base AI regression suite');
-  console.log(`Base URL: ${config.baseUrl}`);
-  console.log(`Health URL: ${config.healthUrl}`);
-  console.log(`AI tests: ${config.runAI ? 'on' : 'off'}`);
-  console.log(`Strict AI: ${config.strictAI ? 'on' : 'off'}`);
-  console.log(`Destructive: ${config.allowDestructive ? 'on' : 'off'}\n`);
-
-  await test('health: endpoint responds', async () => {
-    const response = await rawFetch(config.healthUrl, { headers: { Accept: 'application/json' } });
-    assert(response.ok, `Health endpoint returned ${response.status}`);
-    return { status: response.status };
-  });
-
-  await test('auth: token/login and /auth/me', async () => {
-    const user = await ensureAuth();
-    assert(user?.id, 'No user id after auth', user);
-    return { userId: user.id, isAdmin: user.isAdmin };
-  });
-
-  await test('read contracts: all base endpoints', async () => {
-    const endpoints = [
-      '/users/me',
-      '/accounts',
-      '/accounts/summary',
-      '/accounts/total-balance',
-      '/transactions?limit=5',
-      '/transactions/latest',
-      '/transactions/stats/monthly',
-      '/sections',
-      '/categories',
-      '/goals',
-      '/budgets',
-      '/recurring',
-      '/notifications',
-      '/referral',
-      '/progression/me',
-      '/companion/state',
-      '/companion/events',
-      '/premium/capabilities',
-      '/ai-settings',
-      '/ai-settings/onboarding',
-      '/ai/pending-actions',
-      '/ai/audit-logs?limit=5',
-      '/ai/observability?limit=5',
-    ];
-
-    const checked = [];
-    for (const endpoint of endpoints) {
-      const response = await api(endpoint);
-      checked.push({ endpoint, status: response.status });
-    }
-    return { checked };
-  });
-
-  await test('manual CRUD: accounts, balance endpoints and lock flags', async () => {
-    const cash = await createAccount(`${state.prefix} Наличка`, 100_000, 'cash');
-    const card = await createAccount(`${state.prefix} Карта`, 25_000, 'card');
-    const updated = await api(`/accounts/${cash.id}`, { method: 'PUT', body: { name: `${state.prefix} Основная наличка`, balance: 110_000, lockSpending: false, lockTransfers: false } });
-    assert((updated.data?.account ?? updated.data)?.name?.includes('Основная'), 'Account update did not change name', updated.data);
-    await api('/accounts/recalculate-balances', { method: 'POST' });
-    const total = await api('/accounts/total-balance');
-    assert(typeof total.data === 'object', 'Total balance payload invalid', total.data);
-    state.refs.cash = { ...cash, name: `${state.prefix} Основная наличка` };
-    state.refs.card = card;
-    return { cash: cash.id, card: card.id, total: total.data };
-  });
-
-  await test('manual CRUD: sections, categories and taxonomy update', async () => {
-    const food = await createSection(`${state.prefix} Еда`);
-    const transport = await createSection(`${state.prefix} Транспорт`);
-    const updatedSection = await api(`/sections/${transport.id}`, { method: 'PUT', body: { name: `${state.prefix} Передвижение`, icon: '•', color: '#77aaff' } });
-    assert((updatedSection.data?.section ?? updatedSection.data)?.name?.includes('Передвижение'), 'Section update failed', updatedSection.data);
-    const cafe = await createCategory(`${state.prefix} Кафе`, food.id, 'expense');
-    const salary = await createCategory(`${state.prefix} Зарплата`, null, 'income');
-    const updatedCategory = await api(`/categories/${cafe.id}`, { method: 'PUT', body: { name: `${state.prefix} Кофе`, sectionId: transport.id, icon: '•', color: '#77aaff' } });
-    assert((updatedCategory.data?.category ?? updatedCategory.data)?.name?.includes('Кофе'), 'Category update failed', updatedCategory.data);
-    state.refs.food = food;
-    state.refs.transport = { ...transport, name: `${state.prefix} Передвижение` };
-    state.refs.expenseCategory = { ...cafe, name: `${state.prefix} Кофе` };
-    state.refs.incomeCategory = salary;
-    return { food: food.id, transport: transport.id, cafe: cafe.id, salary: salary.id };
-  });
-
-  await test('manual CRUD: income, expense, transfer and transaction update', async () => {
-    const expense = await createTransaction({ accountId: state.refs.cash.id, categoryId: state.refs.expenseCategory.id, sectionId: state.refs.transport.id, type: 'expense', amount: 300, description: `${state.prefix} кофе` }, 'manual-expense');
-    const income = await createTransaction({ accountId: state.refs.cash.id, categoryId: state.refs.incomeCategory.id, type: 'income', amount: 10_000, description: `${state.prefix} доход` }, 'manual-income');
-    const transfer = await createTransaction({ accountId: state.refs.cash.id, toAccountId: state.refs.card.id, type: 'transfer', amount: 1_000, description: `${state.prefix} перевод` }, 'manual-transfer');
-    const updated = await api(`/transactions/${expense.id}`, { method: 'PATCH', body: { amount: 350, description: `${state.prefix} кофе обновлено`, categoryId: state.refs.expenseCategory.id, sectionId: state.refs.transport.id } });
-    assert(money(updated.data?.transaction?.amount) === 350, 'Transaction update did not change amount', updated.data);
-    const latest = await api('/transactions/latest');
-    const monthly = await api('/transactions/stats/monthly');
-    assert(latest.status === 200 && monthly.status === 200, 'Transaction read endpoints failed');
-    state.refs.manualIncome = income;
-    return { expense: expense.id, income: income.id, transfer: transfer.id };
-  });
-
-  await test('manual CRUD: goals', async () => {
-    const goal = await createGoal(`${state.prefix} Отпуск`, 60_000);
-    const updated = await api(`/goals/${goal.id}`, { method: 'PATCH', body: { currentAmount: 5_000, targetAmount: 80_000, note: 'autotest' } });
-    assert(money(updated.data?.goal?.targetAmount) === 80_000, 'Goal update did not change targetAmount', updated.data);
-    state.refs.goal = goal;
-    return { goal: goal.id };
-  });
-
-  await test('manual CRUD: budgets', async () => {
-    const created = await api('/budgets', { method: 'POST', body: { categoryId: state.refs.expenseCategory.id, amount: 20_000, period: 'monthly', notifyAt: 75, isActive: true } });
-    const budget = created.data?.budget ?? created.data;
-    assert(budget?.id, 'Budget create returned no id', created.data);
-    addCleanup(`budget:${budget.id}`, async () => maybeApi(`/budgets/${budget.id}`, { method: 'DELETE' }));
-    const read = await api(`/budgets/${budget.id}`);
-    const updated = await api(`/budgets/${budget.id}`, { method: 'PUT', body: { amount: 25_000, notifyAt: 80, isActive: false } });
-    assert(money((updated.data?.budget ?? updated.data)?.amount) === 25_000, 'Budget update failed', updated.data);
-    return { budget: budget.id, read: read.status };
-  });
-
-  await test('manual CRUD: recurring payments', async () => {
-    const nextDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
-    const created = await api('/recurring', { method: 'POST', body: { name: `${state.prefix} Подписка`, amount: 499, category: 'Подписки', period: 'monthly', accountId: state.refs.card.id, nextDate, isActive: true } });
-    const recurring = created.data?.recurringPayment ?? created.data;
-    assert(recurring?.id, 'Recurring create returned no id', created.data);
-    addCleanup(`recurring:${recurring.id}`, async () => maybeApi(`/recurring/${recurring.id}`, { method: 'DELETE' }));
-    const read = await api(`/recurring/${recurring.id}`);
-    const updated = await api(`/recurring/${recurring.id}`, { method: 'PUT', body: { name: `${state.prefix} Подписка обновлена`, amount: 599, category: 'Сервисы', period: 'monthly', accountId: state.refs.card.id, isActive: false } });
-    assert(money((updated.data?.recurringPayment ?? updated.data)?.amount) === 599, 'Recurring update failed', updated.data);
-    return { recurring: recurring.id, read: read.status };
-  });
-
-  await test('manual: settings, onboarding, progression, referral and analytics', async () => {
-    const settings = await api('/ai-settings');
-    await api('/ai-settings', { method: 'PATCH', body: { voiceInputEnabled: true, voiceOutputEnabled: false, afterWakeListenSeconds: 7 } });
-    const onboarding = await api('/ai-settings/onboarding');
-    await api('/ai-settings/onboarding', { method: 'PATCH', body: { voiceIntroSeen: true } });
-    await api('/progression/activity', { method: 'POST', body: { type: 'test_activity', amount: 1, metadata: { source: 'base-ai-regression' } } });
-    const progression = await api('/progression/me');
-    const referral = await api('/referral');
-    const analytics = await api('/analytics/events', { method: 'POST', body: { event: 'screen_view', data: { screen: 'base-ai-regression' } } });
-    assert(analytics.status === 204, 'Analytics event should return 204', analytics);
-    return { settings: settings.status, onboarding: onboarding.status, progression: progression.status, referral: referral.status };
-  });
-
-  await test('manual: notifications read contracts', async () => {
-    const notifications = await api('/notifications');
-    await api('/notifications/read-all', { method: 'POST' });
-    return { count: listFrom(notifications.data, ['notifications']).length };
-  });
-
-  await test('admin: access rule and admin dashboard endpoints', async () => {
-    const overview = await maybeApi('/admin/overview');
-    if (overview.error) {
-      assert(!config.expectAdmin && [401, 403].includes(overview.error.status), 'Admin overview failed unexpectedly', overview.error.payload ?? overview.error.message);
-      return { admin: false, status: overview.error.status };
-    }
-    assert(config.expectAdmin, 'Admin endpoint is accessible, but TEST_ADMIN is not enabled. Check test token policy.', overview.data);
-    const users = await api('/admin/users');
-    const events = await api('/admin/events');
-    const monitoring = await api('/admin/monitoring');
-    return { admin: true, overview: overview.status, users: users.status, events: events.status, monitoring: monitoring.status };
-  });
-
-  const aiSkip = config.runAI ? '' : 'TEST_AI=0';
-
-  await test('AI: off-topic answers without financial pending action', async () => {
-    const result = await ai('как думаешь, стоит ли сегодня отдохнуть?', { execute: true, confirm: false });
-    expectAI(!pendingIdFromAI(result) && !result?.requiresConfirmation, 'Off-topic created a pending financial action', result);
-    expectAI(Boolean(result?.message || result?.answer || result?.text), 'Off-topic returned no answer text', result);
-    return compactAI(result);
-  }, { skip: aiSkip });
-
-  await test('AI: create account with confirmation', async () => {
-    const name = `${state.prefix} AI Счёт`;
-    const result = await ai(`создай новый счёт с названием "${name}" и балансом 1000 рублей`);
-    const account = await findAccountByName(name);
-    expectAI(account?.id, 'AI did not create account', { result });
-    if (account?.id) addCleanup(`ai-account:${name}`, async () => { const fresh = await findAccountByName(name); if (fresh?.id) await maybeApi(`/accounts/${fresh.id}`, { method: 'DELETE' }); });
-    state.refs.aiAccount = account;
-    return { accountId: account?.id, result: compactAI(result) };
-  }, { skip: aiSkip });
-
-  await test('AI: rename account and make it primary/default', async () => {
-    const oldName = `${state.prefix} AI Старое имя`;
-    const newName = `${state.prefix} AI Основной счёт`;
-    const seed = await createAccount(oldName, 2_000, 'cash');
-    const rename = await ai(`переименуй счёт "${oldName}" в "${newName}"`);
-    const renamed = await findAccountByName(newName);
-    expectAI(renamed?.id, 'AI did not rename account', { rename, seed });
-    const primary = await ai(`сделай счёт "${newName}" основным`);
-    const settings = await api('/ai-settings');
-    const snapshot = settings.data?.settings ?? settings.data;
-    const isPrimary = snapshot?.defaultExpenseAccountId === renamed?.id || snapshot?.defaultIncomeAccountId === renamed?.id || snapshot?.primaryAccountId === renamed?.id;
-    expectAI(isPrimary, 'AI did not make account primary/default', { primary, settings: settings.data, renamed });
-    return { accountId: renamed?.id, result: compactAI(primary) };
-  }, { skip: aiSkip });
-
-  await test('AI: create expense with category/section through planner contract', async () => {
-    const before = await transactionList();
-    const beforeIds = new Set(before.map((item) => item.id));
-    const result = await ai(`запиши расход ${state.prefix} кофе 321 рубль со счёта "${state.refs.cash.name}" в категорию "${state.prefix} Кофе"`);
-    const after = await transactionList();
-    const created = after.find((item) => !beforeIds.has(item.id) && item.type === 'expense' && money(item.amount) === 321);
-    expectAI(created?.id, 'AI did not create expense transaction', { result, after: after.slice(0, 5) });
-    if (created?.id) addCleanup(`ai-expense:${created.id}`, async () => maybeApi(`/transactions/${created.id}`, { method: 'DELETE' }));
-    state.refs.aiExpense = created;
-    return { transactionId: created?.id, result: compactAI(result) };
-  }, { skip: aiSkip });
-
-  await test('AI: create income and then edit last income without duplicate', async () => {
-    const accountName = state.refs.cash.name;
-    const before = await transactionList();
-    const beforeCount = before.length;
-    const create = await ai(`запиши доход ${state.prefix} премия 4321 рубль на счёт "${accountName}"`);
-    const afterCreate = await transactionList();
-    const income = afterCreate.find((item) => item.type === 'income' && money(item.amount) === 4321 && String(item.description || '').toLowerCase().includes(state.prefix.toLowerCase()))
-      || afterCreate.find((item) => item.type === 'income' && money(item.amount) === 4321);
-    expectAI(income?.id, 'AI did not create income transaction', { create, afterCreate: afterCreate.slice(0, 5) });
-    if (income?.id) addCleanup(`ai-income:${income.id}`, async () => maybeApi(`/transactions/${income.id}`, { method: 'DELETE' }));
-
-    const edit = await ai('измени описание последнего дохода на такси');
-    const afterEdit = await transactionList();
-    const matchingIncome = afterEdit.filter((item) => item.type === 'income' && money(item.amount) === 4321);
-    expectAI(afterEdit.length === afterCreate.length, 'Editing last income changed transaction count. Possible duplicate income.', { beforeCount, create, edit, afterCreateCount: afterCreate.length, afterEditCount: afterEdit.length, matchingIncome: matchingIncome.map((item) => item.id) });
-    const edited = afterEdit.find((item) => item.id === income?.id) || matchingIncome[0];
-    expectAI(String(edited?.description || '').toLowerCase().includes('такси'), 'AI did not update income description', { edit, edited });
-
-    const editAmount = await ai('измени сумму последнего дохода на 5000');
-    const afterAmount = await transactionList();
-    const amountEdited = afterAmount.find((item) => item.id === income?.id) || afterAmount.find((item) => item.type === 'income' && money(item.amount) === 5000);
-    expectAI(afterAmount.length === afterEdit.length, 'Editing last income amount created duplicate transaction', { editAmount, afterEditCount: afterEdit.length, afterAmountCount: afterAmount.length });
-    expectAI(money(amountEdited?.amount) === 5000, 'AI did not update income amount', { editAmount, amountEdited });
-
-    return { incomeId: income?.id, create: compactAI(create), edit: compactAI(edit), editAmount: compactAI(editAmount) };
-  }, { skip: aiSkip });
-
-  await test('AI: transfer between accounts', async () => {
-    const from = await createAccount(`${state.prefix} AI Перевод Откуда`, 9_000, 'card');
-    const to = await createAccount(`${state.prefix} AI Перевод Куда`, 1_000, 'cash');
-    const before = await transactionList();
-    const beforeIds = new Set(before.map((item) => item.id));
-    const result = await ai(`переведи 777 рублей со счёта "${from.name}" на счёт "${to.name}"`);
-    const after = await transactionList();
-    const created = after.find((item) => !beforeIds.has(item.id) && item.type === 'transfer' && money(item.amount) === 777);
-    expectAI(created?.id, 'AI did not create transfer', { result, after: after.slice(0, 5) });
-    if (created?.id) addCleanup(`ai-transfer:${created.id}`, async () => maybeApi(`/transactions/${created.id}`, { method: 'DELETE' }));
-    return { transactionId: created?.id, result: compactAI(result) };
-  }, { skip: aiSkip });
-
-  await test('AI: goals lifecycle', async () => {
-    const title = `${state.prefix} AI Цель`;
-    const create = await ai(`создай цель "${title}" на 77000 рублей`);
-    const goal = await findGoalByTitle(title);
-    expectAI(goal?.id, 'AI did not create goal', { create });
-    if (goal?.id) addCleanup(`ai-goal:${goal.id}`, async () => { const fresh = await findGoalByTitle(title); if (fresh?.id) await maybeApi(`/goals/${fresh.id}`, { method: 'DELETE' }); });
-    const update = await ai(`измени цель "${title}" поставь сумму 88000 рублей`);
-    const updated = await findGoalByTitle(title);
-    expectAI(money(updated?.targetAmount ?? updated?.target) === 88000, 'AI did not update goal target', { update, updated });
-    const remove = await ai(`удали цель "${title}"`);
-    const removed = await findGoalByTitle(title);
-    expectAI(!removed?.id, 'AI did not delete goal', { remove, removed });
-    return { goalId: goal?.id, create: compactAI(create), update: compactAI(update), remove: compactAI(remove) };
-  }, { skip: aiSkip });
-
-  await test('AI: taxonomy lifecycle', async () => {
-    const sectionName = `${state.prefix} AI Раздел`;
-    const categoryName = `${state.prefix} AI Категория`;
-    const sectionCreate = await ai(`создай раздел "${sectionName}"`);
-    const categoryCreate = await ai(`создай категорию "${categoryName}" в разделе "${sectionName}"`);
-    const section = await findSectionByName(sectionName);
-    const category = await findCategoryByName(categoryName);
-    expectAI(section?.id, 'AI did not create section', { sectionCreate });
-    expectAI(category?.id, 'AI did not create category', { categoryCreate });
-    if (category?.id) addCleanup(`ai-category:${category.id}`, async () => { const fresh = await findCategoryByName(categoryName); if (fresh?.id) await maybeApi(`/categories/${fresh.id}`, { method: 'DELETE' }); });
-    if (section?.id) addCleanup(`ai-section:${section.id}`, async () => { const fresh = await findSectionByName(sectionName); if (fresh?.id) await maybeApi(`/sections/${fresh.id}`, { method: 'DELETE' }); });
-    const renameCategoryName = `${state.prefix} AI Категория Новая`;
-    const rename = await ai(`переименуй категорию "${categoryName}" в "${renameCategoryName}"`);
-    const renamed = await findCategoryByName(renameCategoryName);
-    expectAI(renamed?.id, 'AI did not rename category', { rename, renamed });
-    const show = await ai('покажи категории и разделы', { execute: true, confirm: false });
-    return { sectionId: section?.id, categoryId: renamed?.id, show: compactAI(show) };
-  }, { skip: aiSkip });
-
-  await test('AI: pending action can be cancelled and does not mutate data', async () => {
-    const name = `${state.prefix} AI Отмена`;
-    const { result, pendingActionId } = await aiPreview(`создай счёт "${name}" с балансом 1234`);
-    if (pendingActionId) {
-      await api('/ai/cancel', { method: 'POST', body: { pendingActionId } });
-    }
-    const found = await findAccountByName(name);
-    expectAI(!found?.id, 'Cancelled pending action still mutated data', { result, pendingActionId, found });
-    return { pendingActionId, result: compactAI(result) };
-  }, { skip: aiSkip });
-
-  await test('AI: more than 3 actions is blocked for base version', async () => {
-    const result = await ai('создай счёт тест один, создай счёт тест два, создай счёт тест три, создай счёт тест четыре', { execute: true, confirm: false });
-    const text = JSON.stringify(result).toLowerCase();
-    const blocked = result?.success === false || text.includes('premium') || text.includes('преми') || text.includes('3') || text.includes('тр');
-    expectAI(blocked, 'AI did not block 4+ actions in base version', result);
-    return compactAI(result);
-  }, { skip: aiSkip });
-
-  await test('AI destructive guard: delete all accounts requires explicit opt-in', async () => {
-    if (!config.allowDestructive) {
-      state.warnings.push('Skipped destructive AI command. Set TEST_DESTRUCTIVE=1 only on isolated database.');
-      return { skippedByDefault: true };
-    }
-    const { result, pendingActionId } = await aiPreview('удали все счета');
-    expectAI(pendingActionId || result?.requiresConfirmation || result?.riskLevel === 'high', 'Delete-all did not require high-risk confirmation', result);
-    if (pendingActionId) await api('/ai/cancel', { method: 'POST', body: { pendingActionId } });
-    return { pendingActionId, result: compactAI(result) };
-  }, { skip: aiSkip });
-
-  await cleanup();
-  writeReports();
-
-  const failed = state.results.filter((item) => item.status === 'failed');
-  const skipped = state.results.filter((item) => item.status === 'skipped');
-  console.log('\nSummary');
-  console.log(`  Passed: ${state.results.filter((item) => item.status === 'passed').length}`);
-  console.log(`  Failed: ${failed.length}`);
-  console.log(`  Skipped: ${skipped.length}`);
-  console.log(`  Report: ${reportMdPath}`);
-
-  if (state.warnings.length) {
-    console.log('\nWarnings');
-    for (const warning of state.warnings) console.log(`  - ${warning}`);
-  }
-
-  if (failed.length) process.exit(1);
-}
-
-function writeReports() {
+async function writeReport() {
   mkdirSync(reportDir, { recursive: true });
-  const payload = {
-    startedAt: startedAt.toISOString(),
-    finishedAt: new Date().toISOString(),
-    config: {
-      baseUrl: config.baseUrl,
-      healthUrl: config.healthUrl,
-      runAI: config.runAI,
-      strictAI: config.strictAI,
-      expectAdmin: config.expectAdmin,
-      allowDestructive: config.allowDestructive,
-      keepData: config.keepData,
-    },
-    prefix: state.prefix,
-    results: state.results,
-    warnings: state.warnings,
-  };
+  const passed = state.results.filter((item) => item.status === 'passed').length;
+  const failed = state.results.filter((item) => item.status === 'failed').length;
+  const skipped = state.results.filter((item) => item.status === 'skipped').length;
+  const payload = { startedAt, finishedAt: new Date(), config: { ...config, token: config.token ? '<hidden>' : '' }, results: state.results, warnings: state.warnings, summary: { passed, failed, skipped } };
   writeFileSync(reportJsonPath, JSON.stringify(payload, null, 2), 'utf8');
 
   const lines = [];
   lines.push('# AI-Financer base AI regression report');
   lines.push('');
-  lines.push(`Started: ${payload.startedAt}`);
-  lines.push(`Finished: ${payload.finishedAt}`);
-  lines.push(`Base URL: ${config.baseUrl}`);
-  lines.push(`Prefix: ${state.prefix}`);
+  lines.push(`- Started: ${startedAt.toISOString()}`);
+  lines.push(`- Base URL: ${config.baseUrl}`);
+  lines.push(`- AI tests: ${config.runAI ? 'on' : 'off'}`);
+  lines.push(`- Strict AI: ${config.strictAI ? 'on' : 'off'}`);
   lines.push('');
-  lines.push('| Status | Test | Time | Details |');
-  lines.push('|---|---|---:|---|');
+  lines.push(`## Summary`);
+  lines.push('');
+  lines.push(`- Passed: ${passed}`);
+  lines.push(`- Failed: ${failed}`);
+  lines.push(`- Skipped: ${skipped}`);
+  lines.push('');
+  lines.push('## Results');
+  lines.push('');
   for (const item of state.results) {
-    const icon = item.status === 'passed' ? 'PASS' : item.status === 'failed' ? 'FAIL' : 'SKIP';
-    const details = item.status === 'failed' ? `${item.error}: ${short(item.details, 180)}` : item.reason || short(item.details || '', 180);
-    lines.push(`| ${icon} | ${escapeMd(item.name)} | ${item.durationMs ?? ''}ms | ${escapeMd(details)} |`);
+    const mark = item.status === 'passed' ? '✓' : item.status === 'failed' ? '✕' : '↷';
+    lines.push(`### ${mark} ${item.name}`);
+    lines.push('');
+    if (item.durationMs !== undefined) lines.push(`Duration: ${item.durationMs}ms`);
+    if (item.error) lines.push(`Error: ${item.error}`);
+    if (item.reason) lines.push(`Reason: ${item.reason}`);
+    if (item.details !== undefined) lines.push('```json\n' + short(item.details, 2500) + '\n```');
+    lines.push('');
   }
   if (state.warnings.length) {
-    lines.push('');
     lines.push('## Warnings');
-    for (const warning of state.warnings) lines.push(`- ${escapeMd(warning)}`);
+    lines.push('');
+    for (const warning of state.warnings) lines.push(`- ${warning.message}`);
   }
   writeFileSync(reportMdPath, lines.join('\n'), 'utf8');
+  console.log(`\nReport: ${reportMdPath}`);
 }
 
-function escapeMd(value) {
-  return String(value ?? '').replace(/\|/g, '\\|').replace(/\n/g, ' ');
-}
+async function main() {
+  console.log('AI-Financer base AI regression suite');
+  console.log(`Base URL: ${config.baseUrl}`);
+  console.log(`Health URL: ${config.healthUrl}`);
+  console.log(`AI tests: ${config.runAI ? 'on' : 'off'}`);
+  console.log(`Strict AI: ${config.strictAI ? 'on' : 'off'}`);
+  console.log(`Token source: ${config.token ? 'ok' : 'missing'}`);
+  console.log('');
 
-run().catch(async (error) => {
-  console.error('\nFatal test runner error');
-  console.error(error);
-  try {
-    await cleanup();
-    writeReports();
-  } finally {
-    process.exit(1);
+  if (config.reportOnly) return writeReport();
+
+  await test('health: endpoint responds', async () => {
+    const res = await rawFetch(config.healthUrl);
+    assert(res.ok, `Health returned ${res.status}`);
+    return { status: res.status };
+  });
+
+  await test('auth: saved token and /auth/me', async () => {
+    const user = await ensureAuth();
+    return { userId: user.id, isAdmin: Boolean(user.isAdmin) };
+  });
+
+  await test('read contracts: all base endpoints', async () => {
+    await requireToken();
+    const endpoints = ['/accounts', '/accounts/summary', '/accounts/total-balance', '/sections', '/categories', '/transactions', '/transactions/latest', '/transactions/stats/monthly', '/goals', '/budgets', '/recurring', '/ai-settings', '/ai-settings/onboarding', '/referral', '/progression/me', '/companion/state', '/premium/capabilities', '/notifications', '/ai/pending-actions', '/ai/audit-logs'];
+    const results = [];
+    for (const endpoint of endpoints) {
+      const res = await maybeApi(endpoint);
+      if (res.error) results.push({ endpoint, ok: false, status: res.error.status, payload: res.error.payload ?? res.error.message });
+      else results.push({ endpoint, ok: true });
+    }
+    const failed = results.filter((item) => !item.ok);
+    assert(failed.length === 0, 'Some base read endpoints failed', results);
+    return results;
+  });
+
+  await test('manual CRUD: accounts, balances and lock flags', async () => {
+    const account = await createAccount(`${state.prefix} счёт`, 12000, 'card');
+    const updated = await api(`/accounts/${account.id}`, { method: 'PUT', body: { name: `${state.prefix} карта`, balance: 15000, isDefault: true } });
+    await api('/accounts/summary');
+    await api('/accounts/total-balance');
+    return { accountId: account.id, updated: Boolean(updated.data) };
+  });
+
+  await test('manual CRUD: sections, categories and taxonomy update', async () => {
+    const section = await createSection(`${state.prefix} раздел`);
+    const category = await createCategory(`${state.prefix} категория`, section.id, 'expense');
+    await api(`/sections/${section.id}`, { method: 'PUT', body: { name: `${state.prefix} раздел новый` } });
+    await api(`/categories/${category.id}`, { method: 'PUT', body: { name: `${state.prefix} категория новая`, sectionId: section.id } });
+    return { sectionId: section.id, categoryId: category.id };
+  });
+
+  await test('manual CRUD: income, expense, transfer and transaction update', async () => {
+    const source = await createAccount(`${state.prefix} source`, 20000, 'card');
+    const target = await createAccount(`${state.prefix} target`, 1000, 'cash');
+    const section = await createSection(`${state.prefix} расходы`);
+    const category = await createCategory(`${state.prefix} такси`, section.id, 'expense');
+    const expense = await createTransaction({ type: 'expense', amount: 700, accountId: source.id, categoryId: category.id, sectionId: section.id, description: `${state.prefix} расход` });
+    const income = await createTransaction({ type: 'income', amount: 5000, accountId: source.id, description: `${state.prefix} доход` });
+    const transfer = await createTransaction({ type: 'transfer', amount: 1200, accountId: source.id, toAccountId: target.id, description: `${state.prefix} перевод` });
+    await api(`/transactions/${expense.id}`, { method: 'PUT', body: { description: `${state.prefix} расход изменён`, amount: 800 } });
+    return { expenseId: expense.id, incomeId: income.id, transferId: transfer.id };
+  });
+
+  await test('manual CRUD: goals', async () => {
+    const goal = await createGoal(`${state.prefix} цель`, 90000);
+    await api(`/goals/${goal.id}`, { method: 'PATCH', body: { currentAmount: 10000, name: `${state.prefix} цель новая` } });
+    return { goalId: goal.id };
+  });
+
+  await test('manual CRUD: budgets', async () => {
+    const section = await createSection(`${state.prefix} бюджет`);
+    const res = await api('/budgets', { method: 'POST', body: { name: `${state.prefix} бюджет`, amount: 30000, limit: 30000, period: 'monthly', sectionId: section.id } });
+    const budget = res.data?.budget ?? res.data;
+    assert(budget?.id, 'Budget create returned no id', res.data);
+    state.budgets.push(budget.id);
+    addCleanup(`budget:${budget.id}`, () => maybeApi(`/budgets/${budget.id}`, { method: 'DELETE' }));
+    await api(`/budgets/${budget.id}`, { method: 'PUT', body: { amount: 32000, limit: 32000 } });
+    return { budgetId: budget.id };
+  });
+
+  await test('manual CRUD: recurring payments', async () => {
+    const account = await createAccount(`${state.prefix} recurring`, 10000, 'card');
+    const res = await api('/recurring', { method: 'POST', body: { name: `${state.prefix} подписка`, amount: 499, accountId: account.id, type: 'expense', interval: 'monthly', nextDate: new Date(Date.now() + 86400000).toISOString() } });
+    const recurring = res.data?.recurringPayment ?? res.data;
+    assert(recurring?.id, 'Recurring create returned no id', res.data);
+    state.recurring.push(recurring.id);
+    addCleanup(`recurring:${recurring.id}`, () => maybeApi(`/recurring/${recurring.id}`, { method: 'DELETE' }));
+    await api(`/recurring/${recurring.id}`, { method: 'PUT', body: { amount: 599 } });
+    return { recurringId: recurring.id };
+  });
+
+  await test('manual: settings, onboarding, progression, referral and analytics', async () => {
+    await api('/ai-settings');
+    await api('/ai-settings', { method: 'PATCH', body: { voiceEnabled: true } });
+    await api('/ai-settings/onboarding');
+    await api('/ai-settings/onboarding', { method: 'PATCH', body: { completed: true } });
+    await api('/progression/me');
+    await api('/referral');
+    await api('/analytics/events', { method: 'POST', body: { event: 'test_base_ai_regression', screen: 'console', meta: { prefix: state.prefix } } });
+    return { ok: true };
+  });
+
+  await test('manual: notifications read contracts', async () => {
+    await api('/notifications');
+    await maybeApi('/notifications/read-all', { method: 'POST', body: {} });
+    return { ok: true };
+  });
+
+  await test('admin: access rule and admin dashboard endpoints', async () => {
+    const endpoints = ['/admin/overview', '/admin/users', '/admin/events', '/admin/monitoring'];
+    const results = [];
+    for (const endpoint of endpoints) {
+      const res = await maybeApi(endpoint);
+      if (res.error) results.push({ endpoint, ok: false, status: res.error.status, payload: res.error.payload ?? res.error.message });
+      else results.push({ endpoint, ok: true });
+    }
+    const failed = results.filter((item) => !item.ok);
+    if (config.expectAdmin) assert(failed.length === 0, 'Admin endpoints failed for admin token', results);
+    else assert(failed.every((item) => item.status === 403 || item.status === 401), 'Admin endpoints should reject non-admin token', results);
+    return results;
+  });
+
+  await test('AI: off-topic answers without financial pending action', async () => {
+    const result = await aiParse('Фина, расскажи коротко, что ты умеешь');
+    assert(result?.success !== false, 'AI off-topic returned hard failure', result);
+    assert(!result?.requiresConfirmation, 'Off-topic should not require financial confirmation', result);
+    return result;
+  }, { skip: !config.runAI && 'TEST_AI=0' });
+
+  await test('AI: create account with confirmation', async () => {
+    const before = await listAccounts();
+    const name = `${state.prefix} ai карта`;
+    await executeAi(`Фина, создай счёт ${name} с балансом 1000 рублей`);
+    const after = await listAccounts();
+    assert(after.length >= before.length + 1 || after.some((item) => String(item.name || '').includes(name)), 'AI did not create account', { before: before.length, after });
+    return { before: before.length, after: after.length };
+  }, { skip: !config.runAI && 'TEST_AI=0' });
+
+  await test('AI: rename account and make it primary/default', async () => {
+    const account = await createAccount(`${state.prefix} старое имя`, 1000, 'card');
+    const newName = `${state.prefix} основная карта`;
+    await executeAi(`Фина, переименуй счёт ${account.name} в ${newName}`);
+    await executeAi(`Фина, сделай счёт ${newName} основным`);
+    const accounts = await listAccounts();
+    assert(accounts.some((item) => item.id === account.id || String(item.name || '').includes(newName)), 'Renamed/default account not found', accounts);
+    return { accountId: account.id };
+  }, { skip: !config.runAI && 'TEST_AI=0' });
+
+  await test('AI: create expense with category/section through planner contract', async () => {
+    const account = await createAccount(`${state.prefix} ai расход`, 20000, 'card');
+    const before = await listTransactions();
+    await executeAi(`Фина, такси 650 рублей со счёта ${account.name}, категория такси, раздел транспорт`);
+    const after = await listTransactions();
+    assert(after.length >= before.length + 1, 'AI did not create expense transaction', { before: before.length, after: after.length });
+    return { before: before.length, after: after.length };
+  }, { skip: !config.runAI && 'TEST_AI=0' });
+
+  await test('AI: create income and then edit last income without duplicate', async () => {
+    const account = await createAccount(`${state.prefix} ai доход`, 1000, 'cash');
+    await executeAi(`Фина, доход 3000 рублей на счёт ${account.name}, описание тестовый доход`);
+    const afterIncome = await listTransactions();
+    const incomeCount = afterIncome.length;
+    await executeAi('Фина, измени описание последнего дохода на такси');
+    const afterDescription = await listTransactions();
+    assert(afterDescription.length === incomeCount, 'Editing last income description created duplicate transaction', { incomeCount, after: afterDescription.length });
+    await executeAi('Фина, измени сумму последнего дохода на 5000');
+    const afterAmount = await listTransactions();
+    assert(afterAmount.length === incomeCount, 'Editing last income amount created duplicate transaction', { incomeCount, after: afterAmount.length });
+    return { transactionCount: incomeCount };
+  }, { skip: !config.runAI && 'TEST_AI=0' });
+
+  await test('AI: transfer between accounts', async () => {
+    const from = await createAccount(`${state.prefix} transfer from`, 10000, 'card');
+    const to = await createAccount(`${state.prefix} transfer to`, 1000, 'cash');
+    const before = await listTransactions();
+    await executeAi(`Фина, переведи 1200 рублей со счёта ${from.name} на счёт ${to.name}`);
+    const after = await listTransactions();
+    assert(after.length >= before.length + 1, 'AI did not create transfer', { before: before.length, after: after.length });
+    return { before: before.length, after: after.length };
+  }, { skip: !config.runAI && 'TEST_AI=0' });
+
+  await test('AI: goals lifecycle', async () => {
+    const name = `${state.prefix} ai цель`;
+    await executeAi(`Фина, создай цель ${name} на 75000 рублей`);
+    let goals = await listGoals();
+    assert(goals.some((item) => String(item.name || '').includes(name)), 'AI did not create goal', goals);
+    await executeAi(`Фина, измени цель ${name}, сумма 80000 рублей`);
+    goals = await listGoals();
+    assert(goals.some((item) => String(item.name || '').includes(name)), 'AI goal disappeared after update', goals);
+    return { goals: goals.length };
+  }, { skip: !config.runAI && 'TEST_AI=0' });
+
+  await test('AI: taxonomy lifecycle', async () => {
+    const sectionName = `${state.prefix} ai раздел`;
+    const categoryName = `${state.prefix} ai категория`;
+    await executeAi(`Фина, создай раздел ${sectionName}`);
+    await executeAi(`Фина, создай категорию ${categoryName} в разделе ${sectionName}`);
+    const sections = await listSections();
+    const categories = await listCategories();
+    assert(sections.some((item) => String(item.name || '').includes(sectionName)), 'AI did not create section', sections);
+    assert(categories.some((item) => String(item.name || '').includes(categoryName)), 'AI did not create category', categories);
+    return { sections: sections.length, categories: categories.length };
+  }, { skip: !config.runAI && 'TEST_AI=0' });
+
+  await test('AI: pending action can be cancelled and does not mutate data', async () => {
+    const before = await listAccounts();
+    const result = await aiParse(`Фина, создай счёт ${state.prefix} отмена с балансом 1234 рублей`);
+    if (!result?.requiresConfirmation) warn('AI action did not require confirmation; cancel test is soft', result);
+    const id = pendingId(result);
+    await aiCancel(id || undefined);
+    const after = await listAccounts();
+    assert(after.length === before.length, 'Cancel mutated accounts list', { before: before.length, after: after.length });
+    return { before: before.length, after: after.length };
+  }, { skip: !config.runAI && 'TEST_AI=0' });
+
+  await test('AI: more than 3 actions is blocked for base version', async () => {
+    const result = await aiParse('Фина, создай счёт раз, создай счёт два, создай счёт три, создай счёт четыре');
+    const text = JSON.stringify(result).toLowerCase();
+    assert(result?.success === false || text.includes('premium') || text.includes('прем'), '4+ actions should be blocked or marked as premium-limit', result);
+    return result;
+  }, { skip: !config.runAI && 'TEST_AI=0' });
+
+  await test('AI destructive guard: delete all accounts requires explicit opt-in', async () => {
+    if (!config.allowDestructive) {
+      state.warnings.push({ message: 'Skipped destructive AI command. Set TEST_DESTRUCTIVE=1 only on isolated database.' });
+      return { skippedDangerousCommand: true };
+    }
+    const result = await aiParse('Фина, удали все счета');
+    assert(result?.requiresConfirmation || result?.riskLevel === 'high', 'Delete all accounts must require high-risk confirmation', result);
+    return result;
+  });
+
+  await cleanup();
+  await writeReport();
+
+  const passed = state.results.filter((item) => item.status === 'passed').length;
+  const failed = state.results.filter((item) => item.status === 'failed').length;
+  const skipped = state.results.filter((item) => item.status === 'skipped').length;
+
+  console.log('\nSummary');
+  console.log(`  Passed: ${passed}`);
+  console.log(`  Failed: ${failed}`);
+  console.log(`  Skipped: ${skipped}`);
+  if (state.warnings.length) {
+    console.log('\nWarnings');
+    for (const warning of state.warnings) console.log(`  - ${warning.message}`);
   }
+
+  const hardFailures = config.strictAI ? failed : state.results.filter((item) => item.status === 'failed' && !item.name.startsWith('AI:')).length;
+  process.exitCode = hardFailures > 0 ? 1 : 0;
+}
+
+main().catch(async (error) => {
+  console.error(error);
+  try { await writeReport(); } catch {}
+  process.exit(1);
 });

@@ -1,57 +1,61 @@
-# Чек-лист базового тестирования AI-Financer
+# Backend base testing guide for testers
 
-Этот файл можно дать тестерам вместе с инструкцией запуска консольного теста.
+Use this after installing the latest backend build and before testing Premium.
 
-## Что проверяет автотест
-
-1. Авторизация и профиль пользователя.
-2. Счета: создание, изменение, баланс, список.
-3. Разделы и категории: создание, изменение, связь категории с разделом.
-4. Операции: доход, расход, перевод, изменение операции.
-5. Цели: создание, изменение, удаление.
-6. Бюджеты и регулярные платежи.
-7. Настройки AI, onboarding, referral, progression, companion.
-8. Admin endpoints, если токен админский.
-9. AI-команды:
-   - создать счёт;
-   - переименовать счёт;
-   - сделать счёт основным;
-   - создать расход;
-   - создать доход;
-   - изменить последний доход без дубля;
-   - изменить сумму последнего дохода без дубля;
-   - перевод между счетами;
-   - цели;
-   - разделы и категории;
-   - отмена pending action;
-   - off-topic без финансового действия;
-   - ограничение 4+ действий для базовой версии.
-
-## Главные баги, которые должен ловить тест
-
-- AI создал новый доход вместо изменения старого.
-- Баланс увеличился второй раз после редактирования описания.
-- Pending action отменили, но данные всё равно изменились.
-- Off-topic фраза создала финансовое действие.
-- Базовая версия выполнила больше 3 действий за один запрос.
-- Admin endpoints не открываются для админа или открываются для неадмина.
-
-## Запуск
+## 1. Generate token
 
 ```bash
 cd /root/ai-financer/backend
+TEST_TELEGRAM_ID=516730814 TEST_ADMIN=1 npm run test:token
+```
 
+The token is saved automatically to `.test-auth-token`.
+
+## 2. Run full base regression
+
+```bash
+cd /root/ai-financer/backend
 TEST_BASE_URL="http://localhost:3000/api" \
 TEST_HEALTH_URL="http://localhost:3000/health" \
-TEST_AUTH_TOKEN="ВСТАВЬ_ТОКЕН" \
 TEST_ADMIN="1" \
 npm run test:base-ai
 ```
 
-## Где отчёт
+## 3. Reports
+
+Reports are saved to:
 
 ```text
-test-results/base-ai-regression-*.md
+backend/test-results/base-ai-regression-*.md
+backend/test-results/base-ai-regression-*.json
 ```
 
-Если есть failed-тесты, отправить разработчику весь markdown-отчёт и последние backend-логи.
+## 4. What is tested
+
+- auth
+- read endpoints
+- accounts
+- transactions
+- sections
+- categories
+- goals
+- budgets
+- recurring payments
+- settings
+- onboarding
+- progression
+- referral
+- notifications
+- admin endpoints
+- base AI account actions
+- base AI transaction actions
+- base AI safe edit of the last income without duplicate
+- base AI transfer
+- base AI goals
+- base AI taxonomy
+- base AI cancel
+- base limit for 4+ actions
+
+## 5. Important
+
+The suite is a black-box tester. It does not parse financial commands locally. It sends natural-language commands to the backend and verifies API state after the backend handles them.

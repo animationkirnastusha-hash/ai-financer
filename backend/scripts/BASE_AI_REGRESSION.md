@@ -1,83 +1,58 @@
 # Base AI regression suite
 
-Этот сценарий нужен перед передачей базовой версии тестерам и перед началом Premium-разработки.
+This suite tests the backend API and the base AI flow from the console. It is intended for pre-tester checks before Premium work.
 
-Он проверяет backend через HTTP, как внешний клиент:
+## Token
 
-- health/auth;
-- чтение основных endpoints;
-- ручной CRUD: счета, разделы, категории, операции, цели, бюджеты, регулярные платежи;
-- настройки AI, onboarding, referral, progression, companion, premium capabilities;
-- admin endpoints, если токен админский;
-- AI-команды базовой версии через настоящий `/api/ai/parse` + `/api/ai/confirm`;
-- pending cancel;
-- запрет на 4+ действия в одном запросе для базовой версии;
-- защиту от критического бага: “измени последний доход” не должен создавать новый доход.
-
-## Важно
-
-Скрипт не является production parser. Он не добавляет парсеры в приложение. Он отправляет обычные текстовые команды в backend и проверяет результат через API.
-
-Production-логика должна оставаться такой:
-
-```text
-AI planner → tool contract → validator → executor
-```
-
-Без regex/ручного извлечения суммы, счёта, категории, раздела, цели или смысла команды из текста.
-
-## Подготовка токена после сброса базы
+Generate a fresh token after every full database reset:
 
 ```bash
 cd /root/ai-financer/backend
 TEST_TELEGRAM_ID=516730814 TEST_ADMIN=1 npm run test:token
 ```
 
-Скопируй JWT из вывода.
+The token is printed to stdout and also saved to:
 
-## Основной запуск
+```text
+backend/.test-auth-token
+```
+
+The regression suite automatically uses this file when `TEST_AUTH_TOKEN` is not provided.
+
+## Run
 
 ```bash
 cd /root/ai-financer/backend
-
 TEST_BASE_URL="http://localhost:3000/api" \
 TEST_HEALTH_URL="http://localhost:3000/health" \
-TEST_AUTH_TOKEN="ВСТАВЬ_НОВЫЙ_ТОКЕН" \
 TEST_ADMIN="1" \
 npm run test:base-ai
 ```
 
-## Мягкий режим, если AI нестабилен из-за модели/API
+You can also pass the token explicitly:
 
 ```bash
-TEST_STRICT_AI=0 npm run test:base-ai
+TEST_AUTH_TOKEN="PASTE_TOKEN_HERE" npm run test:base-ai
 ```
 
-В этом режиме AI-ошибки попадут в warnings, а не всегда будут валить весь прогон.
+Do not split the token line from the final command. A bare `TEST_AUTH_TOKEN=...` on a separate shell line is not exported to the npm process.
 
-## Без AI, только backend CRUD/read endpoints
+## Modes
 
 ```bash
 TEST_AI=0 npm run test:base-ai
 ```
 
-## Опасные destructive-тесты
+Runs backend CRUD/read tests without AI.
 
-По умолчанию команда “удали все счета” не исполняется. Она только проверяется как high-risk/pending, если включить isolated DB.
+```bash
+TEST_STRICT_AI=0 npm run test:base-ai
+```
+
+Allows AI failures to be reported without failing the whole process.
 
 ```bash
 TEST_DESTRUCTIVE=1 npm run test:base-ai
 ```
 
-Включать только на отдельной тестовой базе.
-
-## Отчёты
-
-После каждого запуска создаются файлы:
-
-```text
-test-results/base-ai-regression-*.md
-test-results/base-ai-regression-*.json
-```
-
-Markdown-отчёт можно отправлять тестерам или использовать как чек-лист регрессии.
+Runs destructive AI guard checks. Use only on an isolated test database.
