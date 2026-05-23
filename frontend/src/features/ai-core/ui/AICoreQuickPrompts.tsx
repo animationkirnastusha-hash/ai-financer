@@ -17,12 +17,12 @@ const prompts: QuickPrompt[] = [
   {
     label: 'Доход',
     command: 'доход 50000 на основной счет',
-    description: 'Добавить поступление с preview.',
+    description: 'Добавить поступление с проверкой.',
   },
   {
     label: 'Перевод',
     command: 'переведи 3000 с карты на накопительный',
-    description: 'Подготовить безопасный transfer.',
+    description: 'Подготовить безопасный перевод.',
   },
   {
     label: 'Аналитика',
@@ -32,7 +32,7 @@ const prompts: QuickPrompt[] = [
   {
     label: 'Настройки',
     command: 'включи строгий финансовый режим',
-    description: 'Изменить AI-поведение языком.',
+    description: 'Изменить поведение помощника языком.',
   },
   {
     label: 'Счёт',
@@ -48,7 +48,7 @@ export function AICoreQuickPrompts({ onRunCommand }: Props) {
         <div>
           <div className="text-sm font-semibold text-white">Быстрые команды</div>
           <div className="mt-1 text-xs leading-5 text-white/42">
-            Примеры не являются шаблонами. AI разберёт смысл, покажет preview и попросит confirm там, где это нужно.
+            Примеры не являются шаблонами. Фина разберёт смысл, покажет проверку и попросит подтверждение там, где это нужно.
           </div>
         </div>
       </div>

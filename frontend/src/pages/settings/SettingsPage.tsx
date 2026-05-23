@@ -6,38 +6,77 @@ import { ScreenTopBar } from '@/shared/ui/ScreenTopBar';
 import { useAuthStore } from '@/features/auth/model/auth.store';
 import { dataResetApi, type DataResetMode } from '@/features/data-reset/api/dataReset.api';
 
-type SettingsModal = 'voice' | 'assistant' | 'ai' | 'data' | null;
+type SettingsModal = 'voice' | 'fina' | 'ai' | 'data' | null;
 
-function SettingsModalShell({ title, subtitle, children, onClose }: { title: string; subtitle?: string; children: ReactNode; onClose: () => void }) {
+function ModalShell({
+  title,
+  caption,
+  children,
+  onClose,
+}: {
+  title: string;
+  caption?: string;
+  children: ReactNode;
+  onClose: () => void;
+}) {
   return (
     <div className="app-modal-backdrop" data-no-swipe="true" onClick={onClose}>
-      <div className="app-modal-sheet" data-no-swipe="true" onClick={(event) => event.stopPropagation()}>
+      <div className="app-modal-sheet app-settings-modal" data-no-swipe="true" onClick={(event) => event.stopPropagation()}>
         <div className="app-modal-handle" />
-        <div className="app-modal-body space-y-4">
-          <div>
-            <div className="app-eyebrow">Настройки</div>
-            <h2 className="mt-2 text-2xl font-semibold tracking-[-0.045em] text-white">{title}</h2>
-            {subtitle ? <p className="mt-2 text-sm leading-6 text-white/50">{subtitle}</p> : null}
+        <div className="app-modal-body">
+          <div className="app-settings-modal__head">
+            <div>
+              <div className="app-eyebrow">Настройки</div>
+              <h2>{title}</h2>
+              {caption ? <p>{caption}</p> : null}
+            </div>
+            <button type="button" className="app-icon-button" onClick={onClose} aria-label="Закрыть">×</button>
           </div>
           {children}
         </div>
-        <footer className="app-modal-footer">
-          <button type="button" onClick={onClose} className="app-primary-button w-full">Готово</button>
-        </footer>
       </div>
     </div>
   );
 }
 
-function SettingButton({ title, caption, icon, onClick }: { title: string; caption: string; icon: string; onClick: () => void }) {
+function SettingsCard({
+  title,
+  caption,
+  value,
+  onClick,
+}: {
+  title: string;
+  caption: string;
+  value?: string;
+  onClick: () => void;
+}) {
   return (
-    <button type="button" onClick={onClick} className="app-settings-card-button">
+    <button type="button" className="app-settings-card" onClick={onClick}>
       <span>
         <b>{title}</b>
         <small>{caption}</small>
       </span>
-      <i aria-hidden="true">{icon}</i>
+      {value ? <em>{value}</em> : null}
     </button>
+  );
+}
+
+function ToggleLine({
+  title,
+  caption,
+  checked,
+  onChange,
+}: {
+  title: string;
+  caption: string;
+  checked: boolean;
+  onChange: (value: boolean) => void;
+}) {
+  return (
+    <label className="app-toggle-row app-toggle-row--compact">
+      <span><span>{title}</span><small>{caption}</small></span>
+      <input type="checkbox" checked={checked} onChange={(event) => onChange(event.target.checked)} />
+    </label>
   );
 }
 
@@ -45,11 +84,9 @@ export default function SettingsPage() {
   const [resetStatus, setResetStatus] = useState<string | null>(null);
   const [resetMode, setResetMode] = useState<DataResetMode | null>(null);
   const [modal, setModal] = useState<SettingsModal>(null);
-
   const navigateTo = useNavigationStore((state) => state.navigateTo);
   const user = useAuthStore((state) => state.user);
 
-  const voiceWakeWordEnabled = useSettingsStore((state) => state.voiceWakeWordEnabled);
   const voiceActiveWindowSeconds = useSettingsStore((state) => state.voiceActiveWindowSeconds);
   const voiceEnabled = useSettingsStore((state) => state.voiceEnabled);
   const voiceBetaEnabled = useSettingsStore((state) => state.voiceBetaEnabled);
@@ -58,7 +95,6 @@ export default function SettingsPage() {
   const textInputEnabled = useSettingsStore((state) => state.textInputEnabled);
   const aiInsightsEnabled = useSettingsStore((state) => state.aiInsightsEnabled);
 
-  const setVoiceWakeWordEnabled = useSettingsStore((state) => state.setVoiceWakeWordEnabled);
   const setVoiceActiveWindowSeconds = useSettingsStore((state) => state.setVoiceActiveWindowSeconds);
   const setVoiceEnabled = useSettingsStore((state) => state.setVoiceEnabled);
   const setVoiceBetaEnabled = useSettingsStore((state) => state.setVoiceBetaEnabled);
@@ -91,133 +127,128 @@ export default function SettingsPage() {
   const navigationItems = [
     { title: 'Счета', caption: 'Баланс и основные счета', screen: 'accounts' as const },
     { title: 'Цели', caption: 'Накопления и планы', screen: 'goals' as const },
-    { title: 'Фина', caption: 'Прогресс и привычки', screen: 'companion' as const },
-    { title: 'Категории', caption: 'Разделы и структура', screen: 'sections' as const },
+    { title: 'Помощник', caption: 'Прогресс и реакции Фины', screen: 'companion' as const },
+    { title: 'Разделы', caption: 'Категории и структура', screen: 'taxonomy-settings' as const },
     { title: 'Рефералы', caption: 'Код и приглашения', screen: 'referral' as const },
     { title: 'Премиум', caption: 'Расширенные возможности', screen: 'premium' as const },
   ];
 
   return (
-    <div className="app-page text-white">
+    <div className="app-page app-settings-page text-white">
       <div className="app-page__inner space-y-4">
         <ScreenTopBar title="Настройки" left="back" right={['home']} />
 
-        <header className="app-card app-card--hero">
+        <header className="app-card app-card--hero app-settings-hero">
           <div className="app-eyebrow">Настройки</div>
-          <h1 className="mt-3 text-[32px] font-semibold leading-none tracking-[-0.055em]">Управление</h1>
-          <p className="mt-3 text-sm leading-6 text-white/50">Язык, голос, данные и основные разделы приложения.</p>
+          <h1>Управление</h1>
+          <p>Язык, голос, ввод, данные и быстрые разделы.</p>
         </header>
 
-        <section className="app-card">
-          <div className="flex items-center justify-between gap-4">
-            <div>
-              <div className="app-section-title">Язык</div>
-              <div className="mt-1 text-sm text-white/42">Интерфейс приложения</div>
-            </div>
-            <LanguageSwitcher />
+        <section className="app-card app-settings-language">
+          <div>
+            <div className="app-section-title">Язык</div>
+            <p>Сейчас активен русский интерфейс.</p>
           </div>
+          <LanguageSwitcher />
         </section>
 
-        <section className="app-card">
-          <div className="app-section-title">Основные настройки</div>
-          <div className="app-settings-grid mt-4">
-            <SettingButton title="Голос" caption={voiceAlwaysOnEnabled ? 'Микрофон включён' : 'Микрофон выключен'} icon="◉" onClick={() => setModal('voice')} />
-            <SettingButton title="Фина" caption="Ответы, окно прослушивания и текстовый ввод" icon="◌" onClick={() => setModal('assistant')} />
-            <SettingButton title="AI" caption={aiInsightsEnabled ? 'Короткие выводы включены' : 'Выводы выключены'} icon="✦" onClick={() => setModal('ai')} />
-            <SettingButton title="Данные" caption="Очистка финансов или полный сброс" icon="⌫" onClick={() => setModal('data')} />
-          </div>
+        <section className="app-settings-grid">
+          <SettingsCard
+            title="Голос"
+            caption="Микрофон, ответы и окно после команды"
+            value={voiceEnabled ? 'включён' : 'выключен'}
+            onClick={() => setModal('voice')}
+          />
+          <SettingsCard
+            title="Фина"
+            caption="Как помощник слушает и отвечает"
+            value="по имени"
+            onClick={() => setModal('fina')}
+          />
+          <SettingsCard
+            title="Подсказки"
+            caption="Подсказки, наблюдения и текстовый ввод"
+            value={textInputEnabled ? 'текст есть' : 'только голос'}
+            onClick={() => setModal('ai')}
+          />
+          <SettingsCard
+            title="Данные"
+            caption="Очистка финансов или полный сброс"
+            value="тесты"
+            onClick={() => setModal('data')}
+          />
         </section>
 
-        <section className="app-card">
+        <section className="app-card app-settings-nav">
           <div className="app-section-title">Разделы приложения</div>
-          <div className="mt-4 grid grid-cols-2 gap-3">
+          <div className="mt-3 grid gap-2">
             {navigationItems.map((item) => (
-              <button key={item.screen} onClick={() => navigateTo(item.screen)} className="app-nav-card">
-                <div className="font-semibold">{item.title}</div>
-                <div className="mt-1 text-sm text-white/42">{item.caption}</div>
+              <button key={item.screen} type="button" onClick={() => navigateTo(item.screen)} className="app-list-button">
+                <span>{item.title}</span>
+                <small>{item.caption}</small>
               </button>
             ))}
-            {user?.isAdmin ? (
-              <button onClick={() => navigateTo('admin')} className="app-nav-card border-emerald-300/20 bg-emerald-300/[0.06]">
-                <div className="font-semibold">Админ</div>
-                <div className="mt-1 text-sm text-white/42">Статистика и сервер</div>
-              </button>
-            ) : null}
           </div>
         </section>
+
+        {user ? (
+          <section className="app-card app-settings-user">
+            <div className="app-section-title">Профиль</div>
+            <p>{user.firstName || user.username || 'Пользователь'}</p>
+            <small>ID: {user.telegramId}</small>
+          </section>
+        ) : null}
       </div>
 
       {modal === 'voice' ? (
-        <SettingsModalShell title="Голос" subtitle="Настройки микрофона и запуска голосового управления." onClose={() => setModal(null)}>
-          <div className="app-settings-modal-grid">
-            <label className="app-toggle-row">
-              <span><span>Голосовой ввод</span><small>Разрешить управление голосом.</small></span>
-              <input type="checkbox" checked={voiceEnabled} onChange={(event) => setVoiceEnabled(event.target.checked)} />
-            </label>
-            <label className="app-toggle-row">
-              <span><span>Микрофон включён</span><small>Фина будет ждать обращение, пока приложение открыто.</small></span>
-              <input type="checkbox" checked={voiceAlwaysOnEnabled} onChange={(event) => setVoiceAlwaysOnEnabled(event.target.checked)} />
-            </label>
-            <label className="app-toggle-row">
-              <span><span>Запуск по имени</span><small>Команды выполняются только после обращения к Фине.</small></span>
-              <input type="checkbox" checked={voiceWakeWordEnabled} onChange={(event) => setVoiceWakeWordEnabled(event.target.checked)} />
-            </label>
-            <label className="app-toggle-row">
-              <span><span>Бета-режим</span><small>Улучшенный цикл голосового ввода.</small></span>
-              <input type="checkbox" checked={voiceBetaEnabled} onChange={(event) => setVoiceBetaEnabled(event.target.checked)} />
-            </label>
+        <ModalShell title="Голос" caption="Настройки того, как Фина слушает в открытом приложении." onClose={() => setModal(null)}>
+          <div className="grid gap-3">
+            <ToggleLine title="Голосовой ввод" caption="Фина принимает команды голосом." checked={voiceEnabled} onChange={setVoiceEnabled} />
+            <ToggleLine title="Микрофон включён" caption="Приложение ждёт имя Фины, пока открыто." checked={voiceAlwaysOnEnabled} onChange={setVoiceAlwaysOnEnabled} />
+            <ToggleLine title="Ответы голосом" caption="Короткие ответы можно озвучивать." checked={voiceRepliesEnabled} onChange={setVoiceRepliesEnabled} />
+            <ToggleLine title="Бета-режим" caption="Экспериментальная обработка голоса." checked={voiceBetaEnabled} onChange={setVoiceBetaEnabled} />
           </div>
-        </SettingsModalShell>
+          <div className="app-settings-number mt-4">
+            <div><b>Слушать после команды</b><small>Сколько секунд можно продолжать без повторного имени.</small></div>
+            <label><input type="number" min={2} max={120} step={1} inputMode="numeric" value={voiceActiveWindowSeconds} onChange={(event) => setVoiceActiveWindowSeconds(Number(event.target.value))} /><span>сек</span></label>
+          </div>
+        </ModalShell>
       ) : null}
 
-      {modal === 'assistant' ? (
-        <SettingsModalShell title="Фина" subtitle="Как Фина отвечает и сколько времени слушает продолжение." onClose={() => setModal(null)}>
-          <div className="app-settings-modal-grid">
-            <label className="app-toggle-row">
-              <span><span>Ответы голосом</span><small>Коротко озвучивать результат.</small></span>
-              <input type="checkbox" checked={voiceRepliesEnabled} onChange={(event) => setVoiceRepliesEnabled(event.target.checked)} />
-            </label>
-            <label className="app-toggle-row">
-              <span><span>Текстовый ввод</span><small>Оставить запасной способ ввода.</small></span>
-              <input type="checkbox" checked={textInputEnabled} onChange={(event) => setTextInputEnabled(event.target.checked)} />
-            </label>
-            <div className="voice-window-control voice-window-control--number">
-              <div>
-                <div className="text-sm font-medium text-white">Слушать продолжение</div>
-                <div className="mt-1 text-xs text-white/45">После ответа Фина ждёт следующую фразу заданное число секунд.</div>
-              </div>
-              <label className="voice-window-control__input">
-                <input type="number" min={2} max={120} step={1} inputMode="numeric" value={voiceActiveWindowSeconds} onChange={(event) => setVoiceActiveWindowSeconds(Number(event.target.value))} />
-                <span>сек</span>
-              </label>
-            </div>
+      {modal === 'fina' ? (
+        <ModalShell title="Фина" caption="Помощник реагирует только на своё имя и не отвлекается на случайный шум." onClose={() => setModal(null)}>
+          <div className="app-fina-rules">
+            <div><b>1</b><span>Скажи «Фина»</span></div>
+            <div><b>2</b><span>Назови задачу обычным языком</span></div>
+            <div><b>3</b><span>Подтверди, отмени или уточни</span></div>
           </div>
-        </SettingsModalShell>
+          <p className="app-settings-note">До имени Фина молчит. После имени она коротко слушает продолжение и показывает действие перед важными изменениями.</p>
+        </ModalShell>
       ) : null}
 
       {modal === 'ai' ? (
-        <SettingsModalShell title="AI" subtitle="Короткие подсказки и выводы по финансовому состоянию." onClose={() => setModal(null)}>
-          <label className="app-toggle-row">
-            <span><span>Наблюдения</span><small>Показывать короткие финансовые выводы.</small></span>
-            <input type="checkbox" checked={aiInsightsEnabled} onChange={(event) => setAIInsightsEnabled(event.target.checked)} />
-          </label>
-        </SettingsModalShell>
+        <ModalShell title="Подсказки" caption="Запасной ввод и короткие наблюдения по финансам." onClose={() => setModal(null)}>
+          <div className="grid gap-3">
+            <ToggleLine title="Текстовый ввод" caption="Показывать поле, если говорить неудобно." checked={textInputEnabled} onChange={setTextInputEnabled} />
+            <ToggleLine title="Наблюдения" caption="Показывать короткие финансовые выводы." checked={aiInsightsEnabled} onChange={setAIInsightsEnabled} />
+          </div>
+        </ModalShell>
       ) : null}
 
       {modal === 'data' ? (
-        <SettingsModalShell title="Данные" subtitle="Для тестов можно быстро начать заново." onClose={() => setModal(null)}>
+        <ModalShell title="Данные" caption="Для тестов можно начать заново без удаления профиля." onClose={() => setModal(null)}>
           <div className="grid gap-3">
-            <button type="button" className="w-full rounded-[18px] border border-white/10 bg-white/[0.055] px-3.5 py-3 text-left text-white/88 transition active:scale-[0.985] disabled:cursor-not-allowed disabled:opacity-55" disabled={resetMode !== null} onClick={() => handleReset('finance')}>
-              <span className="block text-[13px] font-bold">Очистить финансы</span>
-              <small className="mt-1 block text-[11px] leading-snug text-white/42">Счета, операции, цели, категории и историю AI</small>
+            <button type="button" className="app-danger-card" disabled={resetMode !== null} onClick={() => handleReset('finance')}>
+              <b>Очистить финансы</b>
+              <small>Счета, операции, цели, категории, разделы и финансовый контекст. XP останется.</small>
             </button>
-            <button type="button" className="w-full rounded-[18px] border border-rose-300/25 bg-rose-500/10 px-3.5 py-3 text-left text-rose-100 transition active:scale-[0.985] disabled:cursor-not-allowed disabled:opacity-55" disabled={resetMode !== null} onClick={() => handleReset('full')}>
-              <span className="block text-[13px] font-bold">Сбросить всё</span>
-              <small className="mt-1 block text-[11px] leading-snug text-white/42">Финансы, XP, уровень, достижения и прогресс</small>
+            <button type="button" className="app-danger-card app-danger-card--hard" disabled={resetMode !== null} onClick={() => handleReset('full')}>
+              <b>Сбросить всё</b>
+              <small>Финансы, XP, уровень, достижения и прогресс. Профиль останется.</small>
             </button>
-            {resetStatus ? <div className="text-sm text-white/60">{resetStatus}</div> : null}
+            {resetStatus ? <div className="app-status-box">{resetStatus}</div> : null}
           </div>
-        </SettingsModalShell>
+        </ModalShell>
       ) : null}
     </div>
   );

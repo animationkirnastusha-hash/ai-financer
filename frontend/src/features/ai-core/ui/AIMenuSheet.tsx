@@ -23,7 +23,7 @@ export function AIMenuSheet({
         <div className="flex items-center justify-between">
           <div>
             <div className="text-[11px] uppercase tracking-[0.16em] text-white/35">
-              AI Menu
+              Меню Фины
             </div>
             <div className="mt-1 text-lg font-semibold text-white">
               Что сделать?
@@ -45,9 +45,9 @@ export function AIMenuSheet({
             onClick={onOpenAI}
             className="w-full rounded-[24px] border border-white/8 bg-white/[0.04] p-4 text-left transition hover:bg-white/[0.06]"
           >
-            <div className="text-sm font-medium text-white">Открыть AI</div>
+            <div className="text-sm font-medium text-white">Написать Фине</div>
             <div className="mt-1 text-xs text-white/45">
-              Перейти в AI Core и написать сообщение
+              Перейти в текстовый ввод и написать сообщение
             </div>
           </button>
 
@@ -67,9 +67,9 @@ export function AIMenuSheet({
             onClick={onOpenVoice}
             className="w-full rounded-[24px] border border-white/8 bg-white/[0.04] p-4 text-left transition hover:bg-white/[0.06]"
           >
-            <div className="text-sm font-medium text-white">Voice beta</div>
+            <div className="text-sm font-medium text-white">Голосовой режим</div>
             <div className="mt-1 text-xs text-white/45">
-              Открыть AI Core и попробовать голосовой режим
+              Открыть текстовый ввод и голосовой режим
             </div>
           </button>
         </div>

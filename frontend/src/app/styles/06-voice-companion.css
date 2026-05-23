@@ -1,3 +1,7 @@
+/* 06-voice-companion.css: generated CSS layer. */
+
+
+/* from voice.css */
 .voice-first-companion {
   position: fixed;
   right: 12px;
@@ -185,4 +189,67 @@
   .voice-first-mic-toggle { max-width: calc(100vw - 104px); font-size: 10px; padding: 9px 10px; }
   .voice-first-bubble { max-width: calc(100vw - 28px); }
   .voice-first-companion .ai-companion-control { width: 50px !important; height: 50px !important; }
+}
+
+
+/* from voice-hardening.css */
+
+/* Patch 55: stable placement for Fina and bubbles. */
+:root {
+  --fina-bottom-reserve: calc(env(safe-area-inset-bottom) + 164px);
+}
+
+.app-page {
+  padding-bottom: calc(env(safe-area-inset-bottom) + 178px) !important;
+  scroll-padding-bottom: calc(env(safe-area-inset-bottom) + 196px) !important;
+}
+
+.voice-first-companion {
+  right: 14px !important;
+  bottom: calc(42px + env(safe-area-inset-bottom)) !important;
+  z-index: 64 !important;
+  transform: translateZ(0);
+  will-change: transform;
+}
+
+.voice-first-companion .ai-companion-control {
+  width: 68px !important;
+  height: 68px !important;
+}
+
+.voice-first-bubble {
+  max-width: min(292px, calc(100vw - 32px)) !important;
+  animation: voiceBubbleStableIn 180ms cubic-bezier(.22,.9,.2,1) both !important;
+  filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+.voice-first-status,
+.voice-first-mic-toggle {
+  max-width: min(190px, calc(100vw - 126px)) !important;
+}
+
+body:has(.app-modal-backdrop) .voice-first-companion,
+body:has(.app-bottom-sheet) .voice-first-companion,
+body:has(.drawer-backdrop) .voice-first-companion,
+body.ai-modal-open .voice-first-companion,
+body.ai-any-modal-open .voice-first-companion,
+body.ai-core-modal-open .voice-first-companion {
+  opacity: 0;
+  pointer-events: none;
+  transform: translate3d(0, 10px, 0) scale(.96);
+}
+
+@keyframes voiceBubbleStableIn {
+  from { opacity: 0; transform: translate3d(6px, 6px, 0) scale(.98); }
+  to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+}
+
+@media (max-width: 380px) {
+  .voice-first-companion { right: 10px !important; bottom: calc(40px + env(safe-area-inset-bottom)) !important; }
+  .voice-first-companion .ai-companion-control { width: 62px !important; height: 62px !important; }
+  .voice-first-status { display: none; }
 }

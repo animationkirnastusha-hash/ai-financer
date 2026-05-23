@@ -98,7 +98,7 @@ export function AICoreOrb({ state, isActive = false, isVoiceLocked = false, onCl
       onLostPointerCapture={(event) => finishPointer(event, true)}
       onContextMenu={(event) => event.preventDefault()}
     >
-      <CompanionButton size="lg" mood={moodFromState(state, isActive, isVoiceLocked)} label="AI помощник" tabIndex={-1} />
+      <CompanionButton size="lg" mood={moodFromState(state, isActive, isVoiceLocked)} label="Фина" tabIndex={-1} />
     </div>
   );
 }

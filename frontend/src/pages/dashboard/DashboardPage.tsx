@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useAccountsStore } from '@/features/accounts/model/accounts.store';
 import { useNavigationStore } from '@/features/navigation/model/navigation.store';
 import { useTransactionsStore } from '@/features/transactions/model/transactions.store';
@@ -7,11 +7,11 @@ import { ProgressionMiniCard } from '@/features/progression/ui/ProgressionMiniCa
 import { ScreenTopBar } from '@/shared/ui/ScreenTopBar';
 import { formatMoney, formatTransactionDate } from '@/shared/lib/money';
 
-const quickActions = [
-  { label: 'Расход', hint: 'Записать трату', prompt: 'кофе 300' },
-  { label: 'Доход', hint: 'Добавить деньги', prompt: 'доход 50000' },
-  { label: 'Перевод', hint: 'Между счетами', prompt: 'переведи 1000 на карту' },
-  { label: 'Спросить', hint: 'Вопрос к Фине', prompt: 'что изменилось за месяц?' },
+const voiceHints = [
+  { label: 'Расход', hint: '«Фина, кофе 300»' },
+  { label: 'Доход', hint: '«Фина, зарплата 50000»' },
+  { label: 'Перевод', hint: '«Фина, переведи 1000 на карту»' },
+  { label: 'Вопрос', hint: '«Фина, что изменилось за месяц?»' },
 ];
 
 const onboardingSteps = [
@@ -21,12 +21,15 @@ const onboardingSteps = [
   { label: 'Спросить аналитику', prompt: 'сколько я потратил за неделю' },
 ];
 
-const secondaryLinks = [
-  { label: 'Счета', screen: 'accounts' as const },
-  { label: 'Цели', screen: 'goals' as const },
-  { label: 'Помощник', screen: 'companion' as const },
-  { label: 'Рефералы', screen: 'referral' as const },
-  { label: 'Премиум', screen: 'premium' as const },
+const menuLinks = [
+  { label: 'Операции', caption: 'История и ручное добавление', screen: 'transactions' as const },
+  { label: 'Счета', caption: 'Карты, наличные и накопления', screen: 'accounts' as const },
+  { label: 'Цели', caption: 'Планы и прогресс', screen: 'goals' as const },
+  { label: 'Аналитика', caption: 'Расходы, доходы и выводы', screen: 'analytics' as const },
+  { label: 'Категории', caption: 'Разделы и правила порядка', screen: 'sections' as const },
+  { label: 'Чат с Финой', caption: 'Текстовый ввод, когда говорить неудобно', screen: 'ai-core' as const },
+  { label: 'Рефералы', caption: 'Код и приглашения', screen: 'referral' as const },
+  { label: 'Премиум', caption: 'Будущие расширенные возможности', screen: 'premium' as const },
 ];
 
 function isCurrentMonth(dateValue: string) {
@@ -42,6 +45,7 @@ function titleOf(transaction: any) {
 }
 
 export default function DashboardPage() {
+  const [menuOpen, setMenuOpen] = useState(false);
   const navigateTo = useNavigationStore((state) => state.navigateTo);
   const openAIWithCommand = useNavigationStore((state) => state.openAIWithCommand);
   const accounts = useAccountsStore((state) => state.items);
@@ -67,14 +71,14 @@ export default function DashboardPage() {
   const isEmptyState = accounts.length === 0 && transactions.length === 0;
 
   return (
-    <div className="app-page text-white">
+    <div className="app-page app-dashboard-page text-white">
       <div className="app-page__inner space-y-4">
         <ScreenTopBar title="Главная" right={['referral', 'history', 'settings']} />
 
         <header className="app-card app-card--hero app-home-hero">
           <div className="app-eyebrow">Баланс</div>
           <div className="mt-3 app-money-hero">{formatMoney(data.totalRub, 'RUB')}</div>
-          <div className="mt-4 grid grid-cols-3 gap-2">
+          <div className="mt-4 grid grid-cols-3 gap-2 app-home-metrics-grid">
             <div className="app-home-metric"><span>Доходы</span><b>{formatMoney(data.income, 'RUB', { sign: 'plus' })}</b></div>
             <div className="app-home-metric"><span>Расходы</span><b>{formatMoney(data.expenses, 'RUB', { sign: 'minus' })}</b></div>
             <div className="app-home-metric"><span>Итог</span><b>{formatMoney(data.delta, 'RUB', { sign: 'auto' })}</b></div>
@@ -83,20 +87,20 @@ export default function DashboardPage() {
 
         <ProgressionMiniCard />
 
-        <section className="app-section">
-          <div className="app-section-title">Что сделать</div>
-          <div className="grid grid-cols-2 gap-3">
-            {quickActions.map((action) => (
-              <button
-                key={action.label}
-                type="button"
-                onClick={() => openAIWithCommand(action.prompt)}
-                className="app-action-card"
-              >
-                <span>{action.label}</span>
-                <small>{action.hint}</small>
-              </button>
+        <section className="app-card app-fina-primary-card">
+          <div>
+            <div className="app-eyebrow">Фина</div>
+            <h2>Голос — основной способ</h2>
+            <p>Позови Фину и скажи задачу обычным языком. Текстовый чат оставлен как запасной вариант.</p>
+          </div>
+          <div className="app-fina-hints">
+            {voiceHints.map((item) => (
+              <div key={item.label}><b>{item.label}</b><small>{item.hint}</small></div>
             ))}
+          </div>
+          <div className="app-fina-actions">
+            <button type="button" className="app-primary-button" onClick={() => openAIWithCommand()}>Написать Фине</button>
+            <button type="button" className="app-secondary-button" onClick={() => setMenuOpen(true)}>Открыть меню</button>
           </div>
         </section>
 
@@ -105,12 +109,7 @@ export default function DashboardPage() {
             <div className="app-section-title">Быстрый старт</div>
             <div className="mt-4 grid gap-2">
               {onboardingSteps.map((step, index) => (
-                <button
-                  key={step.prompt}
-                  type="button"
-                  onClick={() => openAIWithCommand(step.prompt)}
-                  className="app-list-button"
-                >
+                <button key={step.prompt} type="button" onClick={() => openAIWithCommand(step.prompt)} className="app-list-button">
                   <span>{index + 1}. {step.label}</span>
                   <small>{step.prompt}</small>
                 </button>
@@ -134,12 +133,7 @@ export default function DashboardPage() {
               recent.map((transaction) => {
                 const sign = transaction.type === 'income' ? 'plus' : transaction.type === 'expense' ? 'minus' : 'none';
                 return (
-                  <button
-                    key={transaction.id}
-                    type="button"
-                    onClick={() => navigateTo('transactions')}
-                    className="app-transaction-row"
-                  >
+                  <button key={transaction.id} type="button" onClick={() => navigateTo('transactions')} className="app-transaction-row">
                     <div className="min-w-0">
                       <div className="truncate text-sm font-medium text-white">{titleOf(transaction)}</div>
                       <div className="mt-1 truncate text-xs text-white/40">{formatTransactionDate(transaction.date)} · {transaction.account?.name ?? 'Счёт'}</div>
@@ -151,15 +145,32 @@ export default function DashboardPage() {
             )}
           </div>
         </section>
-
-        <section className="app-secondary-links">
-          {secondaryLinks.map((item) => (
-            <button key={item.screen} type="button" onClick={() => navigateTo(item.screen)} className="app-small-link">
-              {item.label}
-            </button>
-          ))}
-        </section>
       </div>
+
+      {menuOpen ? (
+        <div className="app-modal-backdrop" data-no-swipe="true" onClick={() => setMenuOpen(false)}>
+          <div className="app-modal-sheet app-home-menu-sheet" data-no-swipe="true" onClick={(event) => event.stopPropagation()}>
+            <div className="app-modal-handle" />
+            <div className="app-modal-body">
+              <div className="app-home-menu-head">
+                <div>
+                  <div className="app-eyebrow">Меню</div>
+                  <h2>Куда перейти</h2>
+                </div>
+                <button type="button" className="app-icon-button" onClick={() => setMenuOpen(false)}>×</button>
+              </div>
+              <div className="app-home-menu-grid">
+                {menuLinks.map((item) => (
+                  <button key={item.screen} type="button" className="app-list-button" onClick={() => { setMenuOpen(false); navigateTo(item.screen); }}>
+                    <span>{item.label}</span>
+                    <small>{item.caption}</small>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

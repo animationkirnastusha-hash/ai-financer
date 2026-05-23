@@ -132,7 +132,7 @@ export function useVoiceRecognition({
     const recognition = new SpeechRecognitionCtor();
     recognition.lang = lang;
     recognition.interimResults = true;
-    recognition.continuous = false;
+    recognition.continuous = true;
 
     recognition.onstart = () => {
       activeRef.current = true;
@@ -149,7 +149,7 @@ export function useVoiceRecognition({
         } catch {
           // ignore
         }
-        finishCurrentSession({ emit: Boolean(text), noSpeechError: !text });
+        finishCurrentSession({ emit: Boolean(text), noSpeechError: false });
       }, 8200);
     };
 
@@ -191,7 +191,7 @@ export function useVoiceRecognition({
       clearListenWatchdogTimer();
 
       if (isSoftError) {
-        setError(nextError === 'audio-capture' ? 'speech-restart' : nextError);
+        setError(nextError === 'audio-capture' ? 'audio-capture' : nextError);
         setStateSafe('idle');
         return;
       }

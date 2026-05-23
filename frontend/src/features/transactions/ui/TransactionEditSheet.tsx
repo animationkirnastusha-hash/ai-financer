@@ -22,7 +22,7 @@ type Props = {
     toAccountId?: string | null;
   }) => Promise<void> | void;
   onDelete: (transaction: TransactionDto) => Promise<void> | void;
-  onOpenAI: () => void;
+  onOpenAI?: () => void;
 };
 
 function toDateInput(value?: string | null) {
@@ -48,7 +48,6 @@ export function TransactionEditSheet({
   onClose,
   onSave,
   onDelete,
-  onOpenAI,
 }: Props) {
   const accounts = useAccountsStore((state) => state.items);
   const loadAccounts = useAccountsStore((state) => state.loadAccounts);
@@ -147,7 +146,7 @@ export function TransactionEditSheet({
         <div className="mx-auto max-w-[560px] space-y-4">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <div className="text-[11px] uppercase tracking-[0.16em] text-white/35">Transaction</div>
+              <div className="text-[11px] uppercase tracking-[0.16em] text-white/35">Операция</div>
               <h2 className="mt-1 truncate text-2xl font-semibold">{getTransactionTitle(transaction)}</h2>
               <div className="mt-2 text-sm text-white/45">
                 {selectedAccount ? selectedAccount.name : 'Счёт'} · {selectedAccount?.currency || 'RUB'}
@@ -172,7 +171,7 @@ export function TransactionEditSheet({
             <div className="mt-3 flex flex-wrap gap-2">
               {selectedSection ? <Badge>{selectedSection.icon ? `${selectedSection.icon} ` : ''}{selectedSection.name}</Badge> : <Badge muted>Без раздела</Badge>}
               {selectedCategory ? <Badge>{selectedCategory.icon ? `${selectedCategory.icon} ` : ''}{selectedCategory.name}</Badge> : null}
-              {transaction.isAIGenerated ? <Badge tone="violet">AI</Badge> : null}
+              {transaction.isAIGenerated ? <Badge tone="violet">Фина</Badge> : null}
             </div>
           </section>
 
@@ -307,14 +306,14 @@ export function TransactionEditSheet({
             </section>
           )}
 
-          <button
-            type="button"
-            onClick={onOpenAI}
-            className="w-full rounded-[22px] border border-sky-300/15 bg-sky-300/10 px-4 py-3 text-left text-sm text-white"
-          >
-            Открыть AI для этой операции
-            <div className="mt-1 text-xs text-white/45">Например: “перенеси эту трату в Дом” или “измени категорию на Кофе”.</div>
-          </button>
+          <section className="app-transaction-ai-advice">
+            <div className="app-eyebrow">Совет Фины</div>
+            <div className="app-transaction-ai-advice__title">Эту операцию можно уточнить голосом</div>
+            <p>
+              Скажи Фине, что именно изменить: описание, сумму, дату, счёт, категорию или раздел.
+              Фина подготовит изменение существующей операции, а не создаст новую.
+            </p>
+          </section>
 
           {localError ? (
             <div className="rounded-2xl border border-red-300/20 bg-red-300/10 px-4 py-3 text-sm text-red-50">

@@ -78,7 +78,7 @@ function loadSettings(): AppSettings {
       ...parsed,
       appLanguage: parsed.appLanguage === 'en' ? 'en' : 'ru',
       companionName: FIXED_COMPANION_NAME,
-      voiceWakeWordEnabled: parsed.voiceWakeWordEnabled === false ? false : true,
+      voiceWakeWordEnabled: true,
       voiceActiveWindowSeconds: normalizeActiveWindow(parsed.voiceActiveWindowSeconds),
       voiceAlwaysOnEnabled: Boolean(parsed.voiceAlwaysOnEnabled),
       voicePermissionPrompted: Boolean(parsed.voicePermissionPrompted),
@@ -130,8 +130,8 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
     saveSettings(get());
   },
 
-  setVoiceWakeWordEnabled: (voiceWakeWordEnabled) => {
-    set({ voiceWakeWordEnabled });
+  setVoiceWakeWordEnabled: () => {
+    set({ voiceWakeWordEnabled: true });
     saveSettings(get());
   },
 

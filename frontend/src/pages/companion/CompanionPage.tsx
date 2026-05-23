@@ -5,16 +5,6 @@ import { useNavigationStore } from '@/features/navigation/model/navigation.store
 import { ScreenTopBar } from '@/shared/ui/ScreenTopBar';
 import { useSettingsStore } from '@/features/settings/model/settings.store';
 
-
-function moodLabel(value?: string | null) {
-  if (value === 'positive') return 'хороший';
-  if (value === 'focused') return 'в фокусе';
-  if (value === 'social') return 'общительный';
-  if (value === 'proud') return 'гордый';
-  if (value === 'motivated') return 'мотивирует';
-  return 'спокойный';
-}
-
 function progressPercent(xp: number, level: number) {
   const base = Math.max(0, (level - 1) * 100);
   const next = Math.max(100, level * 100);
@@ -22,7 +12,6 @@ function progressPercent(xp: number, level: number) {
 }
 
 export default function CompanionPage() {
-  const openAIWithCommand = useNavigationStore((state) => state.openAIWithCommand);
   const navigateTo = useNavigationStore((state) => state.navigateTo);
   const voiceAlwaysOnEnabled = useSettingsStore((state) => state.voiceAlwaysOnEnabled);
   const voiceRepliesEnabled = useSettingsStore((state) => state.voiceRepliesEnabled);
@@ -68,9 +57,9 @@ export default function CompanionPage() {
             <CompanionButton size="lg" mood={state?.mood ?? 'idle'} label="Помощник" />
           </div>
           <div className="app-eyebrow">Фина</div>
-          <h1 className="mt-3 text-[34px] font-semibold leading-none tracking-[-0.06em]">Финансовый компаньон</h1>
+          <h1 className="mt-3 text-[34px] font-semibold leading-none tracking-[-0.06em]">Финансовый ритм</h1>
           <p className="mt-3 text-sm leading-6 text-white/58">
-            {state?.message || 'Помогает записывать действия, держать ритм и видеть финансовое состояние без лишнего шума.'}
+            {state?.message || 'Помогает держать привычку: записывать операции, следить за целями и не терять порядок.'}
           </p>
         </section>
 
@@ -78,7 +67,7 @@ export default function CompanionPage() {
           <div className="flex items-start justify-between gap-4">
             <div>
               <div className="app-section-title">Прогресс</div>
-              <div className="mt-1 text-sm text-white/45">XP станет отдельным ресурсом позже. Сейчас он показывает устойчивость привычки.</div>
+              <div className="mt-1 text-sm text-white/45">XP показывает регулярность и реальные действия. Позже его можно будет использовать как отдельный ресурс.</div>
             </div>
             <div className="rounded-2xl border border-emerald-300/18 bg-emerald-300/10 px-3 py-2 text-right">
               <div className="text-lg font-semibold text-emerald-50">{xp}</div>
@@ -89,7 +78,7 @@ export default function CompanionPage() {
           <div className="mt-5 grid grid-cols-3 gap-2">
             <div className="app-mini-stat"><span>Уровень</span><b>{level}</b></div>
             <div className="app-mini-stat"><span>Серия</span><b>{streak} дн.</b></div>
-            <div className="app-mini-stat"><span>Настрой</span><b>{moodLabel(state?.mood)}</b></div>
+            <div className="app-mini-stat"><span>Фина</span><b>{state?.mood === 'success' ? 'готова' : state?.mood === 'warning' ? 'уточняет' : 'рядом'}</b></div>
           </div>
 
           <div className="mt-5 app-xp-panel app-xp-panel--large">
@@ -103,7 +92,7 @@ export default function CompanionPage() {
           <div className="app-section-title">Голос</div>
           <div className="mt-4 space-y-3">
             <label className="app-toggle-row">
-              <span><span>Голос всегда готов</span><small>Фина ждёт обращение, пока приложение открыто.</small></span>
+              <span><span>Голос всегда готов</span><small>Фина ждёт своё имя, пока приложение открыто.</small></span>
               <input type="checkbox" checked={voiceAlwaysOnEnabled} onChange={(event) => setVoiceAlwaysOnEnabled(event.target.checked)} />
             </label>
             <label className="app-toggle-row">
@@ -126,9 +115,9 @@ export default function CompanionPage() {
         </section>
 
         <section className="grid grid-cols-2 gap-3">
-          <button type="button" className="app-action-card" onClick={() => openAIWithCommand('что изменилось за месяц?')}>
-            <span>Спросить Фину</span>
-            <small>Короткий финансовый вопрос</small>
+          <button type="button" className="app-action-card" onClick={() => navigateTo('settings')}>
+            <span>Настройки</span>
+            <small>Голос и ввод</small>
           </button>
           <button type="button" className="app-action-card" onClick={() => navigateTo('goals')}>
             <span>Цели</span>

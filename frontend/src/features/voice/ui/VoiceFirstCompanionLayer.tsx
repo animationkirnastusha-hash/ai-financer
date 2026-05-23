@@ -90,9 +90,6 @@ function stripWakeWord(rawText: string) {
     name,
     'Фина',
     'Финна',
-    'Финанс',
-    'помощник',
-    'ассистент',
   ].map((value) => value.trim()).filter(Boolean)));
 
   const matchedAlias = aliases.find((alias) => {
@@ -240,7 +237,7 @@ export function VoiceFirstCompanionLayer() {
     const result = await voice.start();
     if (result === 'started') {
       shouldResumeRef.current = true;
-      const hasCombatWindow = !voiceWakeWordEnabled || activeUntilRef.current > Date.now() || Date.now() - lastWakeAcceptedAtRef.current < activeWindowMs;
+      const hasCombatWindow = activeUntilRef.current > Date.now() || Date.now() - lastWakeAcceptedAtRef.current < activeWindowMs;
 
       if (hasCombatWindow) {
         showThought('Слушаю задачу.', 'listening', 900);
@@ -275,13 +272,11 @@ export function VoiceFirstCompanionLayer() {
 
     const wake = stripWakeWord(originalText);
     const now = Date.now();
-    const isWithinCombatWindow = !voiceWakeWordEnabled || activeUntilRef.current > now;
+    const isWithinCombatWindow = activeUntilRef.current > now;
 
-    if (voiceWakeWordEnabled && !isWithinCombatWindow) {
+    if (!isWithinCombatWindow) {
       if (!wake.hasWakeWord) {
-        // Wake-word discipline: microphone stays technically active, but Fina is silent
-        // and does not react to random speech until her name is heard.
-        resumeListeningSoon(120);
+        resumeListeningSoon(480);
         return;
       }
 
@@ -438,13 +433,18 @@ export function VoiceFirstCompanionLayer() {
   useEffect(() => {
     if (!voice.error) return;
 
-    if (voice.error === 'no-speech') {
-      resumeListeningSoon(240);
+    const silentErrors = ['no-speech', 'aborted', 'speech-restart', 'audio-capture'];
+    if (silentErrors.includes(voice.error)) {
+      resumeListeningSoon(520);
       return;
     }
 
-    showThought('Голос не прошёл. Можно повторить или написать текстом.', 'warning');
-    resumeListeningSoon(1000);
+    if (voice.error === 'not-allowed' || voice.error === 'service-not-allowed') {
+      showThought('Нужен доступ к микрофону.', 'warning');
+      return;
+    }
+
+    resumeListeningSoon(1200);
   }, [resumeListeningSoon, showThought, voice.error]);
 
   useEffect(() => {
@@ -519,6 +519,8 @@ export function VoiceFirstCompanionLayer() {
 
   const needsIntro = canUseVoiceFirst && !voicePermissionPrompted;
   const showLayer = currentScreen !== 'ai-core';
+  const displayName = FIXED_COMPANION_NAME;
+
   if (!showLayer) return null;
 
   return (
@@ -568,11 +570,11 @@ export function VoiceFirstCompanionLayer() {
                 ? voice.state === 'recording'
                   ? isCombatActive
                     ? 'Слушаю задачу'
-                    : 'Готова'
+                    : `Жду “${displayName}”`
                   : chat.isSending || isProcessingVoice || voice.state === 'speaking'
                     ? 'Думаю'
                     : voiceWakeWordEnabled
-                      ? 'Готова'
+                      ? `Скажи “${displayName}”`
                       : 'Голос включён'
                 : 'Микрофон выключен'}
             </div>

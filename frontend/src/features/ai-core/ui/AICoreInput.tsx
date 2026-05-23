@@ -6,6 +6,7 @@ type Props = {
   onSubmit: () => Promise<void>;
   onClose?: () => void;
   disabled?: boolean;
+  inline?: boolean;
 };
 
 export function AICoreInput({
@@ -13,6 +14,7 @@ export function AICoreInput({
   onChange,
   onSubmit,
   disabled = false,
+  inline = false,
 }: Props) {
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
   const [focused, setFocused] = useState(false);
@@ -48,7 +50,7 @@ export function AICoreInput({
 
   return (
     <div
-      className="fixed bottom-[calc(env(safe-area-inset-bottom)+42px)] left-0 right-0 z-[90] mx-auto w-full max-w-[560px] px-4"
+      className={inline ? "app-ai-inline-composer" : "fixed bottom-[calc(env(safe-area-inset-bottom)+42px)] left-0 right-0 z-[90] mx-auto w-full max-w-[560px] px-4"}
       data-ai-composer="true"
       data-no-swipe="true"
     >

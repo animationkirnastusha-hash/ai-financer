@@ -1,3 +1,7 @@
+/* 05-navigation-swipe.css: generated CSS layer. */
+
+
+/* from swipe.css */
 body.ai-screen-dragging .telegram-app-content {
   transform: translate3d(var(--ai-swipe-drag-x), 0, 0) scale(.998);
   opacity: .99;

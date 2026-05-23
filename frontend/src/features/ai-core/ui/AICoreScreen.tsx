@@ -12,11 +12,9 @@ import { EditTransactionModal } from '@/features/transactions/ui/EditTransaction
 import { MonthlyStatsCard } from '@/features/transactions/ui/MonthlyStatsCard';
 import { useTransactionsStore } from '@/features/transactions/model/transactions.store';
 import type { TransactionDto } from '@/features/transactions/api/transactions.api';
-import { useSettingsStore } from '@/features/settings/model/settings.store';
 
 export function AICoreScreen() {
   const [historyOpen, setHistoryOpen] = useState(false);
-  const textInputEnabled = useSettingsStore((state) => state.textInputEnabled);
 
   const {
     items,
@@ -35,7 +33,6 @@ export function AICoreScreen() {
     inputValue,
     setInputValue,
     submit,
-    closeCommandPanel,
     latestAssistantMessage,
     pendingActions,
     confirmAction,
@@ -71,56 +68,49 @@ export function AICoreScreen() {
   };
 
   return (
-    <div className="app-page ai-core-orb-hidden text-white">
+    <div className="app-page app-ai-text-page text-white">
       <div className="app-page__inner space-y-4">
         <ScreenTopBar title="Текстовый ввод" left="back" right={['home']} />
 
         <AICoreBalanceHero />
 
-        <div className="grid grid-cols-2 gap-2" data-no-swipe="true">
-          <button type="button" onClick={openCommandList} className="app-secondary-button h-11">Команды</button>
-          <button type="button" onClick={() => setHistoryOpen(true)} className="app-secondary-button h-11">История</button>
-        </div>
-
-        <section className="app-card">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <div className="app-section-title">Запрос к Фине</div>
-              <p className="mt-2 text-sm leading-6 text-white/48">Запасной способ ввода, если сейчас неудобно говорить.</p>
-            </div>
-            {pendingCount > 0 ? (
-              <button onClick={openPending} className="rounded-full border border-amber-300/20 bg-amber-300/10 px-3 py-2 text-xs text-amber-100">
-                Ждёт: {pendingCount}
-              </button>
-            ) : null}
+        <section className="app-card app-ai-text-hero">
+          <div className="app-eyebrow">Фина</div>
+          <h1>Чат, когда говорить неудобно</h1>
+          <p>Основной сценарий — голосом через имя Фины. Здесь можно написать команду вручную: операция, вопрос, изменение или уточнение.</p>
+          <div className="app-ai-text-actions">
+            <button type="button" onClick={openCommandList} className="app-secondary-button">Подсказки</button>
+            <button type="button" onClick={() => setHistoryOpen(true)} className="app-secondary-button">История</button>
+            {pendingCount > 0 ? <button type="button" onClick={openPending} className="app-primary-button">Ждёт: {pendingCount}</button> : null}
           </div>
-
-          {textInputEnabled ? (
-            <div className="mt-4">
-              <AICoreInput value={inputValue} onChange={setInputValue} onSubmit={submit} onClose={closeCommandPanel} disabled={isSending} />
-            </div>
-          ) : (
-            <div className="mt-4 rounded-[22px] border border-white/10 bg-white/[0.04] px-4 py-4 text-sm leading-6 text-white/52">
-              Текстовый ввод выключен в настройках.
-            </div>
-          )}
         </section>
+
+        <section className="app-card app-ai-text-input-card">
+          <AICoreInput value={inputValue} onChange={setInputValue} onSubmit={submit} disabled={isSending} inline />
+        </section>
+
+        {latestAssistantMessage?.kind === 'preview' ? (
+          <FinancePreviewCard
+            title={latestAssistantMessage.text}
+            intent={latestAssistantMessage.actionType}
+            actionId={latestAssistantMessage.actionId}
+            data={latestAssistantMessage.data}
+            onConfirm={handleAfterConfirm}
+            onCancel={cancelAction}
+          />
+        ) : null}
+
+        {latestAssistantMessage && latestAssistantMessage.kind !== 'preview' ? (
+          <section className="app-card app-ai-text-response">
+            <div className="app-eyebrow">Ответ Фины</div>
+            <div>{latestAssistantMessage.text}</div>
+          </section>
+        ) : null}
 
         <div className="grid grid-cols-2 gap-3">
           <LastTransactionCard compact transaction={latest ?? items[0] ?? null} isMutating={isMutating} onOpenHistory={() => setHistoryOpen(true)} onEdit={handleEdit} onDelete={handleDelete} />
           <MonthlyStatsCard compact stats={monthlyStats} />
         </div>
-
-        {latestAssistantMessage?.kind === 'preview' ? (
-          <FinancePreviewCard title={latestAssistantMessage.text} intent={latestAssistantMessage.actionType} actionId={latestAssistantMessage.actionId} data={latestAssistantMessage.data} onConfirm={handleAfterConfirm} onCancel={cancelAction} />
-        ) : null}
-
-        {latestAssistantMessage && latestAssistantMessage.kind !== 'preview' ? (
-          <section className="app-card">
-            <div className="app-eyebrow">Ответ</div>
-            <div className="mt-2 text-sm leading-6 text-white">{latestAssistantMessage.text}</div>
-          </section>
-        ) : null}
       </div>
 
       <PendingActionsDrawer open={isPendingOpen} items={pendingActions} onClose={closePending} onConfirm={handleAfterConfirm} onCancel={cancelAction} onUpdate={updatePendingAction} />
