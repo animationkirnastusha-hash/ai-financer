@@ -463,3 +463,52 @@
   .app-companion-presence__avatar,
   .app-companion-presence__avatar .ai-companion-control { width: 64px !important; height: 64px !important; }
 }
+
+
+/* 04-buttons-and-controls.css — стабильные кнопки и touch-зоны. */
+.app-primary-button,
+.app-secondary-button,
+.app-danger-card,
+.app-list-button,
+.app-action-card,
+.app-icon-button {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.app-primary-button,
+.app-secondary-button {
+  min-height: 52px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 18px;
+  font-weight: 650;
+}
+
+.app-primary-button {
+  background: linear-gradient(135deg, rgba(52, 211, 153, 0.96), rgba(16, 185, 129, 0.82));
+  color: rgba(2, 10, 10, 0.92);
+  box-shadow: 0 20px 44px rgba(16, 185, 129, 0.20);
+}
+
+.app-secondary-button {
+  border: 1px solid rgba(255,255,255,.1);
+  background: rgba(255,255,255,.055);
+  color: rgba(255,255,255,.82);
+}
+
+.app-compact-menu-button {
+  width: 100%;
+  min-height: 58px;
+  border-radius: 24px;
+  border: 1px solid rgba(255,255,255,.09);
+  background: rgba(255,255,255,.045);
+  color: rgba(255,255,255,.88);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+}

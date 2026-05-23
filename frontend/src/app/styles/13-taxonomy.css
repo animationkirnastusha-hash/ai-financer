@@ -18,3 +18,4 @@
 .app-taxonomy-section-card { min-width:0; }
 .app-taxonomy-section-card__title span:last-child { min-width:0; }
 @media (max-width: 390px) { .app-taxonomy-actions { grid-template-columns:1fr; } }
+

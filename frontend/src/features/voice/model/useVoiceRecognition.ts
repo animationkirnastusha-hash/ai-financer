@@ -150,7 +150,7 @@ export function useVoiceRecognition({
           // ignore
         }
         finishCurrentSession({ emit: Boolean(text), noSpeechError: false });
-      }, 8200);
+      }, 24000);
     };
 
     recognition.onresult = (event) => {
@@ -182,7 +182,7 @@ export function useVoiceRecognition({
       const isSoftError = nextError === 'no-speech' || nextError === 'aborted' || nextError === 'audio-capture';
 
       if (manualStopRef.current) {
-        finishCurrentSession({ emit: true, noSpeechError: nextError === 'no-speech' || nextError === 'aborted' });
+        finishCurrentSession({ emit: true, noSpeechError: false });
         return;
       }
 
@@ -191,7 +191,7 @@ export function useVoiceRecognition({
       clearListenWatchdogTimer();
 
       if (isSoftError) {
-        setError(nextError === 'audio-capture' ? 'audio-capture' : nextError);
+        setError(null);
         setStateSafe('idle');
         return;
       }
@@ -204,7 +204,7 @@ export function useVoiceRecognition({
       const text = finalTranscriptRef.current.trim() || transcriptRef.current.trim();
 
       if (manualStopRef.current) {
-        finishCurrentSession({ emit: true, noSpeechError: !text });
+        finishCurrentSession({ emit: true, noSpeechError: false });
         return;
       }
 

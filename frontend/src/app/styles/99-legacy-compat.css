@@ -1259,3 +1259,26 @@ body.ai-screen-slide-right .ai-screen-transition {
   .app-account-card__balance { max-width: 100%; text-align: left; }
   .app-secondary-links { grid-template-columns: repeat(3, minmax(0,1fr)); }
 }
+
+
+/* 99-legacy-compat.css — временный мост старых классов. Удалять только после аудита всех экранов. */
+.app-home-hero,
+.app-fina-primary-card,
+.app-home-menu-sheet,
+.app-account-card,
+.app-taxonomy-page,
+.app-settings-page {
+  isolation: isolate;
+}
+
+/* страховка от слёта текста */
+.app-home-hero h1,
+.app-home-hero h2,
+.app-fina-primary-card h2,
+.app-card h1,
+.app-card h2,
+.app-card h3 {
+  overflow-wrap: anywhere;
+  word-break: normal;
+  line-height: 1.08;
+}

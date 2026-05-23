@@ -33,6 +33,30 @@ export class AIOrchestratorService {
       const context = await this.context.buildUserContext(userId);
       const plan = await this.planner.plan(trimmed, context);
 
+      if (plan.actions.length > 3) {
+        const audit = await this.audit.create({
+          userId,
+          command: trimmed,
+          intent: 'premium_action_limit',
+          riskLevel: 'low',
+          requiresConfirmation: false,
+          executed: false,
+          status: 'premium_action_limit',
+          result: { actionCount: plan.actions.length },
+        });
+
+        return {
+          success: false,
+          intent: 'premium_action_limit',
+          executed: false,
+          requiresConfirmation: false,
+          riskLevel: 'low',
+          message: 'В одном запросе можно выполнить до трёх действий. Больше трёх задач за раз будет доступно в Premium.',
+          parsed: null,
+          meta: { auditLogId: audit.id },
+        };
+      }
+
       if (!plan.actions.length) {
         const companionAnswer = await this.answer.answer(trimmed, context, 'fast', plan.summary);
         const audit = await this.audit.create({

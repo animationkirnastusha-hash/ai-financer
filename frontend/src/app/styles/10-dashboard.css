@@ -27,3 +27,99 @@
   .app-fina-hints { grid-template-columns: 1fr; }
   .app-fina-actions { grid-template-columns: 1fr; }
 }
+
+
+/* Валютная карточка главной. */
+.app-currency-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.app-currency-card__top {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: start;
+}
+
+.app-currency-card__amount {
+  margin-top: 14px;
+  font-size: clamp(44px, 12vw, 78px);
+  font-weight: 760;
+  color: rgba(255,255,255,.96);
+}
+
+.app-currency-card__top p,
+.app-currency-card__rate {
+  color: rgba(255,255,255,.50);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.app-currency-card__rate {
+  margin-top: 10px;
+  display: inline-flex;
+  width: fit-content;
+  max-width: 100%;
+  border: 1px solid rgba(110,231,183,.16);
+  background: rgba(110,231,183,.055);
+  border-radius: 999px;
+  padding: 7px 10px;
+}
+
+.app-currency-card__nav {
+  min-width: 104px;
+  height: 44px;
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 999px;
+  background: rgba(0,0,0,.18);
+  display: grid;
+  grid-template-columns: 32px 1fr 32px;
+  align-items: center;
+}
+
+.app-currency-card__nav button {
+  height: 100%;
+  border: 0;
+  color: rgba(255,255,255,.75);
+  font-size: 24px;
+}
+
+.app-currency-card__nav span {
+  text-align: center;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: .14em;
+  color: rgba(190,255,230,.86);
+}
+
+.app-currency-card__dots {
+  margin-top: 14px;
+  display: flex;
+  justify-content: center;
+  gap: 7px;
+}
+
+.app-currency-card__dots i {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: rgba(255,255,255,.16);
+}
+
+.app-currency-card__dots i[data-active="true"] {
+  width: 28px;
+  background: rgba(110,231,183,.86);
+}
+
+.app-fina-primary-card .app-fina-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+@media (max-width: 390px) {
+  .app-fina-primary-card .app-fina-actions { grid-template-columns: 1fr; }
+  .app-currency-card__top { grid-template-columns: 1fr; }
+  .app-currency-card__nav { width: fit-content; }
+}

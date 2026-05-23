@@ -55,6 +55,8 @@ function detectScreen(input: string): AppScreen | null {
       'ai',
       'помощник',
       'финансовый помощник',
+      'текстовый ввод',
+      'написать фине',
       'командный центр',
     ])
   ) {
@@ -199,6 +201,10 @@ export function parseNavigationIntent(command: string): NavigationIntent {
   const input = normalize(command);
 
   if (!input) return { type: 'none' };
+
+  if ((input.includes('главн') || input.includes('домой')) && (input.includes('верни') || input.includes('открой') || input.includes('покажи') || input === 'домой')) {
+    return { type: 'open_screen', screen: 'dashboard' };
+  }
 
   if (
     includesAny(input, [

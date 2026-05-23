@@ -99,7 +99,7 @@ function saveSettings(state: AppSettings) {
       voiceActiveWindowSeconds: normalizeActiveWindow(state.voiceActiveWindowSeconds),
       voiceEnabled: state.voiceEnabled,
       voiceBetaEnabled: state.voiceBetaEnabled,
-      voiceRepliesEnabled: state.voiceRepliesEnabled,
+      voiceRepliesEnabled: false,
       voiceAlwaysOnEnabled: state.voiceAlwaysOnEnabled,
       voicePermissionPrompted: state.voicePermissionPrompted,
       textInputEnabled: state.textInputEnabled,
@@ -150,8 +150,8 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
     saveSettings(get());
   },
 
-  setVoiceRepliesEnabled: (value) => {
-    set({ voiceRepliesEnabled: value });
+  setVoiceRepliesEnabled: () => {
+    set({ voiceRepliesEnabled: false });
     saveSettings(get());
   },
 

@@ -253,3 +253,44 @@ body.ai-core-modal-open .voice-first-companion {
   .voice-first-companion .ai-companion-control { width: 62px !important; height: 62px !important; }
   .voice-first-status { display: none; }
 }
+
+
+/* Глобальное подтверждение действия от Фины. */
+.app-pending-confirm-backdrop {
+  z-index: 120;
+  align-items: flex-end;
+}
+
+.app-pending-confirm-sheet {
+  width: min(100%, 720px);
+  max-height: min(82vh, 760px);
+  overflow: hidden;
+}
+
+.app-pending-confirm-head {
+  margin-bottom: 14px;
+}
+
+.app-pending-confirm-head h2 {
+  margin-top: 4px;
+  font-size: 24px;
+  line-height: 1.05;
+  font-weight: 760;
+}
+
+.app-pending-confirm-head p {
+  margin-top: 8px;
+  color: rgba(255,255,255,.52);
+}
+
+.voice-first-bubble {
+  filter: none !important;
+  backdrop-filter: none !important;
+  transform: translateZ(0);
+  animation: voiceBubbleIn .18s ease-out both !important;
+}
+
+@keyframes voiceBubbleIn {
+  from { opacity: 0; transform: translate3d(0, 4px, 0) scale(.98); }
+  to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+}

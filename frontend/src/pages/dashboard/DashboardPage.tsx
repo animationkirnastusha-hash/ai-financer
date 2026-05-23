@@ -1,33 +1,27 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useAccountsStore } from '@/features/accounts/model/accounts.store';
 import { useNavigationStore } from '@/features/navigation/model/navigation.store';
+import { useSettingsStore } from '@/features/settings/model/settings.store';
 import { useTransactionsStore } from '@/features/transactions/model/transactions.store';
 import { CompanionPresence } from '@/features/companion/ui/CompanionPresence';
 import { ProgressionMiniCard } from '@/features/progression/ui/ProgressionMiniCard';
 import { ScreenTopBar } from '@/shared/ui/ScreenTopBar';
 import { formatMoney, formatTransactionDate } from '@/shared/lib/money';
+import type { AppCurrency } from '@/features/settings/model/settings.types';
 
-const voiceHints = [
-  { label: 'Расход', hint: '«Фина, кофе 300»' },
-  { label: 'Доход', hint: '«Фина, зарплата 50000»' },
-  { label: 'Перевод', hint: '«Фина, переведи 1000 на карту»' },
-  { label: 'Вопрос', hint: '«Фина, что изменилось за месяц?»' },
-];
-
-const onboardingSteps = [
-  { label: 'Первый счёт', prompt: 'создай счет основной' },
-  { label: 'Добавить деньги', prompt: 'доход 50000 на основной счет' },
-  { label: 'Записать расход', prompt: 'кофе 300' },
-  { label: 'Спросить аналитику', prompt: 'сколько я потратил за неделю' },
-];
+const currencyLabels: Record<AppCurrency, string> = {
+  RUB: 'Рубли',
+  USD: 'Доллары',
+  EUR: 'Евро',
+};
 
 const menuLinks = [
   { label: 'Операции', caption: 'История и ручное добавление', screen: 'transactions' as const },
   { label: 'Счета', caption: 'Карты, наличные и накопления', screen: 'accounts' as const },
-  { label: 'Цели', caption: 'Планы и прогресс', screen: 'goals' as const },
+  { label: 'Цели', caption: 'Накопления и планы', screen: 'goals' as const },
   { label: 'Аналитика', caption: 'Расходы, доходы и выводы', screen: 'analytics' as const },
   { label: 'Категории', caption: 'Разделы и правила порядка', screen: 'sections' as const },
-  { label: 'Чат с Финой', caption: 'Текстовый ввод, когда говорить неудобно', screen: 'ai-core' as const },
+  { label: 'Чат с Финой', caption: 'Текст, когда говорить неудобно', screen: 'ai-core' as const },
   { label: 'Рефералы', caption: 'Код и приглашения', screen: 'referral' as const },
   { label: 'Премиум', caption: 'Будущие расширенные возможности', screen: 'premium' as const },
 ];
@@ -44,8 +38,27 @@ function titleOf(transaction: any) {
   return transaction.category?.name || transaction.description || 'Операция';
 }
 
+function convertRubToCurrency(amount: number, currency: AppCurrency, rates: { usd: number; eur: number }) {
+  if (currency === 'RUB') return amount;
+  if (currency === 'USD') return rates.usd > 0 ? amount / rates.usd : 0;
+  return rates.eur > 0 ? amount / rates.eur : 0;
+}
+
+function convertCurrencyToRub(amount: number, currency: AppCurrency, rates: { usd: number; eur: number }) {
+  if (currency === 'RUB') return amount;
+  if (currency === 'USD') return amount * rates.usd;
+  return amount * rates.eur;
+}
+
+function exchangeHint(currency: AppCurrency, rates: { usd: number; eur: number }) {
+  if (currency === 'USD') return `1 USD ≈ ${formatMoney(rates.usd, 'RUB')}`;
+  if (currency === 'EUR') return `1 EUR ≈ ${formatMoney(rates.eur, 'RUB')}`;
+  return `USD ≈ ${formatMoney(rates.usd, 'RUB')} · EUR ≈ ${formatMoney(rates.eur, 'RUB')}`;
+}
+
 export default function DashboardPage() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [currencyIndex, setCurrencyIndex] = useState(0);
   const navigateTo = useNavigationStore((state) => state.navigateTo);
   const openAIWithCommand = useNavigationStore((state) => state.openAIWithCommand);
   const accounts = useAccountsStore((state) => state.items);
@@ -53,36 +66,89 @@ export default function DashboardPage() {
   const transactions = useTransactionsStore((state) => state.items);
   const loadTransactions = useTransactionsStore((state) => state.loadTransactions);
 
+  const mainCurrency = useSettingsStore((state) => state.mainCurrency);
+  const secondaryCurrencyEnabled = useSettingsStore((state) => state.secondaryCurrencyEnabled);
+  const secondaryCurrency = useSettingsStore((state) => state.secondaryCurrency);
+  const rubToUsdRate = useSettingsStore((state) => state.rubToUsdRate);
+  const rubToEurRate = useSettingsStore((state) => state.rubToEurRate);
+
   useEffect(() => {
     void Promise.allSettled([loadAccounts(), loadTransactions()]);
   }, [loadAccounts, loadTransactions]);
 
+  const rates = useMemo(() => ({ usd: rubToUsdRate || 90, eur: rubToEurRate || 100 }), [rubToEurRate, rubToUsdRate]);
+
+  const currencies = useMemo<AppCurrency[]>(() => {
+    const withAccounts = accounts.map((account) => account.currency as AppCurrency).filter((currency): currency is AppCurrency => ['RUB', 'USD', 'EUR'].includes(currency));
+    const list = [mainCurrency, ...(secondaryCurrencyEnabled ? [secondaryCurrency] : []), ...withAccounts];
+    return Array.from(new Set(list)).filter(Boolean) as AppCurrency[];
+  }, [accounts, mainCurrency, secondaryCurrency, secondaryCurrencyEnabled]);
+
+  const activeCurrency = currencies[currencyIndex % Math.max(1, currencies.length)] || 'RUB';
+
   const data = useMemo(() => {
-    const rubAccounts = accounts.filter((account) => account.currency === 'RUB');
-    const totalRub = rubAccounts.reduce((sum, account) => sum + (Number(account.balance) || 0), 0);
-    const currentMonth = transactions.filter((item) => isCurrentMonth(item.date) && item.account?.currency === 'RUB');
-    const income = currentMonth.reduce((sum, item) => (item.type === 'income' ? sum + Number(item.amount || 0) : sum), 0);
-    const expenses = currentMonth.reduce((sum, item) => (item.type === 'expense' ? sum + Number(item.amount || 0) : sum), 0);
+    const rubTotal = accounts.reduce((sum, account) => sum + convertCurrencyToRub(Number(account.balance) || 0, account.currency as AppCurrency, rates), 0);
+    const activeNative = accounts
+      .filter((account) => account.currency === activeCurrency)
+      .reduce((sum, account) => sum + (Number(account.balance) || 0), 0);
+    const activeTotal = activeNative > 0 || activeCurrency === 'RUB'
+      ? accounts.filter((account) => account.currency === activeCurrency).reduce((sum, account) => sum + (Number(account.balance) || 0), 0)
+      : convertRubToCurrency(rubTotal, activeCurrency, rates);
+
+    const currentMonth = transactions.filter((item) => isCurrentMonth(item.date));
+    const incomeRub = currentMonth.reduce((sum, item) => {
+      if (item.type !== 'income') return sum;
+      return sum + convertCurrencyToRub(Number(item.amount || 0), (item.account?.currency ?? 'RUB') as AppCurrency, rates);
+    }, 0);
+    const expensesRub = currentMonth.reduce((sum, item) => {
+      if (item.type !== 'expense') return sum;
+      return sum + convertCurrencyToRub(Number(item.amount || 0), (item.account?.currency ?? 'RUB') as AppCurrency, rates);
+    }, 0);
+    const income = convertRubToCurrency(incomeRub, activeCurrency, rates);
+    const expenses = convertRubToCurrency(expensesRub, activeCurrency, rates);
     const delta = income - expenses;
-    return { totalRub, income, expenses, delta };
-  }, [accounts, transactions]);
+    const accountCount = accounts.filter((account) => account.currency === activeCurrency).length;
+    return { activeTotal, rubTotal, income, expenses, delta, accountCount };
+  }, [accounts, activeCurrency, rates, transactions]);
 
   const recent = transactions.slice(0, 3);
   const isEmptyState = accounts.length === 0 && transactions.length === 0;
+
+  const nextCurrency = () => setCurrencyIndex((value) => (value + 1) % Math.max(1, currencies.length));
+  const prevCurrency = () => setCurrencyIndex((value) => (value - 1 + Math.max(1, currencies.length)) % Math.max(1, currencies.length));
 
   return (
     <div className="app-page app-dashboard-page text-white">
       <div className="app-page__inner space-y-4">
         <ScreenTopBar title="Главная" right={['referral', 'history', 'settings']} />
 
-        <header className="app-card app-card--hero app-home-hero">
-          <div className="app-eyebrow">Баланс</div>
-          <div className="mt-3 app-money-hero">{formatMoney(data.totalRub, 'RUB')}</div>
-          <div className="mt-4 grid grid-cols-3 gap-2 app-home-metrics-grid">
-            <div className="app-home-metric"><span>Доходы</span><b>{formatMoney(data.income, 'RUB', { sign: 'plus' })}</b></div>
-            <div className="app-home-metric"><span>Расходы</span><b>{formatMoney(data.expenses, 'RUB', { sign: 'minus' })}</b></div>
-            <div className="app-home-metric"><span>Итог</span><b>{formatMoney(data.delta, 'RUB', { sign: 'auto' })}</b></div>
+        <header className="app-card app-card--hero app-home-hero app-currency-card" data-no-swipe="true">
+          <div className="app-currency-card__top">
+            <div>
+              <div className="app-eyebrow">Баланс</div>
+              <div className="app-currency-card__amount">{formatMoney(data.activeTotal, activeCurrency)}</div>
+              <p>{currencyLabels[activeCurrency]} · {data.accountCount || 'нет'} сч.</p>
+            </div>
+            <div className="app-currency-card__nav">
+              <button type="button" onClick={prevCurrency} aria-label="Предыдущая валюта">‹</button>
+              <span>{activeCurrency}</span>
+              <button type="button" onClick={nextCurrency} aria-label="Следующая валюта">›</button>
+            </div>
           </div>
+
+          <div className="app-currency-card__rate">{exchangeHint(activeCurrency, rates)}</div>
+
+          <div className="mt-4 grid grid-cols-3 gap-2 app-home-metrics-grid">
+            <div className="app-home-metric"><span>Доходы</span><b>{formatMoney(data.income, activeCurrency, { sign: 'plus' })}</b></div>
+            <div className="app-home-metric"><span>Расходы</span><b>{formatMoney(data.expenses, activeCurrency, { sign: 'minus' })}</b></div>
+            <div className="app-home-metric"><span>Итог</span><b>{formatMoney(data.delta, activeCurrency, { sign: 'auto' })}</b></div>
+          </div>
+
+          {currencies.length > 1 ? (
+            <div className="app-currency-card__dots" aria-hidden="true">
+              {currencies.map((currency, index) => <i key={currency} data-active={index === currencyIndex % currencies.length} />)}
+            </div>
+          ) : null}
         </header>
 
         <ProgressionMiniCard />
@@ -91,16 +157,11 @@ export default function DashboardPage() {
           <div>
             <div className="app-eyebrow">Фина</div>
             <h2>Голос — основной способ</h2>
-            <p>Позови Фину и скажи задачу обычным языком. Текстовый чат оставлен как запасной вариант.</p>
-          </div>
-          <div className="app-fina-hints">
-            {voiceHints.map((item) => (
-              <div key={item.label}><b>{item.label}</b><small>{item.hint}</small></div>
-            ))}
+            <p>Скажи «Фина», затем задачу. Если вокруг шумно, открой текстовый ввод.</p>
           </div>
           <div className="app-fina-actions">
             <button type="button" className="app-primary-button" onClick={() => openAIWithCommand()}>Написать Фине</button>
-            <button type="button" className="app-secondary-button" onClick={() => setMenuOpen(true)}>Открыть меню</button>
+            <button type="button" className="app-secondary-button" onClick={() => setMenuOpen(true)}>Меню</button>
           </div>
         </section>
 
@@ -108,10 +169,10 @@ export default function DashboardPage() {
           <section className="app-card">
             <div className="app-section-title">Быстрый старт</div>
             <div className="mt-4 grid gap-2">
-              {onboardingSteps.map((step, index) => (
-                <button key={step.prompt} type="button" onClick={() => openAIWithCommand(step.prompt)} className="app-list-button">
-                  <span>{index + 1}. {step.label}</span>
-                  <small>{step.prompt}</small>
+              {['Создай первый счёт', 'Добавь первый доход', 'Запиши расход', 'Спроси аналитику'].map((label) => (
+                <button key={label} type="button" onClick={() => openAIWithCommand()} className="app-list-button">
+                  <span>{label}</span>
+                  <small>Откроется текстовый ввод к Фине.</small>
                 </button>
               ))}
             </div>
@@ -128,7 +189,7 @@ export default function DashboardPage() {
 
           <div className="mt-4 space-y-2">
             {recent.length === 0 ? (
-              <button type="button" onClick={() => openAIWithCommand('кофе 300')} className="app-empty-button">Добавь первую операцию через Фину</button>
+              <button type="button" onClick={() => openAIWithCommand()} className="app-empty-button">Добавь первую операцию через Фину</button>
             ) : (
               recent.map((transaction) => {
                 const sign = transaction.type === 'income' ? 'plus' : transaction.type === 'expense' ? 'minus' : 'none';
@@ -153,10 +214,7 @@ export default function DashboardPage() {
             <div className="app-modal-handle" />
             <div className="app-modal-body">
               <div className="app-home-menu-head">
-                <div>
-                  <div className="app-eyebrow">Меню</div>
-                  <h2>Куда перейти</h2>
-                </div>
+                <div><div className="app-eyebrow">Меню</div><h2>Куда перейти</h2></div>
                 <button type="button" className="app-icon-button" onClick={() => setMenuOpen(false)}>×</button>
               </div>
               <div className="app-home-menu-grid">

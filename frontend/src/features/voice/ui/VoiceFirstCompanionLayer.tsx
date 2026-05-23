@@ -4,6 +4,7 @@ import { parseNavigationIntent } from '@/features/navigation/lib/parseNavigation
 import { useNavigationStore } from '@/features/navigation/model/navigation.store';
 import { useSettingsStore } from '@/features/settings/model/settings.store';
 import { useVoiceInput } from '@/features/voice/model/useVoiceInput';
+import { PendingActionCard } from '@/features/pending-actions/ui/PendingActionCard';
 import { CompanionButton } from '@/shared/ui/CompanionButton';
 import { telegramHaptic } from '@/shared/lib/telegram';
 
@@ -124,7 +125,6 @@ export function VoiceFirstCompanionLayer() {
 
   const voiceEnabled = useSettingsStore((state) => state.voiceEnabled);
   const voiceBetaEnabled = useSettingsStore((state) => state.voiceBetaEnabled);
-  const voiceRepliesEnabled = useSettingsStore((state) => state.voiceRepliesEnabled);
   const voiceAlwaysOnEnabled = useSettingsStore((state) => state.voiceAlwaysOnEnabled);
   const voicePermissionPrompted = useSettingsStore((state) => state.voicePermissionPrompted);
   const voiceWakeWordEnabled = useSettingsStore((state) => state.voiceWakeWordEnabled);
@@ -422,6 +422,10 @@ export function VoiceFirstCompanionLayer() {
     const transcript = voice.transcript.trim();
     if (!transcript) return;
 
+    const wake = stripWakeWord(transcript);
+    const shouldSubmit = activeUntilRef.current > Date.now() || wake.hasWakeWord;
+    if (!shouldSubmit) return;
+
     clearSilenceTimer();
     silenceTimerRef.current = window.setTimeout(() => {
       stopListening();
@@ -474,14 +478,9 @@ export function VoiceFirstCompanionLayer() {
     armCombatMode(activeWindowMs);
     showThought(lastMessage.text || 'Готово. Ещё несколько секунд можно говорить без “Фина”.', 'success', 2200);
 
-    if (voiceRepliesEnabled && lastMessage.text && chat.pendingActions.length === 0) {
-      voice.speak(lastMessage.text, { maxDurationMs: 900 });
-      resumeListeningSoon(1050);
-      return;
-    }
-
+    voice.stopSpeaking();
     resumeListeningSoon(360);
-  }, [activeWindowMs, armCombatMode, chat.messages, chat.pendingActions.length, resumeListeningSoon, showThought, voice, voiceRepliesEnabled]);
+  }, [activeWindowMs, armCombatMode, chat.messages, chat.pendingActions.length, resumeListeningSoon, showThought, voice]);
 
 
   useEffect(() => {
@@ -551,6 +550,34 @@ export function VoiceFirstCompanionLayer() {
             <div className="voice-first-intro__actions">
               <button type="button" onClick={enableVoiceFirst} disabled={isPriming}>{isPriming ? 'Включаю...' : 'Познакомиться с Финой'}</button>
               <button type="button" onClick={() => setVoicePermissionPrompted(true)}>Позже</button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {chat.pendingActions.length > 0 ? (
+        <div className="app-modal-backdrop app-pending-confirm-backdrop" data-no-swipe="true">
+          <div className="app-modal-sheet app-pending-confirm-sheet" data-no-swipe="true">
+            <div className="app-modal-handle" />
+            <div className="app-modal-body">
+              <div className="app-pending-confirm-head">
+                <div>
+                  <div className="app-eyebrow">Проверка</div>
+                  <h2>Фина ждёт подтверждения</h2>
+                  <p>Можно подтвердить, отменить или изменить детали перед выполнением.</p>
+                </div>
+              </div>
+              <div className="grid gap-3">
+                {chat.pendingActions.slice(0, 1).map((item) => (
+                  <PendingActionCard
+                    key={item.id}
+                    item={item}
+                    onConfirm={chat.confirmAction}
+                    onCancel={chat.cancelAction}
+                    onUpdate={chat.updatePendingAction}
+                  />
+                ))}
+              </div>
             </div>
           </div>
         </div>

@@ -40,3 +40,4 @@
 .app-danger-card small { margin-top:5px; color:rgba(255,255,255,.45); font-size:12px; line-height:1.5; }
 .app-status-box { border:1px solid rgba(129,239,208,.18); background:rgba(129,239,208,.08); color:rgba(220,255,244,.9); border-radius:18px; padding:12px; font-size:13px; }
 @media (max-width: 390px) { .app-settings-grid { grid-template-columns:1fr; } .app-settings-language { align-items:flex-start; flex-direction:column; } }
+
