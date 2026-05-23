@@ -55,6 +55,7 @@ export function useVoiceRecognition({
   const activeRef = useRef(false);
   const finalWasSentRef = useRef(false);
   const fallbackTimerRef = useRef<number | null>(null);
+  const restartCooldownRef = useRef<number | null>(null);
 
   const [state, setState] = useState<VoiceRecognitionState>('idle');
   const [transcript, setTranscript] = useState('');
@@ -156,25 +157,22 @@ export function useVoiceRecognition({
 
     recognition.onerror = (event) => {
       const nextError = event.error || event.message || 'speech-error';
-      const text = finalTranscriptRef.current.trim() || transcriptRef.current.trim();
+      const isSoftError = nextError === 'no-speech' || nextError === 'aborted' || nextError === 'audio-capture';
 
       if (manualStopRef.current) {
-        finishCurrentSession({ emit: true, noSpeechError: nextError === 'no-speech' && !text });
-        return;
-      }
-
-      if (nextError === 'aborted') {
-        finishCurrentSession({ emit: Boolean(text), noSpeechError: false });
-        return;
-      }
-
-      if (nextError === 'no-speech') {
-        finishCurrentSession({ emit: false, noSpeechError: true });
+        finishCurrentSession({ emit: true, noSpeechError: nextError === 'no-speech' || nextError === 'aborted' });
         return;
       }
 
       activeRef.current = false;
       clearFallbackTimer();
+
+      if (isSoftError) {
+        setError(nextError === 'audio-capture' ? 'speech-restart' : nextError);
+        setStateSafe('idle');
+        return;
+      }
+
       setError(nextError);
       setStateSafe('error');
     };
@@ -194,6 +192,10 @@ export function useVoiceRecognition({
 
     return () => {
       clearFallbackTimer();
+      if (restartCooldownRef.current !== null) {
+        window.clearTimeout(restartCooldownRef.current);
+        restartCooldownRef.current = null;
+      }
       try {
         recognition.abort();
       } catch {
@@ -204,14 +206,14 @@ export function useVoiceRecognition({
     };
   }, [SpeechRecognitionCtor, clearFallbackTimer, finishCurrentSession, lang, setStateSafe]);
 
-  const startListening = useCallback(() => {
+  const startListening = useCallback((): boolean => {
     if (!recognitionRef.current || !isSupported) {
       setError('unsupported');
       setStateSafe('unsupported');
-      return;
+      return false;
     }
 
-    if (activeRef.current) return;
+    if (activeRef.current || stateRef.current === 'processing') return false;
 
     transcriptRef.current = '';
     finalTranscriptRef.current = '';
@@ -223,11 +225,27 @@ export function useVoiceRecognition({
 
     try {
       recognitionRef.current.start();
+      return true;
     } catch (err) {
       console.error('Speech start failed', err);
-      setError('start-failed');
       activeRef.current = false;
-      setStateSafe('error');
+      setError('start-failed');
+      setStateSafe('idle');
+
+      if (restartCooldownRef.current !== null) {
+        window.clearTimeout(restartCooldownRef.current);
+      }
+      restartCooldownRef.current = window.setTimeout(() => {
+        restartCooldownRef.current = null;
+      }, 180);
+
+      try {
+        recognitionRef.current.abort();
+      } catch {
+        // ignore
+      }
+
+      return false;
     }
   }, [isSupported, setStateSafe]);
 

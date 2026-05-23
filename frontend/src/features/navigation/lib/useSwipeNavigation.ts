@@ -10,18 +10,22 @@ type Options = {
 
 export const MAIN_SWIPE_SCREENS: AppScreen[] = ['transactions', 'dashboard', 'analytics'];
 
-const START_LOCK_DISTANCE = 8;
-const NAVIGATE_DISTANCE = 52;
-const NAVIGATE_VELOCITY = 0.42;
-const MAX_DRAG = 86;
-const MAX_VERTICAL_DRIFT = 150;
-const MIN_HORIZONTAL_RATIO = 0.5;
+const START_LOCK_DISTANCE = 5;
+const NAVIGATE_DISTANCE = 38;
+const NAVIGATE_VELOCITY = 0.27;
+const MAX_DRAG = 124;
+const MAX_VERTICAL_DRIFT = 170;
+const MIN_HORIZONTAL_RATIO = 0.34;
+const EDGE_BACK_ZONE = 34;
+const MAX_TAP_MS = 90;
 
 function isInteractiveTarget(target: EventTarget | null) {
   if (!(target instanceof HTMLElement)) return false;
 
   return Boolean(
-    target.closest('input, textarea, button, select, [contenteditable="true"], [data-no-swipe="true"], [data-ai-core-modal="true"]'),
+    target.closest(
+      'input, textarea, button, select, a, [role="button"], [contenteditable="true"], [data-no-swipe="true"], [data-ai-core-modal="true"], .app-modal-backdrop, .app-modal-sheet',
+    ),
   );
 }
 
@@ -31,7 +35,8 @@ function isBlockedByUi() {
     document.body.classList.contains('ai-composer-focused') ||
     document.body.classList.contains('ai-core-modal-open') ||
     document.body.classList.contains('ai-any-modal-open') ||
-    document.body.classList.contains('ai-modal-open')
+    document.body.classList.contains('ai-modal-open') ||
+    Boolean(document.querySelector('.app-modal-backdrop, [data-ai-core-modal="true"]'))
   );
 }
 
@@ -41,7 +46,7 @@ function setSwipeDirection(direction: 'left' | 'right') {
   document.body.classList.add(direction === 'left' ? 'ai-screen-slide-left' : 'ai-screen-slide-right');
   window.setTimeout(() => {
     document.body.classList.remove('ai-screen-slide-left', 'ai-screen-slide-right');
-  }, 560);
+  }, 460);
 }
 
 function resetDrag() {
@@ -51,7 +56,7 @@ function resetDrag() {
 
 function rubberBand(deltaX: number) {
   const sign = deltaX < 0 ? -1 : 1;
-  const value = Math.min(MAX_DRAG, Math.sqrt(Math.abs(deltaX)) * 9);
+  const value = Math.min(MAX_DRAG, Math.pow(Math.abs(deltaX), 0.82) * 2.9);
   return sign * value;
 }
 
@@ -59,9 +64,11 @@ export function useSwipeNavigation({ currentScreen, navigateTo, goBack }: Option
   const startX = useRef(0);
   const startY = useRef(0);
   const lastX = useRef(0);
+  const lastY = useRef(0);
   const startAt = useRef(0);
   const startedOnInteractive = useRef(false);
   const lockedHorizontal = useRef(false);
+  const canSwipeRef = useRef(false);
 
   useEffect(() => {
     const handleTouchStart = (event: TouchEvent) => {
@@ -70,9 +77,11 @@ export function useSwipeNavigation({ currentScreen, navigateTo, goBack }: Option
 
       startedOnInteractive.current = isBlockedByUi() || isInteractiveTarget(event.target);
       lockedHorizontal.current = false;
+      canSwipeRef.current = false;
       startX.current = touch.clientX;
       lastX.current = touch.clientX;
       startY.current = touch.clientY;
+      lastY.current = touch.clientY;
       startAt.current = Date.now();
       resetDrag();
     };
@@ -85,20 +94,26 @@ export function useSwipeNavigation({ currentScreen, navigateTo, goBack }: Option
       const deltaX = touch.clientX - startX.current;
       const deltaY = touch.clientY - startY.current;
       lastX.current = touch.clientX;
+      lastY.current = touch.clientY;
 
       if (!lockedHorizontal.current) {
         if (Math.abs(deltaX) < START_LOCK_DISTANCE) return;
         if (Math.abs(deltaY) > MAX_VERTICAL_DRIFT) return;
         if (Math.abs(deltaX) / Math.max(1, Math.abs(deltaY)) < MIN_HORIZONTAL_RATIO) return;
+        if (Date.now() - startAt.current < MAX_TAP_MS && Math.abs(deltaX) < 14) return;
         lockedHorizontal.current = true;
       }
 
       const currentIndex = MAIN_SWIPE_SCREENS.indexOf(currentScreen);
       const canGoMain = currentIndex !== -1
         ? Boolean(MAIN_SWIPE_SCREENS[deltaX < 0 ? currentIndex + 1 : currentIndex - 1])
-        : deltaX > 0;
+        : deltaX > 0 && (startX.current <= EDGE_BACK_ZONE || Math.abs(deltaX) > NAVIGATE_DISTANCE + 12);
 
-      if (!canGoMain) return;
+      canSwipeRef.current = canGoMain;
+      if (!canGoMain) {
+        resetDrag();
+        return;
+      }
 
       if (event.cancelable) event.preventDefault();
       document.body.classList.add('ai-screen-dragging');
@@ -106,15 +121,17 @@ export function useSwipeNavigation({ currentScreen, navigateTo, goBack }: Option
     };
 
     const handleTouchEnd = () => {
-      if (startedOnInteractive.current || !lockedHorizontal.current || isBlockedByUi()) {
+      if (startedOnInteractive.current || !lockedHorizontal.current || isBlockedByUi() || !canSwipeRef.current) {
         resetDrag();
         return;
       }
 
       const deltaX = lastX.current - startX.current;
+      const deltaY = lastY.current - startY.current;
       const elapsed = Math.max(1, Date.now() - startAt.current);
       const velocity = Math.abs(deltaX) / elapsed;
-      const shouldNavigate = Math.abs(deltaX) >= NAVIGATE_DISTANCE || velocity >= NAVIGATE_VELOCITY;
+      const isHorizontal = Math.abs(deltaX) / Math.max(1, Math.abs(deltaY)) >= MIN_HORIZONTAL_RATIO;
+      const shouldNavigate = isHorizontal && (Math.abs(deltaX) >= NAVIGATE_DISTANCE || velocity >= NAVIGATE_VELOCITY);
 
       if (!shouldNavigate) {
         resetDrag();

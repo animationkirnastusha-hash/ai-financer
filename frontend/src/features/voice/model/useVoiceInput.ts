@@ -88,8 +88,7 @@ export function useVoiceInput({
       }
 
       if (speech.isSupported) {
-        speech.startListening();
-        return 'started';
+        return speech.startListening() ? 'started' : 'permission-ready';
       }
 
       await recorder.startRecording();

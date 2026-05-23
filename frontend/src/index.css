@@ -1,12 +1,8 @@
 @import "tailwindcss";
-
-/*
-  CSS is split deliberately:
-  - legacy.css keeps the current visual system intact;
-  - layout-stability.css contains final mobile layout contracts;
-  - voice-stability.css contains the floating companion layer.
-  New patches should edit the small stability files, not append global overrides here.
-*/
-@import "./app/styles/legacy.css";
-@import "./app/styles/layout-stability.css";
-@import "./app/styles/voice-stability.css";
+@import "./app/styles/tokens.css";
+@import "./app/styles/base.css";
+@import "./app/styles/layout.css";
+@import "./app/styles/components.css";
+@import "./app/styles/modals.css";
+@import "./app/styles/voice.css";
+@import "./app/styles/swipe.css";

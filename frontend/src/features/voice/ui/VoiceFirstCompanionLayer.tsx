@@ -18,11 +18,11 @@ type Thought = {
 };
 
 const SILENCE_SUBMIT_MS = 950;
-const RESUME_DELAY_MS = 520;
-const BUBBLE_TIMEOUT_MS = 4200;
+const RESUME_DELAY_MS = 420;
+const WATCHDOG_INTERVAL_MS = 1450;
+const BUBBLE_TIMEOUT_MS = 3800;
 const DUPLICATE_WINDOW_MS = 800;
 const DEFAULT_ACTIVE_WINDOW_SECONDS = 16;
-const VOICE_WATCHDOG_MS = 850;
 
 function compactBubble(text: string) {
   return text
@@ -142,11 +142,10 @@ export function VoiceFirstCompanionLayer() {
   const isProcessingVoiceRef = useRef(false);
   const isActiveRef = useRef(false);
   const activeUntilRef = useRef(0);
-  const voiceStateRef = useRef<string>('idle');
-  const watchdogTimerRef = useRef<number | null>(null);
   const lastHandledRef = useRef<{ text: string; at: number }>({ text: '', at: 0 });
   const handleTextRef = useRef<(text: string) => Promise<void> | void>(() => undefined);
   const startListeningRef = useRef<() => Promise<void> | void>(() => undefined);
+  const lastWatchdogKickRef = useRef(0);
 
   const activeWindowMs = Math.max(6000, Math.min(45000, (voiceActiveWindowSeconds || DEFAULT_ACTIVE_WINDOW_SECONDS) * 1000));
   const isCombatActive = !voiceWakeWordEnabled || activeUntil > Date.now();
@@ -213,10 +212,6 @@ export function VoiceFirstCompanionLayer() {
     }
 
     if (voice.state === 'recording') return;
-
-    if (voice.state === 'error') {
-      voice.reset();
-    }
 
     const now = Date.now();
     if (now - lastStartAtRef.current < 260) {
@@ -339,13 +334,7 @@ export function VoiceFirstCompanionLayer() {
       armCombatMode();
     } finally {
       setIsProcessingVoice(false);
-      shouldResumeRef.current = true;
       resumeListeningSoon(RESUME_DELAY_MS);
-      window.setTimeout(() => {
-        if (shouldResumeRef.current && isActiveRef.current && !isProcessingVoiceRef.current && voiceStateRef.current !== 'recording') {
-          void startListeningRef.current?.();
-        }
-      }, RESUME_DELAY_MS + 900);
     }
   }, [armCombatMode, chat, clearSilenceTimer, companionName, goBack, navigateTo, resumeListeningSoon, showThought, voiceWakeWordEnabled]);
 
@@ -397,40 +386,6 @@ export function VoiceFirstCompanionLayer() {
   useEffect(() => {
     activeUntilRef.current = activeUntil;
   }, [activeUntil]);
-
-  useEffect(() => {
-    voiceStateRef.current = voice.state;
-  }, [voice.state]);
-
-  useEffect(() => {
-    if (!isActive) {
-      if (watchdogTimerRef.current !== null) {
-        window.clearInterval(watchdogTimerRef.current);
-        watchdogTimerRef.current = null;
-      }
-      return;
-    }
-
-    shouldResumeRef.current = true;
-
-    if (watchdogTimerRef.current !== null) {
-      window.clearInterval(watchdogTimerRef.current);
-    }
-
-    watchdogTimerRef.current = window.setInterval(() => {
-      if (!shouldResumeRef.current || !isActiveRef.current || isProcessingVoiceRef.current) return;
-      const state = voiceStateRef.current;
-      if (state === 'recording' || state === 'uploading' || state === 'speaking') return;
-      void startListeningRef.current?.();
-    }, VOICE_WATCHDOG_MS);
-
-    return () => {
-      if (watchdogTimerRef.current !== null) {
-        window.clearInterval(watchdogTimerRef.current);
-        watchdogTimerRef.current = null;
-      }
-    };
-  }, [isActive]);
 
   useEffect(() => {
     if (!isActive) {
@@ -497,18 +452,36 @@ export function VoiceFirstCompanionLayer() {
     showThought(lastMessage.text || 'Готово.', 'success');
 
     if (voiceRepliesEnabled && lastMessage.text && chat.pendingActions.length === 0) {
-      voice.speak(lastMessage.text, { maxDurationMs: 1800 });
-      resumeListeningSoon(2100);
+      voice.speak(lastMessage.text, { maxDurationMs: 1200 });
+      resumeListeningSoon(1450);
       return;
     }
 
     resumeListeningSoon(420);
   }, [armCombatMode, chat.messages, chat.pendingActions.length, resumeListeningSoon, showThought, voice, voiceRepliesEnabled]);
 
+
+  useEffect(() => {
+    if (!isActive) return undefined;
+
+    const tick = window.setInterval(() => {
+      if (!shouldResumeRef.current || !isActiveRef.current) return;
+      if (typeof document !== 'undefined' && document.hidden) return;
+      if (isProcessingVoiceRef.current || chat.isSending) return;
+      if (voice.state === 'recording' || voice.state === 'uploading' || voice.state === 'speaking') return;
+
+      const now = Date.now();
+      if (now - lastWatchdogKickRef.current < WATCHDOG_INTERVAL_MS - 80) return;
+      lastWatchdogKickRef.current = now;
+      void startListeningRef.current?.();
+    }, WATCHDOG_INTERVAL_MS);
+
+    return () => window.clearInterval(tick);
+  }, [chat.isSending, isActive, voice.state]);
+
   useEffect(() => () => {
     clearSilenceTimer();
     clearRestartTimer();
-    if (watchdogTimerRef.current !== null) window.clearInterval(watchdogTimerRef.current);
     if (bubbleTimerRef.current !== null) window.clearTimeout(bubbleTimerRef.current);
   }, [clearRestartTimer, clearSilenceTimer]);
 
@@ -532,10 +505,10 @@ export function VoiceFirstCompanionLayer() {
       {needsIntro ? (
         <div className="voice-first-intro" data-no-swipe="true">
           <div className="voice-first-intro__card">
-            <div className="voice-first-intro__title">Голосовое управление</div>
+            <div className="voice-first-intro__title">Фина слушает по имени</div>
             <p>
-              Микрофон может быть включён, но боевой режим начнётся только после имени помощника.
-              По умолчанию: “Фина”.
+              Сначала произнеси имя помощника, затем финансовую задачу обычным языком.
+              После выполнения она снова вернётся в режим ожидания.
             </p>
 
             <label className="voice-first-intro__field">
@@ -549,7 +522,7 @@ export function VoiceFirstCompanionLayer() {
             </label>
 
             <div className="voice-first-intro__hint">
-              Пример: “{draftName.trim() || 'Фина'}, кофе 300” или “{draftName.trim() || 'Фина'}, создай цель отпуск 120000”.
+              Пример: “{draftName.trim() || 'Фина'}, кофе 300”, “{draftName.trim() || 'Фина'}, наличными 10000” или “{draftName.trim() || 'Фина'}, создай цель отпуск 120000”.
             </div>
 
             <div className="voice-first-intro__actions">

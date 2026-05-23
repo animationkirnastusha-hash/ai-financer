@@ -1,0 +1,64 @@
+body.ai-screen-dragging .telegram-app-content {
+  transform: translate3d(var(--ai-swipe-drag-x), 0, 0) scale(.996);
+  opacity: .985;
+  transition: none !important;
+}
+
+.ai-screen-transition {
+  animation: aiScreenEnter 230ms cubic-bezier(.22,1,.36,1) both;
+  will-change: transform, opacity;
+}
+
+body.ai-screen-slide-left .ai-screen-transition {
+  animation: aiPageSwipeLeft 360ms cubic-bezier(.18,.86,.24,1) both !important;
+  transform-origin: left center;
+}
+body.ai-screen-slide-right .ai-screen-transition {
+  animation: aiPageSwipeRight 360ms cubic-bezier(.18,.86,.24,1) both !important;
+  transform-origin: right center;
+}
+
+.app-card,
+.app-stat-card,
+.app-nav-card,
+.ai-page-card-compact,
+.app-bottom-sheet,
+[data-ai-core-modal="true"] > * {
+  animation: aiSoftEnter 210ms cubic-bezier(.22,1,.36,1) both;
+}
+
+@keyframes aiScreenEnter {
+  from { opacity: .84; transform: translateY(6px) scale(.997); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes aiPageSwipeLeft {
+  0% { opacity: .60; transform: perspective(900px) translateX(34px) rotateY(-8deg) scale(.988); filter: blur(1px); }
+  60% { opacity: 1; transform: perspective(900px) translateX(-2px) rotateY(.8deg) scale(1.001); filter: blur(0); }
+  100% { opacity: 1; transform: perspective(900px) translateX(0) rotateY(0) scale(1); filter: blur(0); }
+}
+@keyframes aiPageSwipeRight {
+  0% { opacity: .60; transform: perspective(900px) translateX(-34px) rotateY(8deg) scale(.988); filter: blur(1px); }
+  60% { opacity: 1; transform: perspective(900px) translateX(2px) rotateY(-.8deg) scale(1.001); filter: blur(0); }
+  100% { opacity: 1; transform: perspective(900px) translateX(0) rotateY(0) scale(1); filter: blur(0); }
+}
+@keyframes aiSoftEnter {
+  from { opacity: 0; transform: translateY(7px) scale(.994); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ai-screen-transition,
+  body.ai-screen-slide-left .ai-screen-transition,
+  body.ai-screen-slide-right .ai-screen-transition,
+  body.ai-screen-dragging .telegram-app-content,
+  .app-card,
+  .app-stat-card,
+  .app-nav-card,
+  .ai-page-card-compact,
+  .app-bottom-sheet,
+  [data-ai-core-modal="true"] > * {
+    animation: none !important;
+    transition: none !important;
+    transform: none !important;
+  }
+}
