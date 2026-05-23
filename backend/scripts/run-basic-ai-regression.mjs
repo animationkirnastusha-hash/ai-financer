@@ -140,6 +140,19 @@ function randomCyrillic(length = 8) {
   return value;
 }
 
+function entityName(label) {
+  return `${state.prefix} ${label}`.trim().replace(/\s+/g, ' ');
+}
+
+function matchesName(item, expected) {
+  const actual = String(item?.name ?? item?.title ?? '').toLowerCase();
+  return actual.includes(String(expected || '').toLowerCase());
+}
+
+function countMatching(items, expected) {
+  return items.filter((item) => matchesName(item, expected)).length;
+}
+
 function short(value, length = 900) {
   const text = typeof value === 'string' ? value : JSON.stringify(value, null, 2);
   return text.length > length ? `${text.slice(0, length)}…` : text;
@@ -311,7 +324,7 @@ async function createTransaction(payload) {
 }
 
 async function createGoal(name, targetAmount = 50000) {
-  const res = await api('/goals', { method: 'POST', body: { name, targetAmount, currentAmount: 0, currency: 'RUB' } });
+  const res = await api('/goals', { method: 'POST', body: { title: name, targetAmount, currentAmount: 0, currency: 'RUB' } });
   const goal = res.data?.goal ?? res.data;
   assert(goal?.id, 'Goal create returned no id', res.data);
   state.goals.push(goal.id);
@@ -504,13 +517,14 @@ async function main() {
 
   await test('manual CRUD: goals', async () => {
     const goal = await createGoal(`${state.prefix} цель`, 90000);
-    await api(`/goals/${goal.id}`, { method: 'PATCH', body: { currentAmount: 10000, name: `${state.prefix} цель новая` } });
+    await api(`/goals/${goal.id}`, { method: 'PATCH', body: { currentAmount: 10000, title: `${state.prefix} цель новая` } });
     return { goalId: goal.id };
   });
 
   await test('manual CRUD: budgets', async () => {
     const section = await createSection(`${state.prefix} бюджет`);
-    const res = await api('/budgets', { method: 'POST', body: { name: `${state.prefix} бюджет`, amount: 30000, limit: 30000, period: 'monthly', sectionId: section.id } });
+    const category = await createCategory(`${state.prefix} бюджет категория`, section.id, 'expense');
+    const res = await api('/budgets', { method: 'POST', body: { amount: 30000, period: 'monthly', categoryId: category.id, notifyAt: 80 } });
     const budget = res.data?.budget ?? res.data;
     assert(budget?.id, 'Budget create returned no id', res.data);
     state.budgets.push(budget.id);
@@ -521,7 +535,7 @@ async function main() {
 
   await test('manual CRUD: recurring payments', async () => {
     const account = await createAccount(`${state.prefix} recurring`, 10000, 'card');
-    const res = await api('/recurring', { method: 'POST', body: { name: `${state.prefix} подписка`, amount: 499, accountId: account.id, type: 'expense', interval: 'monthly', nextDate: new Date(Date.now() + 86400000).toISOString() } });
+    const res = await api('/recurring', { method: 'POST', body: { name: `${state.prefix} подписка`, amount: 499, accountId: account.id, category: 'Подписки', period: 'monthly', nextDate: new Date(Date.now() + 86400000).toISOString() } });
     const recurring = res.data?.recurringPayment ?? res.data;
     assert(recurring?.id, 'Recurring create returned no id', res.data);
     state.recurring.push(recurring.id);
@@ -537,7 +551,7 @@ async function main() {
     await api('/ai-settings/onboarding', { method: 'PATCH', body: { completed: true } });
     await api('/progression/me');
     await api('/referral');
-    await api('/analytics/events', { method: 'POST', body: { event: 'test_base_ai_regression', screen: 'console', meta: { prefix: state.prefix } } });
+    await api('/analytics/events', { method: 'POST', body: { event: 'screen_view', data: { screen: 'console', prefix: state.prefix } } });
     return { ok: true };
   });
 
@@ -570,11 +584,11 @@ async function main() {
 
   await test('AI: create account with confirmation', async () => {
     const before = await listAccounts();
-    const name = `${state.prefix} ai карта`;
-    await executeAi(`Фина, создай счёт ${name} с балансом 1000 рублей`);
+    const name = entityName('ai счет');
+    await executeAi(`Фина, создай новый счёт ${name}`);
     const after = await listAccounts();
-    assert(after.length >= before.length + 1 || after.some((item) => String(item.name || '').includes(name)), 'AI did not create account', { before: before.length, after });
-    return { before: before.length, after: after.length };
+    assert(after.length >= before.length + 1 || countMatching(after, name) > countMatching(before, name), 'AI did not create account', { expectedName: name, before: before.length, after: after.map((item) => item.name) });
+    return { expectedName: name, before: before.length, after: after.length };
   }, { skip: !config.runAI && 'TEST_AI=0' });
 
   await test('AI: rename account and make it primary/default', async () => {
@@ -624,10 +638,10 @@ async function main() {
     const name = `${state.prefix} ai цель`;
     await executeAi(`Фина, создай цель ${name} на 75000 рублей`);
     let goals = await listGoals();
-    assert(goals.some((item) => String(item.name || '').includes(name)), 'AI did not create goal', goals);
+    assert(goals.some((item) => matchesName(item, name)), 'AI did not create goal', goals);
     await executeAi(`Фина, измени цель ${name}, сумма 80000 рублей`);
     goals = await listGoals();
-    assert(goals.some((item) => String(item.name || '').includes(name)), 'AI goal disappeared after update', goals);
+    assert(goals.some((item) => matchesName(item, name)), 'AI goal disappeared after update', goals);
     return { goals: goals.length };
   }, { skip: !config.runAI && 'TEST_AI=0' });
 
@@ -638,8 +652,8 @@ async function main() {
     await executeAi(`Фина, создай категорию ${categoryName} в разделе ${sectionName}`);
     const sections = await listSections();
     const categories = await listCategories();
-    assert(sections.some((item) => String(item.name || '').includes(sectionName)), 'AI did not create section', sections);
-    assert(categories.some((item) => String(item.name || '').includes(categoryName)), 'AI did not create category', categories);
+    assert(sections.some((item) => matchesName(item, sectionName)), 'AI did not create section', sections);
+    assert(categories.some((item) => matchesName(item, categoryName)), 'AI did not create category', categories);
     return { sections: sections.length, categories: categories.length };
   }, { skip: !config.runAI && 'TEST_AI=0' });
 
