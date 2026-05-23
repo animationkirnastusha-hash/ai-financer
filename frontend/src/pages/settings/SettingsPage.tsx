@@ -92,7 +92,7 @@ export default function SettingsPage() {
               </div>
             </div>
             <div className="voice-settings-example">
-              Пример: “Фина, кофе 300”. Без имени команда не уйдёт в AI.
+              Схема простая: скажи “Фина”, затем задачу. После ответа можно продолжить без повторного имени несколько секунд.
             </div>
           </div>
 
@@ -130,13 +130,13 @@ export default function SettingsPage() {
           <div className="voice-window-control voice-window-control--number mt-4">
             <div>
               <div className="text-sm font-medium text-white">Сколько слушать после команды</div>
-              <div className="mt-1 text-xs text-white/45">Можно поставить любое значение от 3 до 90 секунд. Для быстрого режима удобно 5–10 сек.</div>
+              <div className="mt-1 text-xs text-white/45">Можно поставить любое значение от 2 до 120 секунд. Для быстрого режима удобно 5–8 сек.</div>
             </div>
             <label className="voice-window-control__input">
               <input
                 type="number"
-                min={3}
-                max={90}
+                min={2}
+                max={120}
                 step={1}
                 inputMode="numeric"
                 value={voiceActiveWindowSeconds}

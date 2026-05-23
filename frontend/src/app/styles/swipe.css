@@ -7,19 +7,19 @@ body.ai-screen-dragging .telegram-app-content {
 
 body.ai-screen-snap-back .telegram-app-content {
   transform: translate3d(0,0,0) scale(1);
-  transition: transform 140ms cubic-bezier(.2,.9,.2,1), opacity 140ms ease !important;
+  transition: transform 190ms cubic-bezier(.16,1,.25,1), opacity 190ms ease !important;
 }
 
 .ai-screen-transition {
-  animation: aiScreenEnter 160ms cubic-bezier(.2,.9,.2,1) both;
+  animation: aiScreenEnter 210ms cubic-bezier(.16,1,.25,1) both;
   will-change: transform, opacity;
 }
 
 body.ai-screen-slide-left .ai-screen-transition {
-  animation: aiPageSwipeLeft 190ms cubic-bezier(.2,.9,.2,1) both !important;
+  animation: aiPageSwipeLeft 240ms cubic-bezier(.16,1,.25,1) both !important;
 }
 body.ai-screen-slide-right .ai-screen-transition {
-  animation: aiPageSwipeRight 190ms cubic-bezier(.2,.9,.2,1) both !important;
+  animation: aiPageSwipeRight 240ms cubic-bezier(.16,1,.25,1) both !important;
 }
 
 .app-card,
@@ -36,11 +36,11 @@ body.ai-screen-slide-right .ai-screen-transition {
   to { opacity: 1; transform: translate3d(0, 0, 0); }
 }
 @keyframes aiPageSwipeLeft {
-  from { opacity: .88; transform: translate3d(18px, 0, 0); }
+  from { opacity: .90; transform: translate3d(12px, 0, 0); }
   to { opacity: 1; transform: translate3d(0, 0, 0); }
 }
 @keyframes aiPageSwipeRight {
-  from { opacity: .88; transform: translate3d(-18px, 0, 0); }
+  from { opacity: .90; transform: translate3d(-12px, 0, 0); }
   to { opacity: 1; transform: translate3d(0, 0, 0); }
 }
 @keyframes aiSoftEnter {

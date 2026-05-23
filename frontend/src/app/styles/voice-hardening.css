@@ -1,0 +1,108 @@
+/* patch-53: voice stability and mobile polish */
+:root {
+  --ai-companion-size: 82px;
+  --ai-companion-bottom: calc(82px + env(safe-area-inset-bottom));
+  --ai-bottom-reserve: calc(178px + env(safe-area-inset-bottom));
+}
+
+.app-page,
+.telegram-app-content {
+  padding-bottom: max(var(--app-bottom-safe, 128px), var(--ai-bottom-reserve)) !important;
+  scroll-padding-bottom: max(var(--app-bottom-safe, 128px), var(--ai-bottom-reserve)) !important;
+}
+
+.voice-first-companion {
+  right: max(10px, env(safe-area-inset-right)) !important;
+  bottom: var(--ai-companion-bottom) !important;
+  transform: translate3d(0, 0, 0) !important;
+  backface-visibility: hidden !important;
+  perspective: 1000px;
+  contain: layout paint style;
+  will-change: auto !important;
+}
+
+.voice-first-companion__controls {
+  align-items: flex-end !important;
+  gap: 7px !important;
+}
+
+.voice-first-companion .ai-companion-control {
+  width: var(--ai-companion-size) !important;
+  height: var(--ai-companion-size) !important;
+  min-width: var(--ai-companion-size) !important;
+  min-height: var(--ai-companion-size) !important;
+  transform: translate3d(0, 0, 0) !important;
+  backface-visibility: hidden !important;
+  will-change: auto !important;
+}
+
+.voice-first-companion .ai-companion-avatar {
+  width: calc(var(--ai-companion-size) - 9px) !important;
+  height: calc(var(--ai-companion-size) - 9px) !important;
+  transform: translate3d(0, 0, 0) !important;
+  backface-visibility: hidden !important;
+}
+
+.voice-first-companion__voice-panel {
+  margin-bottom: 5px !important;
+  transform: translate3d(0, 0, 0) !important;
+}
+
+.voice-first-status,
+.voice-first-mic-toggle {
+  max-width: min(178px, calc(100vw - 118px)) !important;
+  transform: translate3d(0, 0, 0) !important;
+  backface-visibility: hidden !important;
+}
+
+.voice-first-bubble {
+  max-width: min(268px, calc(100vw - 34px)) !important;
+  margin-right: 4px !important;
+  margin-bottom: 6px !important;
+  transform: translate3d(0, 0, 0) !important;
+  backface-visibility: hidden !important;
+  filter: none !important;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: geometricPrecision;
+  animation: aiVoiceBubbleStable 130ms ease-out both !important;
+  will-change: opacity !important;
+}
+
+@keyframes aiVoiceBubbleStable {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+body:has(.app-modal-backdrop) .voice-first-companion,
+body:has(.app-bottom-sheet) .voice-first-companion,
+body:has([role="dialog"]) .voice-first-companion,
+body.ai-modal-open .voice-first-companion,
+body.ai-any-modal-open .voice-first-companion,
+body.ai-core-modal-open .voice-first-companion {
+  display: none !important;
+}
+
+.voice-window-control--number {
+  grid-template-columns: minmax(0, 1fr) auto !important;
+  gap: 12px !important;
+}
+
+.voice-window-control__input input {
+  appearance: textfield;
+}
+
+@media (max-width: 390px) {
+  :root {
+    --ai-companion-size: 76px;
+    --ai-companion-bottom: calc(78px + env(safe-area-inset-bottom));
+    --ai-bottom-reserve: calc(170px + env(safe-area-inset-bottom));
+  }
+
+  .voice-first-status {
+    display: none !important;
+  }
+
+  .voice-first-mic-toggle {
+    display: none !important;
+  }
+}

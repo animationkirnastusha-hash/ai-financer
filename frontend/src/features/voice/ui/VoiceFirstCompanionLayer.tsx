@@ -17,13 +17,13 @@ type Thought = {
   tone: BubbleTone;
 };
 
-const SILENCE_SUBMIT_MS = 1050;
-const RESUME_DELAY_MS = 520;
-const WATCHDOG_INTERVAL_MS = 1800;
-const BUBBLE_TIMEOUT_MS = 3400;
-const DUPLICATE_WINDOW_MS = 900;
-const DEFAULT_ACTIVE_WINDOW_SECONDS = 10;
-const WAKE_PROMPT_THROTTLE_MS = 5200;
+const SILENCE_SUBMIT_MS = 880;
+const RESUME_DELAY_MS = 420;
+const WATCHDOG_INTERVAL_MS = 1350;
+const BUBBLE_TIMEOUT_MS = 2800;
+const DUPLICATE_WINDOW_MS = 850;
+const DEFAULT_ACTIVE_WINDOW_SECONDS = 7;
+const WAKE_PROMPT_THROTTLE_MS = 9000;
 const FIXED_COMPANION_NAME = 'Фина';
 
 function compactBubble(text: string) {
@@ -33,7 +33,7 @@ function compactBubble(text: string) {
     .split(/(?<=[.!?。！？])\s+/)
     .slice(0, 2)
     .join(' ')
-    .slice(0, 135);
+    .slice(0, 118);
 }
 
 function normalizeForWake(text: string) {
@@ -49,6 +49,15 @@ function escapeRegExp(value: string) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
+
+function cleanVoiceText(text: string) {
+  return text
+    .replace(/[\u00A0\t\r\n]+/g, ' ')
+    .replace(/\s+([,.;:!?])/g, '$1')
+    .replace(/([,.;:!?]){2,}/g, '$1')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
 
 function normalizeDecision(text: string) {
   return normalizeForWake(text);
@@ -147,8 +156,10 @@ export function VoiceFirstCompanionLayer() {
   const lastWatchdogKickRef = useRef(0);
   const lastWakePromptAtRef = useRef(0);
   const lastAssistantMessageKeyRef = useRef('');
+  const lastWakeAcceptedAtRef = useRef(0);
+  const lastThoughtRef = useRef<{ text: string; tone: BubbleTone; at: number }>({ text: '', tone: 'neutral', at: 0 });
 
-  const activeWindowMs = Math.max(3000, Math.min(90000, (voiceActiveWindowSeconds || DEFAULT_ACTIVE_WINDOW_SECONDS) * 1000));
+  const activeWindowMs = Math.max(2000, Math.min(120000, (voiceActiveWindowSeconds || DEFAULT_ACTIVE_WINDOW_SECONDS) * 1000));
   const isCombatActive = !voiceWakeWordEnabled || activeUntil > Date.now();
 
   const clearSilenceTimer = useCallback(() => {
@@ -175,11 +186,16 @@ export function VoiceFirstCompanionLayer() {
     const cleanText = compactBubble(text);
     if (!cleanText) return;
 
+    const now = Date.now();
+    const lastThought = lastThoughtRef.current;
+    if (lastThought.text === cleanText && lastThought.tone === tone && now - lastThought.at < 1400) return;
+    lastThoughtRef.current = { text: cleanText, tone, at: now };
+
     if (bubbleTimerRef.current !== null) {
       window.clearTimeout(bubbleTimerRef.current);
     }
 
-    setThought({ id: crypto.randomUUID(), text: cleanText, tone });
+    setThought({ id: `${tone}-${now}`, text: cleanText, tone });
 
     bubbleTimerRef.current = window.setTimeout(() => {
       setThought(null);
@@ -226,14 +242,16 @@ export function VoiceFirstCompanionLayer() {
     const result = await voice.start();
     if (result === 'started') {
       shouldResumeRef.current = true;
-      if (voiceWakeWordEnabled && activeUntilRef.current <= Date.now()) {
+      const hasCombatWindow = !voiceWakeWordEnabled || activeUntilRef.current > Date.now() || Date.now() - lastWakeAcceptedAtRef.current < activeWindowMs;
+
+      if (hasCombatWindow) {
+        showThought('Слушаю задачу.', 'listening', 900);
+      } else {
         const now = Date.now();
         if (now - lastWakePromptAtRef.current > WAKE_PROMPT_THROTTLE_MS) {
           lastWakePromptAtRef.current = now;
-          showThought('Скажи “Фина”, затем задачу.', 'neutral', 1600);
+          showThought('Жду “Фина”.', 'neutral', 1200);
         }
-      } else {
-        showThought('Слушаю задачу.', 'listening', 1100);
       }
       return;
     }
@@ -260,7 +278,7 @@ export function VoiceFirstCompanionLayer() {
   }, [clearSilenceTimer, voice]);
 
   const handleText = useCallback(async (rawText: string) => {
-    const originalText = rawText.trim();
+    const originalText = cleanVoiceText(rawText);
     if (!originalText || isProcessingVoiceRef.current) return;
 
     const wake = stripWakeWord(originalText);
@@ -273,17 +291,20 @@ export function VoiceFirstCompanionLayer() {
         return;
       }
 
+      lastWakeAcceptedAtRef.current = now;
       armCombatMode();
 
       if (!wake.command) {
         armCombatMode(Math.max(activeWindowMs, 10000));
-        showThought('Я слушаю. Теперь скажи задачу без имени.', 'listening', 2600);
+        showThought('Я слушаю. Скажи задачу без имени.', 'listening', 2200);
         resumeListeningSoon(260);
         return;
       }
     }
 
-    const text = (wake.hasWakeWord ? wake.command : originalText).trim();
+    if (wake.hasWakeWord) lastWakeAcceptedAtRef.current = now;
+
+    const text = cleanVoiceText(wake.hasWakeWord ? wake.command : originalText);
     if (!text) {
       resumeListeningSoon(180);
       return;
@@ -300,7 +321,7 @@ export function VoiceFirstCompanionLayer() {
 
     setIsProcessingVoice(true);
     clearSilenceTimer();
-    showThought('Думаю...', 'thinking', 2000);
+    showThought('Думаю...', 'thinking', 1500);
 
     try {
       const navigationIntent = parseNavigationIntent(text);
@@ -441,23 +462,23 @@ export function VoiceFirstCompanionLayer() {
     lastAssistantMessageKeyRef.current = messageKey;
 
     if (lastMessage.kind === 'preview') {
-      armCombatMode(Math.max(activeWindowMs, 22000));
+      armCombatMode(Math.max(activeWindowMs, 12000));
       voice.stopSpeaking();
-      showThought('Проверь действие. Скажи: “подтверди”, “отмени”, “измени сумму”, “измени счёт” или добавь уточнение.', 'warning', 5200);
+      showThought('Проверь действие. Ответь: “подтверди”, “отмени” или скажи, что изменить: сумму, счёт, категорию, дату.', 'warning', 5200);
       resumeListeningSoon(420);
       return;
     }
 
     if (lastMessage.kind === 'error') {
-      armCombatMode(Math.max(activeWindowMs, 18000));
+      armCombatMode(Math.max(activeWindowMs, 12000));
       voice.stopSpeaking();
-      showThought(lastMessage.text || 'Нужно уточнение. Скажи счёт, сумму, категорию или “отмени”.', 'warning', 5000);
+      showThought(lastMessage.text || 'Нужно уточнение. Ответь коротко или скажи “отмени”.', 'warning', 5000);
       resumeListeningSoon(420);
       return;
     }
 
     armCombatMode(activeWindowMs);
-    showThought(lastMessage.text || 'Готово. Можешь дать следующую задачу.', 'success', 2600);
+    showThought(lastMessage.text || 'Готово. Ещё несколько секунд можно говорить без “Фина”.', 'success', 2200);
 
     if (voiceRepliesEnabled && lastMessage.text && chat.pendingActions.length === 0) {
       voice.speak(lastMessage.text, { maxDurationMs: 900 });
@@ -530,8 +551,7 @@ export function VoiceFirstCompanionLayer() {
             </div>
 
             <div className="voice-first-intro__hint">
-              Попробуй: “Фина, кофе 300”, “Фина, у меня есть 10к наличными”,
-              “Фина, создай цель отпуск 120000”.
+              Говори обычным языком: запись траты, доход, перевод, цель, вопрос по расходам. Фина подготовит действие и покажет подтверждение.
             </div>
 
             <div className="voice-first-intro__actions">
@@ -544,7 +564,7 @@ export function VoiceFirstCompanionLayer() {
 
       <div className="voice-first-companion" data-no-swipe="true">
         {thought ? (
-          <div key={thought.id} className={`voice-first-bubble voice-first-bubble--${thought.tone}`}>
+          <div className={`voice-first-bubble voice-first-bubble--${thought.tone}`}>
             {thought.text}
           </div>
         ) : null}

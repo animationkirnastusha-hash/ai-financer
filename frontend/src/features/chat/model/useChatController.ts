@@ -1,11 +1,17 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { pendingActionsApi } from '@/features/pending-actions/api/pendingActions.api';
-import { auditLogApi } from '@/features/audit-log/api/auditLog.api';
-import { chatApi } from '@/features/chat/api/chat.api';
-import { useAccountsStore } from '@/features/accounts/model/accounts.store';
-import { useTransactionsStore } from '@/features/transactions/model/transactions.store';
-import type { ChatMessage } from '@/features/chat/model/chat.types';
+import { pendingActionsApi } from "@/features/pending-actions/api/pendingActions.api";
+import { auditLogApi } from "@/features/audit-log/api/auditLog.api";
+import { chatApi } from "@/features/chat/api/chat.api";
+import { useAccountsStore } from "@/features/accounts/model/accounts.store";
+import { useTransactionsStore } from "@/features/transactions/model/transactions.store";
+import type { ChatMessage } from "@/features/chat/model/chat.types";
+
+const MAX_LOCAL_CHAT_MESSAGES = 50;
+
+function appendCappedMessage(prev: ChatMessage[], message: ChatMessage) {
+  return [...prev.slice(-(MAX_LOCAL_CHAT_MESSAGES - 1)), message];
+}
 
 export function useChatController() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -14,12 +20,13 @@ export function useChatController() {
   const [isPendingOpen, setIsPendingOpen] = useState(false);
   const [isAuditOpen, setIsAuditOpen] = useState(false);
   const [isSending, setIsSending] = useState(false);
+  const refreshInFlightRef = useRef<Promise<void> | null>(null);
 
   const loadAccounts = useAccountsStore((state) => state.loadAccounts);
   const refreshTransactions = useTransactionsStore((state) => state.refreshAll);
 
   const hasAuthToken = useMemo(() => {
-    return !!localStorage.getItem('auth-token');
+    return !!localStorage.getItem("auth-token");
   }, []);
 
   const loadPendingActions = useCallback(async () => {
@@ -29,7 +36,7 @@ export function useChatController() {
       const items = await pendingActionsApi.list();
       setPendingActions(Array.isArray(items) ? items : []);
     } catch (error) {
-      console.error('Failed to load pending actions', error);
+      console.error("Failed to load pending actions", error);
       setPendingActions([]);
     }
   }, [hasAuthToken]);
@@ -41,18 +48,33 @@ export function useChatController() {
       const items = await auditLogApi.list();
       setAuditLogs(Array.isArray(items) ? items : []);
     } catch (error) {
-      console.error('Failed to load audit logs', error);
+      console.error("Failed to load audit logs", error);
       setAuditLogs([]);
     }
   }, [hasAuthToken]);
 
   const refreshFinanceState = useCallback(async () => {
-    await Promise.allSettled([
+    if (refreshInFlightRef.current) {
+      await refreshInFlightRef.current;
+      return;
+    }
+
+    const task = Promise.allSettled([
       loadPendingActions(),
       loadAuditLogs(),
       loadAccounts(true),
       refreshTransactions(),
-    ]);
+    ]).then(() => undefined);
+
+    refreshInFlightRef.current = task;
+
+    try {
+      await task;
+    } finally {
+      if (refreshInFlightRef.current === task) {
+        refreshInFlightRef.current = null;
+      }
+    }
   }, [loadAccounts, loadAuditLogs, loadPendingActions, refreshTransactions]);
 
   useEffect(() => {
@@ -67,55 +89,57 @@ export function useChatController() {
 
       const userMessage: ChatMessage = {
         id: crypto.randomUUID(),
-        role: 'user',
+        role: "user",
         text,
         content: text,
         createdAt: new Date().toISOString(),
-        kind: 'text',
+        kind: "text",
       };
 
-      setMessages((prev) => [...prev, userMessage]);
+      setMessages((prev) => appendCappedMessage(prev, userMessage));
 
       try {
         const response = await chatApi.sendMessage({ text });
 
-        const assistantText = response.message || 'Готово';
+        const assistantText = response.message || "Готово";
 
         const assistantMessage: ChatMessage = {
           id: crypto.randomUUID(),
-          role: 'assistant',
+          role: "assistant",
           text: assistantText,
           content: assistantText,
           createdAt: new Date().toISOString(),
-          kind: response.requiresConfirmation ? 'preview' : 'text',
+          kind: response.requiresConfirmation ? "preview" : "text",
           actionType: response.intent,
           actionId: response.meta?.pendingActionId || response.meta?.auditLogId,
           auditLogId: response.meta?.auditLogId,
-          canUndo: Boolean(response.meta?.undo?.available && response.meta?.auditLogId),
+          canUndo: Boolean(
+            response.meta?.undo?.available && response.meta?.auditLogId,
+          ),
           data:
-            response.parsed && typeof response.parsed === 'object'
+            response.parsed && typeof response.parsed === "object"
               ? (response.parsed as Record<string, unknown>)
               : undefined,
         };
 
-        setMessages((prev) => [...prev, assistantMessage]);
+        setMessages((prev) => appendCappedMessage(prev, assistantMessage));
 
         await refreshFinanceState();
       } catch (error) {
-        console.error('Send message failed', error);
+        console.error("Send message failed", error);
 
-        const errorText = 'Не удалось обработать запрос.';
+        const errorText = "Не удалось обработать запрос.";
 
         const assistantError: ChatMessage = {
           id: crypto.randomUUID(),
-          role: 'assistant',
+          role: "assistant",
           text: errorText,
           content: errorText,
           createdAt: new Date().toISOString(),
-          kind: 'error',
+          kind: "error",
         };
 
-        setMessages((prev) => [...prev, assistantError]);
+        setMessages((prev) => appendCappedMessage(prev, assistantError));
       } finally {
         setIsSending(false);
       }
@@ -132,40 +156,38 @@ export function useChatController() {
       try {
         const response: any = await pendingActionsApi.confirm(actionId);
 
-        const assistantText = response?.message || '✅ Действие подтверждено.';
+        const assistantText = response?.message || "✅ Действие подтверждено.";
 
-        setMessages((prev) => [
-          ...prev,
-          {
+        setMessages((prev) =>
+          appendCappedMessage(prev, {
             id: crypto.randomUUID(),
-            role: 'assistant',
+            role: "assistant",
             text: assistantText,
             content: assistantText,
             createdAt: new Date().toISOString(),
-            kind: 'text',
+            kind: "text",
             actionType: response?.intent,
             actionId: response?.meta?.auditLogId,
             data:
-              response?.data && typeof response.data === 'object'
+              response?.data && typeof response.data === "object"
                 ? response.data
                 : undefined,
-          },
-        ]);
+          }),
+        );
       } catch (error) {
-        console.error('Confirm action failed', error);
+        console.error("Confirm action failed", error);
 
-        setMessages((prev) => [
-          ...prev,
-          {
+        setMessages((prev) =>
+          appendCappedMessage(prev, {
             id: crypto.randomUUID(),
-            role: 'assistant',
-            text: 'Не удалось подтвердить действие. Возможно, оно уже выполнено, отменено или истекло.',
+            role: "assistant",
+            text: "Не удалось подтвердить действие. Возможно, оно уже выполнено, отменено или истекло.",
             content:
-              'Не удалось подтвердить действие. Возможно, оно уже выполнено, отменено или истекло.',
+              "Не удалось подтвердить действие. Возможно, оно уже выполнено, отменено или истекло.",
             createdAt: new Date().toISOString(),
-            kind: 'error',
-          },
-        ]);
+            kind: "error",
+          }),
+        );
       } finally {
         await refreshFinanceState();
       }
@@ -182,23 +204,22 @@ export function useChatController() {
       try {
         const response: any = await pendingActionsApi.cancel(actionId);
 
-        const assistantText = response?.message || 'Действие отменено.';
+        const assistantText = response?.message || "Действие отменено.";
 
-        setMessages((prev) => [
-          ...prev,
-          {
+        setMessages((prev) =>
+          appendCappedMessage(prev, {
             id: crypto.randomUUID(),
-            role: 'assistant',
+            role: "assistant",
             text: assistantText,
             content: assistantText,
             createdAt: new Date().toISOString(),
-            kind: 'text',
+            kind: "text",
             actionType: response?.intent,
             actionId: response?.meta?.auditLogId,
-          },
-        ]);
+          }),
+        );
       } catch (error) {
-        console.error('Cancel action failed', error);
+        console.error("Cancel action failed", error);
       } finally {
         await refreshFinanceState();
       }
@@ -212,43 +233,45 @@ export function useChatController() {
 
       try {
         const response = await chatApi.undoByAuditLog(auditLogId);
-        const assistantText = response?.message || '↩️ Операция отменена.';
+        const assistantText = response?.message || "↩️ Операция отменена.";
 
         setMessages((prev) =>
-          prev.map((message) =>
-            message.auditLogId === auditLogId
-              ? { ...message, canUndo: false }
-              : message,
-          ).concat({
-            id: crypto.randomUUID(),
-            role: 'assistant',
-            text: assistantText,
-            content: assistantText,
-            createdAt: new Date().toISOString(),
-            kind: 'text',
-          }),
+          appendCappedMessage(
+            prev.map((message) =>
+              message.auditLogId === auditLogId
+                ? { ...message, canUndo: false }
+                : message,
+            ),
+            {
+              id: crypto.randomUUID(),
+              role: "assistant",
+              text: assistantText,
+              content: assistantText,
+              createdAt: new Date().toISOString(),
+              kind: "text",
+            },
+          ),
         );
       } catch (error) {
-        console.error('Undo failed', error);
+        console.error("Undo failed", error);
 
-        setMessages((prev) => [
-          ...prev,
-          {
+        setMessages((prev) =>
+          appendCappedMessage(prev, {
             id: crypto.randomUUID(),
-            role: 'assistant',
-            text: 'Не удалось отменить операцию. Возможно, она уже отменена или изменена.',
-            content: 'Не удалось отменить операцию. Возможно, она уже отменена или изменена.',
+            role: "assistant",
+            text: "Не удалось отменить операцию. Возможно, она уже отменена или изменена.",
+            content:
+              "Не удалось отменить операцию. Возможно, она уже отменена или изменена.",
             createdAt: new Date().toISOString(),
-            kind: 'error',
-          },
-        ]);
+            kind: "error",
+          }),
+        );
       } finally {
         await refreshFinanceState();
       }
     },
     [refreshFinanceState],
   );
-
 
   const updatePendingAction = useCallback(
     async (actionId: string, parsed: Record<string, unknown>) => {

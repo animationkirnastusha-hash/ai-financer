@@ -11,13 +11,13 @@ type Options = {
 export const MAIN_SWIPE_SCREENS: AppScreen[] = ['transactions', 'dashboard', 'analytics'];
 
 const START_LOCK_DISTANCE = 1;
-const NAVIGATE_DISTANCE = 14;
-const NAVIGATE_VELOCITY = 0.075;
-const MAX_DRAG = 190;
+const NAVIGATE_DISTANCE = 10;
+const NAVIGATE_VELOCITY = 0.045;
+const MAX_DRAG = 220;
 const MAX_VERTICAL_DRIFT = 260;
-const MIN_HORIZONTAL_RATIO = 0.08;
+const MIN_HORIZONTAL_RATIO = 0.045;
 const EDGE_BACK_ZONE = 72;
-const MAX_TAP_MS = 45;
+const MAX_TAP_MS = 20;
 
 function isInteractiveTarget(target: EventTarget | null) {
   if (!(target instanceof HTMLElement)) return false;
@@ -61,7 +61,7 @@ function resetDrag(animate = true) {
 function rubberBand(deltaX: number) {
   const sign = deltaX < 0 ? -1 : 1;
   const abs = Math.abs(deltaX);
-  const value = Math.min(MAX_DRAG, abs * 0.94 + Math.sqrt(abs) * 6.2);
+  const value = Math.min(MAX_DRAG, abs * 1.08 + Math.sqrt(abs) * 7.5);
   return sign * value;
 }
 

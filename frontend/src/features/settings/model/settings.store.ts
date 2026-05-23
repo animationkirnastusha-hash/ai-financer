@@ -40,7 +40,7 @@ const defaultSettings: AppSettings = {
 
   companionName: FIXED_COMPANION_NAME,
   voiceWakeWordEnabled: true,
-  voiceActiveWindowSeconds: 10,
+  voiceActiveWindowSeconds: 7,
 
   voiceEnabled: true,
   voiceBetaEnabled: true,
@@ -63,7 +63,7 @@ const defaultSettings: AppSettings = {
 
 function normalizeActiveWindow(value: unknown) {
   if (typeof value !== 'number' || Number.isNaN(value)) return defaultSettings.voiceActiveWindowSeconds;
-  return Math.min(90, Math.max(3, Math.round(value)));
+  return Math.min(120, Math.max(2, Math.round(value)));
 }
 
 function loadSettings(): AppSettings {

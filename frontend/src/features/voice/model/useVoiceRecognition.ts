@@ -55,6 +55,7 @@ export function useVoiceRecognition({
   const activeRef = useRef(false);
   const finalWasSentRef = useRef(false);
   const fallbackTimerRef = useRef<number | null>(null);
+  const listenWatchdogTimerRef = useRef<number | null>(null);
   const restartCooldownRef = useRef<number | null>(null);
   const processingStartedAtRef = useRef(0);
 
@@ -80,6 +81,13 @@ export function useVoiceRecognition({
     }
   }, []);
 
+  const clearListenWatchdogTimer = useCallback(() => {
+    if (listenWatchdogTimerRef.current !== null) {
+      window.clearTimeout(listenWatchdogTimerRef.current);
+      listenWatchdogTimerRef.current = null;
+    }
+  }, []);
+
   const emitFinalText = useCallback(async () => {
     const text = finalTranscriptRef.current.trim() || transcriptRef.current.trim();
     if (!text || finalWasSentRef.current) return;
@@ -90,6 +98,7 @@ export function useVoiceRecognition({
 
   const finishCurrentSession = useCallback((options?: { emit?: boolean; noSpeechError?: boolean }) => {
     clearFallbackTimer();
+    clearListenWatchdogTimer();
     processingStartedAtRef.current = 0;
     activeRef.current = false;
 
@@ -105,7 +114,7 @@ export function useVoiceRecognition({
     if (options?.emit && text) {
       void emitFinalText();
     }
-  }, [clearFallbackTimer, emitFinalText, setStateSafe]);
+  }, [clearFallbackTimer, clearListenWatchdogTimer, emitFinalText, setStateSafe]);
 
   useEffect(() => {
     onFinalTextRef.current = onFinalText;
@@ -129,8 +138,19 @@ export function useVoiceRecognition({
       activeRef.current = true;
       finalWasSentRef.current = false;
       clearFallbackTimer();
+      clearListenWatchdogTimer();
       setError(null);
       setStateSafe('listening');
+
+      listenWatchdogTimerRef.current = window.setTimeout(() => {
+        const text = finalTranscriptRef.current.trim() || transcriptRef.current.trim();
+        try {
+          recognitionRef.current?.abort();
+        } catch {
+          // ignore
+        }
+        finishCurrentSession({ emit: Boolean(text), noSpeechError: !text });
+      }, 8200);
     };
 
     recognition.onresult = (event) => {
@@ -168,6 +188,7 @@ export function useVoiceRecognition({
 
       activeRef.current = false;
       clearFallbackTimer();
+      clearListenWatchdogTimer();
 
       if (isSoftError) {
         setError(nextError === 'audio-capture' ? 'speech-restart' : nextError);
@@ -194,6 +215,7 @@ export function useVoiceRecognition({
 
     return () => {
       clearFallbackTimer();
+      clearListenWatchdogTimer();
       if (restartCooldownRef.current !== null) {
         window.clearTimeout(restartCooldownRef.current);
         restartCooldownRef.current = null;
@@ -206,7 +228,7 @@ export function useVoiceRecognition({
       recognitionRef.current = null;
       activeRef.current = false;
     };
-  }, [SpeechRecognitionCtor, clearFallbackTimer, finishCurrentSession, lang, setStateSafe]);
+  }, [SpeechRecognitionCtor, clearFallbackTimer, clearListenWatchdogTimer, finishCurrentSession, lang, setStateSafe]);
 
 
   useEffect(() => {
@@ -234,7 +256,7 @@ export function useVoiceRecognition({
       return false;
     }
 
-    if (activeRef.current || stateRef.current === 'processing') return false;
+    if (activeRef.current || stateRef.current === 'processing' || restartCooldownRef.current !== null) return false;
 
     transcriptRef.current = '';
     finalTranscriptRef.current = '';
@@ -286,6 +308,7 @@ export function useVoiceRecognition({
       recognitionRef.current.stop();
 
       clearFallbackTimer();
+      clearListenWatchdogTimer();
       fallbackTimerRef.current = window.setTimeout(() => {
         try {
           recognitionRef.current?.abort();
@@ -299,10 +322,11 @@ export function useVoiceRecognition({
       setError('stop-failed');
       setStateSafe('error');
     }
-  }, [clearFallbackTimer, finishCurrentSession, isSupported, setStateSafe]);
+  }, [clearFallbackTimer, clearListenWatchdogTimer, finishCurrentSession, isSupported, setStateSafe]);
 
   const cancelListening = useCallback(() => {
     clearFallbackTimer();
+    clearListenWatchdogTimer();
     manualStopRef.current = false;
     finalWasSentRef.current = true;
 
@@ -319,7 +343,7 @@ export function useVoiceRecognition({
     setTranscript('');
     setError(null);
     setStateSafe(isSupported ? 'idle' : 'unsupported');
-  }, [clearFallbackTimer, isSupported, setStateSafe]);
+  }, [clearFallbackTimer, clearListenWatchdogTimer, isSupported, setStateSafe]);
 
   const reset = useCallback(() => {
     cancelListening();

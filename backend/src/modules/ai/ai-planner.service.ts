@@ -84,9 +84,10 @@ export class AIPlannerService {
       'Use semantic understanding only. Do not rely on keyword rules or regex-like extraction.',
       'Never output accountId/categoryId/sectionId; backend resolves entities.',
       'The current USER message is the primary source of truth. Context and memory are secondary only for pronouns or explicit continuations.',
-      'Treat voice-recognition text as noisy but meaningful; infer user intent from the whole sentence and the available tool contract.',
+      'Treat voice-recognition text as noisy but meaningful: missing punctuation, spoken numbers, and informal wording are expected. Infer intent from the whole sentence and the available tool contract, not from hard-coded phrases.',
       'If USER gives an exact name in quotes, copy it exactly. Do not replace it with memory or an older command.',
       'If the request is materially ambiguous, produce the safest plan that lets validator ask for clarification instead of inventing facts.',
+      'Do not include examples in reasoning or outputs. Do not implement phrase-specific behavior in planner instructions.',
     ].join(' ');
   }
 
@@ -96,7 +97,7 @@ export class AIPlannerService {
       getPlannerToolContract(),
       'RULES:',
       'Use only listed tools.',
-      'Do not parse the command with rules. Plan by semantic meaning and tool contracts only.',
+      'Do not parse the command with rules. Plan by semantic meaning and tool contracts only. No regex-like financial extraction, no command-parser behavior.',
       'Do not invent unavailable fields. Use natural entity names; backend validator resolves them.',
       'If the user says something unrelated to finance, answer briefly and meaningfully in summary, but do not create actions and do not pretend to save memory.',
       'For analytics questions, use query_analytics.',
