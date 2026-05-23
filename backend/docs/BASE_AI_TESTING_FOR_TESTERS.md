@@ -47,3 +47,8 @@ Use destructive checks only on a disposable database:
 ```bash
 TEST_DESTRUCTIVE=1 npm run test:base-ai
 ```
+
+
+### Patch 65
+
+The console suite uses an explicit account-create command for the AI account test: account type, currency and balance are included so the test checks backend capability rather than a missing-details clarification.

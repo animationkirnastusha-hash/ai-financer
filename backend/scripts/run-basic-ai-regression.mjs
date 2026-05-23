@@ -585,10 +585,29 @@ async function main() {
   await test('AI: create account with confirmation', async () => {
     const before = await listAccounts();
     const name = entityName('ai счет');
-    await executeAi(`Фина, создай новый счёт ${name}`);
+
+    // Keep the command explicit so this test checks the account-create tool,
+    // not a valid clarification branch caused by missing type/currency/balance.
+    // This is still a black-box AI test: no financial parser is used here.
+    const execution = await executeAi(`Фина, создай новый наличный счёт с названием ${name}, валюта рубли, баланс 0 рублей`);
+
     const after = await listAccounts();
-    assert(after.length >= before.length + 1 || countMatching(after, name) > countMatching(before, name), 'AI did not create account', { expectedName: name, before: before.length, after: after.map((item) => item.name) });
-    return { expectedName: name, before: before.length, after: after.length };
+    const beforeMatches = countMatching(before, name);
+    const afterMatches = countMatching(after, name);
+    const created = after.length >= before.length + 1 || afterMatches > beforeMatches;
+
+    assert(created, 'AI did not create account from explicit account command', {
+      expectedName: name,
+      before: before.length,
+      after: after.length,
+      beforeMatches,
+      afterMatches,
+      accountNames: after.map((item) => item.name),
+      aiPrepared: execution.prepared,
+      aiConfirmed: execution.confirmed,
+    });
+
+    return { expectedName: name, before: before.length, after: after.length, matches: afterMatches };
   }, { skip: !config.runAI && 'TEST_AI=0' });
 
   await test('AI: rename account and make it primary/default', async () => {

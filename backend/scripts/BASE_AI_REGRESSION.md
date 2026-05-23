@@ -32,3 +32,8 @@ TEST_DESTRUCTIVE=1 npm run test:base-ai
 ```
 
 Use `TEST_DESTRUCTIVE=1` only on an isolated database.
+
+
+## Patch 65 note
+
+The AI account creation case now sends an explicit account type, currency and zero balance. This prevents a valid clarification branch from failing the suite when the goal of the case is to verify the account-create tool path.
