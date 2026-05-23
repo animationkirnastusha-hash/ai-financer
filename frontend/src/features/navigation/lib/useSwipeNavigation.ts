@@ -10,21 +10,21 @@ type Options = {
 
 export const MAIN_SWIPE_SCREENS: AppScreen[] = ['transactions', 'dashboard', 'analytics'];
 
-const START_LOCK_DISTANCE = 1;
-const NAVIGATE_DISTANCE = 10;
-const NAVIGATE_VELOCITY = 0.045;
-const MAX_DRAG = 220;
-const MAX_VERTICAL_DRIFT = 260;
-const MIN_HORIZONTAL_RATIO = 0.045;
-const EDGE_BACK_ZONE = 72;
-const MAX_TAP_MS = 20;
+const START_LOCK_DISTANCE = 16;
+const NAVIGATE_DISTANCE = 58;
+const NAVIGATE_VELOCITY = 0.26;
+const MAX_DRAG = 118;
+const MAX_VERTICAL_DRIFT = 96;
+const MIN_HORIZONTAL_RATIO = 1.18;
+const EDGE_BACK_ZONE = 76;
+const TAP_GUARD_MS = 90;
 
 function isInteractiveTarget(target: EventTarget | null) {
   if (!(target instanceof HTMLElement)) return false;
 
   return Boolean(
     target.closest(
-      'input, textarea, select, a, [contenteditable="true"], [data-no-swipe="true"], [data-ai-core-modal="true"], .app-modal-backdrop, .app-modal-sheet, .app-bottom-sheet, .drawer-backdrop, .drawer-sheet',
+      'input, textarea, select, button, a, [contenteditable="true"], [data-no-swipe="true"], [data-ai-core-modal="true"], .app-modal-backdrop, .app-modal-sheet, .app-bottom-sheet, .drawer-backdrop, .drawer-sheet',
     ),
   );
 }
@@ -46,13 +46,13 @@ function setSwipeDirection(direction: 'left' | 'right') {
   document.body.classList.add(direction === 'left' ? 'ai-screen-slide-left' : 'ai-screen-slide-right');
   window.setTimeout(() => {
     document.body.classList.remove('ai-screen-slide-left', 'ai-screen-slide-right');
-  }, 220);
+  }, 300);
 }
 
 function resetDrag(animate = true) {
   if (animate) {
     document.body.classList.add('ai-screen-snap-back');
-    window.setTimeout(() => document.body.classList.remove('ai-screen-snap-back'), 150);
+    window.setTimeout(() => document.body.classList.remove('ai-screen-snap-back'), 210);
   }
   document.body.classList.remove('ai-screen-dragging');
   document.documentElement.style.setProperty('--ai-swipe-drag-x', '0px');
@@ -61,7 +61,7 @@ function resetDrag(animate = true) {
 function rubberBand(deltaX: number) {
   const sign = deltaX < 0 ? -1 : 1;
   const abs = Math.abs(deltaX);
-  const value = Math.min(MAX_DRAG, abs * 1.08 + Math.sqrt(abs) * 7.5);
+  const value = Math.min(MAX_DRAG, abs * 0.52 + Math.sqrt(abs) * 2.4);
   return sign * value;
 }
 
@@ -71,8 +71,9 @@ export function useSwipeNavigation({ currentScreen, navigateTo, goBack }: Option
   const lastX = useRef(0);
   const lastY = useRef(0);
   const startAt = useRef(0);
-  const startedOnInteractive = useRef(false);
+  const blocked = useRef(false);
   const lockedHorizontal = useRef(false);
+  const verticalScroll = useRef(false);
   const canSwipeRef = useRef(false);
   const rafRef = useRef<number | null>(null);
 
@@ -90,8 +91,9 @@ export function useSwipeNavigation({ currentScreen, navigateTo, goBack }: Option
       const touch = event.touches[0];
       if (!touch) return;
 
-      startedOnInteractive.current = isBlockedByUi() || isInteractiveTarget(event.target);
+      blocked.current = isBlockedByUi() || isInteractiveTarget(event.target);
       lockedHorizontal.current = false;
+      verticalScroll.current = false;
       canSwipeRef.current = false;
       startX.current = touch.clientX;
       lastX.current = touch.clientX;
@@ -102,27 +104,38 @@ export function useSwipeNavigation({ currentScreen, navigateTo, goBack }: Option
     };
 
     const handleTouchMove = (event: TouchEvent) => {
-      if (startedOnInteractive.current || isBlockedByUi()) return;
+      if (blocked.current || verticalScroll.current || isBlockedByUi()) return;
       const touch = event.touches[0];
       if (!touch) return;
 
       const deltaX = touch.clientX - startX.current;
       const deltaY = touch.clientY - startY.current;
+      const absX = Math.abs(deltaX);
+      const absY = Math.abs(deltaY);
       lastX.current = touch.clientX;
       lastY.current = touch.clientY;
 
       if (!lockedHorizontal.current) {
-        if (Math.abs(deltaX) < START_LOCK_DISTANCE) return;
-        if (Math.abs(deltaY) > MAX_VERTICAL_DRIFT) return;
-        if (Math.abs(deltaX) / Math.max(1, Math.abs(deltaY)) < MIN_HORIZONTAL_RATIO) return;
-        if (Date.now() - startAt.current < MAX_TAP_MS && Math.abs(deltaX) < 10) return;
+        if (Date.now() - startAt.current < TAP_GUARD_MS && absX < 18) return;
+        if (absY > 10 && absY > absX * 0.86) {
+          verticalScroll.current = true;
+          resetDrag(false);
+          return;
+        }
+        if (absX < START_LOCK_DISTANCE) return;
+        if (absY > MAX_VERTICAL_DRIFT) {
+          verticalScroll.current = true;
+          resetDrag(false);
+          return;
+        }
+        if (absX / Math.max(1, absY) < MIN_HORIZONTAL_RATIO) return;
         lockedHorizontal.current = true;
       }
 
       const currentIndex = MAIN_SWIPE_SCREENS.indexOf(currentScreen);
       const canGoMain = currentIndex !== -1
         ? Boolean(MAIN_SWIPE_SCREENS[deltaX < 0 ? currentIndex + 1 : currentIndex - 1])
-        : deltaX > 0 && (startX.current <= EDGE_BACK_ZONE || Math.abs(deltaX) > NAVIGATE_DISTANCE);
+        : deltaX > 0 && (startX.current <= EDGE_BACK_ZONE || absX > NAVIGATE_DISTANCE + 14);
 
       canSwipeRef.current = canGoMain;
       if (!canGoMain) {
@@ -135,7 +148,7 @@ export function useSwipeNavigation({ currentScreen, navigateTo, goBack }: Option
     };
 
     const handleTouchEnd = () => {
-      if (startedOnInteractive.current || !lockedHorizontal.current || isBlockedByUi() || !canSwipeRef.current) {
+      if (blocked.current || verticalScroll.current || !lockedHorizontal.current || isBlockedByUi() || !canSwipeRef.current) {
         resetDrag();
         return;
       }
@@ -195,7 +208,5 @@ export function useSwipeNavigation({ currentScreen, navigateTo, goBack }: Option
     };
   }, [currentScreen, goBack, navigateTo]);
 
-  return {
-    mainScreens: MAIN_SWIPE_SCREENS,
-  };
+  return { mainScreens: MAIN_SWIPE_SCREENS };
 }

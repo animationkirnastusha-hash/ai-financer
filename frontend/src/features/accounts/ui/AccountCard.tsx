@@ -24,48 +24,29 @@ export function AccountCard({
   onClick,
 }: Props) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="w-full rounded-[28px] border border-white/8 bg-white/[0.04] p-4 text-left transition active:scale-[0.985] hover:bg-white/[0.07]"
-    >
-      <div className="flex items-start justify-between gap-4">
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="truncate text-sm font-medium text-white">{name}</div>
-            {currency ? (
-              <span className="rounded-full border border-white/10 bg-white/6 px-2 py-0.5 text-[10px] text-white/50">
-                {currency}
-              </span>
-            ) : null}
-          </div>
-
-          {hint ? <div className="mt-1 text-xs text-white/50">{hint}</div> : null}
-
-          <div className="mt-3 flex flex-wrap gap-2">
-            {isPrimary ? <Badge tone="green">Главный</Badge> : null}
-            {isIncomeDefault ? <Badge tone="blue">Доход сюда</Badge> : null}
-            {lockRename ? <Badge tone="yellow">Имя lock</Badge> : null}
-            {lockSpending ? <Badge tone="red">Траты lock</Badge> : null}
-            {lockTransfers ? <Badge tone="red">Переводы lock</Badge> : null}
-          </div>
+    <button type="button" onClick={onClick} className="app-account-card">
+      <div className="app-account-card__main">
+        <div className="app-account-card__title">
+          <div className="app-account-card__name">{name}</div>
+          {currency ? <span className="app-account-card__currency">{currency}</span> : null}
         </div>
 
-        <div className="shrink-0 text-right text-lg font-semibold text-white">{balance}</div>
+        {hint ? <div className="app-account-card__hint">{hint}</div> : null}
+
+        <div className="app-account-card__badges">
+          {isPrimary ? <Badge tone="green">Главный</Badge> : null}
+          {isIncomeDefault ? <Badge tone="blue">Доходы</Badge> : null}
+          {lockRename ? <Badge tone="yellow">Имя защищено</Badge> : null}
+          {lockSpending ? <Badge tone="red">Траты закрыты</Badge> : null}
+          {lockTransfers ? <Badge tone="red">Переводы закрыты</Badge> : null}
+        </div>
       </div>
+
+      <div className="app-account-card__balance">{balance}</div>
     </button>
   );
 }
 
 function Badge({ children, tone }: { children: string; tone: 'green' | 'blue' | 'yellow' | 'red' }) {
-  const className =
-    tone === 'green'
-      ? 'border-emerald-300/20 bg-emerald-300/10 text-emerald-100'
-      : tone === 'blue'
-        ? 'border-sky-300/20 bg-sky-300/10 text-sky-100'
-        : tone === 'yellow'
-          ? 'border-yellow-300/20 bg-yellow-300/10 text-yellow-100'
-          : 'border-red-300/20 bg-red-300/10 text-red-100';
-
-  return <span className={`rounded-full border px-2.5 py-1 text-[11px] ${className}`}>{children}</span>;
+  return <span className={`app-account-badge app-account-badge--${tone}`}>{children}</span>;
 }

@@ -28,7 +28,7 @@ export function MainMenuDots({
   currentScreen,
   onNavigate,
   items = MAIN_ITEMS,
-  bottomOffset = 12,
+  bottomOffset = 8,
 }: Props) {
   const [hidden, setHidden] = useState(false);
 
@@ -55,14 +55,14 @@ export function MainMenuDots({
 
   return (
     <div
-      className={`pointer-events-auto fixed left-0 right-0 z-[70] flex justify-center px-4 transition duration-200 ${
+      className={`app-main-menu-dots pointer-events-auto fixed left-0 right-0 flex justify-center px-4 transition duration-200 ${
         hidden ? 'translate-y-2 opacity-0 pointer-events-none' : 'translate-y-0 opacity-100'
       }`}
       style={{ bottom: `calc(env(safe-area-inset-bottom) + ${bottomOffset}px)` }}
       data-no-swipe="true"
       aria-hidden={hidden}
     >
-      <div className="flex items-center gap-2 rounded-full border border-white/10 bg-[#050b10]/78 px-3 py-2 shadow-2xl">
+      <div className="app-main-menu-dots__panel flex items-center gap-2 rounded-full border border-white/10 bg-[#050b10]/78 px-3 py-2 shadow-2xl">
         {items.map((item) => {
           const active = item.screen === currentScreen;
 

@@ -19,8 +19,12 @@ type SectionModal = SectionDto | 'ungrouped' | null;
 
 function typeLabel(type?: string | null) {
   if (type === 'income') return 'Доход';
-  if (type === 'both') return 'Оба';
+  if (type === 'both') return 'Доход и расход';
   return 'Расход';
+}
+
+function countType(categories: CategoryDto[], type: 'expense' | 'income' | 'both') {
+  return categories.filter((category) => (category.type ?? 'expense') === type).length;
 }
 
 export default function SectionsPage({ onBack }: Props) {
@@ -42,6 +46,7 @@ export default function SectionsPage({ onBack }: Props) {
   const [sectionSheet, setSectionSheet] = useState<{ mode: 'create' } | { mode: 'edit'; section: SectionDto } | null>(null);
   const [categorySheet, setCategorySheet] = useState<{ mode: 'create'; sectionId?: string | null } | { mode: 'edit'; category: CategoryDto } | null>(null);
   const [sectionModal, setSectionModal] = useState<SectionModal>(null);
+  const [toolsOpen, setToolsOpen] = useState(false);
 
   useEffect(() => { void loadAll(); }, [loadAll]);
 
@@ -69,9 +74,14 @@ export default function SectionsPage({ onBack }: Props) {
         <ScreenTopBar title="Категории" left={{ label: 'Назад', onClick: onBack }} right={['home']} />
 
         <header className="app-card app-card--hero app-taxonomy-hero">
-          <div className="app-eyebrow">Структура расходов</div>
-          <h1 className="app-hero-title">Разделы без хаоса</h1>
-          <p className="app-hero-caption">На странице — только обзор. Создание, редактирование и длинные списки открываются в модалках.</p>
+          <div className="app-taxonomy-hero__top app-accounts-hero__top">
+            <div>
+              <div className="app-eyebrow">Структура расходов</div>
+              <h1 className="app-hero-title">Разделы и категории</h1>
+              <p className="app-hero-caption">Короткий обзор структуры. Длинные списки, правила и редактирование открываются отдельно.</p>
+            </div>
+            <button type="button" onClick={() => setToolsOpen(true)} className="app-icon-button app-icon-button--lg" aria-label="Правила категорий">⚙</button>
+          </div>
 
           <div className="app-taxonomy-stats">
             <div><span>{sections.length}</span><small>разделов</small></div>
@@ -83,24 +93,19 @@ export default function SectionsPage({ onBack }: Props) {
         <section className="app-card app-taxonomy-actions">
           <button type="button" onClick={() => setSectionSheet({ mode: 'create' })} className="app-action-card app-action-card--wide">
             <span className="app-action-card__icon">▣</span>
-            <span><b>Новый раздел</b><small>Например, Еда или Подписки</small></span>
+            <span><b>Новый раздел</b><small>Группа для категорий</small></span>
           </button>
           <button type="button" onClick={() => setCategorySheet({ mode: 'create' })} className="app-action-card app-action-card--wide">
             <span className="app-action-card__icon">＋</span>
-            <span><b>Новая категория</b><small>Привязать к разделу</small></span>
+            <span><b>Новая категория</b><small>Расход, доход или оба типа</small></span>
           </button>
         </section>
 
-        <section className="app-card app-taxonomy-examples">
-          <div className="app-section-title">Голосовые примеры</div>
-          <div className="mt-3 grid gap-2">
-            {examples.map((example) => (
-              <button key={example} type="button" onClick={() => openAI(example)} className="app-list-button">
-                <span>{example}</span>
-                <small>Фина подготовит действие и покажет подтверждение</small>
-              </button>
-            ))}
-          </div>
+        <section className="app-card app-taxonomy-rules-grid">
+          <div className="app-taxonomy-rule-tile"><small>Расходные</small><b>{countType(categories, 'expense')} категорий</b></div>
+          <div className="app-taxonomy-rule-tile"><small>Доходные</small><b>{countType(categories, 'income')} категорий</b></div>
+          <div className="app-taxonomy-rule-tile"><small>Универсальные</small><b>{countType(categories, 'both')} категорий</b></div>
+          <div className="app-taxonomy-rule-tile"><small>Правило Фины</small><b>создаёт недостающее</b></div>
         </section>
 
         {error ? <div className="app-error-box">{error}</div> : null}
@@ -111,7 +116,7 @@ export default function SectionsPage({ onBack }: Props) {
           <EmptyState
             eyebrow="Категории"
             title="Структура пока пустая"
-            description="Создай раздел и категории вручную или скажи Фине: “создай категорию кофе в разделе еда”."
+            description="Создай раздел и категории вручную или скажи Фине, что нужно добавить. Перед изменением она покажет подтверждение."
             actionLabel="Создать категорию"
             onAction={() => setCategorySheet({ mode: 'create' })}
           />
@@ -123,11 +128,11 @@ export default function SectionsPage({ onBack }: Props) {
               return (
                 <article key={section.id} className="app-card app-taxonomy-section-card">
                   <div className="app-taxonomy-section-card__head">
-                    <button type="button" onClick={() => setSectionSheet({ mode: 'edit', section })} className="app-taxonomy-section-card__title">
+                    <button type="button" onClick={() => setSectionModal(section)} className="app-taxonomy-section-card__title">
                       <span className="app-taxonomy-icon">{section.icon || '◌'}</span>
                       <span><b>{section.name}</b><small>{section.description || 'Раздел для категорий'}</small></span>
                     </button>
-                    <button type="button" onClick={() => setCategorySheet({ mode: 'create', sectionId: section.id })} className="app-icon-button">+</button>
+                    <button type="button" onClick={() => setCategorySheet({ mode: 'create', sectionId: section.id })} className="app-icon-button" aria-label="Добавить категорию">+</button>
                   </div>
 
                   <div className="app-taxonomy-preview">
@@ -136,7 +141,7 @@ export default function SectionsPage({ onBack }: Props) {
                     {sectionCategories.length > preview.length ? <span className="app-chip app-chip--muted">+{sectionCategories.length - preview.length}</span> : null}
                   </div>
 
-                  <button type="button" onClick={() => setSectionModal(section)} className="app-secondary-button w-full">Открыть раздел</button>
+                  <button type="button" onClick={() => setSectionModal(section)} className="app-secondary-button">Открыть</button>
                 </article>
               );
             })}
@@ -152,12 +157,49 @@ export default function SectionsPage({ onBack }: Props) {
                 <div className="app-taxonomy-preview">
                   {ungrouped.slice(0, 5).map((category) => <span key={category.id} className="app-chip">{category.icon ? `${category.icon} ` : ''}{category.name}</span>)}
                 </div>
-                <button type="button" onClick={() => setSectionModal('ungrouped')} className="app-secondary-button w-full">Разобрать категории</button>
+                <button type="button" onClick={() => setSectionModal('ungrouped')} className="app-secondary-button">Разобрать</button>
               </article>
             ) : null}
           </section>
         )}
       </div>
+
+      {toolsOpen ? (
+        <div className="app-modal-backdrop" data-no-swipe="true" onClick={() => setToolsOpen(false)}>
+          <div className="app-modal-sheet app-taxonomy-tools" data-no-swipe="true" onClick={(event) => event.stopPropagation()}>
+            <div className="app-modal-handle" />
+            <div className="app-modal-body space-y-4">
+              <div>
+                <div className="app-eyebrow">Правила категорий</div>
+                <h2 className="mt-2 text-2xl font-semibold tracking-[-0.045em] text-white">Порядок для разделов</h2>
+                <p className="mt-2 text-sm leading-6 text-white/50">Категории помогают Фине правильно раскладывать операции. Если раздела или категории нет, Фина может предложить создать их перед подтверждением.</p>
+              </div>
+
+              <section className="app-taxonomy-rules-grid">
+                <div className="app-taxonomy-rule-tile"><small>Тип расхода</small><b>для трат</b></div>
+                <div className="app-taxonomy-rule-tile"><small>Тип дохода</small><b>для поступлений</b></div>
+                <div className="app-taxonomy-rule-tile"><small>Тип оба</small><b>для двух сценариев</b></div>
+                <div className="app-taxonomy-rule-tile"><small>Без раздела</small><b>нужно разложить</b></div>
+              </section>
+
+              <div className="grid gap-2">
+                {examples.map((example) => (
+                  <button key={example} type="button" onClick={() => openAI(example)} className="app-list-button">
+                    <span>{example}</span>
+                    <small>Фина подготовит действие и покажет подтверждение</small>
+                  </button>
+                ))}
+              </div>
+            </div>
+            <footer className="app-modal-footer">
+              <div className="grid grid-cols-2 gap-2">
+                <button type="button" onClick={() => setToolsOpen(false)} className="app-secondary-button">Закрыть</button>
+                <button type="button" onClick={() => setSectionSheet({ mode: 'create' })} className="app-primary-button">Новый раздел</button>
+              </div>
+            </footer>
+          </div>
+        </div>
+      ) : null}
 
       {sectionModal ? (
         <div className="app-modal-backdrop" data-no-swipe="true" onClick={() => setSectionModal(null)}>
@@ -187,7 +229,7 @@ export default function SectionsPage({ onBack }: Props) {
             <footer className="app-modal-footer">
               <div className="grid grid-cols-2 gap-2">
                 <button type="button" onClick={() => setSectionModal(null)} className="app-secondary-button">Закрыть</button>
-                <button type="button" onClick={() => setCategorySheet({ mode: 'create', sectionId: sectionModal === 'ungrouped' ? null : sectionModal.id })} className="app-primary-button">+ Категория</button>
+                <button type="button" onClick={() => setCategorySheet({ mode: 'create', sectionId: sectionModal === 'ungrouped' ? null : sectionModal.id })} className="app-primary-button">Категория</button>
               </div>
             </footer>
           </div>
