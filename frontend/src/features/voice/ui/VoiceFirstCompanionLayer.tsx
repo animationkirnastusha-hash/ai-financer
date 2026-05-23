@@ -17,12 +17,14 @@ type Thought = {
   tone: BubbleTone;
 };
 
-const SILENCE_SUBMIT_MS = 950;
-const RESUME_DELAY_MS = 420;
-const WATCHDOG_INTERVAL_MS = 1100;
-const BUBBLE_TIMEOUT_MS = 3200;
-const DUPLICATE_WINDOW_MS = 800;
-const DEFAULT_ACTIVE_WINDOW_SECONDS = 16;
+const SILENCE_SUBMIT_MS = 1050;
+const RESUME_DELAY_MS = 520;
+const WATCHDOG_INTERVAL_MS = 1800;
+const BUBBLE_TIMEOUT_MS = 3400;
+const DUPLICATE_WINDOW_MS = 900;
+const DEFAULT_ACTIVE_WINDOW_SECONDS = 10;
+const WAKE_PROMPT_THROTTLE_MS = 5200;
+const FIXED_COMPANION_NAME = 'Фина';
 
 function compactBubble(text: string) {
   return text
@@ -31,7 +33,7 @@ function compactBubble(text: string) {
     .split(/(?<=[.!?。！？])\s+/)
     .slice(0, 2)
     .join(' ')
-    .slice(0, 150);
+    .slice(0, 135);
 }
 
 function normalizeForWake(text: string) {
@@ -68,15 +70,15 @@ function pendingHasClarification(pending: unknown) {
   return Boolean(parsed && typeof parsed === 'object' && !Array.isArray(parsed) && (parsed as { clarification?: unknown }).clarification);
 }
 
-function stripWakeWord(rawText: string, companionName: string) {
+function stripWakeWord(rawText: string) {
   const source = rawText.trim();
-  const name = normalizeForWake(companionName || 'Фина');
+  const name = normalizeForWake(FIXED_COMPANION_NAME);
   const normalized = normalizeForWake(source);
 
   if (!name) return { hasWakeWord: false, command: source };
 
   const aliases = Array.from(new Set([
-    companionName,
+    FIXED_COMPANION_NAME,
     name,
     'Фина',
     'Финна',
@@ -122,16 +124,13 @@ export function VoiceFirstCompanionLayer() {
   const voicePermissionPrompted = useSettingsStore((state) => state.voicePermissionPrompted);
   const voiceWakeWordEnabled = useSettingsStore((state) => state.voiceWakeWordEnabled);
   const voiceActiveWindowSeconds = useSettingsStore((state) => state.voiceActiveWindowSeconds);
-  const companionName = useSettingsStore((state) => state.companionName);
   const appLanguage = useSettingsStore((state) => state.appLanguage);
-  const setCompanionName = useSettingsStore((state) => state.setCompanionName);
   const setVoiceAlwaysOnEnabled = useSettingsStore((state) => state.setVoiceAlwaysOnEnabled);
   const setVoicePermissionPrompted = useSettingsStore((state) => state.setVoicePermissionPrompted);
 
   const [thought, setThought] = useState<Thought | null>(null);
   const [isProcessingVoice, setIsProcessingVoice] = useState(false);
   const [isPriming, setIsPriming] = useState(false);
-  const [draftName, setDraftName] = useState(companionName || 'Фина');
   const [activeUntil, setActiveUntil] = useState(0);
 
   const silenceTimerRef = useRef<number | null>(null);
@@ -146,9 +145,10 @@ export function VoiceFirstCompanionLayer() {
   const handleTextRef = useRef<(text: string) => Promise<void> | void>(() => undefined);
   const startListeningRef = useRef<() => Promise<void> | void>(() => undefined);
   const lastWatchdogKickRef = useRef(0);
-  const lastMicWarningAtRef = useRef(0);
+  const lastWakePromptAtRef = useRef(0);
+  const lastAssistantMessageKeyRef = useRef('');
 
-  const activeWindowMs = Math.max(6000, Math.min(45000, (voiceActiveWindowSeconds || DEFAULT_ACTIVE_WINDOW_SECONDS) * 1000));
+  const activeWindowMs = Math.max(3000, Math.min(90000, (voiceActiveWindowSeconds || DEFAULT_ACTIVE_WINDOW_SECONDS) * 1000));
   const isCombatActive = !voiceWakeWordEnabled || activeUntil > Date.now();
 
   const clearSilenceTimer = useCallback(() => {
@@ -227,9 +227,13 @@ export function VoiceFirstCompanionLayer() {
     if (result === 'started') {
       shouldResumeRef.current = true;
       if (voiceWakeWordEnabled && activeUntilRef.current <= Date.now()) {
-        showThought(`Скажи “${companionName || 'Фина'}”, и я начну слушать задачу.`, 'neutral', 1800);
+        const now = Date.now();
+        if (now - lastWakePromptAtRef.current > WAKE_PROMPT_THROTTLE_MS) {
+          lastWakePromptAtRef.current = now;
+          showThought('Скажи “Фина”, затем задачу.', 'neutral', 1600);
+        }
       } else {
-        showThought('Слушаю задачу.', 'listening', 1300);
+        showThought('Слушаю задачу.', 'listening', 1100);
       }
       return;
     }
@@ -241,14 +245,10 @@ export function VoiceFirstCompanionLayer() {
     }
 
     if (result === 'error') {
-      const now = Date.now();
-      if (now - lastMicWarningAtRef.current > 5000) {
-        lastMicWarningAtRef.current = now;
-        showThought('Микрофон перезапускается. Если Telegram запретил доступ — включи его в настройках.', 'warning');
-      }
-      if (isActiveRef.current) resumeListeningSoon(1400);
+      shouldResumeRef.current = false;
+      showThought('Микрофон недоступен. Можно написать команду текстом.', 'warning');
     }
-  }, [canUseVoiceFirst, companionName, resumeListeningSoon, showThought, voice, voiceWakeWordEnabled]);
+  }, [canUseVoiceFirst, resumeListeningSoon, showThought, voice, voiceWakeWordEnabled]);
 
   useEffect(() => {
     startListeningRef.current = startListening;
@@ -263,7 +263,7 @@ export function VoiceFirstCompanionLayer() {
     const originalText = rawText.trim();
     if (!originalText || isProcessingVoiceRef.current) return;
 
-    const wake = stripWakeWord(originalText, companionName || 'Фина');
+    const wake = stripWakeWord(originalText);
     const now = Date.now();
     const isWithinCombatWindow = !voiceWakeWordEnabled || activeUntilRef.current > now;
 
@@ -276,8 +276,9 @@ export function VoiceFirstCompanionLayer() {
       armCombatMode();
 
       if (!wake.command) {
-        showThought('Слушаю. Скажи задачу.', 'listening', 2500);
-        resumeListeningSoon(220);
+        armCombatMode(Math.max(activeWindowMs, 10000));
+        showThought('Я слушаю. Теперь скажи задачу без имени.', 'listening', 2600);
+        resumeListeningSoon(260);
         return;
       }
     }
@@ -308,7 +309,7 @@ export function VoiceFirstCompanionLayer() {
         telegramHaptic('light');
         navigateTo(navigationIntent.screen);
         showThought('Открываю.', 'success');
-        armCombatMode(9000);
+        armCombatMode(activeWindowMs);
         return;
       }
 
@@ -316,7 +317,7 @@ export function VoiceFirstCompanionLayer() {
         telegramHaptic('light');
         goBack();
         showThought('Вернулся назад.', 'success');
-        armCombatMode(9000);
+        armCombatMode(activeWindowMs);
         return;
       }
 
@@ -324,14 +325,14 @@ export function VoiceFirstCompanionLayer() {
       if (latestPending?.id && isVoiceCancel(text)) {
         await chat.cancelAction(latestPending.id);
         showThought('Отменил действие.', 'success', 1800);
-        armCombatMode(9000);
+        armCombatMode(activeWindowMs);
         return;
       }
 
       if (latestPending?.id && !pendingHasClarification(latestPending) && isVoiceConfirm(text)) {
         await chat.confirmAction(latestPending.id);
         showThought('Подтвердил.', 'success', 1800);
-        armCombatMode(9000);
+        armCombatMode(activeWindowMs);
         return;
       }
 
@@ -341,15 +342,13 @@ export function VoiceFirstCompanionLayer() {
       setIsProcessingVoice(false);
       resumeListeningSoon(RESUME_DELAY_MS);
     }
-  }, [armCombatMode, chat, clearSilenceTimer, companionName, goBack, navigateTo, resumeListeningSoon, showThought, voiceWakeWordEnabled]);
+  }, [activeWindowMs, armCombatMode, chat, clearSilenceTimer, goBack, navigateTo, resumeListeningSoon, showThought, voiceWakeWordEnabled]);
 
   useEffect(() => {
     handleTextRef.current = handleText;
   }, [handleText]);
 
   const enableVoiceFirst = useCallback(async () => {
-    const nextName = draftName.trim() || 'Фина';
-    setCompanionName(nextName);
     setIsPriming(true);
     setVoicePermissionPrompted(true);
     setVoiceAlwaysOnEnabled(true);
@@ -358,7 +357,7 @@ export function VoiceFirstCompanionLayer() {
     try {
       const result = await voice.start();
       if (result === 'started') {
-        showThought(`Голос включён. Скажи “${nextName}”, затем команду.`, 'success', 3600);
+        showThought('Голос включён. Скажи “Фина”, затем команду.', 'success', 3600);
       } else {
         showThought('Разрешение сохранено. Если микрофон не включился, проверь доступ в Telegram.', 'warning');
         resumeListeningSoon(700);
@@ -366,7 +365,7 @@ export function VoiceFirstCompanionLayer() {
     } finally {
       setIsPriming(false);
     }
-  }, [draftName, resumeListeningSoon, setCompanionName, setVoiceAlwaysOnEnabled, setVoicePermissionPrompted, showThought, voice]);
+  }, [resumeListeningSoon, setVoiceAlwaysOnEnabled, setVoicePermissionPrompted, showThought, voice]);
 
   const disableVoiceFirst = useCallback(() => {
     shouldResumeRef.current = false;
@@ -424,45 +423,41 @@ export function VoiceFirstCompanionLayer() {
   useEffect(() => {
     if (!voice.error) return;
 
-    if (voice.error === 'microphone-denied') {
-      shouldResumeRef.current = false;
-      showThought('Нет доступа к микрофону. Разреши доступ в Telegram и включи голос снова.', 'warning');
+    if (voice.error === 'no-speech') {
+      resumeListeningSoon(240);
       return;
     }
 
-    if (voice.error === 'no-speech' || voice.error === 'aborted' || voice.error === 'speech-restart' || voice.error === 'start-failed') {
-      voice.reset();
-      resumeListeningSoon(260);
-      return;
-    }
-
-    showThought('Голос не прошёл. Перезапускаю микрофон.', 'warning');
-    voice.reset();
-    resumeListeningSoon(900);
+    showThought('Голос не прошёл. Можно повторить или написать текстом.', 'warning');
+    resumeListeningSoon(1000);
   }, [resumeListeningSoon, showThought, voice.error]);
 
   useEffect(() => {
     const lastMessage = chat.messages.filter((message) => message.role === 'assistant').at(-1);
     if (!lastMessage) return;
 
+    const messageKey = `${lastMessage.id}:${lastMessage.kind}:${lastMessage.text}`;
+    if (lastAssistantMessageKeyRef.current === messageKey) return;
+    lastAssistantMessageKeyRef.current = messageKey;
+
     if (lastMessage.kind === 'preview') {
-      armCombatMode(26000);
+      armCombatMode(Math.max(activeWindowMs, 22000));
       voice.stopSpeaking();
-      showThought('Проверь действие. Скажи: да, отмени или уточнение.', 'warning', 3400);
-      resumeListeningSoon(260);
+      showThought('Проверь действие. Скажи: “подтверди”, “отмени”, “измени сумму”, “измени счёт” или добавь уточнение.', 'warning', 5200);
+      resumeListeningSoon(420);
       return;
     }
 
     if (lastMessage.kind === 'error') {
-      armCombatMode(26000);
+      armCombatMode(Math.max(activeWindowMs, 18000));
       voice.stopSpeaking();
-      showThought(lastMessage.text || 'Нужно уточнение. Ответь коротко.', 'warning', 3400);
-      resumeListeningSoon(260);
+      showThought(lastMessage.text || 'Нужно уточнение. Скажи счёт, сумму, категорию или “отмени”.', 'warning', 5000);
+      resumeListeningSoon(420);
       return;
     }
 
-    armCombatMode(13000);
-    showThought(lastMessage.text || 'Готово.', 'success');
+    armCombatMode(activeWindowMs);
+    showThought(lastMessage.text || 'Готово. Можешь дать следующую задачу.', 'success', 2600);
 
     if (voiceRepliesEnabled && lastMessage.text && chat.pendingActions.length === 0) {
       voice.speak(lastMessage.text, { maxDurationMs: 900 });
@@ -470,8 +465,8 @@ export function VoiceFirstCompanionLayer() {
       return;
     }
 
-    resumeListeningSoon(420);
-  }, [armCombatMode, chat.messages, chat.pendingActions.length, resumeListeningSoon, showThought, voice, voiceRepliesEnabled]);
+    resumeListeningSoon(360);
+  }, [activeWindowMs, armCombatMode, chat.messages, chat.pendingActions.length, resumeListeningSoon, showThought, voice, voiceRepliesEnabled]);
 
 
   useEffect(() => {
@@ -485,7 +480,6 @@ export function VoiceFirstCompanionLayer() {
 
       const now = Date.now();
       if (now - lastWatchdogKickRef.current < WATCHDOG_INTERVAL_MS - 80) return;
-      if (voice.state === 'error') voice.reset();
       lastWatchdogKickRef.current = now;
       void startListeningRef.current?.();
     }, WATCHDOG_INTERVAL_MS);
@@ -510,7 +504,7 @@ export function VoiceFirstCompanionLayer() {
 
   const needsIntro = canUseVoiceFirst && !voicePermissionPrompted;
   const showLayer = currentScreen !== 'ai-core';
-  const displayName = companionName || 'Фина';
+  const displayName = FIXED_COMPANION_NAME;
 
   if (!showLayer) return null;
 
@@ -518,38 +512,31 @@ export function VoiceFirstCompanionLayer() {
     <>
       {needsIntro ? (
         <div className="voice-first-intro" data-no-swipe="true">
-          <div className="voice-first-intro__card">
-            <div className="voice-first-intro__title">Фина слушает по имени</div>
+          <div className="voice-first-intro__card voice-first-intro__card--polished">
+            <div className="voice-first-intro__avatar" aria-hidden="true">
+              <CompanionButton mood="idle" size="md" label="Фина" />
+            </div>
+            <div className="voice-first-intro__eyebrow">Знакомься</div>
+            <div className="voice-first-intro__title">Это Фина</div>
             <p>
-              Сначала произнеси имя помощника, затем финансовую задачу обычным языком.
-              После выполнения она снова вернётся в режим ожидания.
+              Она слушает финансовые команды голосом, готовит действие и просит подтверждение,
+              если операция влияет на деньги.
             </p>
 
-            <label className="voice-first-intro__field">
-              <span>Имя помощника</span>
-              <input
-                value={draftName}
-                onChange={(event) => setDraftName(event.target.value)}
-                placeholder="Фина"
-                maxLength={24}
-              />
-            </label>
+            <div className="voice-first-intro__steps">
+              <div><b>1</b><span>Скажи “Фина”</span></div>
+              <div><b>2</b><span>Назови задачу обычным языком</span></div>
+              <div><b>3</b><span>Подтверди, отмени или уточни</span></div>
+            </div>
 
             <div className="voice-first-intro__hint">
-              Пример: “{draftName.trim() || 'Фина'}, кофе 300”, “{draftName.trim() || 'Фина'}, наличными 10000” или “{draftName.trim() || 'Фина'}, создай цель отпуск 120000”.
+              Попробуй: “Фина, кофе 300”, “Фина, у меня есть 10к наличными”,
+              “Фина, создай цель отпуск 120000”.
             </div>
 
             <div className="voice-first-intro__actions">
-              <button type="button" onClick={enableVoiceFirst} disabled={isPriming}>{isPriming ? 'Включаю...' : 'Включить голос'}</button>
-              <button
-                type="button"
-                onClick={() => {
-                  setCompanionName(draftName.trim() || 'Фина');
-                  setVoicePermissionPrompted(true);
-                }}
-              >
-                Позже
-              </button>
+              <button type="button" onClick={enableVoiceFirst} disabled={isPriming}>{isPriming ? 'Включаю...' : 'Познакомиться с Финой'}</button>
+              <button type="button" onClick={() => setVoicePermissionPrompted(true)}>Позже</button>
             </div>
           </div>
         </div>

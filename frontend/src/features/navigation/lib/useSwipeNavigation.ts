@@ -10,21 +10,21 @@ type Options = {
 
 export const MAIN_SWIPE_SCREENS: AppScreen[] = ['transactions', 'dashboard', 'analytics'];
 
-const START_LOCK_DISTANCE = 4;
-const NAVIGATE_DISTANCE = 34;
-const NAVIGATE_VELOCITY = 0.22;
-const MAX_DRAG = 138;
-const MAX_VERTICAL_DRIFT = 190;
-const MIN_HORIZONTAL_RATIO = 0.30;
-const EDGE_BACK_ZONE = 42;
-const MAX_TAP_MS = 80;
+const START_LOCK_DISTANCE = 1;
+const NAVIGATE_DISTANCE = 14;
+const NAVIGATE_VELOCITY = 0.075;
+const MAX_DRAG = 190;
+const MAX_VERTICAL_DRIFT = 260;
+const MIN_HORIZONTAL_RATIO = 0.08;
+const EDGE_BACK_ZONE = 72;
+const MAX_TAP_MS = 45;
 
 function isInteractiveTarget(target: EventTarget | null) {
   if (!(target instanceof HTMLElement)) return false;
 
   return Boolean(
     target.closest(
-      'input, textarea, button, select, a, [role="button"], [contenteditable="true"], [data-no-swipe="true"], [data-ai-core-modal="true"], .app-modal-backdrop, .app-modal-sheet',
+      'input, textarea, select, a, [contenteditable="true"], [data-no-swipe="true"], [data-ai-core-modal="true"], .app-modal-backdrop, .app-modal-sheet, .app-bottom-sheet, .drawer-backdrop, .drawer-sheet',
     ),
   );
 }
@@ -36,27 +36,32 @@ function isBlockedByUi() {
     document.body.classList.contains('ai-core-modal-open') ||
     document.body.classList.contains('ai-any-modal-open') ||
     document.body.classList.contains('ai-modal-open') ||
-    Boolean(document.querySelector('.app-modal-backdrop, [data-ai-core-modal="true"]'))
+    Boolean(document.querySelector('.app-modal-backdrop, [data-ai-core-modal="true"], .drawer-backdrop, .app-bottom-sheet'))
   );
 }
 
 function setSwipeDirection(direction: 'left' | 'right') {
-  document.body.classList.remove('ai-screen-slide-left', 'ai-screen-slide-right', 'ai-screen-dragging', 'ai-screen-drag-ready');
+  document.body.classList.remove('ai-screen-slide-left', 'ai-screen-slide-right', 'ai-screen-dragging', 'ai-screen-snap-back');
   document.documentElement.style.setProperty('--ai-swipe-drag-x', '0px');
   document.body.classList.add(direction === 'left' ? 'ai-screen-slide-left' : 'ai-screen-slide-right');
   window.setTimeout(() => {
     document.body.classList.remove('ai-screen-slide-left', 'ai-screen-slide-right');
-  }, 460);
+  }, 220);
 }
 
-function resetDrag() {
-  document.body.classList.remove('ai-screen-dragging', 'ai-screen-drag-ready');
+function resetDrag(animate = true) {
+  if (animate) {
+    document.body.classList.add('ai-screen-snap-back');
+    window.setTimeout(() => document.body.classList.remove('ai-screen-snap-back'), 150);
+  }
+  document.body.classList.remove('ai-screen-dragging');
   document.documentElement.style.setProperty('--ai-swipe-drag-x', '0px');
 }
 
 function rubberBand(deltaX: number) {
   const sign = deltaX < 0 ? -1 : 1;
-  const value = Math.min(MAX_DRAG, Math.pow(Math.abs(deltaX), 0.86) * 2.55);
+  const abs = Math.abs(deltaX);
+  const value = Math.min(MAX_DRAG, abs * 0.94 + Math.sqrt(abs) * 6.2);
   return sign * value;
 }
 
@@ -72,6 +77,15 @@ export function useSwipeNavigation({ currentScreen, navigateTo, goBack }: Option
   const rafRef = useRef<number | null>(null);
 
   useEffect(() => {
+    const applyDrag = (value: number) => {
+      if (rafRef.current !== null) window.cancelAnimationFrame(rafRef.current);
+      rafRef.current = window.requestAnimationFrame(() => {
+        document.body.classList.add('ai-screen-dragging');
+        document.documentElement.style.setProperty('--ai-swipe-drag-x', `${value}px`);
+        rafRef.current = null;
+      });
+    };
+
     const handleTouchStart = (event: TouchEvent) => {
       const touch = event.touches[0];
       if (!touch) return;
@@ -84,11 +98,7 @@ export function useSwipeNavigation({ currentScreen, navigateTo, goBack }: Option
       startY.current = touch.clientY;
       lastY.current = touch.clientY;
       startAt.current = Date.now();
-      if (rafRef.current !== null) {
-        window.cancelAnimationFrame(rafRef.current);
-        rafRef.current = null;
-      }
-      resetDrag();
+      resetDrag(false);
     };
 
     const handleTouchMove = (event: TouchEvent) => {
@@ -105,14 +115,14 @@ export function useSwipeNavigation({ currentScreen, navigateTo, goBack }: Option
         if (Math.abs(deltaX) < START_LOCK_DISTANCE) return;
         if (Math.abs(deltaY) > MAX_VERTICAL_DRIFT) return;
         if (Math.abs(deltaX) / Math.max(1, Math.abs(deltaY)) < MIN_HORIZONTAL_RATIO) return;
-        if (Date.now() - startAt.current < MAX_TAP_MS && Math.abs(deltaX) < 14) return;
+        if (Date.now() - startAt.current < MAX_TAP_MS && Math.abs(deltaX) < 10) return;
         lockedHorizontal.current = true;
       }
 
       const currentIndex = MAIN_SWIPE_SCREENS.indexOf(currentScreen);
       const canGoMain = currentIndex !== -1
         ? Boolean(MAIN_SWIPE_SCREENS[deltaX < 0 ? currentIndex + 1 : currentIndex - 1])
-        : deltaX > 0 && (startX.current <= EDGE_BACK_ZONE || Math.abs(deltaX) > NAVIGATE_DISTANCE + 12);
+        : deltaX > 0 && (startX.current <= EDGE_BACK_ZONE || Math.abs(deltaX) > NAVIGATE_DISTANCE);
 
       canSwipeRef.current = canGoMain;
       if (!canGoMain) {
@@ -121,16 +131,7 @@ export function useSwipeNavigation({ currentScreen, navigateTo, goBack }: Option
       }
 
       if (event.cancelable) event.preventDefault();
-      document.body.classList.add('ai-screen-dragging');
-      if (Math.abs(deltaX) > NAVIGATE_DISTANCE * 0.72) document.body.classList.add('ai-screen-drag-ready');
-      else document.body.classList.remove('ai-screen-drag-ready');
-
-      if (rafRef.current !== null) window.cancelAnimationFrame(rafRef.current);
-      const nextDrag = rubberBand(deltaX);
-      rafRef.current = window.requestAnimationFrame(() => {
-        document.documentElement.style.setProperty('--ai-swipe-drag-x', `${nextDrag}px`);
-        rafRef.current = null;
-      });
+      applyDrag(rubberBand(deltaX));
     };
 
     const handleTouchEnd = () => {
@@ -177,13 +178,7 @@ export function useSwipeNavigation({ currentScreen, navigateTo, goBack }: Option
       resetDrag();
     };
 
-    const handleTouchCancel = () => {
-      if (rafRef.current !== null) {
-        window.cancelAnimationFrame(rafRef.current);
-        rafRef.current = null;
-      }
-      resetDrag();
-    };
+    const handleTouchCancel = () => resetDrag();
 
     window.addEventListener('touchstart', handleTouchStart, { passive: true });
     window.addEventListener('touchmove', handleTouchMove, { passive: false });
@@ -195,11 +190,8 @@ export function useSwipeNavigation({ currentScreen, navigateTo, goBack }: Option
       window.removeEventListener('touchmove', handleTouchMove);
       window.removeEventListener('touchend', handleTouchEnd);
       window.removeEventListener('touchcancel', handleTouchCancel);
-      if (rafRef.current !== null) {
-        window.cancelAnimationFrame(rafRef.current);
-        rafRef.current = null;
-      }
-      resetDrag();
+      if (rafRef.current !== null) window.cancelAnimationFrame(rafRef.current);
+      resetDrag(false);
     };
   }, [currentScreen, goBack, navigateTo]);
 

@@ -22,9 +22,18 @@ type CurrencyGroup = {
   accounts: AccountDto[];
 };
 
+function accountTypeLabel(type?: string | null) {
+  if (type === 'cash') return 'Наличные';
+  if (type === 'card') return 'Карта';
+  if (type === 'savings') return 'Накопления';
+  if (type === 'credit') return 'Кредит';
+  return 'Счёт';
+}
+
 export default function AccountsPage() {
   const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
   const [transferFromAccountId, setTransferFromAccountId] = useState<string | null>(null);
+  const [toolsOpen, setToolsOpen] = useState(false);
 
   const openAIWithCommand = useNavigationStore((s) => s.openAIWithCommand);
 
@@ -57,32 +66,16 @@ export default function AccountsPage() {
     void loadAccounts();
   }, [loadAccounts]);
 
-  const selectedAccount = useMemo(() => {
-    return items.find((item) => item.id === selectedAccountId) ?? null;
-  }, [items, selectedAccountId]);
-
-  const transferFromAccount = useMemo(() => {
-    return items.find((item) => item.id === transferFromAccountId) ?? null;
-  }, [items, transferFromAccountId]);
+  const selectedAccount = useMemo(() => items.find((item) => item.id === selectedAccountId) ?? null, [items, selectedAccountId]);
+  const transferFromAccount = useMemo(() => items.find((item) => item.id === transferFromAccountId) ?? null, [items, transferFromAccountId]);
 
   const grouped = useMemo<CurrencyGroup[]>(() => {
     const map = new Map<string, CurrencyGroup>();
 
     for (const account of items) {
       const currency = account.currency || 'RUB';
-
-      const current =
-        map.get(currency) ??
-        ({
-          currency,
-          total: 0,
-          accounts: [],
-        } satisfies CurrencyGroup);
-
-      if (account.showInTotalBalance !== false) {
-        current.total += Number(account.balance) || 0;
-      }
-
+      const current = map.get(currency) ?? ({ currency, total: 0, accounts: [] } satisfies CurrencyGroup);
+      if (account.showInTotalBalance !== false) current.total += Number(account.balance) || 0;
       current.accounts.push(account);
       map.set(currency, current);
     }
@@ -97,13 +90,9 @@ export default function AccountsPage() {
   const mainGroup = grouped.find((group) => group.currency === mainCurrency);
   const primaryAccount = items.find((item) => item.id === primaryAccountId);
   const incomeAccount = items.find((item) => item.id === incomeAccountId);
+  const totalAccounts = items.length;
 
-  const handleCreateTransfer = async (payload: {
-    fromAccountId: string;
-    toAccountId: string;
-    amount: number;
-    description?: string | null;
-  }) => {
+  const handleCreateTransfer = async (payload: { fromAccountId: string; toAccountId: string; amount: number; description?: string | null }) => {
     await createTransfer(payload);
     await loadAccounts(true);
     setTransferFromAccountId(null);
@@ -111,190 +100,133 @@ export default function AccountsPage() {
   };
 
   return (
-    <div className="flex h-dvh flex-col bg-[linear-gradient(180deg,#0b1016_0%,#090d13_100%)] text-white">
-      <PageHeader title="Счета" subtitle="Баланс и структура" />
-      <div className="flex-1 overflow-y-auto px-4 pb-28">
-        <div className="mx-auto max-w-[560px] space-y-4">
-          <AccountsSummary total={formatMoney(mainGroup?.total ?? 0, mainCurrency)} />
+    <div className="app-page app-accounts-page text-white">
+      <div className="app-page__inner space-y-4">
+        <PageHeader title="Счета" subtitle="Баланс и структура" />
 
-          <section className="rounded-[28px] border border-white/8 bg-white/[0.04] p-4">
-            <div className="text-[11px] uppercase tracking-[0.16em] text-white/35">
-              Правила счетов
+        <header className="app-card app-card--hero app-accounts-hero">
+          <div className="app-eyebrow">Кошелёк</div>
+          <div className="app-accounts-hero__top">
+            <div className="min-w-0">
+              <h1 className="app-hero-title">Все деньги по местам</h1>
+              <p className="app-hero-caption">Счета, наличные, карты и накопления без лишнего шума.</p>
             </div>
+            <button type="button" onClick={() => setToolsOpen(true)} className="app-icon-button app-icon-button--lg" aria-label="Настройки счетов">⚙</button>
+          </div>
 
-            <div className="mt-3 grid gap-3">
-              <div className="rounded-2xl border border-white/8 bg-black/20 p-3">
-                <div className="text-xs text-white/42">Основная валюта</div>
-                <div className="mt-2 flex gap-2">
-                  {(['RUB', 'USD', 'EUR'] as const).map((currency) => (
-                    <button
-                      key={currency}
-                      type="button"
-                      onClick={() => setMainCurrency(currency)}
-                      className={`rounded-xl border px-3 py-2 text-xs transition ${
-                        mainCurrency === currency
-                          ? 'border-emerald-300/25 bg-emerald-300/12 text-white'
-                          : 'border-white/10 bg-white/5 text-white/55'
-                      }`}
-                    >
-                      {currency}
-                    </button>
+          <div className="mt-4">
+            <AccountsSummary total={formatMoney(mainGroup?.total ?? 0, mainCurrency)} />
+          </div>
+
+          <div className="app-accounts-stats">
+            <div><span>{totalAccounts}</span><small>счетов</small></div>
+            <div><span>{primaryAccount?.name || '—'}</span><small>главный</small></div>
+            <div><span>{incomeAccount?.name || primaryAccount?.name || '—'}</span><small>доходы</small></div>
+          </div>
+        </header>
+
+        <section className="app-card app-accounts-actions">
+          <button type="button" onClick={() => openCreateAccount({ type: 'card', currency: mainCurrency })} className="app-action-card app-action-card--wide">
+            <span className="app-action-card__icon">＋</span>
+            <span><b>Создать счёт</b><small>Карта, наличные или цель</small></span>
+          </button>
+          <button type="button" disabled={items.length < 2} onClick={() => setTransferFromAccountId(primaryAccount?.id ?? items[0]?.id ?? null)} className="app-action-card app-action-card--wide disabled:opacity-40">
+            <span className="app-action-card__icon">⇄</span>
+            <span><b>Перевод</b><small>Между своими счетами</small></span>
+          </button>
+        </section>
+
+        {error && items.length === 0 ? (
+          <ErrorState title="Счета не загрузились" message={error} onRetry={() => void loadAccounts(true)} onOpenAI={() => openAIWithCommand()} />
+        ) : isLoading ? (
+          <div className="app-card p-5 text-sm text-white/60">Загружаю счета...</div>
+        ) : items.length === 0 ? (
+          <EmptyAccountsState onCreate={() => openCreateAccount()} />
+        ) : (
+          <div className="space-y-4">
+            {grouped.map((group) => (
+              <section key={group.currency} className="app-card app-accounts-group">
+                <div className="app-accounts-group__head">
+                  <div>
+                    <div className="app-section-title">{group.currency}</div>
+                    <div className="mt-1 text-xs text-white/42">{group.accounts.length} счетов · {formatMoney(group.total, group.currency)}</div>
+                  </div>
+                  {group.currency === mainCurrency ? <span className="app-badge app-badge--green">главная валюта</span> : null}
+                </div>
+
+                <div className="mt-3 grid gap-3">
+                  {group.accounts.map((account) => (
+                    <AccountCard
+                      key={account.id}
+                      name={account.name}
+                      balance={formatMoney(Number(account.balance) || 0, account.currency)}
+                      currency={account.currency}
+                      hint={accountTypeLabel(account.type)}
+                      isPrimary={account.id === primaryAccountId}
+                      isIncomeDefault={account.id === incomeAccountId}
+                      lockRename={account.lockRename}
+                      lockSpending={account.lockSpending}
+                      lockTransfers={account.lockTransfers}
+                      onClick={() => setSelectedAccountId(account.id)}
+                    />
                   ))}
                 </div>
-                <div className="mt-2 text-xs leading-5 text-white/40">
-                  Валюта меняет главный блок и сортировку. Балансы разных валют не смешиваются.
-                </div>
-              </div>
-
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="rounded-2xl border border-white/8 bg-black/20 p-3">
-                  <div className="text-xs text-white/42">Главный счёт</div>
-                  <div className="mt-1 truncate text-sm text-white">
-                    {primaryAccount?.name || 'Не выбран'}
-                  </div>
-                </div>
-
-                <div className="rounded-2xl border border-white/8 bg-black/20 p-3">
-                  <div className="text-xs text-white/42">Доходы по умолчанию</div>
-                  <div className="mt-1 truncate text-sm text-white">
-                    {incomeAccount?.name || primaryAccount?.name || 'Не выбран'}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </section>
-
-          <section className="rounded-[28px] border border-white/8 bg-white/[0.04] p-4">
-            <div className="text-[11px] uppercase tracking-[0.16em] text-white/35">
-              Действия
-            </div>
-
-            <div className="mt-3 text-sm leading-6 text-white/60">
-              Создавай счета, меняй основные настройки и делай переводы вручную или через AI.
-            </div>
-
-            <div className="mt-4 flex flex-wrap gap-3">
-              <button
-                type="button"
-                onClick={() =>
-                  openCreateAccount({
-                    type: 'savings',
-                    currency: mainCurrency,
-                  })
-                }
-                className="rounded-2xl border border-emerald-400/20 bg-emerald-400/12 px-4 py-2 text-sm text-white transition hover:bg-emerald-400/18"
-              >
-                Создать счёт
-              </button>
-
-              <button
-                type="button"
-                disabled={items.length < 2}
-                onClick={() => setTransferFromAccountId(primaryAccount?.id ?? items[0]?.id ?? null)}
-                className="rounded-2xl border border-emerald-400/20 bg-emerald-400/10 px-4 py-2 text-sm text-white transition hover:bg-emerald-400/15 disabled:opacity-40"
-              >
-                Перевод между счетами
-              </button>
-
-              <button
-                type="button"
-                onClick={() => openAIWithCommand('создай счет отпуск')}
-                className="rounded-2xl border border-white/10 bg-white/10 px-4 py-2 text-sm transition hover:bg-white/15"
-              >
-                Открыть AI
-              </button>
-            </div>
-          </section>
-
-          {error && items.length === 0 ? (
-            <ErrorState
-              title="Счета не загрузились"
-              message={error}
-              onRetry={() => void loadAccounts(true)}
-              onOpenAI={() => openAIWithCommand()}
-            />
-          ) : isLoading ? (
-            <div className="rounded-[28px] border border-white/8 bg-white/[0.04] p-5 text-sm text-white/60">
-              Загружаю счета...
-            </div>
-          ) : items.length === 0 ? (
-            <EmptyAccountsState onCreate={() => openCreateAccount()} />
-          ) : (
-            <div className="space-y-4">
-              {grouped.map((group) => (
-                <section key={group.currency} className="rounded-[28px] border border-white/8 bg-white/[0.035] p-4">
-                  <div className="mb-3 flex items-center justify-between gap-3">
-                    <div>
-                      <div className="text-[11px] uppercase tracking-[0.16em] text-white/35">
-                        {group.currency === mainCurrency ? 'Основная валюта' : 'Другая валюта'}
-                      </div>
-                      <div className="mt-1 text-lg font-semibold text-white">{group.currency}</div>
-                    </div>
-
-                    <div className="text-right text-sm font-medium text-white">
-                      {formatMoney(group.total, group.currency)}
-                    </div>
-                  </div>
-
-                  <div className="space-y-3">
-                    {group.accounts.map((acc) => (
-                      <AccountCard
-                        key={acc.id}
-                        name={acc.name}
-                        balance={formatMoney(Number(acc.balance || 0), acc.currency)}
-                        hint={acc.type}
-                        currency={acc.currency}
-                        isPrimary={acc.id === primaryAccountId}
-                        isIncomeDefault={acc.id === incomeAccountId}
-                        lockRename={acc.lockRename}
-                        lockSpending={acc.lockSpending}
-                        lockTransfers={acc.lockTransfers}
-                        onClick={() => setSelectedAccountId(acc.id)}
-                      />
-                    ))}
-                  </div>
-                </section>
-              ))}
-            </div>
-          )}
-        </div>
+              </section>
+            ))}
+          </div>
+        )}
       </div>
 
+      {toolsOpen ? (
+        <div className="app-modal-backdrop" data-no-swipe="true" onClick={() => setToolsOpen(false)}>
+          <div className="app-modal-sheet app-accounts-tools" data-no-swipe="true" onClick={(event) => event.stopPropagation()}>
+            <div className="app-modal-handle" />
+            <div className="app-modal-body space-y-4">
+              <div>
+                <div className="app-eyebrow">Настройки счетов</div>
+                <h2 className="mt-2 text-2xl font-semibold tracking-[-0.045em] text-white">Правила кошелька</h2>
+                <p className="mt-2 text-sm leading-6 text-white/50">Здесь только служебные настройки. Основные действия вынесены на страницу.</p>
+              </div>
+
+              <section className="app-settings-grid">
+                <div className="app-settings-tile">
+                  <div className="text-xs text-white/42">Основная валюта</div>
+                  <div className="mt-3 flex gap-2">
+                    {(['RUB', 'USD', 'EUR'] as const).map((currency) => (
+                      <button key={currency} type="button" onClick={() => setMainCurrency(currency)} className={mainCurrency === currency ? 'app-choice app-choice--active' : 'app-choice'}>{currency}</button>
+                    ))}
+                  </div>
+                </div>
+                <div className="app-settings-tile"><small>Главный счёт</small><b>{primaryAccount?.name || 'Не выбран'}</b></div>
+                <div className="app-settings-tile"><small>Доходы по умолчанию</small><b>{incomeAccount?.name || primaryAccount?.name || 'Не выбран'}</b></div>
+              </section>
+
+              <div className="grid gap-2">
+                <button type="button" onClick={() => openAIWithCommand('сделай наличку основной')} className="app-list-button"><span>Сказать Фине</span><small>“сделай наличку основной”</small></button>
+                <button type="button" onClick={() => openAIWithCommand('создай счет наличка')} className="app-list-button"><span>Создать голосом</span><small>“создай счет наличка”</small></button>
+              </div>
+            </div>
+            <footer className="app-modal-footer"><button type="button" onClick={() => setToolsOpen(false)} className="app-secondary-button w-full">Готово</button></footer>
+          </div>
+        </div>
+      ) : null}
+
       <AccountDetailsSheet
-        open={!!selectedAccount}
         account={selectedAccount}
+        open={!!selectedAccount}
         isPrimary={selectedAccount?.id === primaryAccountId}
         isIncomeDefault={selectedAccount?.id === incomeAccountId}
+        isDeleting={isDeleting}
         onClose={() => setSelectedAccountId(null)}
+        onEdit={(account) => openEdit(account)}
+        onDelete={async (accountId) => {
+          await deleteAccount(accountId);
+          setSelectedAccountId(null);
+        }}
         onSetPrimary={(accountId) => setPrimaryAccountId(accountId)}
         onSetIncomeDefault={(accountId) => setIncomeAccountId(accountId)}
-        onEdit={(account) => openEdit(account)}
-        onTransfer={(account) => {
-          setSelectedAccountId(null);
-          setTransferFromAccountId(account.id);
-        }}
-        onAskAI={() => {
-          setSelectedAccountId(null);
-          openAIWithCommand();
-        }}
-        isDeleting={isDeleting}
-        onDelete={async (accountId) => {
-          try {
-            await deleteAccount(accountId);
-
-            if (primaryAccountId === accountId) {
-              setPrimaryAccountId(null);
-            }
-
-            if (incomeAccountId === accountId) {
-              setIncomeAccountId(null);
-            }
-
-            setSelectedAccountId(null);
-          } catch (error) {
-            alert(error instanceof Error ? error.message : 'Не удалось удалить счёт');
-          }
-        }}
+        onTransfer={(account) => setTransferFromAccountId(account.id)}
+        onAskAI={() => selectedAccount ? openAIWithCommand(`покажи счет ${selectedAccount.name}`) : openAIWithCommand()}
       />
 
       <AccountTransferSheet
@@ -306,16 +238,9 @@ export default function AccountsPage() {
         onSubmit={handleCreateTransfer}
       />
 
-      <EditAccountModal
-        open={!!editing}
-        account={editing}
-        isSaving={isUpdating}
-        onClose={closeEdit}
-        onSave={async (accountId, payload) => {
-          await updateAccount(accountId, payload);
-          await loadAccounts(true);
-        }}
-      />
+      <EditAccountModal open={!!editing} account={editing} isSaving={isUpdating} onClose={closeEdit} onSave={async (id, payload) => {
+          await updateAccount(id, payload);
+        }} />
     </div>
   );
 }

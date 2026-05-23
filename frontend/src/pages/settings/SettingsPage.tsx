@@ -11,7 +11,6 @@ export default function SettingsPage() {
   const [resetMode, setResetMode] = useState<DataResetMode | null>(null);
   const navigateTo = useNavigationStore((state) => state.navigateTo);
   const user = useAuthStore((state) => state.user);
-  const companionName = useSettingsStore((state) => state.companionName);
   const voiceWakeWordEnabled = useSettingsStore((state) => state.voiceWakeWordEnabled);
   const voiceActiveWindowSeconds = useSettingsStore((state) => state.voiceActiveWindowSeconds);
   const voiceEnabled = useSettingsStore((state) => state.voiceEnabled);
@@ -20,7 +19,6 @@ export default function SettingsPage() {
   const voiceAlwaysOnEnabled = useSettingsStore((state) => state.voiceAlwaysOnEnabled);
   const textInputEnabled = useSettingsStore((state) => state.textInputEnabled);
   const aiInsightsEnabled = useSettingsStore((state) => state.aiInsightsEnabled);
-  const setCompanionName = useSettingsStore((state) => state.setCompanionName);
   const setVoiceWakeWordEnabled = useSettingsStore((state) => state.setVoiceWakeWordEnabled);
   const setVoiceActiveWindowSeconds = useSettingsStore((state) => state.setVoiceActiveWindowSeconds);
   const setVoiceEnabled = useSettingsStore((state) => state.setVoiceEnabled);
@@ -86,17 +84,15 @@ export default function SettingsPage() {
           <div className="app-section-title">Голос и AI</div>
 
           <div className="voice-settings-card mt-4">
-            <label className="voice-settings-field">
-              <span>Имя помощника</span>
-              <input
-                value={companionName}
-                onChange={(event) => setCompanionName(event.target.value)}
-                placeholder="Фина"
-                maxLength={24}
-              />
-            </label>
+            <div className="voice-settings-card__head">
+              <span className="voice-settings-card__badge">Фина</span>
+              <div>
+                <div className="text-sm font-semibold text-white">Имя помощника фиксировано</div>
+                <div className="mt-1 text-xs leading-5 text-white/46">Пользователь всегда зовёт Фину. Так меньше путаницы в обучении, голосе и подсказках.</div>
+              </div>
+            </div>
             <div className="voice-settings-example">
-              Скажи: “{companionName || 'Фина'}, кофе 300”. Без имени команда не уйдёт в AI.
+              Пример: “Фина, кофе 300”. Без имени команда не уйдёт в AI.
             </div>
           </div>
 
@@ -131,17 +127,23 @@ export default function SettingsPage() {
             </label>
           </div>
 
-          <div className="voice-window-control mt-4">
+          <div className="voice-window-control voice-window-control--number mt-4">
             <div>
-              <div className="text-sm font-medium text-white">Время после имени</div>
-              <div className="mt-1 text-xs text-white/45">Сколько секунд помощник слушает без повторного имени.</div>
+              <div className="text-sm font-medium text-white">Сколько слушать после команды</div>
+              <div className="mt-1 text-xs text-white/45">Можно поставить любое значение от 3 до 90 секунд. Для быстрого режима удобно 5–10 сек.</div>
             </div>
-            <select value={voiceActiveWindowSeconds} onChange={(event) => setVoiceActiveWindowSeconds(Number(event.target.value))}>
-              <option value={8}>8 сек</option>
-              <option value={16}>16 сек</option>
-              <option value={25}>25 сек</option>
-              <option value={40}>40 сек</option>
-            </select>
+            <label className="voice-window-control__input">
+              <input
+                type="number"
+                min={3}
+                max={90}
+                step={1}
+                inputMode="numeric"
+                value={voiceActiveWindowSeconds}
+                onChange={(event) => setVoiceActiveWindowSeconds(Number(event.target.value))}
+              />
+              <span>сек</span>
+            </label>
           </div>
         </section>
 

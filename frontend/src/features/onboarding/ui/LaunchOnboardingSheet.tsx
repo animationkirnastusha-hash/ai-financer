@@ -1,11 +1,12 @@
 import { useEffect } from 'react';
 import { useOnboardingStore } from '@/features/onboarding/model/onboarding.store';
 import { useNavigationStore } from '@/features/navigation/model/navigation.store';
+import { CompanionButton } from '@/shared/ui/CompanionButton';
 
 const steps = [
-  ['1', 'Позови помощника', 'Скажи “Фина”, затем обычную финансовую команду.'],
-  ['2', 'Проверь превью', 'Деньги, счета и цели не меняются без подтверждения.'],
-  ['3', 'Подтверди или уточни', 'Можно ответить коротко: “да”, “нет”, “отмени”, “на карту”.'],
+  ['1', 'Позови Фину', 'Скажи “Фина”, затем финансовую задачу обычным языком.'],
+  ['2', 'Проверь действие', 'Счета, операции и цели не меняются без понятного превью.'],
+  ['3', 'Ответь коротко', 'Можно сказать: “да”, “отмени”, “на карту”, “создай наличку”.'],
 ];
 
 const examples = [
@@ -39,45 +40,38 @@ export function LaunchOnboardingSheet() {
 
   return (
     <div className="app-modal-backdrop px-3" data-no-swipe="true" data-ai-core-modal="true">
-      <div className="app-modal-sheet max-w-[560px]" data-no-swipe="true" data-ai-core-modal="true">
+      <div className="app-modal-sheet app-launch-onboarding max-w-[560px]" data-no-swipe="true" data-ai-core-modal="true">
         <div className="app-modal-handle" />
 
         <div className="app-modal-body space-y-4">
-          <section className="rounded-[30px] border border-emerald-300/15 bg-[radial-gradient(circle_at_top,rgba(16,185,129,0.18),transparent_48%),rgba(255,255,255,0.04)] p-5">
+          <section className="app-onboarding-hero">
+            <div className="app-onboarding-hero__avatar" aria-hidden="true">
+              <CompanionButton mood="success" size="md" label="Фина" />
+            </div>
             <div className="app-eyebrow">Первый запуск</div>
-            <h2 className="mt-3 text-[30px] font-semibold leading-none tracking-[-0.055em] text-white">
-              Голосовые финансы без лишних кнопок
-            </h2>
-            <p className="mt-3 text-sm leading-6 text-white/60">
-              Основной сценарий простой: позови помощника, скажи задачу, проверь действие и подтверди. Текстовый ввод останется запасным вариантом.
+            <h2>Познакомься с Финой</h2>
+            <p>
+              Фина — голосовой финансовый помощник. Она слушает после своего имени,
+              понимает обычные команды и просит подтверждение перед важными действиями.
             </p>
           </section>
 
           <section className="grid gap-3">
             {steps.map(([step, title, description]) => (
-              <div key={step} className="grid grid-cols-[34px_minmax(0,1fr)] gap-3 rounded-[22px] border border-white/8 bg-white/[0.04] p-4">
-                <div className="grid h-8 w-8 place-items-center rounded-full border border-emerald-300/20 bg-emerald-300/10 text-sm font-semibold text-emerald-100">
-                  {step}
-                </div>
-                <div className="min-w-0">
-                  <div className="text-sm font-semibold leading-snug text-white">{title}</div>
-                  <div className="mt-1 text-xs leading-5 text-white/45">{description}</div>
-                </div>
+              <div key={step} className="app-onboarding-step">
+                <div>{step}</div>
+                <span><b>{title}</b><small>{description}</small></span>
               </div>
             ))}
           </section>
 
-          <section className="rounded-[26px] border border-white/8 bg-black/20 p-4">
-            <div className="app-eyebrow">Примеры</div>
+          <section className="app-onboarding-examples">
+            <div className="app-eyebrow">Можно попробовать сразу</div>
             <div className="mt-3 grid gap-2">
               {examples.map((example) => (
-                <button
-                  key={example}
-                  type="button"
-                  onClick={() => runExample(example)}
-                  className="rounded-[18px] border border-emerald-300/15 bg-emerald-300/[0.06] px-3 py-3 text-left text-xs leading-5 text-emerald-100/90 transition active:scale-[0.99]"
-                >
-                  {example}
+                <button key={example} type="button" onClick={() => runExample(example)} className="app-list-button">
+                  <span>{example}</span>
+                  <small>Фина откроет превью и попросит подтверждение</small>
                 </button>
               ))}
             </div>
@@ -94,7 +88,7 @@ export function LaunchOnboardingSheet() {
               }}
               className="app-primary-button w-full"
             >
-              Начать с первого счёта
+              Начать с Финой
             </button>
             <button
               type="button"
