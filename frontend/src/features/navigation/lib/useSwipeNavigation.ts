@@ -10,14 +10,14 @@ type Options = {
 
 export const MAIN_SWIPE_SCREENS: AppScreen[] = ['transactions', 'dashboard', 'analytics'];
 
-const START_LOCK_DISTANCE = 5;
-const NAVIGATE_DISTANCE = 38;
-const NAVIGATE_VELOCITY = 0.27;
-const MAX_DRAG = 124;
-const MAX_VERTICAL_DRIFT = 170;
-const MIN_HORIZONTAL_RATIO = 0.34;
-const EDGE_BACK_ZONE = 34;
-const MAX_TAP_MS = 90;
+const START_LOCK_DISTANCE = 4;
+const NAVIGATE_DISTANCE = 34;
+const NAVIGATE_VELOCITY = 0.22;
+const MAX_DRAG = 138;
+const MAX_VERTICAL_DRIFT = 190;
+const MIN_HORIZONTAL_RATIO = 0.30;
+const EDGE_BACK_ZONE = 42;
+const MAX_TAP_MS = 80;
 
 function isInteractiveTarget(target: EventTarget | null) {
   if (!(target instanceof HTMLElement)) return false;
@@ -41,7 +41,7 @@ function isBlockedByUi() {
 }
 
 function setSwipeDirection(direction: 'left' | 'right') {
-  document.body.classList.remove('ai-screen-slide-left', 'ai-screen-slide-right', 'ai-screen-dragging');
+  document.body.classList.remove('ai-screen-slide-left', 'ai-screen-slide-right', 'ai-screen-dragging', 'ai-screen-drag-ready');
   document.documentElement.style.setProperty('--ai-swipe-drag-x', '0px');
   document.body.classList.add(direction === 'left' ? 'ai-screen-slide-left' : 'ai-screen-slide-right');
   window.setTimeout(() => {
@@ -50,13 +50,13 @@ function setSwipeDirection(direction: 'left' | 'right') {
 }
 
 function resetDrag() {
-  document.body.classList.remove('ai-screen-dragging');
+  document.body.classList.remove('ai-screen-dragging', 'ai-screen-drag-ready');
   document.documentElement.style.setProperty('--ai-swipe-drag-x', '0px');
 }
 
 function rubberBand(deltaX: number) {
   const sign = deltaX < 0 ? -1 : 1;
-  const value = Math.min(MAX_DRAG, Math.pow(Math.abs(deltaX), 0.82) * 2.9);
+  const value = Math.min(MAX_DRAG, Math.pow(Math.abs(deltaX), 0.86) * 2.55);
   return sign * value;
 }
 
@@ -69,6 +69,7 @@ export function useSwipeNavigation({ currentScreen, navigateTo, goBack }: Option
   const startedOnInteractive = useRef(false);
   const lockedHorizontal = useRef(false);
   const canSwipeRef = useRef(false);
+  const rafRef = useRef<number | null>(null);
 
   useEffect(() => {
     const handleTouchStart = (event: TouchEvent) => {
@@ -83,6 +84,10 @@ export function useSwipeNavigation({ currentScreen, navigateTo, goBack }: Option
       startY.current = touch.clientY;
       lastY.current = touch.clientY;
       startAt.current = Date.now();
+      if (rafRef.current !== null) {
+        window.cancelAnimationFrame(rafRef.current);
+        rafRef.current = null;
+      }
       resetDrag();
     };
 
@@ -117,7 +122,15 @@ export function useSwipeNavigation({ currentScreen, navigateTo, goBack }: Option
 
       if (event.cancelable) event.preventDefault();
       document.body.classList.add('ai-screen-dragging');
-      document.documentElement.style.setProperty('--ai-swipe-drag-x', `${rubberBand(deltaX)}px`);
+      if (Math.abs(deltaX) > NAVIGATE_DISTANCE * 0.72) document.body.classList.add('ai-screen-drag-ready');
+      else document.body.classList.remove('ai-screen-drag-ready');
+
+      if (rafRef.current !== null) window.cancelAnimationFrame(rafRef.current);
+      const nextDrag = rubberBand(deltaX);
+      rafRef.current = window.requestAnimationFrame(() => {
+        document.documentElement.style.setProperty('--ai-swipe-drag-x', `${nextDrag}px`);
+        rafRef.current = null;
+      });
     };
 
     const handleTouchEnd = () => {
@@ -164,7 +177,13 @@ export function useSwipeNavigation({ currentScreen, navigateTo, goBack }: Option
       resetDrag();
     };
 
-    const handleTouchCancel = () => resetDrag();
+    const handleTouchCancel = () => {
+      if (rafRef.current !== null) {
+        window.cancelAnimationFrame(rafRef.current);
+        rafRef.current = null;
+      }
+      resetDrag();
+    };
 
     window.addEventListener('touchstart', handleTouchStart, { passive: true });
     window.addEventListener('touchmove', handleTouchMove, { passive: false });
@@ -176,6 +195,10 @@ export function useSwipeNavigation({ currentScreen, navigateTo, goBack }: Option
       window.removeEventListener('touchmove', handleTouchMove);
       window.removeEventListener('touchend', handleTouchEnd);
       window.removeEventListener('touchcancel', handleTouchCancel);
+      if (rafRef.current !== null) {
+        window.cancelAnimationFrame(rafRef.current);
+        rafRef.current = null;
+      }
       resetDrag();
     };
   }, [currentScreen, goBack, navigateTo]);

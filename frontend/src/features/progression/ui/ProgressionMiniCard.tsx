@@ -5,18 +5,24 @@ function nextLevelXP(level: number) {
   return Math.max(100, level * level * 75);
 }
 
+function formatXP(value: number) {
+  if (value >= 10000) return `${Math.round(value / 1000)}k`;
+  return String(value);
+}
+
 export function ProgressionMiniCard() {
   const { snapshot, isLoading, load } = useProgressionStore();
 
   useEffect(() => {
-    load();
+    void load();
   }, [load]);
 
   if (isLoading && !snapshot) {
     return (
-      <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-4 text-sm text-white/60">
-        Загружаю прогресс…
-      </div>
+      <section className="app-card app-xp-hero">
+        <div className="app-eyebrow">XP</div>
+        <div className="app-xp-hero__title">Загружаю прогресс…</div>
+      </section>
     );
   }
 
@@ -24,30 +30,31 @@ export function ProgressionMiniCard() {
 
   const targetXP = nextLevelXP(snapshot.level);
   const progress = Math.min(100, Math.round((snapshot.xp / targetXP) * 100));
+  const xpLeft = Math.max(0, targetXP - snapshot.xp);
 
   return (
-    <section className="rounded-3xl border border-emerald-300/15 bg-emerald-300/[0.06] p-4 shadow-[0_18px_60px_rgba(0,0,0,0.18)]">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="text-xs uppercase tracking-[0.2em] text-emerald-100/55">Progression</p>
-          <h3 className="mt-1 text-lg font-semibold text-white">Уровень {snapshot.level}</h3>
+    <section className="app-card app-xp-hero" onClick={() => load(true)} role="button" tabIndex={0}>
+      <div className="app-xp-hero__head">
+        <div className="min-w-0">
+          <div className="app-eyebrow">XP ресурс</div>
+          <div className="app-xp-hero__title">Уровень {snapshot.level}. Опыт копится за реальные действия.</div>
         </div>
-        <div className="rounded-2xl border border-white/10 bg-black/20 px-3 py-2 text-right">
-          <p className="text-xs text-white/50">Streak</p>
-          <p className="text-sm font-semibold text-white">{snapshot.streakDays} дн.</p>
+        <div className="app-xp-hero__badge">
+          <b>{formatXP(snapshot.xp)}</b>
+          <span>XP</span>
         </div>
       </div>
 
-      <div className="mt-4 h-2 overflow-hidden rounded-full bg-white/10">
-        <div
-          className="h-full rounded-full bg-emerald-300 transition-all duration-500"
-          style={{ width: `${progress}%` }}
-        />
+      <div className="app-xp-hero__grid">
+        <div className="app-xp-hero__stat"><span>До уровня</span><b>{formatXP(xpLeft)}</b></div>
+        <div className="app-xp-hero__stat"><span>Серия</span><b>{snapshot.streakDays} дн.</b></div>
+        <div className="app-xp-hero__stat"><span>Фина</span><b>{snapshot.companionLevel}</b></div>
       </div>
 
-      <div className="mt-3 flex items-center justify-between text-xs text-white/55">
-        <span>{snapshot.xp} XP</span>
-        <span>AI companion: {snapshot.companionLevel}</span>
+      <div className="mt-4 app-xp-panel">
+        <div className="app-xp-panel__top"><span>Прогресс уровня</span><b>{progress}%</b></div>
+        <div className="app-xp-panel__track"><i style={{ width: `${progress}%` }} /></div>
+        <div className="app-xp-panel__caption">Позже XP можно будет использовать как ресурс для преимуществ и наград.</div>
       </div>
     </section>
   );

@@ -3,6 +3,7 @@ import { useAccountsStore } from '@/features/accounts/model/accounts.store';
 import { useNavigationStore } from '@/features/navigation/model/navigation.store';
 import { useTransactionsStore } from '@/features/transactions/model/transactions.store';
 import { CompanionPresence } from '@/features/companion/ui/CompanionPresence';
+import { ProgressionMiniCard } from '@/features/progression/ui/ProgressionMiniCard';
 import { ScreenTopBar } from '@/shared/ui/ScreenTopBar';
 import { formatMoney, formatTransactionDate } from '@/shared/lib/money';
 
@@ -79,6 +80,8 @@ export default function DashboardPage() {
             <div className="app-home-metric"><span>Итог</span><b>{formatMoney(data.delta, 'RUB', { sign: 'auto' })}</b></div>
           </div>
         </header>
+
+        <ProgressionMiniCard />
 
         <section className="app-section">
           <div className="app-section-title">Что сделать</div>

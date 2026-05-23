@@ -19,8 +19,8 @@ type Thought = {
 
 const SILENCE_SUBMIT_MS = 950;
 const RESUME_DELAY_MS = 420;
-const WATCHDOG_INTERVAL_MS = 1450;
-const BUBBLE_TIMEOUT_MS = 3800;
+const WATCHDOG_INTERVAL_MS = 1100;
+const BUBBLE_TIMEOUT_MS = 3200;
 const DUPLICATE_WINDOW_MS = 800;
 const DEFAULT_ACTIVE_WINDOW_SECONDS = 16;
 
@@ -146,6 +146,7 @@ export function VoiceFirstCompanionLayer() {
   const handleTextRef = useRef<(text: string) => Promise<void> | void>(() => undefined);
   const startListeningRef = useRef<() => Promise<void> | void>(() => undefined);
   const lastWatchdogKickRef = useRef(0);
+  const lastMicWarningAtRef = useRef(0);
 
   const activeWindowMs = Math.max(6000, Math.min(45000, (voiceActiveWindowSeconds || DEFAULT_ACTIVE_WINDOW_SECONDS) * 1000));
   const isCombatActive = !voiceWakeWordEnabled || activeUntil > Date.now();
@@ -240,8 +241,12 @@ export function VoiceFirstCompanionLayer() {
     }
 
     if (result === 'error') {
-      shouldResumeRef.current = false;
-      showThought('Микрофон недоступен. Можно написать команду текстом.', 'warning');
+      const now = Date.now();
+      if (now - lastMicWarningAtRef.current > 5000) {
+        lastMicWarningAtRef.current = now;
+        showThought('Микрофон перезапускается. Если Telegram запретил доступ — включи его в настройках.', 'warning');
+      }
+      if (isActiveRef.current) resumeListeningSoon(1400);
     }
   }, [canUseVoiceFirst, companionName, resumeListeningSoon, showThought, voice, voiceWakeWordEnabled]);
 
@@ -419,13 +424,21 @@ export function VoiceFirstCompanionLayer() {
   useEffect(() => {
     if (!voice.error) return;
 
-    if (voice.error === 'no-speech') {
-      resumeListeningSoon(240);
+    if (voice.error === 'microphone-denied') {
+      shouldResumeRef.current = false;
+      showThought('Нет доступа к микрофону. Разреши доступ в Telegram и включи голос снова.', 'warning');
       return;
     }
 
-    showThought('Голос не прошёл. Можно повторить или написать текстом.', 'warning');
-    resumeListeningSoon(1000);
+    if (voice.error === 'no-speech' || voice.error === 'aborted' || voice.error === 'speech-restart' || voice.error === 'start-failed') {
+      voice.reset();
+      resumeListeningSoon(260);
+      return;
+    }
+
+    showThought('Голос не прошёл. Перезапускаю микрофон.', 'warning');
+    voice.reset();
+    resumeListeningSoon(900);
   }, [resumeListeningSoon, showThought, voice.error]);
 
   useEffect(() => {
@@ -435,16 +448,16 @@ export function VoiceFirstCompanionLayer() {
     if (lastMessage.kind === 'preview') {
       armCombatMode(26000);
       voice.stopSpeaking();
-      showThought('Проверь действие. Можешь сказать: да, отмени или уточнение.', 'warning', 3600);
-      resumeListeningSoon(380);
+      showThought('Проверь действие. Скажи: да, отмени или уточнение.', 'warning', 3400);
+      resumeListeningSoon(260);
       return;
     }
 
     if (lastMessage.kind === 'error') {
       armCombatMode(26000);
       voice.stopSpeaking();
-      showThought(lastMessage.text || 'Нужно уточнение. Ответь коротко.', 'warning', 3600);
-      resumeListeningSoon(380);
+      showThought(lastMessage.text || 'Нужно уточнение. Ответь коротко.', 'warning', 3400);
+      resumeListeningSoon(260);
       return;
     }
 
@@ -452,8 +465,8 @@ export function VoiceFirstCompanionLayer() {
     showThought(lastMessage.text || 'Готово.', 'success');
 
     if (voiceRepliesEnabled && lastMessage.text && chat.pendingActions.length === 0) {
-      voice.speak(lastMessage.text, { maxDurationMs: 1200 });
-      resumeListeningSoon(1450);
+      voice.speak(lastMessage.text, { maxDurationMs: 900 });
+      resumeListeningSoon(1050);
       return;
     }
 
@@ -472,6 +485,7 @@ export function VoiceFirstCompanionLayer() {
 
       const now = Date.now();
       if (now - lastWatchdogKickRef.current < WATCHDOG_INTERVAL_MS - 80) return;
+      if (voice.state === 'error') voice.reset();
       lastWatchdogKickRef.current = now;
       void startListeningRef.current?.();
     }, WATCHDOG_INTERVAL_MS);

@@ -56,6 +56,8 @@ export function useVoiceRecognition({
   const finalWasSentRef = useRef(false);
   const fallbackTimerRef = useRef<number | null>(null);
   const restartCooldownRef = useRef<number | null>(null);
+  const processingStartedAtRef = useRef(0);
+  const lastStartFailedAtRef = useRef(0);
 
   const [state, setState] = useState<VoiceRecognitionState>('idle');
   const [transcript, setTranscript] = useState('');
@@ -98,6 +100,7 @@ export function useVoiceRecognition({
     }
 
     manualStopRef.current = false;
+    processingStartedAtRef.current = 0;
     setStateSafe('idle');
 
     if (options?.emit && text) {
@@ -127,6 +130,7 @@ export function useVoiceRecognition({
       activeRef.current = true;
       finalWasSentRef.current = false;
       clearFallbackTimer();
+      processingStartedAtRef.current = 0;
       setError(null);
       setStateSafe('listening');
     };
@@ -165,6 +169,7 @@ export function useVoiceRecognition({
       }
 
       activeRef.current = false;
+      processingStartedAtRef.current = 0;
       clearFallbackTimer();
 
       if (isSoftError) {
@@ -213,7 +218,26 @@ export function useVoiceRecognition({
       return false;
     }
 
+    const now = Date.now();
+
+    if (stateRef.current === 'processing' && now - processingStartedAtRef.current > 1400) {
+      try {
+        recognitionRef.current.abort();
+      } catch {
+        // ignore
+      }
+      activeRef.current = false;
+      processingStartedAtRef.current = 0;
+      setStateSafe('idle');
+    }
+
+    if (activeRef.current && stateRef.current === 'idle') {
+      activeRef.current = false;
+    }
+
     if (activeRef.current || stateRef.current === 'processing') return false;
+
+    if (now - lastStartFailedAtRef.current < 180) return false;
 
     transcriptRef.current = '';
     finalTranscriptRef.current = '';
@@ -229,6 +253,8 @@ export function useVoiceRecognition({
     } catch (err) {
       console.error('Speech start failed', err);
       activeRef.current = false;
+      processingStartedAtRef.current = 0;
+      lastStartFailedAtRef.current = Date.now();
       setError('start-failed');
       setStateSafe('idle');
 
@@ -260,6 +286,7 @@ export function useVoiceRecognition({
     }
 
     try {
+      processingStartedAtRef.current = Date.now();
       setStateSafe('processing');
       recognitionRef.current.stop();
 
@@ -274,6 +301,7 @@ export function useVoiceRecognition({
       }, 1200);
     } catch (err) {
       console.error('Speech stop failed', err);
+      processingStartedAtRef.current = 0;
       setError('stop-failed');
       setStateSafe('error');
     }
@@ -293,6 +321,7 @@ export function useVoiceRecognition({
     transcriptRef.current = '';
     finalTranscriptRef.current = '';
     activeRef.current = false;
+    processingStartedAtRef.current = 0;
 
     setTranscript('');
     setError(null);
