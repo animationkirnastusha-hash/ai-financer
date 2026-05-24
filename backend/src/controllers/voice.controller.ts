@@ -27,6 +27,12 @@ function sanitizeVoiceDebugDetails(details: unknown) {
     'userAgent',
     'url',
     'visibilityState',
+    'textLength',
+    'hasText',
+    'provider',
+    'model',
+    'language',
+    'originalName',
   ]);
 
   const source = details as Record<string, unknown>;
@@ -75,6 +81,11 @@ export async function getVoiceStatus(_req: Request, res: Response) {
 }
 
 export async function transcribeVoice(req: Request, res: Response) {
+  const startedAt = Date.now();
+  const userId = typeof (req as Request & { userId?: unknown }).userId === 'string'
+    ? (req as Request & { userId?: string }).userId
+    : undefined;
+
   try {
     if (!req.file) {
       return res.status(400).json({
@@ -84,12 +95,41 @@ export async function transcribeVoice(req: Request, res: Response) {
       });
     }
 
+    if (process.env.VOICE_DEBUG_LOGS !== '0') {
+      console.info('[voice-transcribe]', JSON.stringify({
+        at: new Date().toISOString(),
+        userId,
+        event: 'transcribe_received',
+        details: {
+          mimeType: req.file.mimetype,
+          originalName: req.file.originalname,
+          blobSize: req.file.size,
+        },
+      }));
+    }
+
     const result = await voiceService.transcribe({
       buffer: req.file.buffer,
       mimeType: req.file.mimetype,
       originalName: req.file.originalname,
       language: typeof req.body?.language === 'string' ? req.body.language : undefined,
     });
+
+    if (process.env.VOICE_DEBUG_LOGS !== '0') {
+      console.info('[voice-transcribe]', JSON.stringify({
+        at: new Date().toISOString(),
+        userId,
+        event: 'transcribe_finished',
+        details: {
+          provider: result.provider,
+          model: result.model,
+          language: result.language,
+          elapsedMs: Date.now() - startedAt,
+          textLength: result.text.length,
+          hasText: Boolean(result.text.trim()),
+        },
+      }));
+    }
 
     return res.json({
       success: true,
@@ -99,6 +139,19 @@ export async function transcribeVoice(req: Request, res: Response) {
       language: result.language,
     });
   } catch (error) {
+    if (process.env.VOICE_DEBUG_LOGS !== '0') {
+      console.info('[voice-transcribe]', JSON.stringify({
+        at: new Date().toISOString(),
+        userId,
+        event: 'transcribe_failed',
+        details: {
+          elapsedMs: Date.now() - startedAt,
+          error: error instanceof Error ? error.name : 'unknown',
+          code: error instanceof VoiceProviderRequestError ? error.code : error instanceof Error ? error.message : 'unknown',
+          status: error instanceof VoiceProviderRequestError ? error.status : undefined,
+        },
+      }));
+    }
     if (error instanceof VoiceTranscriptionNotConfiguredError) {
       return res.status(503).json({
         success: false,

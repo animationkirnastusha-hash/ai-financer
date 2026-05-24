@@ -24,7 +24,6 @@ function getAuthHeaders() {
   return token ? { Authorization: `Bearer ${token}` } : undefined;
 }
 
-
 type VoiceDebugDetails = Record<string, string | number | boolean | null | undefined>;
 
 function getVoiceDebugHeaders() {
@@ -47,11 +46,8 @@ export function logVoiceDebugEvent(event: string, details?: VoiceDebugDetails) {
 
   try {
     const headers = getVoiceDebugHeaders();
-
-    if (typeof navigator !== 'undefined' && typeof navigator.sendBeacon === 'function') {
-      const token = localStorage.getItem('auth-token');
-      if (!token) return;
-    }
+    const token = localStorage.getItem('auth-token');
+    if (!token) return;
 
     void fetch(`${env.apiBaseUrl}/voice/debug`, {
       method: 'POST',
@@ -83,25 +79,42 @@ export async function transcribeVoice(
   audioBlob: Blob,
   filename = 'voice.webm',
   language = 'ru',
+  timeoutMs = 34_000,
 ): Promise<VoiceTranscriptionResponse> {
   const formData = new FormData();
   formData.append('audio', audioBlob, filename);
   formData.append('language', language);
 
-  const response = await fetch(`${env.apiBaseUrl}/voice/transcribe`, {
-    method: 'POST',
-    headers: getAuthHeaders(),
-    body: formData,
-  });
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), Math.max(8_000, timeoutMs));
 
-  const payload = await response.json().catch(() => ({}));
+  try {
+    const response = await fetch(`${env.apiBaseUrl}/voice/transcribe`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: formData,
+      signal: controller.signal,
+    });
 
-  if (!response.ok) {
-    const error = new Error(payload?.message || 'voice-transcription-failed');
-    (error as Error & { code?: string; status?: number }).code = payload?.code;
-    (error as Error & { code?: string; status?: number }).status = response.status;
+    const payload = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      const error = new Error(payload?.message || 'voice-transcription-failed');
+      (error as Error & { code?: string; status?: number }).code = payload?.code;
+      (error as Error & { code?: string; status?: number }).status = response.status;
+      throw error;
+    }
+
+    return payload;
+  } catch (error) {
+    if (typeof error === 'object' && error !== null && 'name' in error && String((error as { name?: unknown }).name) === 'AbortError') {
+      const timeoutError = new Error('voice-transcription-timeout');
+      (timeoutError as Error & { code?: string; status?: number }).code = 'VOICE_TRANSCRIPTION_CLIENT_TIMEOUT';
+      (timeoutError as Error & { code?: string; status?: number }).status = 408;
+      throw timeoutError;
+    }
     throw error;
+  } finally {
+    window.clearTimeout(timeout);
   }
-
-  return payload;
 }

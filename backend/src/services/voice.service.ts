@@ -267,6 +267,25 @@ function delay(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+async function fetchWithTimeout(url: string, init: RequestInit = {}, timeoutMs = 12_000) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), Math.max(1500, timeoutMs));
+
+  try {
+    return await fetch(url, {
+      ...init,
+      signal: controller.signal,
+    });
+  } catch (error) {
+    if (typeof error === 'object' && error !== null && 'name' in error && String((error as { name?: unknown }).name) === 'AbortError') {
+      throw new VoiceProviderRequestError(getProvider(), 504, 'VOICE_PROVIDER_FETCH_TIMEOUT');
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 class VoiceService {
   getStatus(): VoiceStatus {
     const provider = getProvider();
@@ -295,13 +314,13 @@ class VoiceService {
     const formData = new FormData();
     formData.append('audio', new Blob([buffer], { type: mimeType }), filename);
 
-    const uploadResponse = await fetch('https://api.gladia.io/v2/upload', {
+    const uploadResponse = await fetchWithTimeout('https://api.gladia.io/v2/upload', {
       method: 'POST',
       headers: {
         'x-gladia-key': apiKey,
       },
       body: formData,
-    });
+    }, Number(process.env.GLADIA_UPLOAD_TIMEOUT_MS || 12_000));
     const uploadPayload = await readJsonSafely(uploadResponse);
 
     if (!uploadResponse.ok) {
@@ -330,14 +349,14 @@ class VoiceService {
       sentences: false,
     };
 
-    const createResponse = await fetch('https://api.gladia.io/v2/pre-recorded', {
+    const createResponse = await fetchWithTimeout('https://api.gladia.io/v2/pre-recorded', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'x-gladia-key': apiKey,
       },
       body: JSON.stringify(requestBody),
-    });
+    }, Number(process.env.GLADIA_CREATE_TIMEOUT_MS || 12_000));
     const createPayload = await readJsonSafely(createResponse);
 
     if (!createResponse.ok) {
@@ -349,18 +368,18 @@ class VoiceService {
       throw new VoiceProviderRequestError(provider, 502, 'VOICE_GLADIA_TRANSCRIPTION_ID_MISSING', createPayload);
     }
 
-    const timeoutMs = Number(process.env.GLADIA_POLL_TIMEOUT_MS || 25_000);
+    const timeoutMs = Number(process.env.GLADIA_POLL_TIMEOUT_MS || 28_000);
     const intervalMs = Number(process.env.GLADIA_POLL_INTERVAL_MS || 900);
     const startedAt = Date.now();
 
     while (Date.now() - startedAt < timeoutMs) {
       await delay(Math.max(350, Math.min(3000, intervalMs)));
 
-      const pollResponse = await fetch(`https://api.gladia.io/v2/pre-recorded/${id}`, {
+      const pollResponse = await fetchWithTimeout(`https://api.gladia.io/v2/pre-recorded/${id}`, {
         headers: {
           'x-gladia-key': apiKey,
         },
-      });
+      }, Number(process.env.GLADIA_POLL_REQUEST_TIMEOUT_MS || 8_000));
       const pollPayload = await readJsonSafely(pollResponse);
 
       if (!pollResponse.ok) {

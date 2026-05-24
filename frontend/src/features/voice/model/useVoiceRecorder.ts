@@ -14,9 +14,11 @@ type RecorderFormat = {
   extension: string;
 };
 
-const DEFAULT_CHUNK_MS = 4200;
+const DEFAULT_CHUNK_MS = 6500;
 const MIN_AUDIO_BYTES = 900;
 const MAX_SOFT_FAILURES = 3;
+const TRANSCRIBE_CLIENT_TIMEOUT_MS = 34_000;
+const TRANSCRIBE_IN_FLIGHT_STALE_MS = 38_000;
 
 function getBestRecorderFormat(): RecorderFormat | null {
   if (typeof MediaRecorder === 'undefined') {
@@ -50,6 +52,7 @@ export function useVoiceRecorder({ onText, lang = 'ru-RU', chunkMs = DEFAULT_CHU
   const softFailuresRef = useRef(0);
   const onTextRef = useRef(onText);
   const recordingStartedAtRef = useRef(0);
+  const uploadStartedAtRef = useRef(0);
 
   const [state, setState] = useState<VoiceRecorderState>('idle');
   const [error, setError] = useState<string | null>(null);
@@ -94,8 +97,25 @@ export function useVoiceRecorder({ onText, lang = 'ru-RU', chunkMs = DEFAULT_CHU
 
   const uploadChunk = useCallback(async (blob: Blob, format: RecorderFormat) => {
     if (uploadInFlightRef.current) {
-      logVoiceDebugEvent('transcribe_skipped_in_flight', { blobSize: blob.size, mimeType: format.mimeType, extension: format.extension });
-      return;
+      const ageMs = uploadStartedAtRef.current ? Date.now() - uploadStartedAtRef.current : 0;
+      if (ageMs > TRANSCRIBE_IN_FLIGHT_STALE_MS) {
+        logVoiceDebugEvent('transcribe_in_flight_stale_reset', {
+          blobSize: blob.size,
+          mimeType: format.mimeType,
+          extension: format.extension,
+          elapsedMs: ageMs,
+        });
+        uploadInFlightRef.current = false;
+        uploadStartedAtRef.current = 0;
+      } else {
+        logVoiceDebugEvent('transcribe_skipped_in_flight', {
+          blobSize: blob.size,
+          mimeType: format.mimeType,
+          extension: format.extension,
+          elapsedMs: ageMs,
+        });
+        return;
+      }
     }
 
     if (blob.size < MIN_AUDIO_BYTES) {
@@ -104,19 +124,23 @@ export function useVoiceRecorder({ onText, lang = 'ru-RU', chunkMs = DEFAULT_CHU
     }
 
     uploadInFlightRef.current = true;
+    uploadStartedAtRef.current = Date.now();
+    setState('uploading');
     logVoiceDebugEvent('transcribe_request_sent', { blobSize: blob.size, mimeType: format.mimeType, extension: format.extension });
 
     try {
-      const result = await transcribeVoice(blob, `voice.${format.extension}`, toSttLanguage(lang));
+      const result = await transcribeVoice(blob, `voice.${format.extension}`, toSttLanguage(lang), TRANSCRIBE_CLIENT_TIMEOUT_MS);
       softFailuresRef.current = 0;
+      const text = result.text?.trim();
       logVoiceDebugEvent('transcribe_request_success', {
         status: 200,
         blobSize: blob.size,
         mimeType: format.mimeType,
         extension: format.extension,
+        elapsedMs: uploadStartedAtRef.current ? Date.now() - uploadStartedAtRef.current : 0,
+        textLength: text?.length ?? 0,
+        hasText: Boolean(text),
       });
-
-      const text = result.text?.trim();
       if (text) {
         await onTextRef.current(text);
       }
@@ -129,6 +153,7 @@ export function useVoiceRecorder({ onText, lang = 'ru-RU', chunkMs = DEFAULT_CHU
         blobSize: blob.size,
         mimeType: format.mimeType,
         extension: format.extension,
+        elapsedMs: uploadStartedAtRef.current ? Date.now() - uploadStartedAtRef.current : 0,
       });
 
       if (code === 'VOICE_TRANSCRIPTION_NOT_CONFIGURED' || status === 503) {
@@ -146,6 +171,8 @@ export function useVoiceRecorder({ onText, lang = 'ru-RU', chunkMs = DEFAULT_CHU
       }
     } finally {
       uploadInFlightRef.current = false;
+      uploadStartedAtRef.current = 0;
+      setState((current) => (current === 'uploading' ? 'recording' : current));
     }
   }, [lang, stopInternal]);
 
@@ -232,6 +259,7 @@ export function useVoiceRecorder({ onText, lang = 'ru-RU', chunkMs = DEFAULT_CHU
         chunksRef.current = [];
         activeFormatRef.current = null;
         uploadInFlightRef.current = false;
+        uploadStartedAtRef.current = 0;
         setState((current) => (current === 'error' ? current : 'idle'));
       };
 
@@ -261,6 +289,8 @@ export function useVoiceRecorder({ onText, lang = 'ru-RU', chunkMs = DEFAULT_CHU
     setError(null);
     setState('idle');
     softFailuresRef.current = 0;
+    uploadInFlightRef.current = false;
+    uploadStartedAtRef.current = 0;
   }, [stopInternal]);
 
   return {
