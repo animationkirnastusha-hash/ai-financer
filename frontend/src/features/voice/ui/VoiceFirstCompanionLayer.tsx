@@ -107,6 +107,7 @@ export function VoiceFirstCompanionLayer() {
   const lastAssistantMessageKeyRef = useRef('');
   const lastThoughtRef = useRef<{ text: string; tone: BubbleTone; at: number }>({ text: '', tone: 'neutral', at: 0 });
   const isProcessingVoiceRef = useRef(false);
+  const voiceCancelRef = useRef<() => void>(() => undefined);
 
   const showThought = useCallback((text: string, tone: BubbleTone = 'neutral', timeoutMs = BUBBLE_TIMEOUT_MS) => {
     const cleanText = compactBubble(text);
@@ -300,10 +301,14 @@ export function VoiceFirstCompanionLayer() {
     showThought(lastMessage.text || 'Готово.', 'success', 1800);
   }, [chat.messages, showThought, voice]);
 
+  useEffect(() => {
+    voiceCancelRef.current = voice.cancel;
+  }, [voice.cancel]);
+
   useEffect(() => () => {
     if (bubbleTimerRef.current !== null) window.clearTimeout(bubbleTimerRef.current);
-    voice.cancel();
-  }, [voice]);
+    voiceCancelRef.current();
+  }, []);
 
   const mood = useMemo<CompanionMood>(() => {
     if (chat.pendingActions.length > 0) return 'confirm';
