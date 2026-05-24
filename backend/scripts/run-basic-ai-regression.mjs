@@ -233,6 +233,32 @@ async function resetBeforeRun() {
   return { ok: true, result: res.data };
 }
 
+async function resetFinanceContext(label = 'finance context') {
+  const res = await maybeApi('/users/me/reset', { method: 'POST', body: { mode: 'finance' } });
+  if (res.error) {
+    throw Object.assign(new Error(`${label} reset failed`), { details: res.error.payload ?? res.error.message });
+  }
+  state.accounts = [];
+  state.sections = [];
+  state.categories = [];
+  state.transactions = [];
+  state.goals = [];
+  state.budgets = [];
+  state.recurring = [];
+  state.cleanup = [];
+  return res.data;
+}
+
+function cleanAiName(value) {
+  return String(value || '')
+    .replace(/\bai\b/gi, '')
+    .replace(/\btransfer\b/gi, '')
+    .replace(/\bfrom\b/gi, '')
+    .replace(/\bto\b/gi, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 async function createAccount(name, balance = 10000, type = 'cash') {
   const res = await api('/accounts', { method: 'POST', body: { name, type, currency: 'RUB', balance } });
   const account = res.data?.account ?? res.data;
@@ -570,9 +596,15 @@ async function main() {
     return result;
   }, { skip: !config.runAI && 'TEST_AI=0' });
 
+  await test('AI isolation: reset finance data before mutation AI tests', async () => {
+    const result = await resetFinanceContext('AI mutation phase');
+    state.prefix = `База ${randomCyrillic(7)}`;
+    return { ok: true, prefix: state.prefix, result };
+  }, { skip: !config.runAI && 'TEST_AI=0' });
+
   await test('AI: create account with confirmation', async () => {
     const before = await listAccounts();
-    const expectedName = `${state.prefix} ai счет`;
+    const expectedName = cleanAiName(`${state.prefix} новый счёт`);
     const beforeMatches = before.filter((item) => String(item.name || '').includes(expectedName)).length;
     const execution = await executeAi(`Фина, создай новый наличный счёт с названием ${expectedName}, валюта рубли, баланс 0 рублей`);
     const after = await listAccounts();
@@ -593,24 +625,24 @@ async function main() {
   await test('AI: rename account and make it primary/default', async () => {
     const account = await createAccount(`${state.prefix} старое имя`, 1000, 'card');
     const newName = `${state.prefix} основная карта`;
-    await executeAi(`Фина, переименуй счёт ${account.name} в ${newName}`);
-    await executeAi(`Фина, сделай счёт ${newName} основным`);
+    const renameExecution = await executeAi(`Фина, переименуй счёт ${account.name} в ${newName}`);
+    const primaryExecution = await executeAi(`Фина, сделай счёт ${newName} основным`);
     const accounts = await listAccounts();
-    assert(accounts.some((item) => item.id === account.id || String(item.name || '').includes(newName)), 'Renamed/default account not found', accounts);
+    assert(accounts.some((item) => item.id === account.id || String(item.name || '').includes(newName)), 'Renamed/default account not found', { accountNames: accounts.map((item) => item.name), renameExecution, primaryExecution });
     return { accountId: account.id };
   }, { skip: !config.runAI && 'TEST_AI=0' });
 
   await test('AI: create expense with category/section through planner contract', async () => {
-    const account = await createAccount(`${state.prefix} ai расход`, 20000, 'card');
+    const account = await createAccount(cleanAiName(`${state.prefix} счёт расходов`), 20000, 'card');
     const before = await listTransactions();
-    await executeAi(`Фина, такси 650 рублей со счёта ${account.name}, категория такси, раздел транспорт`);
+    const execution = await executeAi(`Фина, создай расход такси 650 рублей со счёта ${account.name}, категория такси, раздел транспорт`);
     const after = await listTransactions();
-    assert(after.length >= before.length + 1, 'AI did not create expense transaction', { before: before.length, after: after.length });
+    assert(after.length >= before.length + 1, 'AI did not create expense transaction', { before: before.length, after: after.length, execution });
     return { before: before.length, after: after.length };
   }, { skip: !config.runAI && 'TEST_AI=0' });
 
   await test('AI: create income and then edit last income without duplicate', async () => {
-    const account = await createAccount(`${state.prefix} ai доход`, 1000, 'cash');
+    const account = await createAccount(cleanAiName(`${state.prefix} счёт доходов`), 1000, 'cash');
     await executeAi(`Фина, доход 3000 рублей на счёт ${account.name}, описание тестовый доход`);
     const afterIncome = await listTransactions();
     const incomeCount = afterIncome.length;
@@ -624,20 +656,20 @@ async function main() {
   }, { skip: !config.runAI && 'TEST_AI=0' });
 
   await test('AI: transfer between accounts', async () => {
-    const from = await createAccount(`${state.prefix} transfer from`, 10000, 'card');
-    const to = await createAccount(`${state.prefix} transfer to`, 1000, 'cash');
+    const from = await createAccount(cleanAiName(`${state.prefix} счёт источник`), 10000, 'card');
+    const to = await createAccount(cleanAiName(`${state.prefix} счёт получатель`), 1000, 'cash');
     const before = await listTransactions();
-    await executeAi(`Фина, переведи 1200 рублей со счёта ${from.name} на счёт ${to.name}`);
+    const execution = await executeAi(`Фина, переведи 1200 рублей со счёта ${from.name} на счёт ${to.name}`);
     const after = await listTransactions();
-    assert(after.length >= before.length + 1, 'AI did not create transfer', { before: before.length, after: after.length });
+    assert(after.length >= before.length + 1, 'AI did not create transfer', { before: before.length, after: after.length, execution });
     return { before: before.length, after: after.length };
   }, { skip: !config.runAI && 'TEST_AI=0' });
 
   await test('AI: goals lifecycle', async () => {
-    const name = `${state.prefix} ai цель`;
-    await executeAi(`Фина, создай цель ${name} на 75000 рублей`);
+    const name = cleanAiName(`${state.prefix} цель отпуска`);
+    const createExecution = await executeAi(`Фина, создай цель ${name} на 75000 рублей`);
     let goals = await listGoals();
-    assert(goals.some((item) => String(item.title || item.name || '').includes(name)), 'AI did not create goal', goals);
+    assert(goals.some((item) => String(item.title || item.name || '').includes(name)), 'AI did not create goal', { goalNames: goals.map((item) => item.title || item.name), createExecution });
     await executeAi(`Фина, измени цель ${name}, сумма 80000 рублей`);
     goals = await listGoals();
     assert(goals.some((item) => String(item.title || item.name || '').includes(name)), 'AI goal disappeared after update', goals);
@@ -645,14 +677,14 @@ async function main() {
   }, { skip: !config.runAI && 'TEST_AI=0' });
 
   await test('AI: taxonomy lifecycle', async () => {
-    const sectionName = `${state.prefix} ai раздел`;
-    const categoryName = `${state.prefix} ai категория`;
-    await executeAi(`Фина, создай раздел ${sectionName}`);
-    await executeAi(`Фина, создай категорию ${categoryName} в разделе ${sectionName}`);
+    const sectionName = cleanAiName(`${state.prefix} раздел покупок`);
+    const categoryName = cleanAiName(`${state.prefix} категория такси`);
+    const sectionExecution = await executeAi(`Фина, создай раздел ${sectionName}`);
+    const categoryExecution = await executeAi(`Фина, создай категорию ${categoryName} в разделе ${sectionName}`);
     const sections = await listSections();
     const categories = await listCategories();
-    assert(sections.some((item) => String(item.name || '').includes(sectionName)), 'AI did not create section', sections);
-    assert(categories.some((item) => String(item.name || '').includes(categoryName)), 'AI did not create category', categories);
+    assert(sections.some((item) => String(item.name || '').includes(sectionName)), 'AI did not create section', { sectionNames: sections.map((item) => item.name), sectionExecution });
+    assert(categories.some((item) => String(item.name || '').includes(categoryName)), 'AI did not create category', { categoryNames: categories.map((item) => item.name), categoryExecution });
     return { sections: sections.length, categories: categories.length };
   }, { skip: !config.runAI && 'TEST_AI=0' });
 

@@ -1,54 +1,23 @@
-# Backend base AI testing for testers
+# Base AI testing for testers
 
-Run this from the backend folder after deployment:
+Run this on an isolated test user/database.
 
 ```bash
 cd /root/ai-financer/backend
 TEST_TELEGRAM_ID=516730814 TEST_ADMIN=1 npm run test:base-ai
 ```
 
-The test runner creates or reuses a test user, creates a JWT automatically, then checks the base product endpoints and AI actions.
+The runner automatically creates a test token when needed and resets finance data for the test user before tests. Do not run destructive tests on a real user.
 
-Reports are saved to:
-
-```text
-test-results/base-ai-regression-*.md
-test-results/base-ai-regression-*.json
-```
-
-## What must pass before Premium work
-
-- auth
-- read endpoints
-- accounts
-- sections/categories
-- transactions
-- goals
-- budgets
-- recurring payments
-- settings/onboarding/progression/referral/analytics
-- notifications
-- admin dashboard endpoints
-- AI account lifecycle
-- AI transaction lifecycle
-- AI edit last income without duplicate
-- AI transfer
-- AI goals lifecycle
-- AI taxonomy lifecycle
-- AI cancel without mutation
-- AI 4+ action base limit
-
-## Notes
-
-This suite is a black-box API test. It does not implement financial parsers and does not extract amount/account/category from natural language. It only sends commands to the backend and verifies API state.
-
-Use destructive checks only on a disposable database:
+Optional flags:
 
 ```bash
-TEST_DESTRUCTIVE=1 npm run test:base-ai
+TEST_AI=0 npm run test:base-ai          # backend CRUD only
+TEST_STRICT_AI=0 npm run test:base-ai   # AI issues as softer checks
+TEST_RESET_BEFORE=0 npm run test:base-ai # keep existing test data
 ```
 
 
-### Patch 65
+## Patch 68 update
 
-The console suite uses an explicit account-create command for the AI account test: account type, currency and balance are included so the test checks backend capability rather than a missing-details clarification.
+The base AI suite isolates manual CRUD tests from AI mutation tests. This prevents the AI planner from selecting accounts created by the earlier manual CRUD phase. The suite still sends normal user commands and verifies results through API state.
