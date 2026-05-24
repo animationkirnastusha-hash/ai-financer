@@ -2,7 +2,7 @@ import { Router } from 'express';
 import multer from 'multer';
 
 import { authMiddleware } from '../middleware/auth';
-import { getVoiceStatus, logVoiceDebug, transcribeVoice } from '../controllers/voice.controller';
+import { getVoiceCueAudio, getVoiceStatus, logVoiceDebug, transcribeVoice } from '../controllers/voice.controller';
 
 const router = Router();
 const maxAudioMb = Number(process.env.VOICE_MAX_AUDIO_MB || 8);
@@ -17,5 +17,6 @@ const upload = multer({
 router.get('/status', authMiddleware, getVoiceStatus);
 router.post('/transcribe', authMiddleware, upload.single('audio'), transcribeVoice);
 router.post('/debug', authMiddleware, logVoiceDebug);
+router.get('/tts/:cue', authMiddleware, getVoiceCueAudio);
 
 export default router;

@@ -118,3 +118,30 @@ export async function transcribeVoice(
     window.clearTimeout(timeout);
   }
 }
+
+export type VoiceCue = 'here' | 'listening' | 'thinking' | 'done' | 'not-heard' | 'confirm';
+
+export async function getVoiceCueAudio(cue: VoiceCue, timeoutMs = 12_000): Promise<Blob> {
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), Math.max(4_000, timeoutMs));
+
+  try {
+    const response = await fetch(`${env.apiBaseUrl}/voice/tts/${cue}`, {
+      method: 'GET',
+      headers: getAuthHeaders(),
+      signal: controller.signal,
+    });
+
+    if (!response.ok) {
+      const payload = await response.json().catch(() => ({}));
+      const error = new Error(payload?.message || 'voice-tts-failed');
+      (error as Error & { code?: string; status?: number }).code = payload?.code;
+      (error as Error & { code?: string; status?: number }).status = response.status;
+      throw error;
+    }
+
+    return response.blob();
+  } finally {
+    window.clearTimeout(timeout);
+  }
+}

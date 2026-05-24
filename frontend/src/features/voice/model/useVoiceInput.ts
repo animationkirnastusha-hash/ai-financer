@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
-import { logVoiceDebugEvent } from '@/features/voice/api/voice.api';
+import { getVoiceCueAudio, logVoiceDebugEvent, type VoiceCue } from '@/features/voice/api/voice.api';
 import { useVoiceRecognition } from '@/features/voice/model/useVoiceRecognition';
 import { useVoiceRecorder } from '@/features/voice/model/useVoiceRecorder';
 import type {
@@ -34,6 +34,8 @@ export function useVoiceInput({
   sessionMs = 8500,
 }: UseVoiceInputParams) {
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const audioUrlRef = useRef<string | null>(null);
   const [permissionPrimed, setPermissionPrimed] = useState(false);
   const [permissionError, setPermissionError] = useState<string | null>(null);
   const permissionRequestInFlightRef = useRef(false);
@@ -49,6 +51,22 @@ export function useVoiceInput({
     lang,
     onFinalText: onText,
   });
+
+  const stopCurrentAudio = useCallback(() => {
+    const currentAudio = audioRef.current;
+    if (currentAudio) {
+      currentAudio.pause();
+      currentAudio.src = '';
+      audioRef.current = null;
+    }
+
+    if (audioUrlRef.current) {
+      URL.revokeObjectURL(audioUrlRef.current);
+      audioUrlRef.current = null;
+    }
+
+    setIsSpeaking(false);
+  }, []);
 
   const mode = useMemo<VoiceInputMode>(() => {
     return recorder.isSupported ? 'recorder' : 'speech';
@@ -130,29 +148,76 @@ export function useVoiceInput({
 
   const cancel = useCallback(() => {
     window.speechSynthesis?.cancel();
-    setIsSpeaking(false);
+    stopCurrentAudio();
     setPermissionError(null);
     recorder.cancelRecording();
     speech.cancelListening();
-  }, [recorder, speech]);
+  }, [recorder, speech, stopCurrentAudio]);
 
   const reset = useCallback(() => {
     window.speechSynthesis?.cancel();
-    setIsSpeaking(false);
+    stopCurrentAudio();
     setPermissionError(null);
     recorder.reset();
     speech.reset();
-  }, [recorder, speech]);
+  }, [recorder, speech, stopCurrentAudio]);
 
-  const speak = useCallback((_text: string, _options?: { maxDurationMs?: number }) => {
+  const speak = useCallback((text: string, options?: { maxDurationMs?: number; cue?: VoiceCue }) => {
+    const cue = options?.cue;
+    if (!cue) return;
+
     window.speechSynthesis?.cancel();
-    setIsSpeaking(false);
-  }, []);
+    stopCurrentAudio();
+    setIsSpeaking(true);
+
+    void getVoiceCueAudio(cue)
+      .then((blob) => {
+        const url = URL.createObjectURL(blob);
+        const audio = new Audio(url);
+        audioRef.current = audio;
+        audioUrlRef.current = url;
+
+        const cleanup = () => {
+          if (audioRef.current === audio) audioRef.current = null;
+          if (audioUrlRef.current === url) audioUrlRef.current = null;
+          URL.revokeObjectURL(url);
+          setIsSpeaking(false);
+        };
+
+        audio.onended = cleanup;
+        audio.onerror = cleanup;
+        void audio.play().catch((error) => {
+          logVoiceDebugEvent('tts_playback_failed', {
+            error: error instanceof Error ? error.name || error.message : 'unknown',
+            code: cue,
+          });
+          cleanup();
+        });
+
+        if (options?.maxDurationMs) {
+          window.setTimeout(() => {
+            if (audioRef.current === audio) {
+              audio.pause();
+              cleanup();
+            }
+          }, Math.max(700, options.maxDurationMs));
+        }
+      })
+      .catch((error) => {
+        logVoiceDebugEvent('tts_request_failed', {
+          error: error instanceof Error ? error.name || error.message : 'unknown',
+          code: typeof error === 'object' && error !== null && 'code' in error ? String((error as { code?: unknown }).code) : cue,
+          status: typeof error === 'object' && error !== null && 'status' in error ? Number((error as { status?: unknown }).status) : 0,
+          textLength: text.length,
+        });
+        setIsSpeaking(false);
+      });
+  }, [stopCurrentAudio]);
 
   const stopSpeaking = useCallback(() => {
     window.speechSynthesis?.cancel();
-    setIsSpeaking(false);
-  }, []);
+    stopCurrentAudio();
+  }, [stopCurrentAudio]);
 
   const state = useMemo<VoiceInputState>(() => {
     if (isSpeaking) return 'speaking';

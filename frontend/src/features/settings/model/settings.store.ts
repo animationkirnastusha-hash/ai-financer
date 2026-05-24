@@ -44,8 +44,8 @@ const defaultSettings: AppSettings = {
 
   voiceEnabled: true,
   voiceBetaEnabled: true,
-  voiceRepliesEnabled: false,
-  voiceAlwaysOnEnabled: false,
+  voiceRepliesEnabled: true,
+  voiceAlwaysOnEnabled: true,
   voicePermissionPrompted: false,
   textInputEnabled: true,
   aiInsightsEnabled: true,
@@ -80,7 +80,8 @@ function loadSettings(): AppSettings {
       companionName: FIXED_COMPANION_NAME,
       voiceWakeWordEnabled: true,
       voiceActiveWindowSeconds: normalizeActiveWindow(parsed.voiceActiveWindowSeconds),
-      voiceAlwaysOnEnabled: Boolean(parsed.voiceAlwaysOnEnabled),
+      voiceRepliesEnabled: parsed.voiceRepliesEnabled === false ? false : true,
+      voiceAlwaysOnEnabled: parsed.voiceAlwaysOnEnabled === false ? false : true,
       voicePermissionPrompted: Boolean(parsed.voicePermissionPrompted),
       textInputEnabled: parsed.textInputEnabled === false ? false : true,
     };
@@ -99,7 +100,7 @@ function saveSettings(state: AppSettings) {
       voiceActiveWindowSeconds: normalizeActiveWindow(state.voiceActiveWindowSeconds),
       voiceEnabled: state.voiceEnabled,
       voiceBetaEnabled: state.voiceBetaEnabled,
-      voiceRepliesEnabled: false,
+      voiceRepliesEnabled: state.voiceRepliesEnabled,
       voiceAlwaysOnEnabled: state.voiceAlwaysOnEnabled,
       voicePermissionPrompted: state.voicePermissionPrompted,
       textInputEnabled: state.textInputEnabled,
@@ -150,8 +151,8 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
     saveSettings(get());
   },
 
-  setVoiceRepliesEnabled: () => {
-    set({ voiceRepliesEnabled: false });
+  setVoiceRepliesEnabled: (value) => {
+    set({ voiceRepliesEnabled: value });
     saveSettings(get());
   },
 

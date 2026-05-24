@@ -6,6 +6,11 @@ import {
   VoiceTranscriptionNotConfiguredError,
   voiceService,
 } from '../services/voice.service';
+import {
+  VoiceTtsNotConfiguredError,
+  VoiceTtsProviderError,
+  voiceTtsService,
+} from '../services/voice-tts.service';
 
 
 function sanitizeVoiceDebugDetails(details: unknown) {
@@ -77,6 +82,7 @@ export async function getVoiceStatus(_req: Request, res: Response) {
   return res.json({
     success: true,
     ...voiceService.getStatus(),
+    ...voiceTtsService.getStatus(),
   });
 }
 
@@ -198,6 +204,73 @@ export async function transcribeVoice(req: Request, res: Response) {
       success: false,
       message: 'Voice transcription failed.',
       code: 'VOICE_TRANSCRIPTION_FAILED',
+    });
+  }
+}
+
+
+export async function getVoiceCueAudio(req: Request, res: Response) {
+  const rawCue = typeof req.params.cue === 'string' ? req.params.cue : '';
+
+  if (!voiceTtsService.isCue(rawCue)) {
+    return res.status(404).json({
+      success: false,
+      code: 'VOICE_TTS_CUE_NOT_FOUND',
+      message: 'Voice cue not found.',
+    });
+  }
+
+  try {
+    const result = await voiceTtsService.getCueAudio(rawCue);
+
+    if (process.env.VOICE_DEBUG_LOGS !== '0') {
+      const userId = typeof (req as Request & { userId?: unknown }).userId === 'string'
+        ? (req as Request & { userId?: string }).userId
+        : undefined;
+      console.info('[voice-tts]', JSON.stringify({
+        at: new Date().toISOString(),
+        userId,
+        event: 'tts_cue_served',
+        details: {
+          cue: result.cue,
+          cached: result.cached,
+          textLength: result.text.length,
+        },
+      }));
+    }
+
+    res.setHeader('Content-Type', result.contentType);
+    res.setHeader('Cache-Control', 'private, max-age=604800');
+    res.setHeader('X-Voice-Cue', result.cue);
+    return res.send(result.buffer);
+  } catch (error) {
+    if (error instanceof VoiceTtsNotConfiguredError) {
+      return res.status(503).json({
+        success: false,
+        code: 'VOICE_TTS_NOT_CONFIGURED',
+        message: 'Voice TTS is not configured on the server.',
+      });
+    }
+
+    if (error instanceof VoiceTtsProviderError) {
+      console.error('Voice TTS provider failed:', {
+        status: error.status,
+        code: error.code,
+        details: error.details,
+      });
+
+      return res.status(error.status >= 400 && error.status < 600 ? error.status : 502).json({
+        success: false,
+        code: error.code,
+        message: 'Voice TTS provider failed.',
+      });
+    }
+
+    console.error('Voice TTS failed:', error);
+    return res.status(500).json({
+      success: false,
+      code: 'VOICE_TTS_FAILED',
+      message: 'Voice TTS failed.',
     });
   }
 }
