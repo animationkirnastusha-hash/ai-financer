@@ -28,6 +28,7 @@ const config = {
   expectAdmin: bool(process.env.TEST_ADMIN, false),
   allowDestructive: bool(process.env.TEST_DESTRUCTIVE, false),
   keepData: bool(process.env.TEST_KEEP_DATA, false),
+  resetBefore: bool(process.env.TEST_RESET_BEFORE, true),
   reportOnly: args.has('--report-only'),
 };
 
@@ -214,6 +215,24 @@ async function ensureAuth() {
   return me.data.user;
 }
 
+async function resetBeforeRun() {
+  if (!config.resetBefore) return { skipped: true };
+  const res = await maybeApi('/users/me/reset', { method: 'POST', body: { mode: 'finance' } });
+  if (res.error) {
+    warn('Pre-test finance reset failed; continuing with existing test user data', res.error.payload ?? res.error.message);
+    return { ok: false, error: res.error.payload ?? res.error.message };
+  }
+  state.accounts = [];
+  state.sections = [];
+  state.categories = [];
+  state.transactions = [];
+  state.goals = [];
+  state.budgets = [];
+  state.recurring = [];
+  state.cleanup = [];
+  return { ok: true, result: res.data };
+}
+
 async function createAccount(name, balance = 10000, type = 'cash') {
   const res = await api('/accounts', { method: 'POST', body: { name, type, currency: 'RUB', balance } });
   const account = res.data?.account ?? res.data;
@@ -288,30 +307,51 @@ function pendingId(result) {
   return result?.pendingActionId || result?.result?.pendingActionId || result?.pendingAction?.id || result?.meta?.pendingActionId || '';
 }
 
-async function latestPendingId(command = '') {
+async function latestPending(command = '', sinceMs = 0) {
   const res = await maybeApi('/ai/pending-actions');
-  if (res.error) return '';
+  if (res.error) return null;
   const items = pickArrayPayload(res.data);
+  const normalizedCommand = String(command || '').trim();
   const pending = items
-    .filter((item) => item?.status === 'pending' && (!command || String(item.command || '').trim() === command.trim()))
-    .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
-  return pending[0]?.id || '';
+    .filter((item) => item?.status === 'pending')
+    .filter((item) => {
+      if (!sinceMs) return true;
+      const created = new Date(item.createdAt || item.updatedAt || 0).getTime();
+      return Number.isFinite(created) && created >= sinceMs - 2_000;
+    })
+    .sort((a, b) => {
+      const aCommand = String(a.command || '').trim();
+      const bCommand = String(b.command || '').trim();
+      const aExact = normalizedCommand && aCommand === normalizedCommand ? 1 : 0;
+      const bExact = normalizedCommand && bCommand === normalizedCommand ? 1 : 0;
+      if (aExact !== bExact) return bExact - aExact;
+      return new Date(b.createdAt || b.updatedAt || 0).getTime() - new Date(a.createdAt || a.updatedAt || 0).getTime();
+    });
+  return pending[0] || null;
+}
+
+async function latestPendingId(command = '', sinceMs = 0) {
+  const pending = await latestPending(command, sinceMs);
+  return pending?.id || '';
 }
 
 async function executeAi(command) {
+  const beforeParseMs = Date.now();
   const prepared = await aiParse(command);
   assert(prepared?.success !== false, `AI prepare failed for: ${command}`, prepared);
 
   let id = pendingId(prepared);
-  if (!id && prepared?.intent === 'batch' && !prepared?.executed) id = await latestPendingId(command);
+  if (!id && (prepared?.requiresConfirmation || (prepared?.intent === 'batch' && !prepared?.executed))) {
+    id = await latestPendingId(command, beforeParseMs);
+  }
 
-  const shouldConfirm = Boolean(prepared?.requiresConfirmation || (prepared?.intent === 'batch' && !prepared?.executed && id));
+  const shouldConfirm = Boolean(prepared?.requiresConfirmation || (prepared?.intent === 'batch' && !prepared?.executed));
   if (shouldConfirm) {
-    assert(Boolean(id), `AI prepared an unexecuted batch but did not expose pendingActionId: ${command}`, prepared);
+    assert(Boolean(id), `AI prepared an unexecuted action but did not expose pendingActionId: ${command}`, { prepared, latestPending: await latestPending(command, beforeParseMs) });
     const confirmed = await aiConfirm(id);
-    assert(confirmed?.success !== false, `AI confirm failed for: ${command}`, { prepared, confirmed });
-    assert(confirmed?.executed === true || confirmed?.requiresConfirmation === false, `AI confirm did not execute action: ${command}`, { prepared, confirmed });
-    return { prepared, confirmed };
+    assert(confirmed?.success !== false, `AI confirm failed for: ${command}`, { prepared, confirmed, pendingActionId: id });
+    assert(confirmed?.executed === true || confirmed?.requiresConfirmation === false, `AI confirm did not execute action: ${command}`, { prepared, confirmed, pendingActionId: id });
+    return { prepared, confirmed, pendingActionId: id };
   }
 
   assert(prepared?.executed === true || prepared?.intent !== 'batch', `AI returned unexecuted batch without pending action: ${command}`, prepared);
@@ -401,6 +441,7 @@ async function main() {
   console.log(`AI tests: ${config.runAI ? 'on' : 'off'}`);
   console.log(`Strict AI: ${config.strictAI ? 'on' : 'off'}`);
   console.log(`Token source: ${config.token ? 'ok' : 'missing'}`);
+  console.log(`Reset before run: ${config.resetBefore ? 'on' : 'off'}`);
   console.log('');
 
   if (config.reportOnly) return writeReport();
@@ -415,6 +456,10 @@ async function main() {
     const user = await ensureAuth();
     return { userId: user.id, isAdmin: Boolean(user.isAdmin) };
   });
+
+  await test('test isolation: reset finance data for test user', async () => {
+    return resetBeforeRun();
+  }, { skip: !config.resetBefore && 'TEST_RESET_BEFORE=0' });
 
   await test('read contracts: all base endpoints', async () => {
     await requireToken();
