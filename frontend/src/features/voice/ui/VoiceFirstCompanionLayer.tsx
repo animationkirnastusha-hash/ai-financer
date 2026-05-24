@@ -73,9 +73,63 @@ function isVoiceCancel(text: string) {
   return ['нет', 'не надо', 'отмена', 'отмени', 'отменить', 'cancel', 'no'].includes(value);
 }
 
+
+function levenshteinDistance(a: string, b: string) {
+  if (a === b) return 0;
+  if (!a.length) return b.length;
+  if (!b.length) return a.length;
+
+  const previous = Array.from({ length: b.length + 1 }, (_, index) => index);
+  const current = new Array<number>(b.length + 1);
+
+  for (let i = 1; i <= a.length; i += 1) {
+    current[0] = i;
+    for (let j = 1; j <= b.length; j += 1) {
+      const substitutionCost = a[i - 1] === b[j - 1] ? 0 : 1;
+      current[j] = Math.min(
+        current[j - 1] + 1,
+        previous[j] + 1,
+        previous[j - 1] + substitutionCost,
+      );
+    }
+    for (let j = 0; j <= b.length; j += 1) previous[j] = current[j];
+  }
+
+  return previous[b.length];
+}
+
+function looksLikeWakeToken(token: string) {
+  const value = normalizeForWake(token);
+  if (!value) return false;
+
+  const wakeTokens = ['фина', 'финна', 'фине', 'фину', 'фины', 'fina'];
+  if (wakeTokens.includes(value)) return true;
+
+  if (value.length >= 3 && value.length <= 7) {
+    return wakeTokens.some((wakeToken) => levenshteinDistance(value, wakeToken) <= 1);
+  }
+
+  return false;
+}
+
+function stripWakeTokenPrefix(rawText: string) {
+  const parts = rawText.trim().split(/\s+/);
+  if (!parts.length) return { hasWakeWord: false, command: rawText.trim() };
+
+  const firstMeaningfulIndex = ['эй', 'ок', 'окей', 'слушай'].includes(normalizeForWake(parts[0])) ? 1 : 0;
+  const token = parts[firstMeaningfulIndex] ?? '';
+
+  if (!looksLikeWakeToken(token)) return { hasWakeWord: false, command: rawText.trim() };
+
+  return {
+    hasWakeWord: true,
+    command: parts.slice(firstMeaningfulIndex + 1).join(' ').replace(/^[,.:;!\-—\s]+/, '').trim(),
+  };
+}
+
 function isWakeOnlyCommand(text: string) {
   const value = normalizeDecision(text);
-  return value === normalizeForWake(FIXED_COMPANION_NAME) || value === 'финна';
+  return looksLikeWakeToken(value);
 }
 
 function pendingHasClarification(pending: unknown) {
@@ -91,11 +145,18 @@ function stripWakeWord(rawText: string) {
 
   if (!name) return { hasWakeWord: false, command: source };
 
+  const fuzzyPrefix = stripWakeTokenPrefix(source);
+  if (fuzzyPrefix.hasWakeWord) return fuzzyPrefix;
+
   const aliases = Array.from(new Set([
     FIXED_COMPANION_NAME,
     name,
     'Фина',
     'Финна',
+    'Фине',
+    'Фину',
+    'Фины',
+    'Fina',
   ].map((value) => value.trim()).filter(Boolean)));
 
   const matchedAlias = aliases.find((alias) => {

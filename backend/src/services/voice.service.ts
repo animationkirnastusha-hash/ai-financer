@@ -11,8 +11,21 @@ const SUPPORTED_MIME_PREFIXES = [
   'audio/mp3',
   'audio/wav',
   'audio/x-wav',
+  'audio/wave',
   'audio/aac',
   'audio/ogg',
+  'audio/x-m4a',
+];
+
+const SUPPORTED_AUDIO_EXTENSIONS = [
+  '.webm',
+  '.mp4',
+  '.m4a',
+  '.mp3',
+  '.mpeg',
+  '.wav',
+  '.aac',
+  '.ogg',
 ];
 
 type SttProvider = 'gladia' | 'deepgram' | 'assemblyai' | 'mock';
@@ -132,14 +145,38 @@ function normalizeMimeType(mimeType: string) {
   return value || 'audio/webm';
 }
 
-function assertSupportedAudio(buffer: Buffer, mimeType: string) {
+function hasSupportedAudioExtension(originalName: string) {
+  const value = originalName.toLowerCase().trim();
+  return SUPPORTED_AUDIO_EXTENSIONS.some((extension) => value.endsWith(extension));
+}
+
+function inferMimeType(mimeType: string, originalName: string) {
+  const normalized = normalizeMimeType(mimeType);
+  const name = originalName.toLowerCase().trim();
+
+  if (normalized !== 'application/octet-stream' && normalized !== 'binary/octet-stream') return normalized;
+
+  if (name.endsWith('.webm')) return 'audio/webm';
+  if (name.endsWith('.mp4') || name.endsWith('.m4a')) return 'audio/mp4';
+  if (name.endsWith('.mp3') || name.endsWith('.mpeg')) return 'audio/mpeg';
+  if (name.endsWith('.wav')) return 'audio/wav';
+  if (name.endsWith('.aac')) return 'audio/aac';
+  if (name.endsWith('.ogg')) return 'audio/ogg';
+
+  return normalized;
+}
+
+function assertSupportedAudio(buffer: Buffer, mimeType: string, originalName = '') {
   if (!buffer.length) throw new VoiceAudioUnsupportedError();
 
   const maxBytes = getMaxAudioMb() * 1024 * 1024;
   if (buffer.length > maxBytes) throw new VoiceAudioTooLargeError();
 
   const normalized = normalizeMimeType(mimeType);
-  if (!SUPPORTED_MIME_PREFIXES.some((prefix) => normalized.startsWith(prefix))) {
+  const hasSupportedMime = SUPPORTED_MIME_PREFIXES.some((prefix) => normalized.startsWith(prefix));
+  const isGenericBinary = normalized === 'application/octet-stream' || normalized === 'binary/octet-stream';
+
+  if (!hasSupportedMime && !(isGenericBinary && hasSupportedAudioExtension(originalName))) {
     throw new VoiceAudioUnsupportedError();
   }
 }
@@ -485,8 +522,8 @@ class VoiceService {
 
   async transcribe({ buffer, mimeType, originalName, language }: TranscribeParams): Promise<TranscribeResult> {
     const provider = getProvider();
-    const normalizedMimeType = normalizeMimeType(mimeType);
-    assertSupportedAudio(buffer, normalizedMimeType);
+    const normalizedMimeType = inferMimeType(mimeType, originalName);
+    assertSupportedAudio(buffer, normalizedMimeType, originalName);
 
     if (provider === 'mock') {
       return {

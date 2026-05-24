@@ -17,15 +17,51 @@ type VoiceStatusResponse = {
   model: string;
   maxAudioMb: number;
   language: string;
-  supportedProviders?: string[];
-  gladiaConfigured?: boolean;
-  deepgramConfigured?: boolean;
-  assemblyaiConfigured?: boolean;
 };
 
 function getAuthHeaders() {
   const token = localStorage.getItem('auth-token');
   return token ? { Authorization: `Bearer ${token}` } : undefined;
+}
+
+
+type VoiceDebugDetails = Record<string, string | number | boolean | null | undefined>;
+
+function getVoiceDebugHeaders() {
+  return {
+    'Content-Type': 'application/json',
+    ...(getAuthHeaders() ?? {}),
+  };
+}
+
+export function logVoiceDebugEvent(event: string, details?: VoiceDebugDetails) {
+  const body = JSON.stringify({
+    event,
+    details: {
+      ...details,
+      visibilityState: typeof document !== 'undefined' ? document.visibilityState : undefined,
+      userAgent: typeof navigator !== 'undefined' ? navigator.userAgent.slice(0, 180) : undefined,
+      url: typeof window !== 'undefined' ? window.location.pathname : undefined,
+    },
+  });
+
+  try {
+    const headers = getVoiceDebugHeaders();
+
+    if (typeof navigator !== 'undefined' && typeof navigator.sendBeacon === 'function') {
+      const token = localStorage.getItem('auth-token');
+      if (!token) return;
+    }
+
+    void fetch(`${env.apiBaseUrl}/voice/debug`, {
+      method: 'POST',
+      headers,
+      body,
+      keepalive: true,
+    }).catch(() => undefined);
+  } catch {
+    // Debug events must never affect voice flow.
+  }
 }
 
 export async function getVoiceStatus(): Promise<VoiceStatusResponse> {
@@ -62,9 +98,8 @@ export async function transcribeVoice(
 
   if (!response.ok) {
     const error = new Error(payload?.message || 'voice-transcription-failed');
-    (error as Error & { code?: string; status?: number; provider?: string }).code = payload?.code;
-    (error as Error & { code?: string; status?: number; provider?: string }).status = response.status;
-    (error as Error & { code?: string; status?: number; provider?: string }).provider = payload?.provider;
+    (error as Error & { code?: string; status?: number }).code = payload?.code;
+    (error as Error & { code?: string; status?: number }).status = response.status;
     throw error;
   }
 

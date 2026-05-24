@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
+import { logVoiceDebugEvent } from '@/features/voice/api/voice.api';
 import { useVoiceRecognition } from '@/features/voice/model/useVoiceRecognition';
 import { useVoiceRecorder } from '@/features/voice/model/useVoiceRecorder';
 import type {
@@ -59,13 +60,16 @@ export function useVoiceInput({
       return true;
     }
 
-    await getMicrophonePermissionState();
+    const permissionState = await getMicrophonePermissionState();
+    logVoiceDebugEvent('permission_state_checked', { permissionState: permissionState ?? 'unknown' });
 
     if (permissionRequestInFlightRef.current) return false;
 
     permissionRequestInFlightRef.current = true;
 
     try {
+      logVoiceDebugEvent('permission_prime_requested');
+
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: {
           echoCancellation: true,
@@ -75,9 +79,11 @@ export function useVoiceInput({
         },
       });
       stream.getTracks().forEach((track) => track.stop());
+      logVoiceDebugEvent('permission_prime_granted');
       setPermissionPrimed(true);
       return true;
     } catch (error) {
+      logVoiceDebugEvent('permission_prime_denied', { error: error instanceof Error ? error.name || error.message : 'unknown' });
       setPermissionPrimed(false);
       setPermissionError('microphone-denied');
       throw error;
@@ -98,17 +104,21 @@ export function useVoiceInput({
       }
 
       if (mode === 'recorder') {
+        logVoiceDebugEvent('voice_start_recorder', { mode });
         await recorder.startRecording();
         return 'started';
       }
 
       if (speech.isSupported) {
+        logVoiceDebugEvent('voice_start_speech_fallback', { mode });
         return speech.startListening() ? 'started' : 'permission-ready';
       }
 
+      logVoiceDebugEvent('voice_start_unsupported', { mode, isSupported: false });
       return 'error';
     } catch (err) {
       console.error(err);
+      logVoiceDebugEvent('voice_start_unsupported', { mode, isSupported: false });
       return 'error';
     }
   }, [ensurePermissionBeforeRecording, mode, recorder, speech]);
