@@ -2,6 +2,7 @@ import type { Request, Response } from 'express';
 import {
   VoiceAudioTooLargeError,
   VoiceAudioUnsupportedError,
+  VoiceProviderRequestError,
   VoiceTranscriptionNotConfiguredError,
   voiceService,
 } from '../services/voice.service';
@@ -59,6 +60,22 @@ export async function transcribeVoice(req: Request, res: Response) {
         success: false,
         message: 'Unsupported audio format.',
         code: 'VOICE_AUDIO_UNSUPPORTED',
+      });
+    }
+
+    if (error instanceof VoiceProviderRequestError) {
+      console.error('Voice provider request failed:', {
+        provider: error.provider,
+        status: error.status,
+        code: error.code,
+        details: error.details,
+      });
+
+      return res.status(error.status >= 400 && error.status < 600 ? error.status : 502).json({
+        success: false,
+        message: 'Voice transcription provider failed.',
+        code: error.code,
+        provider: error.provider,
       });
     }
 

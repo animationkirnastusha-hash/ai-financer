@@ -18,6 +18,18 @@ const DEFAULT_CHUNK_MS = 4200;
 const MIN_AUDIO_BYTES = 900;
 const MAX_SOFT_FAILURES = 3;
 
+const HARD_PROVIDER_ERROR_CODES = new Set([
+  'VOICE_GLADIA_UPLOAD_FAILED',
+  'VOICE_GLADIA_CREATE_FAILED',
+  'VOICE_GLADIA_POLL_FAILED',
+  'VOICE_GLADIA_TRANSCRIPTION_ERROR',
+  'VOICE_GLADIA_TIMEOUT',
+  'VOICE_DEEPGRAM_REQUEST_FAILED',
+  'VOICE_ASSEMBLYAI_UPLOAD_FAILED',
+  'VOICE_ASSEMBLYAI_CREATE_FAILED',
+  'VOICE_ASSEMBLYAI_POLL_FAILED',
+]);
+
 function getBestRecorderFormat(): RecorderFormat | null {
   if (typeof MediaRecorder === 'undefined') return null;
 
@@ -105,6 +117,13 @@ export function useVoiceRecorder({ onText, lang = 'ru-RU', chunkMs = DEFAULT_CHU
 
       if (code === 'VOICE_TRANSCRIPTION_NOT_CONFIGURED' || status === 503) {
         setError('transcription-not-configured');
+        setState('error');
+        stopInternal();
+        return;
+      }
+
+      if (HARD_PROVIDER_ERROR_CODES.has(code) || status === 401 || status === 403) {
+        setError('transcription-provider-error');
         setState('error');
         stopInternal();
         return;

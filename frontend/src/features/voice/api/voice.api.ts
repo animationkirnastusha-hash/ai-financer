@@ -17,6 +17,10 @@ type VoiceStatusResponse = {
   model: string;
   maxAudioMb: number;
   language: string;
+  supportedProviders?: string[];
+  gladiaConfigured?: boolean;
+  deepgramConfigured?: boolean;
+  assemblyaiConfigured?: boolean;
 };
 
 function getAuthHeaders() {
@@ -58,8 +62,9 @@ export async function transcribeVoice(
 
   if (!response.ok) {
     const error = new Error(payload?.message || 'voice-transcription-failed');
-    (error as Error & { code?: string; status?: number }).code = payload?.code;
-    (error as Error & { code?: string; status?: number }).status = response.status;
+    (error as Error & { code?: string; status?: number; provider?: string }).code = payload?.code;
+    (error as Error & { code?: string; status?: number; provider?: string }).status = response.status;
+    (error as Error & { code?: string; status?: number; provider?: string }).provider = payload?.provider;
     throw error;
   }
 
