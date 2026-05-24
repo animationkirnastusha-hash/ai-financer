@@ -267,7 +267,7 @@ function delay(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-async function fetchWithTimeout(url: string, init: RequestInit = {}, timeoutMs = 12_000) {
+async function fetchWithTimeout(url: string, init: RequestInit = {}, timeoutMs = 30_000) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), Math.max(1500, timeoutMs));
 
@@ -320,7 +320,7 @@ class VoiceService {
         'x-gladia-key': apiKey,
       },
       body: formData,
-    }, Number(process.env.GLADIA_UPLOAD_TIMEOUT_MS || 12_000));
+    }, Number(process.env.GLADIA_UPLOAD_TIMEOUT_MS || 30_000));
     const uploadPayload = await readJsonSafely(uploadResponse);
 
     if (!uploadResponse.ok) {
@@ -356,7 +356,7 @@ class VoiceService {
         'x-gladia-key': apiKey,
       },
       body: JSON.stringify(requestBody),
-    }, Number(process.env.GLADIA_CREATE_TIMEOUT_MS || 12_000));
+    }, Number(process.env.GLADIA_CREATE_TIMEOUT_MS || 30_000));
     const createPayload = await readJsonSafely(createResponse);
 
     if (!createResponse.ok) {
@@ -368,7 +368,7 @@ class VoiceService {
       throw new VoiceProviderRequestError(provider, 502, 'VOICE_GLADIA_TRANSCRIPTION_ID_MISSING', createPayload);
     }
 
-    const timeoutMs = Number(process.env.GLADIA_POLL_TIMEOUT_MS || 28_000);
+    const timeoutMs = Number(process.env.GLADIA_POLL_TIMEOUT_MS || 60_000);
     const intervalMs = Number(process.env.GLADIA_POLL_INTERVAL_MS || 900);
     const startedAt = Date.now();
 
@@ -379,7 +379,7 @@ class VoiceService {
         headers: {
           'x-gladia-key': apiKey,
         },
-      }, Number(process.env.GLADIA_POLL_REQUEST_TIMEOUT_MS || 8_000));
+      }, Number(process.env.GLADIA_POLL_REQUEST_TIMEOUT_MS || 15_000));
       const pollPayload = await readJsonSafely(pollResponse);
 
       if (!pollResponse.ok) {

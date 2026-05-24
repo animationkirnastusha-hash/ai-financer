@@ -14,11 +14,11 @@ type RecorderFormat = {
   extension: string;
 };
 
-const DEFAULT_CHUNK_MS = 6500;
+const DEFAULT_CHUNK_MS = 9000;
 const MIN_AUDIO_BYTES = 900;
 const MAX_SOFT_FAILURES = 3;
-const TRANSCRIBE_CLIENT_TIMEOUT_MS = 34_000;
-const TRANSCRIBE_IN_FLIGHT_STALE_MS = 38_000;
+const TRANSCRIBE_CLIENT_TIMEOUT_MS = 68_000;
+const TRANSCRIBE_IN_FLIGHT_STALE_MS = 72_000;
 
 function getBestRecorderFormat(): RecorderFormat | null {
   if (typeof MediaRecorder === 'undefined') {
@@ -53,6 +53,7 @@ export function useVoiceRecorder({ onText, lang = 'ru-RU', chunkMs = DEFAULT_CHU
   const onTextRef = useRef(onText);
   const recordingStartedAtRef = useRef(0);
   const uploadStartedAtRef = useRef(0);
+  const startInProgressRef = useRef(false);
 
   const [state, setState] = useState<VoiceRecorderState>('idle');
   const [error, setError] = useState<string | null>(null);
@@ -177,6 +178,11 @@ export function useVoiceRecorder({ onText, lang = 'ru-RU', chunkMs = DEFAULT_CHU
   }, [lang, stopInternal]);
 
   const startRecording = useCallback(async () => {
+    if (startInProgressRef.current) {
+      logVoiceDebugEvent('voice_start_ignored_in_progress', { state });
+      return;
+    }
+
     if (!isSupported || !recorderFormat) {
       logVoiceDebugEvent('recorder_unsupported', { isSupported, mimeType: recorderFormat?.mimeType, extension: recorderFormat?.extension });
       setError('unsupported');
@@ -184,7 +190,12 @@ export function useVoiceRecorder({ onText, lang = 'ru-RU', chunkMs = DEFAULT_CHU
       return;
     }
 
-    if (mediaRecorderRef.current?.state === 'recording') return;
+    if (mediaRecorderRef.current?.state === 'recording') {
+      logVoiceDebugEvent('voice_start_ignored_already_recording', { state: mediaRecorderRef.current.state });
+      return;
+    }
+
+    startInProgressRef.current = true;
 
     try {
       setError(null);
@@ -232,6 +243,7 @@ export function useVoiceRecorder({ onText, lang = 'ru-RU', chunkMs = DEFAULT_CHU
       };
 
       recorder.onstart = () => {
+        startInProgressRef.current = false;
         recordingStartedAtRef.current = Date.now();
         logVoiceDebugEvent('recorder_started', {
           mimeType: recorder.mimeType || recorderFormat.mimeType,
@@ -249,6 +261,7 @@ export function useVoiceRecorder({ onText, lang = 'ru-RU', chunkMs = DEFAULT_CHU
       };
 
       recorder.onstop = () => {
+        startInProgressRef.current = false;
         logVoiceDebugEvent('recorder_stopped', {
           mimeType: recorder.mimeType || recorderFormat.mimeType,
           extension: recorderFormat.extension,
@@ -264,10 +277,11 @@ export function useVoiceRecorder({ onText, lang = 'ru-RU', chunkMs = DEFAULT_CHU
       };
 
       mediaRecorderRef.current = recorder;
-      const timeslice = Math.max(2200, Math.min(9000, chunkMs));
+      const timeslice = Math.max(4500, Math.min(12000, chunkMs));
       logVoiceDebugEvent('recorder_start_call', { mimeType: recorderFormat.mimeType, extension: recorderFormat.extension, elapsedMs: timeslice });
       recorder.start(timeslice);
     } catch (err) {
+      startInProgressRef.current = false;
       console.error(err);
       logVoiceDebugEvent('recorder_start_failed', { error: err instanceof Error ? err.name || err.message : 'unknown' });
       setError('microphone-denied');
@@ -291,6 +305,7 @@ export function useVoiceRecorder({ onText, lang = 'ru-RU', chunkMs = DEFAULT_CHU
     softFailuresRef.current = 0;
     uploadInFlightRef.current = false;
     uploadStartedAtRef.current = 0;
+    startInProgressRef.current = false;
   }, [stopInternal]);
 
   return {
