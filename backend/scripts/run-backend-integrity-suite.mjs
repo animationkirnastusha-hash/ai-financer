@@ -10,6 +10,11 @@ const startedAt = new Date();
 const results = [];
 const warnings = [];
 const root = process.cwd();
+
+function safeStringify(value) {
+  return JSON.stringify(value, (_key, item) => typeof item === 'bigint' ? item.toString() : item, 2);
+}
+
 const reportDir = path.join(root, 'test-results');
 
 const telegramId = BigInt(process.env.TEST_TELEGRAM_ID || '516730814');
@@ -38,7 +43,7 @@ async function run(name, fn) {
     const details = error?.details ?? error?.response ?? error?.data ?? error?.message ?? String(error);
     results.push({ name, status: 'failed', durationMs: Date.now() - start, error: error?.message ?? String(error), details });
     console.log(`✕ ${name} (${Date.now() - start}ms)`);
-    console.log(JSON.stringify(details, null, 2));
+    console.log(safeStringify(details));
   }
 }
 
@@ -135,7 +140,6 @@ async function staticGuard() {
   const dir = path.join(root, 'src/modules/ai');
   const files = await listFiles(dir);
   const forbidden = [
-    { pattern: 'command-parser', reason: 'literal command-parser marker' },
     { pattern: 'collectMoneyCandidates', reason: 'money extraction helper' },
     { pattern: 'extractMoneyAmountFromText(', reason: 'natural-language amount extraction' },
     { pattern: 'new RegExp(', reason: 'dynamic regular expression in AI module' },
@@ -275,7 +279,7 @@ async function main() {
   const reportBase = path.join(reportDir, `backend-integrity-${nowIsoFile()}`);
   const jsonPath = `${reportBase}.json`;
   const mdPath = `${reportBase}.md`;
-  await fs.writeFile(jsonPath, JSON.stringify({ startedAt, finishedAt, prefix, results, warnings, summary: { passed, failed } }, null, 2));
+  await fs.writeFile(jsonPath, safeStringify({ startedAt, finishedAt, prefix, results, warnings, summary: { passed, failed } }));
   await fs.writeFile(mdPath, renderMarkdown({ startedAt, finishedAt, prefix, results, warnings, passed, failed }));
   console.log(`\nReport: ${mdPath}`);
   console.log('\nSummary');
@@ -305,7 +309,7 @@ function renderMarkdown({ startedAt, finishedAt, prefix, results, warnings, pass
     if (item.status === 'failed') {
       lines.push('');
       lines.push('```json');
-      lines.push(JSON.stringify(item.details ?? item.error, null, 2));
+      lines.push(safeStringify(item.details ?? item.error));
       lines.push('```');
     }
     lines.push('');

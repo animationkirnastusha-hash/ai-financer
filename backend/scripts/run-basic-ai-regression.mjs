@@ -9,6 +9,7 @@
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { performance } from 'node:perf_hooks';
 import dotenv from 'dotenv';
 import jwt from 'jsonwebtoken';
@@ -38,6 +39,7 @@ const config = {
   aiRetryMax: Number(process.env.TEST_AI_RETRY_MAX || 6),
   aiLimitResetMs: Number(process.env.TEST_AI_LIMIT_RESET_MS || 65_000),
   reportOnly: args.has('--report-only'),
+  confirmMode: process.env.TEST_CONFIRM_MODE || 'direct',
 };
 
 const state = {
@@ -53,6 +55,8 @@ const state = {
   cleanup: [],
   results: [],
   warnings: [],
+  userId: '',
+  directAiService: null,
 };
 
 function bool(value, fallback) {
@@ -150,8 +154,12 @@ function randomCyrillic(length = 8) {
   return value;
 }
 
+function safeStringify(value) {
+  return JSON.stringify(value, (_key, item) => typeof item === 'bigint' ? item.toString() : item, 2);
+}
+
 function short(value, length = 900) {
-  const text = typeof value === 'string' ? value : JSON.stringify(value, null, 2);
+  const text = typeof value === 'string' ? value : safeStringify(value);
   return text.length > length ? `${text.slice(0, length)}…` : text;
 }
 
@@ -290,6 +298,7 @@ async function ensureAuth() {
   await requireToken();
   const me = await api('/auth/me');
   assert(Boolean(me.data?.user?.id), '/auth/me returned no user. Regenerate token after DB reset.', me.data);
+  state.userId = me.data.user.id;
   return me.data.user;
 }
 
@@ -416,7 +425,33 @@ async function aiParse(command) {
   return aiResult(res.data);
 }
 
+
+async function getDirectAiService() {
+  if (state.directAiService) return state.directAiService;
+  const servicePath = join(process.cwd(), 'dist/modules/ai/service.js');
+  if (!existsSync(servicePath)) throw new Error('dist/modules/ai/service.js not found. Run npm run build before test:base-ai when TEST_CONFIRM_MODE=direct.');
+  const mod = await import(pathToFileURL(servicePath).href);
+  if (!mod.AIService) throw new Error('AIService export not found in dist/modules/ai/service.js');
+  state.directAiService = new mod.AIService();
+  return state.directAiService;
+}
+
+async function directAiConfirm(pendingActionId) {
+  if (!pendingActionId) throw new Error('pendingActionId is required for direct confirm');
+  if (!state.userId) {
+    const decoded = jwt.decode(state.token);
+    state.userId = typeof decoded?.userId === 'string' ? decoded.userId : '';
+  }
+  if (!state.userId) throw new Error('Cannot resolve userId for direct confirm');
+  const service = await getDirectAiService();
+  return service.confirmCommand(state.userId, pendingActionId);
+}
+
 async function aiConfirm(pendingActionId) {
+  if (config.confirmMode === 'direct' && pendingActionId) {
+    return directAiConfirm(pendingActionId);
+  }
+
   const body = pendingActionId ? { pendingActionId } : {};
   if (pendingActionId) {
     const viaUrl = await maybeAiApi(`/ai/confirm/${encodeURIComponent(pendingActionId)}`, { method: 'POST', body });
@@ -488,6 +523,7 @@ async function executeAi(command) {
     const confirmed = await aiConfirm(id);
     assert(confirmed?.success !== false, `AI confirm failed for: ${command}`, { prepared, confirmed, pendingActionId: id });
     assert(confirmed?.executed === true, `AI confirm did not execute action: ${command}`, { prepared, confirmed, pendingActionId: id });
+    await sleep(250);
     return { prepared, confirmed, pendingActionId: id };
   }
 
@@ -534,7 +570,7 @@ async function writeReport() {
   const failed = state.results.filter((item) => item.status === 'failed').length;
   const skipped = state.results.filter((item) => item.status === 'skipped').length;
   const payload = { startedAt, finishedAt: new Date(), config: { ...config, token: config.token ? '<hidden>' : '' }, results: state.results, warnings: state.warnings, summary: { passed, failed, skipped } };
-  writeFileSync(reportJsonPath, JSON.stringify(payload, null, 2), 'utf8');
+  writeFileSync(reportJsonPath, safeStringify(payload), 'utf8');
 
   const lines = [];
   lines.push('# AI-Financer base AI regression report');

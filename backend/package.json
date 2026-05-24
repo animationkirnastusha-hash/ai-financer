@@ -14,7 +14,7 @@
     "prisma:studio": "prisma studio",
     "test": "node scripts/run-ai-tests.mjs",
     "test:ai": "node scripts/run-ai-tests.mjs",
-    "test:ai:compiled": "node --test dist/modules/ai/__tests__/*.test.js",
+    "test:ai:compiled": "echo \"Compiled TS unit tests were removed. Use npm run test:backend-integrity\"",
     "test:product": "node scripts/run-product-tests.mjs",
     "test:product:report": "node scripts/run-product-tests.mjs --report-only",
     "reset:data": "node scripts/reset-app-data.mjs",

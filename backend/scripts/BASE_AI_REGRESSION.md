@@ -1,9 +1,15 @@
 # Base AI regression suite
 
-Запуск полного backend-regression для базовой версии:
+Run backend integrity first:
 
 ```bash
-cd /root/ai-financer/backend
+npm run build
+TEST_TELEGRAM_ID=516730814 TEST_ADMIN=1 npm run test:backend-integrity
+```
+
+Then run the natural-language suite:
+
+```bash
 TEST_BASE_URL="http://localhost:3000/api" \
 TEST_HEALTH_URL="http://localhost:3000/health" \
 TEST_TELEGRAM_ID=516730814 \
@@ -11,20 +17,18 @@ TEST_ADMIN=1 \
 npm run test:base-ai
 ```
 
-Runner сам создаёт тестовый JWT, если `TEST_AUTH_TOKEN` и `.test-auth-token` отсутствуют.
+`test:base-ai` sends real user-like text to `/api/ai/parse`, but confirms prepared actions directly through the compiled backend service by default. This removes HTTP confirm/rate-limit noise from product regression while still testing the external AI planner path.
 
-По умолчанию runner делает финансовый reset тестового пользователя перед прогоном и отдельный reset перед AI mutation-тестами. Отключить можно так:
-
-```bash
-TEST_RESET_BEFORE=0 npm run test:base-ai
-```
-
-AI-запросы выполняются с задержкой и retry на `TOO_MANY_REQUESTS`, чтобы тесты не падали из-за rate-limit cooldown. Настройки:
+To test HTTP confirm explicitly:
 
 ```bash
-TEST_AI_DELAY_MS=900
-TEST_AI_RETRY_MAX=6
-TEST_AI_LIMIT_RESET_MS=65000
+TEST_CONFIRM_MODE=http npm run test:base-ai
 ```
 
-Финансовых парсеров в тестах нет. Runner отправляет естественный текст в backend и проверяет состояние через API.
+Recommended full run:
+
+```bash
+TEST_TELEGRAM_ID=516730814 TEST_ADMIN=1 npm run test:base-full
+```
+
+The suite does not parse financial commands. It sends text to the backend and checks state through API/DB.
