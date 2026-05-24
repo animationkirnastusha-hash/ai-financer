@@ -52,42 +52,16 @@ type ExecuteOptions = {
 
 export class AIExecutorService {
   async execute(userId: string, parsed: AIParsedCommand, options: ExecuteOptions = {}) {
+    void options;
     this.applyStructuredBatchGuards(parsed.actions);
 
     const results = await prisma.$transaction(async (tx) => {
-      if (options.pendingActionId) {
-        const claimed = await tx.aIPendingAction.updateMany({
-          where: {
-            id: options.pendingActionId,
-            userId,
-            status: 'pending',
-            expiresAt: { gt: new Date() },
-          },
-          data: { status: 'claimed' },
-        });
-
-        if (claimed.count !== 1) {
-          throw new BadRequestError('Pending action was already processed or expired');
-        }
-      }
-
       const createdAccountNames = new Map<string, string>();
       const actionResults: unknown[] = [];
 
       for (const action of parsed.actions) {
         const result = await this.executeAction(tx, userId, action, createdAccountNames);
         actionResults.push(result);
-      }
-
-      if (options.pendingActionId) {
-        const confirmed = await tx.aIPendingAction.updateMany({
-          where: { id: options.pendingActionId, userId, status: 'claimed' },
-          data: { status: 'confirmed', confirmedAt: new Date() },
-        });
-
-        if (confirmed.count !== 1) {
-          throw new BadRequestError('Pending action was already processed or expired');
-        }
       }
 
       return actionResults;

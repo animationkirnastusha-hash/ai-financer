@@ -23,21 +23,14 @@ function parseLimit(value: unknown, fallback = 50) {
   return parsed;
 }
 
-function firstString(value: unknown) {
-  if (typeof value === 'string') return value;
-  if (Array.isArray(value)) return typeof value[0] === 'string' ? value[0] : '';
-  return '';
-}
-
 function readPendingActionId(req: Request) {
-  const fromParams = firstString(req.params.pendingActionId);
-  if (fromParams.trim()) return fromParams;
+  const fromParams = req.params.pendingActionId;
+  const fromBody = req.body?.pendingActionId ?? req.body?.id;
 
-  const fromBody = firstString(req.body?.pendingActionId);
-  if (fromBody.trim()) return fromBody;
-
-  const fromBodyId = firstString(req.body?.id);
-  if (fromBodyId.trim()) return fromBodyId;
+  if (typeof fromParams === 'string' && fromParams.trim()) return fromParams.trim();
+  if (Array.isArray(fromParams) && typeof fromParams[0] === 'string') return fromParams[0].trim();
+  if (typeof fromBody === 'string' && fromBody.trim()) return fromBody.trim();
+  if (Array.isArray(fromBody) && typeof fromBody[0] === 'string') return fromBody[0].trim();
 
   return '';
 }

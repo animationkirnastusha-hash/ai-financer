@@ -234,7 +234,7 @@ export class AIOrchestratorService {
     let parsed: AIParsedCommand | null = null;
 
     try {
-      pending = await this.pending.getForConfirm(userId, pendingActionId);
+      pending = await this.pending.claimForConfirm(userId, pendingActionId);
       parsed = pending.parsed as unknown as AIParsedCommand | null;
 
       if (!parsed || parsed.intent !== 'batch' || !Array.isArray(parsed.actions)) {
@@ -242,6 +242,9 @@ export class AIOrchestratorService {
       }
 
       const result = await this.executor.execute(userId, parsed, { pendingActionId });
+
+      const confirmedPending = await this.pending.markConfirmedFlexible(userId, pendingActionId);
+      if (!confirmedPending) throw new BadRequestError('Pending action could not be marked as confirmed');
 
       await aiSessionService.clear(userId);
       await aiSessionService.rememberResult(userId, { command: pending.command, intent: parsed.intent, tool: parsed.actions[0]?.tool, result });
@@ -273,7 +276,7 @@ export class AIOrchestratorService {
         message: this.preview.buildExecutedMessage(parsed),
         parsed: parsed as unknown as Record<string, unknown>,
         result,
-        meta: { auditLogId: audit.id, pendingActionId, undo: { available: true } },
+        meta: { auditLogId: audit.id, undo: { available: true } },
       };
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Confirm failed';

@@ -1,27 +1,19 @@
 # Base AI testing for testers
 
-Run this on an isolated test user/database.
+Use an isolated test user or isolated database. The suite checks backend read contracts, manual CRUD and base AI workflows.
+
+Run:
 
 ```bash
 cd /root/ai-financer/backend
 TEST_TELEGRAM_ID=516730814 TEST_ADMIN=1 npm run test:base-ai
 ```
 
-The runner automatically creates a test token when needed and resets finance data for the test user before tests. Do not run destructive tests on a real user.
+Reports are saved to:
 
-Optional flags:
-
-```bash
-TEST_AI=0 npm run test:base-ai          # backend CRUD only
-TEST_STRICT_AI=0 npm run test:base-ai   # AI issues as softer checks
-TEST_RESET_BEFORE=0 npm run test:base-ai # keep existing test data
+```text
+test-results/base-ai-regression-*.md
+test-results/base-ai-regression-*.json
 ```
 
-
-## Patch 68 update
-
-The base AI suite isolates manual CRUD tests from AI mutation tests. This prevents the AI planner from selecting accounts created by the earlier manual CRUD phase. The suite still sends normal user commands and verifies results through API state.
-
-## Patch 69 confirmation hardening
-
-If AI returns `requiresConfirmation: true`, the test runner confirms the pending action with an explicit pending action id. This is required for all mutation tests: accounts, transactions, transfers, goals, sections and categories.
+If AI tests fail after `prepared.success=true`, inspect the `confirmed` block. A correct confirmed action must return `executed: true` and must change the relevant backend state.

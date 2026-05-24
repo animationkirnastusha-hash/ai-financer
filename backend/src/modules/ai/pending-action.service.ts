@@ -91,6 +91,45 @@ export class AIPendingActionService {
     return this.serialize(updated as PrismaPendingActionRow);
   }
 
+
+  async claimForConfirm(userId: string, pendingActionId: string): Promise<AIPendingActionView> {
+    await this.expireOld(userId);
+
+    const pending = await prisma.aIPendingAction.findFirst({
+      where: { id: pendingActionId, userId, status: 'pending', expiresAt: { gt: new Date() } },
+    });
+
+    if (!pending) throw new NotFoundError('Pending action not found');
+
+    const claimed = await prisma.aIPendingAction.updateMany({
+      where: { id: pending.id, userId, status: 'pending' },
+      data: { status: 'claimed' },
+    });
+
+    if (claimed.count !== 1) throw new NotFoundError('Pending action was already processed');
+
+    const row = await prisma.aIPendingAction.findFirst({ where: { id: pending.id, userId } });
+    if (!row) throw new NotFoundError('Pending action not found');
+
+    return this.serialize(row as PrismaPendingActionRow);
+  }
+
+  async markConfirmedFlexible(userId: string, pendingActionId: string): Promise<AIPendingActionView | null> {
+    const updated = await prisma.aIPendingAction.updateMany({
+      where: {
+        id: pendingActionId,
+        userId,
+        status: { in: ['pending', 'claimed'] },
+      },
+      data: { status: 'confirmed', confirmedAt: new Date() },
+    });
+
+    if (updated.count !== 1) return null;
+
+    const row = await prisma.aIPendingAction.findFirst({ where: { id: pendingActionId, userId } });
+    return row ? this.serialize(row as PrismaPendingActionRow) : null;
+  }
+
   async getForConfirm(userId: string, pendingActionId: string): Promise<AIPendingActionView> {
     const pending = await this.ensurePending(userId, pendingActionId);
     return this.serialize(pending);
