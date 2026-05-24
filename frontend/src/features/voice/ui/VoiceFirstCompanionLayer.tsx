@@ -9,7 +9,6 @@ import { CompanionButton } from '@/shared/ui/CompanionButton';
 import { telegramHaptic } from '@/shared/lib/telegram';
 
 type CompanionMood = 'idle' | 'listening' | 'thinking' | 'confirm' | 'success' | 'warning';
-
 type BubbleTone = 'neutral' | 'listening' | 'thinking' | 'success' | 'warning';
 
 type Thought = {
@@ -18,13 +17,9 @@ type Thought = {
   tone: BubbleTone;
 };
 
-const SILENCE_SUBMIT_MS = 980;
-const RESUME_DELAY_MS = 850;
-const WATCHDOG_INTERVAL_MS = 2200;
 const BUBBLE_TIMEOUT_MS = 2800;
-const DUPLICATE_WINDOW_MS = 850;
-const DEFAULT_ACTIVE_WINDOW_SECONDS = 7;
-const FIXED_COMPANION_NAME = 'Фина';
+const DUPLICATE_WINDOW_MS = 1000;
+const DEFAULT_VOICE_SESSION_MS = 8500;
 
 function compactBubble(text: string) {
   return text
@@ -49,7 +44,6 @@ function escapeRegExp(value: string) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-
 function cleanVoiceText(text: string) {
   return text
     .replace(/[\u00A0\t\r\n]+/g, ' ')
@@ -59,105 +53,12 @@ function cleanVoiceText(text: string) {
     .trim();
 }
 
-function normalizeDecision(text: string) {
-  return normalizeForWake(text);
-}
-
-function isVoiceConfirm(text: string) {
-  const value = normalizeDecision(text);
-  return ['да', 'ага', 'угу', 'подтверди', 'подтверждаю', 'выполняй', 'сделай', 'ок', 'окей', 'yes', 'confirm'].includes(value);
-}
-
-function isVoiceCancel(text: string) {
-  const value = normalizeDecision(text);
-  return ['нет', 'не надо', 'отмена', 'отмени', 'отменить', 'cancel', 'no'].includes(value);
-}
-
-
-function levenshteinDistance(a: string, b: string) {
-  if (a === b) return 0;
-  if (!a.length) return b.length;
-  if (!b.length) return a.length;
-
-  const previous = Array.from({ length: b.length + 1 }, (_, index) => index);
-  const current = new Array<number>(b.length + 1);
-
-  for (let i = 1; i <= a.length; i += 1) {
-    current[0] = i;
-    for (let j = 1; j <= b.length; j += 1) {
-      const substitutionCost = a[i - 1] === b[j - 1] ? 0 : 1;
-      current[j] = Math.min(
-        current[j - 1] + 1,
-        previous[j] + 1,
-        previous[j - 1] + substitutionCost,
-      );
-    }
-    for (let j = 0; j <= b.length; j += 1) previous[j] = current[j];
-  }
-
-  return previous[b.length];
-}
-
-function looksLikeWakeToken(token: string) {
-  const value = normalizeForWake(token);
-  if (!value) return false;
-
-  const wakeTokens = ['фина', 'финна', 'фине', 'фину', 'фины', 'fina'];
-  if (wakeTokens.includes(value)) return true;
-
-  if (value.length >= 3 && value.length <= 7) {
-    return wakeTokens.some((wakeToken) => levenshteinDistance(value, wakeToken) <= 1);
-  }
-
-  return false;
-}
-
-function stripWakeTokenPrefix(rawText: string) {
-  const parts = rawText.trim().split(/\s+/);
-  if (!parts.length) return { hasWakeWord: false, command: rawText.trim() };
-
-  const firstMeaningfulIndex = ['эй', 'ок', 'окей', 'слушай'].includes(normalizeForWake(parts[0])) ? 1 : 0;
-  const token = parts[firstMeaningfulIndex] ?? '';
-
-  if (!looksLikeWakeToken(token)) return { hasWakeWord: false, command: rawText.trim() };
-
-  return {
-    hasWakeWord: true,
-    command: parts.slice(firstMeaningfulIndex + 1).join(' ').replace(/^[,.:;!\-—\s]+/, '').trim(),
-  };
-}
-
-function isWakeOnlyCommand(text: string) {
-  const value = normalizeDecision(text);
-  return looksLikeWakeToken(value);
-}
-
-function pendingHasClarification(pending: unknown) {
-  if (!pending || typeof pending !== 'object') return false;
-  const parsed = (pending as { parsed?: unknown }).parsed;
-  return Boolean(parsed && typeof parsed === 'object' && !Array.isArray(parsed) && (parsed as { clarification?: unknown }).clarification);
-}
-
 function stripWakeWord(rawText: string) {
   const source = rawText.trim();
-  const name = normalizeForWake(FIXED_COMPANION_NAME);
   const normalized = normalizeForWake(source);
-
-  if (!name) return { hasWakeWord: false, command: source };
-
-  const fuzzyPrefix = stripWakeTokenPrefix(source);
-  if (fuzzyPrefix.hasWakeWord) return fuzzyPrefix;
-
-  const aliases = Array.from(new Set([
-    FIXED_COMPANION_NAME,
-    name,
-    'Фина',
-    'Финна',
-    'Фине',
-    'Фину',
-    'Фины',
-    'Fina',
-  ].map((value) => value.trim()).filter(Boolean)));
+  const aliases = ['Фина', 'Финна', 'Fina', 'фина', 'фину', 'фине', 'фины']
+    .map((value) => value.trim())
+    .filter(Boolean);
 
   const matchedAlias = aliases.find((alias) => {
     const aliasNormalized = normalizeForWake(alias);
@@ -182,6 +83,7 @@ function stripWakeWord(rawText: string) {
   return { hasWakeWord: true, command: source };
 }
 
+
 export function VoiceFirstCompanionLayer() {
   const currentScreen = useNavigationStore((state) => state.currentScreen);
   const navigateTo = useNavigationStore((state) => state.navigateTo);
@@ -191,57 +93,20 @@ export function VoiceFirstCompanionLayer() {
 
   const voiceEnabled = useSettingsStore((state) => state.voiceEnabled);
   const voiceBetaEnabled = useSettingsStore((state) => state.voiceBetaEnabled);
-  const voiceAlwaysOnEnabled = useSettingsStore((state) => state.voiceAlwaysOnEnabled);
   const voicePermissionPrompted = useSettingsStore((state) => state.voicePermissionPrompted);
-  const voiceWakeWordEnabled = useSettingsStore((state) => state.voiceWakeWordEnabled);
-  const voiceActiveWindowSeconds = useSettingsStore((state) => state.voiceActiveWindowSeconds);
   const appLanguage = useSettingsStore((state) => state.appLanguage);
-  const setVoiceAlwaysOnEnabled = useSettingsStore((state) => state.setVoiceAlwaysOnEnabled);
   const setVoicePermissionPrompted = useSettingsStore((state) => state.setVoicePermissionPrompted);
 
   const [thought, setThought] = useState<Thought | null>(null);
   const [isProcessingVoice, setIsProcessingVoice] = useState(false);
   const [isPriming, setIsPriming] = useState(false);
-  const [activeUntil, setActiveUntil] = useState(0);
 
-  const silenceTimerRef = useRef<number | null>(null);
-  const restartTimerRef = useRef<number | null>(null);
   const bubbleTimerRef = useRef<number | null>(null);
-  const lastStartAtRef = useRef(0);
-  const shouldResumeRef = useRef(false);
-  const isProcessingVoiceRef = useRef(false);
-  const isActiveRef = useRef(false);
-  const activeUntilRef = useRef(0);
   const lastHandledRef = useRef<{ text: string; at: number }>({ text: '', at: 0 });
   const handleTextRef = useRef<(text: string) => Promise<void> | void>(() => undefined);
-  const startListeningRef = useRef<() => Promise<void> | void>(() => undefined);
-  const lastWatchdogKickRef = useRef(0);
   const lastAssistantMessageKeyRef = useRef('');
-  const lastWakeAcceptedAtRef = useRef(0);
   const lastThoughtRef = useRef<{ text: string; tone: BubbleTone; at: number }>({ text: '', tone: 'neutral', at: 0 });
-
-  const activeWindowMs = Math.max(2000, Math.min(120000, (voiceActiveWindowSeconds || DEFAULT_ACTIVE_WINDOW_SECONDS) * 1000));
-  const isCombatActive = !voiceWakeWordEnabled || activeUntil > Date.now();
-
-  const clearSilenceTimer = useCallback(() => {
-    if (silenceTimerRef.current !== null) {
-      window.clearTimeout(silenceTimerRef.current);
-      silenceTimerRef.current = null;
-    }
-  }, []);
-
-  const clearRestartTimer = useCallback(() => {
-    if (restartTimerRef.current !== null) {
-      window.clearTimeout(restartTimerRef.current);
-      restartTimerRef.current = null;
-    }
-  }, []);
-
-  const armCombatMode = useCallback((durationMs = activeWindowMs) => {
-    const until = Date.now() + durationMs;
-    activeUntilRef.current = until;
-    setActiveUntil(until);
-  }, [activeWindowMs]);
+  const isProcessingVoiceRef = useRef(false);
 
   const showThought = useCallback((text: string, tone: BubbleTone = 'neutral', timeoutMs = BUBBLE_TIMEOUT_MS) => {
     const cleanText = compactBubble(text);
@@ -252,9 +117,7 @@ export function VoiceFirstCompanionLayer() {
     if (lastThought.text === cleanText && lastThought.tone === tone && now - lastThought.at < 1400) return;
     lastThoughtRef.current = { text: cleanText, tone, at: now };
 
-    if (bubbleTimerRef.current !== null) {
-      window.clearTimeout(bubbleTimerRef.current);
-    }
+    if (bubbleTimerRef.current !== null) window.clearTimeout(bubbleTimerRef.current);
 
     setThought({ id: `${tone}-${now}`, text: cleanText, tone });
 
@@ -266,115 +129,30 @@ export function VoiceFirstCompanionLayer() {
 
   const voice = useVoiceInput({
     lang: appLanguage === 'en' ? 'en-US' : 'ru-RU',
+    sessionMs: DEFAULT_VOICE_SESSION_MS,
     onText: (text) => handleTextRef.current(text),
   });
 
-  const canUseVoiceFirst = voiceEnabled && voiceBetaEnabled && voice.isSupported;
-  const isActive = canUseVoiceFirst && voiceAlwaysOnEnabled && voicePermissionPrompted;
-
-  const resumeListeningSoon = useCallback((delayMs = RESUME_DELAY_MS) => {
-    clearRestartTimer();
-
-    restartTimerRef.current = window.setTimeout(() => {
-      if (!shouldResumeRef.current || !isActiveRef.current) return;
-      void startListeningRef.current?.();
-    }, delayMs);
-  }, [clearRestartTimer]);
-
-  const startListening = useCallback(async () => {
-    if (!canUseVoiceFirst) return;
-
-    if (isProcessingVoiceRef.current || voice.state === 'uploading' || voice.state === 'speaking') {
-      if (shouldResumeRef.current && isActiveRef.current) resumeListeningSoon(260);
-      return;
-    }
-
-    if (voice.state === 'recording') return;
-
-    const now = Date.now();
-    if (now - lastStartAtRef.current < 260) {
-      if (shouldResumeRef.current && isActiveRef.current) resumeListeningSoon(260);
-      return;
-    }
-    lastStartAtRef.current = now;
-
-    if (voice.state === 'error') voice.reset();
-
-    const result = await voice.start();
-    if (result === 'started') {
-      shouldResumeRef.current = true;
-      return;
-    }
-
-    if (result === 'permission-ready') {
-      shouldResumeRef.current = true;
-      resumeListeningSoon(520);
-      return;
-    }
-
-    if (result === 'error') {
-      shouldResumeRef.current = false;
-      showThought('Микрофон недоступен. Можно написать команду текстом.', 'warning');
-    }
-  }, [canUseVoiceFirst, resumeListeningSoon, showThought, voice]);
-
-  useEffect(() => {
-    startListeningRef.current = startListening;
-  }, [startListening]);
-
-  const stopListening = useCallback(() => {
-    clearSilenceTimer();
-    if (voice.state === 'recording') voice.stop();
-  }, [clearSilenceTimer, voice]);
+  const canUseVoice = voiceEnabled && voiceBetaEnabled && voice.isSupported;
 
   const handleText = useCallback(async (rawText: string) => {
     const originalText = cleanVoiceText(rawText);
     if (!originalText || isProcessingVoiceRef.current) return;
 
     const wake = stripWakeWord(originalText);
-    const now = Date.now();
-    const isWithinCombatWindow = activeUntilRef.current > now;
-
-    if (!isWithinCombatWindow) {
-      if (!wake.hasWakeWord) {
-        resumeListeningSoon(480);
-        return;
-      }
-
-      lastWakeAcceptedAtRef.current = now;
-      armCombatMode();
-
-      if (!wake.command) {
-        armCombatMode(Math.max(activeWindowMs, 10000));
-        showThought('Я слушаю. Скажи задачу без имени.', 'listening', 2200);
-        resumeListeningSoon(260);
-        return;
-      }
-    }
-
-    if (wake.hasWakeWord) lastWakeAcceptedAtRef.current = now;
-
     const text = cleanVoiceText(wake.hasWakeWord ? wake.command : originalText);
-    if (!text || isWakeOnlyCommand(text)) {
-      resumeListeningSoon(240);
+    if (!text) {
+      showThought('Скажи задачу после имени.', 'listening', 2200);
       return;
     }
 
-    // After wake + command we process one command and then return to passive wake mode.
-    // This prevents random speech after the action from being sent to AI.
-    activeUntilRef.current = 0;
-    setActiveUntil(0);
-
+    const now = Date.now();
     const last = lastHandledRef.current;
-    if (last.text === text && now - last.at < DUPLICATE_WINDOW_MS) {
-      resumeListeningSoon(180);
-      return;
-    }
+    if (last.text === text && now - last.at < DUPLICATE_WINDOW_MS) return;
     lastHandledRef.current = { text, at: now };
 
     setIsProcessingVoice(true);
-    clearSilenceTimer();
-    showThought('Думаю...', 'thinking', 1500);
+    showThought('Думаю...', 'thinking', 1800);
 
     try {
       const navigationIntent = parseNavigationIntent(text);
@@ -383,8 +161,6 @@ export function VoiceFirstCompanionLayer() {
         telegramHaptic('light');
         navigateTo(navigationIntent.screen);
         showThought('Открываю.', 'success');
-        activeUntilRef.current = 0;
-        setActiveUntil(0);
         return;
       }
 
@@ -392,149 +168,113 @@ export function VoiceFirstCompanionLayer() {
         telegramHaptic('light');
         goBack();
         showThought('Вернулся назад.', 'success');
-        activeUntilRef.current = 0;
-        setActiveUntil(0);
         return;
       }
 
-      const latestPending = chat.pendingActions[0];
-      if (latestPending?.id && isVoiceCancel(text)) {
-        await chat.cancelAction(latestPending.id);
-        showThought('Отменил действие.', 'success', 1800);
-        activeUntilRef.current = 0;
-        setActiveUntil(0);
-        return;
-      }
-
-      if (latestPending?.id && !pendingHasClarification(latestPending) && isVoiceConfirm(text)) {
-        await chat.confirmAction(latestPending.id);
-        showThought('Подтвердил.', 'success', 1800);
-        activeUntilRef.current = 0;
-        setActiveUntil(0);
-        return;
-      }
-
+      // Подтверждения, отмены и уточнения идут через существующие модалки.
+      // Голос здесь — только ввод новой команды, без отдельного параллельного confirm-flow.
       await chat.sendMessage(text);
-      activeUntilRef.current = 0;
-      setActiveUntil(0);
     } finally {
       setIsProcessingVoice(false);
-      resumeListeningSoon(RESUME_DELAY_MS);
     }
-  }, [activeWindowMs, armCombatMode, chat, clearSilenceTimer, goBack, navigateTo, resumeListeningSoon, showThought]);
+  }, [chat, goBack, navigateTo, showThought]);
 
   useEffect(() => {
     handleTextRef.current = handleText;
   }, [handleText]);
 
-  const enableVoiceFirst = useCallback(async () => {
+  const primeVoicePermission = useCallback(async () => {
     setIsPriming(true);
-    setVoicePermissionPrompted(true);
-    setVoiceAlwaysOnEnabled(true);
-    shouldResumeRef.current = true;
-
     try {
-      const result = await voice.start();
-      if (result === 'started') {
-        showThought('Голос включён. Скажи “Фина”, затем команду.', 'success', 3600);
-      } else {
-        showThought('Разрешение сохранено. Если микрофон не включился, проверь доступ в Telegram.', 'warning');
-        resumeListeningSoon(700);
-      }
+      const ready = await voice.primePermission();
+      setVoicePermissionPrompted(true);
+      if (ready) showThought('Готово. Нажми на Фину и скажи команду.', 'success', 3600);
+      else showThought('Нажми на Фину, когда будешь готов сказать команду.', 'neutral', 3200);
+    } catch {
+      showThought('Нужен доступ к микрофону.', 'warning', 3600);
     } finally {
       setIsPriming(false);
     }
-  }, [resumeListeningSoon, setVoiceAlwaysOnEnabled, setVoicePermissionPrompted, showThought, voice]);
+  }, [setVoicePermissionPrompted, showThought, voice]);
 
-  const disableVoiceFirst = useCallback(() => {
-    shouldResumeRef.current = false;
-    activeUntilRef.current = 0;
-    setActiveUntil(0);
-    setVoiceAlwaysOnEnabled(false);
-    clearSilenceTimer();
-    clearRestartTimer();
-    voice.cancel();
-    voice.stopSpeaking();
-    showThought('Микрофон выключен.', 'neutral');
-  }, [clearRestartTimer, clearSilenceTimer, setVoiceAlwaysOnEnabled, showThought, voice]);
+  const startVoiceSession = useCallback(async () => {
+    if (!canUseVoice) {
+      showThought('Голос сейчас выключен. Проверь настройки.', 'warning');
+      return;
+    }
+
+    if (!voicePermissionPrompted) {
+      await primeVoicePermission();
+      return;
+    }
+
+    if (chat.pendingActions.length > 0) {
+      showThought('Сначала проверь действие в модалке.', 'warning', 2600);
+      return;
+    }
+
+    if (isProcessingVoiceRef.current || chat.isSending || voice.state === 'uploading' || voice.state === 'speaking') {
+      showThought('Думаю...', 'thinking', 1200);
+      return;
+    }
+
+    if (voice.state === 'recording') {
+      voice.stop();
+      showThought('Отправляю.', 'thinking', 1400);
+      return;
+    }
+
+    telegramHaptic('light');
+    const result = await voice.start();
+    if (result === 'started') {
+      showThought('Слушаю.', 'listening', DEFAULT_VOICE_SESSION_MS);
+      return;
+    }
+
+    if (result === 'busy') {
+      showThought('Секунду.', 'thinking', 1200);
+      return;
+    }
+
+    if (result === 'permission-ready') {
+      showThought('Доступ к микрофону готов. Нажми ещё раз и скажи команду.', 'neutral', 3200);
+      return;
+    }
+
+    showThought('Микрофон недоступен.', 'warning', 3000);
+  }, [canUseVoice, chat.isSending, chat.pendingActions.length, primeVoicePermission, showThought, telegramHaptic, voice, voicePermissionPrompted]);
 
   useEffect(() => {
     isProcessingVoiceRef.current = isProcessingVoice;
   }, [isProcessingVoice]);
 
   useEffect(() => {
-    isActiveRef.current = isActive;
-  }, [isActive]);
-
-  useEffect(() => {
-    activeUntilRef.current = activeUntil;
-  }, [activeUntil]);
-
-  useEffect(() => {
-    if (!isActive) {
-      shouldResumeRef.current = false;
-      clearSilenceTimer();
-      clearRestartTimer();
-      return;
-    }
-
-    shouldResumeRef.current = true;
-
-    if (voice.state === 'idle' && !isProcessingVoice) {
-      resumeListeningSoon(RESUME_DELAY_MS);
-    }
-  }, [clearRestartTimer, clearSilenceTimer, isActive, isProcessingVoice, resumeListeningSoon, voice.state]);
-
-  useEffect(() => {
-    if (!isActive || voice.state !== 'recording' || voice.mode !== 'speech') return;
-
-    const transcript = voice.transcript.trim();
-    if (!transcript) return;
-
-    const wake = stripWakeWord(transcript);
-    const shouldSubmit = activeUntilRef.current > Date.now() || wake.hasWakeWord;
-    if (!shouldSubmit) return;
-
-    clearSilenceTimer();
-    silenceTimerRef.current = window.setTimeout(() => {
-      stopListening();
-    }, SILENCE_SUBMIT_MS);
-
-    return clearSilenceTimer;
-  }, [clearSilenceTimer, isActive, stopListening, voice.mode, voice.state, voice.transcript]);
-
-  useEffect(() => {
     if (!voice.error) return;
 
     if (voice.error === 'transcription-not-configured') {
-      shouldResumeRef.current = false;
-      setVoiceAlwaysOnEnabled(false);
-      showThought('Серверное распознавание ещё не настроено. Добавь ключ в backend .env или напиши команду текстом.', 'warning', 5600);
+      showThought('Распознавание ещё не настроено.', 'warning', 4200);
+      return;
+    }
+
+    if (voice.error === 'microphone-denied' || voice.error === 'not-allowed' || voice.error === 'service-not-allowed') {
+      showThought('Нужен доступ к микрофону.', 'warning', 3600);
+      return;
+    }
+
+    if (voice.error === 'no-speech') {
+      showThought('Не расслышала. Нажми и повтори.', 'warning', 2800);
+      return;
+    }
+
+    if (voice.error === 'transcription-timeout') {
+      showThought('Не дождалась распознавания. Повтори ещё раз.', 'warning', 3400);
       return;
     }
 
     if (voice.error === 'transcription-error') {
-      shouldResumeRef.current = false;
-      showThought('Распознавание нестабильно. Повтори позже или напиши текстом.', 'warning', 4200);
-      return;
+      showThought('Не расслышала. Повтори ещё раз.', 'warning', 3000);
     }
-
-    const silentErrors = ['no-speech', 'aborted', 'speech-restart', 'audio-capture'];
-    if (voice.mode === 'speech' && silentErrors.includes(voice.error)) {
-      resumeListeningSoon(520);
-      return;
-    }
-
-    if (voice.error === 'not-allowed' || voice.error === 'service-not-allowed' || voice.error === 'microphone-denied') {
-      shouldResumeRef.current = false;
-      showThought('Нужен доступ к микрофону.', 'warning');
-      return;
-    }
-
-    if (voice.mode === 'speech') {
-      resumeListeningSoon(1200);
-    }
-  }, [resumeListeningSoon, setVoiceAlwaysOnEnabled, showThought, voice.error, voice.mode]);
+  }, [showThought, voice.error]);
 
   useEffect(() => {
     const lastMessage = chat.messages.filter((message) => message.role === 'assistant').at(-1);
@@ -545,68 +285,37 @@ export function VoiceFirstCompanionLayer() {
     lastAssistantMessageKeyRef.current = messageKey;
 
     if (lastMessage.kind === 'preview') {
-      activeUntilRef.current = 0;
-      setActiveUntil(0);
       voice.stopSpeaking();
       showThought('Проверь действие в модалке.', 'warning', 3600);
-      resumeListeningSoon(700);
       return;
     }
 
     if (lastMessage.kind === 'error') {
-      activeUntilRef.current = 0;
-      setActiveUntil(0);
       voice.stopSpeaking();
-      showThought(lastMessage.text || 'Нужно уточнение. Скажи “Фина” и ответ.', 'warning', 5000);
-      resumeListeningSoon(700);
+      showThought(lastMessage.text || 'Нужно уточнение.', 'warning', 5000);
       return;
     }
 
-    activeUntilRef.current = 0;
-    setActiveUntil(0);
-    showThought(lastMessage.text || 'Готово.', 'success', 1800);
-
     voice.stopSpeaking();
-    resumeListeningSoon(900);
-  }, [chat.messages, chat.pendingActions.length, resumeListeningSoon, showThought, voice]);
-
-
-  useEffect(() => {
-    if (!isActive) return undefined;
-
-    const tick = window.setInterval(() => {
-      if (!shouldResumeRef.current || !isActiveRef.current) return;
-      if (typeof document !== 'undefined' && document.hidden) return;
-      if (isProcessingVoiceRef.current || chat.isSending) return;
-      if (voice.state === 'recording' || voice.state === 'uploading' || voice.state === 'speaking') return;
-
-      const now = Date.now();
-      if (now - lastWatchdogKickRef.current < WATCHDOG_INTERVAL_MS - 80) return;
-      lastWatchdogKickRef.current = now;
-      void startListeningRef.current?.();
-    }, WATCHDOG_INTERVAL_MS);
-
-    return () => window.clearInterval(tick);
-  }, [chat.isSending, isActive, voice.state]);
+    showThought(lastMessage.text || 'Готово.', 'success', 1800);
+  }, [chat.messages, showThought, voice]);
 
   useEffect(() => () => {
-    clearSilenceTimer();
-    clearRestartTimer();
     if (bubbleTimerRef.current !== null) window.clearTimeout(bubbleTimerRef.current);
-  }, [clearRestartTimer, clearSilenceTimer]);
+    voice.cancel();
+  }, [voice]);
 
   const mood = useMemo<CompanionMood>(() => {
     if (chat.pendingActions.length > 0) return 'confirm';
-    if (voice.state === 'recording' && isCombatActive) return 'listening';
+    if (voice.state === 'recording') return 'listening';
     if (voice.state === 'uploading' || voice.state === 'speaking' || chat.isSending || isProcessingVoice) return 'thinking';
     if (thought?.tone === 'warning') return 'warning';
     if (thought?.tone === 'success') return 'success';
     return 'idle';
-  }, [chat.isSending, chat.pendingActions.length, isCombatActive, isProcessingVoice, thought?.tone, voice.state]);
+  }, [chat.isSending, chat.pendingActions.length, isProcessingVoice, thought?.tone, voice.state]);
 
-  const needsIntro = canUseVoiceFirst && !voicePermissionPrompted;
+  const needsIntro = canUseVoice && !voicePermissionPrompted;
   const showFloatingCompanion = currentScreen !== 'ai-core';
-  const displayName = FIXED_COMPANION_NAME;
 
   if (!showFloatingCompanion && !needsIntro && chat.pendingActions.length === 0) return null;
 
@@ -621,22 +330,21 @@ export function VoiceFirstCompanionLayer() {
             <div className="voice-first-intro__eyebrow">Знакомься</div>
             <div className="voice-first-intro__title">Это Фина</div>
             <p>
-              Она слушает финансовые команды голосом, готовит действие и просит подтверждение,
-              если операция влияет на деньги.
+              Нажми на Фину, скажи финансовую команду обычным языком, а подтверждение появится в обычной модалке.
             </p>
 
             <div className="voice-first-intro__steps">
-              <div><b>1</b><span>Скажи “Фина”</span></div>
-              <div><b>2</b><span>Назови задачу обычным языком</span></div>
-              <div><b>3</b><span>Подтверди, отмени или уточни</span></div>
+              <div><b>1</b><span>Разреши микрофон</span></div>
+              <div><b>2</b><span>Нажми на Фину</span></div>
+              <div><b>3</b><span>Скажи команду</span></div>
             </div>
 
             <div className="voice-first-intro__hint">
-              Говори обычным языком: запись траты, доход, перевод, цель, вопрос по расходам. Фина подготовит действие и покажет подтверждение.
+              Примеры: “Фина, кофе 300”, “создай цель отпуск 120000”, “сделай наличку основной”.
             </div>
 
             <div className="voice-first-intro__actions">
-              <button type="button" onClick={enableVoiceFirst} disabled={isPriming}>{isPriming ? 'Включаю...' : 'Познакомиться с Финой'}</button>
+              <button type="button" onClick={primeVoicePermission} disabled={isPriming}>{isPriming ? 'Запрашиваю...' : 'Разрешить микрофон'}</button>
               <button type="button" onClick={() => setVoicePermissionPrompted(true)}>Позже</button>
             </div>
           </div>
@@ -652,7 +360,7 @@ export function VoiceFirstCompanionLayer() {
                 <div>
                   <div className="app-eyebrow">Проверка</div>
                   <h2>Фина ждёт подтверждения</h2>
-                  <p>Можно подтвердить, отменить или изменить детали перед выполнением.</p>
+                  <p>Проверь действие перед выполнением.</p>
                 </div>
               </div>
               <div className="grid gap-3">
@@ -672,53 +380,36 @@ export function VoiceFirstCompanionLayer() {
       ) : null}
 
       {showFloatingCompanion ? (
-      <div className="voice-first-companion" data-no-swipe="true">
-        {thought ? (
-          <div className={`voice-first-bubble voice-first-bubble--${thought.tone}`}>
-            {thought.text}
-          </div>
-        ) : null}
+        <div className="voice-first-companion" data-no-swipe="true">
+          {thought ? (
+            <div className={`voice-first-bubble voice-first-bubble--${thought.tone}`}>
+              {thought.text}
+            </div>
+          ) : null}
 
-        <div className="voice-first-companion__controls">
-          <div className="voice-first-companion__voice-panel">
-            <div className={isActive ? 'voice-first-status voice-first-status--on' : 'voice-first-status'}>
-              {isActive
-                ? voice.state === 'recording'
-                  ? isCombatActive
-                    ? 'Слушаю задачу'
-                    : `Жду “${displayName}”`
-                  : chat.isSending || isProcessingVoice || voice.state === 'speaking'
-                    ? 'Думаю'
-                    : voice.mode === 'recorder'
-                      ? `Сервер ждёт “${displayName}”`
-                      : voiceWakeWordEnabled
-                        ? `Скажи “${displayName}”`
-                        : 'Голос включён'
-                : 'Микрофон выключен'}
+          <div className="voice-first-companion__controls">
+            <div className="voice-first-companion__voice-panel">
+              <div className={canUseVoice ? 'voice-first-status voice-first-status--on' : 'voice-first-status'}>
+                {canUseVoice
+                  ? voice.state === 'recording'
+                    ? 'Слушаю'
+                    : voice.state === 'uploading'
+                      ? 'Распознаю'
+                      : chat.isSending || isProcessingVoice
+                        ? 'Думаю'
+                        : 'Нажми и скажи команду'
+                  : 'Голос выключен'}
+              </div>
             </div>
 
-            {isActive ? (
-              <button type="button" className="voice-first-mic-toggle voice-first-mic-toggle--off" onClick={disableVoiceFirst}>
-                Выключить микрофон
-              </button>
-            ) : voicePermissionPrompted ? (
-              <button type="button" className="voice-first-mic-toggle" onClick={enableVoiceFirst} disabled={!canUseVoiceFirst || isPriming}>
-                {isPriming ? 'Включаю...' : 'Включить микрофон'}
-              </button>
-            ) : null}
+            <CompanionButton
+              mood={mood}
+              size="md"
+              label="Сказать команду"
+              onClick={startVoiceSession}
+            />
           </div>
-
-          <CompanionButton
-            mood={mood}
-            size="md"
-            label="Открыть помощника"
-            onClick={() => {
-              telegramHaptic('light');
-              navigateTo('companion');
-            }}
-          />
         </div>
-      </div>
       ) : null}
     </>
   );

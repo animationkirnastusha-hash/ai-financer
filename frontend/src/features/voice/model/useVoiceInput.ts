@@ -10,9 +10,10 @@ import type {
 type UseVoiceInputParams = {
   onText: (text: string) => Promise<void> | void;
   lang?: string;
+  sessionMs?: number;
 };
 
-type VoiceStartResult = 'started' | 'permission-ready' | 'error';
+type VoiceStartResult = 'started' | 'permission-ready' | 'busy' | 'error';
 
 async function getMicrophonePermissionState(): Promise<PermissionState | null> {
   if (typeof navigator === 'undefined') return null;
@@ -20,6 +21,7 @@ async function getMicrophonePermissionState(): Promise<PermissionState | null> {
 
   try {
     const status = await navigator.permissions.query({ name: 'microphone' as PermissionName });
+    logVoiceDebugEvent('permission_state_checked', { permissionState: status.state });
     return status.state;
   } catch {
     return null;
@@ -29,6 +31,7 @@ async function getMicrophonePermissionState(): Promise<PermissionState | null> {
 export function useVoiceInput({
   onText,
   lang = 'ru-RU',
+  sessionMs = 8500,
 }: UseVoiceInputParams) {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [permissionPrimed, setPermissionPrimed] = useState(false);
@@ -38,10 +41,10 @@ export function useVoiceInput({
   const recorder = useVoiceRecorder({
     onText,
     lang,
+    chunkMs: sessionMs,
   });
 
-  // Web Speech remains only as a last-resort fallback. The main product path is
-  // server STT through MediaRecorder, which behaves the same on iOS and Android.
+  // Web Speech stays only as a last-resort desktop/dev fallback. The product path is one-shot server STT.
   const speech = useVoiceRecognition({
     lang,
     onFinalText: onText,
@@ -51,7 +54,7 @@ export function useVoiceInput({
     return recorder.isSupported ? 'recorder' : 'speech';
   }, [recorder.isSupported]);
 
-  const ensurePermissionBeforeRecording = useCallback(async (): Promise<boolean> => {
+  const primePermission = useCallback(async (): Promise<boolean> => {
     setPermissionError(null);
 
     if (permissionPrimed) return true;
@@ -60,16 +63,13 @@ export function useVoiceInput({
       return true;
     }
 
-    const permissionState = await getMicrophonePermissionState();
-    logVoiceDebugEvent('permission_state_checked', { permissionState: permissionState ?? 'unknown' });
+    await getMicrophonePermissionState();
 
     if (permissionRequestInFlightRef.current) return false;
-
     permissionRequestInFlightRef.current = true;
+    logVoiceDebugEvent('permission_prime_requested');
 
     try {
-      logVoiceDebugEvent('permission_prime_requested');
-
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: {
           echoCancellation: true,
@@ -79,13 +79,13 @@ export function useVoiceInput({
         },
       });
       stream.getTracks().forEach((track) => track.stop());
-      logVoiceDebugEvent('permission_prime_granted');
       setPermissionPrimed(true);
+      logVoiceDebugEvent('permission_prime_granted');
       return true;
     } catch (error) {
-      logVoiceDebugEvent('permission_prime_denied', { error: error instanceof Error ? error.name || error.message : 'unknown' });
       setPermissionPrimed(false);
       setPermissionError('microphone-denied');
+      logVoiceDebugEvent('permission_prime_denied', { error: error instanceof Error ? error.name || error.message : 'unknown' });
       throw error;
     } finally {
       permissionRequestInFlightRef.current = false;
@@ -96,32 +96,28 @@ export function useVoiceInput({
     window.speechSynthesis?.cancel();
     setPermissionError(null);
 
-    try {
-      const canStartNow = await ensurePermissionBeforeRecording();
+    if (mode === 'recorder' && (recorder.state === 'recording' || recorder.state === 'uploading')) return 'busy';
+    if (mode === 'speech' && speech.state !== 'idle') return 'busy';
 
-      if (!canStartNow) {
-        return 'permission-ready';
-      }
+    try {
+      const permissionReady = await primePermission();
+      if (!permissionReady) return 'permission-ready';
 
       if (mode === 'recorder') {
-        logVoiceDebugEvent('voice_start_recorder', { mode });
         await recorder.startRecording();
         return 'started';
       }
 
       if (speech.isSupported) {
-        logVoiceDebugEvent('voice_start_speech_fallback', { mode });
         return speech.startListening() ? 'started' : 'permission-ready';
       }
 
-      logVoiceDebugEvent('voice_start_unsupported', { mode, isSupported: false });
       return 'error';
     } catch (err) {
       console.error(err);
-      logVoiceDebugEvent('voice_start_unsupported', { mode, isSupported: false });
       return 'error';
     }
-  }, [ensurePermissionBeforeRecording, mode, recorder, speech]);
+  }, [mode, primePermission, recorder, speech]);
 
   const stop = useCallback(() => {
     if (mode === 'recorder') {
@@ -133,13 +129,12 @@ export function useVoiceInput({
   }, [mode, recorder, speech]);
 
   const cancel = useCallback(() => {
-    if (mode === 'recorder') {
-      recorder.cancelRecording();
-      return;
-    }
-
+    window.speechSynthesis?.cancel();
+    setIsSpeaking(false);
+    setPermissionError(null);
+    recorder.cancelRecording();
     speech.cancelListening();
-  }, [mode, recorder, speech]);
+  }, [recorder, speech]);
 
   const reset = useCallback(() => {
     window.speechSynthesis?.cancel();
@@ -149,13 +144,10 @@ export function useVoiceInput({
     speech.reset();
   }, [recorder, speech]);
 
-  const speak = useCallback(
-    (_text: string, _options?: { maxDurationMs?: number }) => {
-      window.speechSynthesis?.cancel();
-      setIsSpeaking(false);
-    },
-    [],
-  );
+  const speak = useCallback((_text: string, _options?: { maxDurationMs?: number }) => {
+    window.speechSynthesis?.cancel();
+    setIsSpeaking(false);
+  }, []);
 
   const stopSpeaking = useCallback(() => {
     window.speechSynthesis?.cancel();
@@ -190,6 +182,7 @@ export function useVoiceInput({
     stop,
     cancel,
     reset,
+    primePermission,
     speak,
     stopSpeaking,
   };

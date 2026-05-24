@@ -57,10 +57,8 @@ export default function SettingsPage() {
   const navigateTo = useNavigationStore((state) => state.navigateTo);
   const user = useAuthStore((state) => state.user);
 
-  const voiceActiveWindowSeconds = useSettingsStore((state) => state.voiceActiveWindowSeconds);
   const voiceEnabled = useSettingsStore((state) => state.voiceEnabled);
   const voiceBetaEnabled = useSettingsStore((state) => state.voiceBetaEnabled);
-  const voiceAlwaysOnEnabled = useSettingsStore((state) => state.voiceAlwaysOnEnabled);
   const textInputEnabled = useSettingsStore((state) => state.textInputEnabled);
   const aiInsightsEnabled = useSettingsStore((state) => state.aiInsightsEnabled);
   const mainCurrency = useSettingsStore((state) => state.mainCurrency);
@@ -69,10 +67,8 @@ export default function SettingsPage() {
   const rubToUsdRate = useSettingsStore((state) => state.rubToUsdRate);
   const rubToEurRate = useSettingsStore((state) => state.rubToEurRate);
 
-  const setVoiceActiveWindowSeconds = useSettingsStore((state) => state.setVoiceActiveWindowSeconds);
   const setVoiceEnabled = useSettingsStore((state) => state.setVoiceEnabled);
   const setVoiceBetaEnabled = useSettingsStore((state) => state.setVoiceBetaEnabled);
-  const setVoiceAlwaysOnEnabled = useSettingsStore((state) => state.setVoiceAlwaysOnEnabled);
   const setTextInputEnabled = useSettingsStore((state) => state.setTextInputEnabled);
   const setAIInsightsEnabled = useSettingsStore((state) => state.setAIInsightsEnabled);
   const setMainCurrency = useSettingsStore((state) => state.setMainCurrency);
@@ -81,19 +77,11 @@ export default function SettingsPage() {
   const setRubToUsdRate = useSettingsStore((state) => state.setRubToUsdRate);
   const setRubToEurRate = useSettingsStore((state) => state.setRubToEurRate);
 
-  const [activeWindowDraft, setActiveWindowDraft] = useState(String(voiceActiveWindowSeconds));
   const [usdDraft, setUsdDraft] = useState(String(rubToUsdRate));
   const [eurDraft, setEurDraft] = useState(String(rubToEurRate));
 
-  useEffect(() => setActiveWindowDraft(String(voiceActiveWindowSeconds)), [voiceActiveWindowSeconds, modal]);
   useEffect(() => setUsdDraft(String(rubToUsdRate)), [rubToUsdRate, modal]);
   useEffect(() => setEurDraft(String(rubToEurRate)), [rubToEurRate, modal]);
-
-  const handleActiveWindowBlur = () => {
-    const value = Number(activeWindowDraft);
-    setVoiceActiveWindowSeconds(Number.isFinite(value) ? value : voiceActiveWindowSeconds);
-    setActiveWindowDraft(String(Number.isFinite(value) ? Math.min(120, Math.max(2, Math.round(value))) : voiceActiveWindowSeconds));
-  };
 
   const saveUsdRate = () => {
     const value = Number(usdDraft.replace(',', '.'));
@@ -145,7 +133,7 @@ export default function SettingsPage() {
         <header className="app-card app-card--hero app-settings-hero">
           <div className="app-eyebrow">Настройки</div>
           <h1>Управление</h1>
-          <p>Голос, валюты, подсказки, данные и быстрые разделы.</p>
+          <p>Голос по нажатию, валюты, подсказки, данные и быстрые разделы.</p>
         </header>
 
         <section className="app-card app-settings-language">
@@ -157,8 +145,8 @@ export default function SettingsPage() {
         </section>
 
         <section className="app-settings-grid">
-          <SettingsCard title="Голос" caption="Микрофон и окно после команды" value={voiceEnabled ? 'включён' : 'выключен'} onClick={() => setModal('voice')} />
-          <SettingsCard title="Фина" caption="Как помощник слушает команды" value="по имени" onClick={() => setModal('fina')} />
+          <SettingsCard title="Голос" caption="Команда по тапу на Фину" value={voiceEnabled ? 'включён' : 'выключен'} onClick={() => setModal('voice')} />
+          <SettingsCard title="Фина" caption="Как помощник принимает голос" value="по тапу" onClick={() => setModal('fina')} />
           <SettingsCard title="Валюты" caption="Главная валюта и курсы" value={`${mainCurrency}${secondaryCurrencyEnabled ? ` + ${secondaryCurrency}` : ''}`} onClick={() => setModal('currency')} />
           <SettingsCard title="Подсказки" caption="Текстовый ввод и наблюдения" value={textInputEnabled ? 'текст есть' : 'только голос'} onClick={() => setModal('ai')} />
           <SettingsCard title="Данные" caption="Очистка финансов или полный сброс" value="тесты" onClick={() => setModal('data')} />
@@ -186,39 +174,23 @@ export default function SettingsPage() {
       </div>
 
       {modal === 'voice' ? (
-        <ModalShell title="Голос" caption="Фина слушает только после имени. Озвучка ответов временно выключена." onClose={() => setModal(null)}>
+        <ModalShell title="Голос" caption="Фина больше не слушает бесконечно. Нажми на companion, скажи команду и дождись результата." onClose={() => setModal(null)}>
           <div className="grid gap-3">
-            <ToggleLine title="Голосовой ввод" caption="Команды можно говорить вслух." checked={voiceEnabled} onChange={setVoiceEnabled} />
-            <ToggleLine title="Микрофон включён" caption="Пока приложение открыто, Фина ждёт своё имя." checked={voiceAlwaysOnEnabled} onChange={setVoiceAlwaysOnEnabled} />
-            <ToggleLine title="Бета-режим" caption="Улучшенный голосовой цикл для тестов." checked={voiceBetaEnabled} onChange={setVoiceBetaEnabled} />
+            <ToggleLine title="Голосовой ввод" caption="Команды можно говорить вслух через одно нажатие на Фину." checked={voiceEnabled} onChange={setVoiceEnabled} />
+            <ToggleLine title="Голосовой режим" caption="Стабильная запись одной команды без фонового цикла." checked={voiceBetaEnabled} onChange={setVoiceBetaEnabled} />
           </div>
-          <div className="app-settings-number mt-4">
-            <div><b>Слушать после команды</b><small>Сколько секунд можно продолжать без повторного имени.</small></div>
-            <label>
-              <input
-                type="number"
-                min={2}
-                max={120}
-                step={1}
-                inputMode="numeric"
-                value={activeWindowDraft}
-                onChange={(event) => setActiveWindowDraft(event.target.value)}
-                onBlur={handleActiveWindowBlur}
-              />
-              <span>сек</span>
-            </label>
-          </div>
+          <p className="app-settings-note mt-4">Если действие требует проверки, появится обычная модалка подтверждения. Чтобы сказать новую команду, нажми на Фину ещё раз.</p>
         </ModalShell>
       ) : null}
 
       {modal === 'fina' ? (
-        <ModalShell title="Фина" caption="Помощник реагирует на имя, готовит действие и показывает подтверждение." onClose={() => setModal(null)}>
+        <ModalShell title="Фина" caption="Помощник принимает одну голосовую команду за одно нажатие." onClose={() => setModal(null)}>
           <div className="app-fina-rules">
-            <div><b>1</b><span>Скажи «Фина»</span></div>
-            <div><b>2</b><span>Назови задачу</span></div>
-            <div><b>3</b><span>Подтверди или уточни</span></div>
+            <div><b>1</b><span>Нажми на Фину</span></div>
+            <div><b>2</b><span>Скажи задачу обычным языком</span></div>
+            <div><b>3</b><span>Проверь модалку, если нужно подтверждение</span></div>
           </div>
-          <p className="app-settings-note">До имени Фина не отправляет речь в обработку. Если действие влияет на деньги, появится окно подтверждения.</p>
+          <p className="app-settings-note">Голос не создаёт отдельный поток подтверждений. Все проверки, отмены и изменения остаются в обычных модалках приложения.</p>
         </ModalShell>
       ) : null}
 

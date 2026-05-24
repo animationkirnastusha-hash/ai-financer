@@ -14,11 +14,11 @@ type RecorderFormat = {
   extension: string;
 };
 
-const DEFAULT_CHUNK_MS = 9000;
+const DEFAULT_SESSION_MS = 8500;
+const MIN_SESSION_MS = 3500;
+const MAX_SESSION_MS = 12000;
 const MIN_AUDIO_BYTES = 900;
-const MAX_SOFT_FAILURES = 3;
 const TRANSCRIBE_CLIENT_TIMEOUT_MS = 68_000;
-const TRANSCRIBE_IN_FLIGHT_STALE_MS = 72_000;
 
 function getBestRecorderFormat(): RecorderFormat | null {
   if (typeof MediaRecorder === 'undefined') {
@@ -42,18 +42,21 @@ function toSttLanguage(lang: string) {
   return lang.toLowerCase().startsWith('en') ? 'en' : 'ru';
 }
 
-export function useVoiceRecorder({ onText, lang = 'ru-RU', chunkMs = DEFAULT_CHUNK_MS }: UseVoiceRecorderParams) {
+function clampSessionMs(value: number) {
+  if (!Number.isFinite(value)) return DEFAULT_SESSION_MS;
+  return Math.max(MIN_SESSION_MS, Math.min(MAX_SESSION_MS, Math.round(value)));
+}
+
+export function useVoiceRecorder({ onText, lang = 'ru-RU', chunkMs = DEFAULT_SESSION_MS }: UseVoiceRecorderParams) {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const chunksRef = useRef<BlobPart[]>([]);
   const activeFormatRef = useRef<RecorderFormat | null>(null);
-  const uploadInFlightRef = useRef(false);
-  const intentionallyStoppedRef = useRef(false);
-  const softFailuresRef = useRef(0);
   const onTextRef = useRef(onText);
   const recordingStartedAtRef = useRef(0);
-  const uploadStartedAtRef = useRef(0);
   const startInProgressRef = useRef(false);
+  const finalizeTimerRef = useRef<number | null>(null);
+  const cancelledRef = useRef(false);
 
   const [state, setState] = useState<VoiceRecorderState>('idle');
   const [error, setError] = useState<string | null>(null);
@@ -69,6 +72,13 @@ export function useVoiceRecorder({ onText, lang = 'ru-RU', chunkMs = DEFAULT_CHU
       recorderFormat,
   );
 
+  const clearFinalizeTimer = useCallback(() => {
+    if (finalizeTimerRef.current !== null) {
+      window.clearTimeout(finalizeTimerRef.current);
+      finalizeTimerRef.current = null;
+    }
+  }, []);
+
   const cleanupStream = useCallback(() => {
     if (streamRef.current) {
       streamRef.current.getTracks().forEach((track) => track.stop());
@@ -76,75 +86,67 @@ export function useVoiceRecorder({ onText, lang = 'ru-RU', chunkMs = DEFAULT_CHU
     }
   }, []);
 
-  const stopInternal = useCallback(() => {
-    intentionallyStoppedRef.current = true;
-    logVoiceDebugEvent('recorder_stop_requested', { state });
+  const hardCleanup = useCallback(() => {
+    clearFinalizeTimer();
+    cleanupStream();
+    mediaRecorderRef.current = null;
+    chunksRef.current = [];
+    activeFormatRef.current = null;
+    recordingStartedAtRef.current = 0;
+    startInProgressRef.current = false;
+    cancelledRef.current = false;
+  }, [clearFinalizeTimer, cleanupStream]);
 
-    const recorder = mediaRecorderRef.current;
-    if (recorder && recorder.state !== 'inactive') {
-      try {
-        recorder.stop();
-      } catch {
-        // ignore
-      }
-    } else {
-      cleanupStream();
-      mediaRecorderRef.current = null;
-      chunksRef.current = [];
-      activeFormatRef.current = null;
-      setState((current) => (current === 'error' ? current : 'idle'));
-    }
-  }, [cleanupStream]);
-
-  const uploadChunk = useCallback(async (blob: Blob, format: RecorderFormat) => {
-    if (uploadInFlightRef.current) {
-      const ageMs = uploadStartedAtRef.current ? Date.now() - uploadStartedAtRef.current : 0;
-      if (ageMs > TRANSCRIBE_IN_FLIGHT_STALE_MS) {
-        logVoiceDebugEvent('transcribe_in_flight_stale_reset', {
-          blobSize: blob.size,
-          mimeType: format.mimeType,
-          extension: format.extension,
-          elapsedMs: ageMs,
-        });
-        uploadInFlightRef.current = false;
-        uploadStartedAtRef.current = 0;
-      } else {
-        logVoiceDebugEvent('transcribe_skipped_in_flight', {
-          blobSize: blob.size,
-          mimeType: format.mimeType,
-          extension: format.extension,
-          elapsedMs: ageMs,
-        });
-        return;
-      }
-    }
-
-    if (blob.size < MIN_AUDIO_BYTES) {
-      logVoiceDebugEvent('audio_blob_too_small', { blobSize: blob.size, mimeType: format.mimeType, extension: format.extension });
+  const uploadFinalBlob = useCallback(async (blob: Blob, format: RecorderFormat) => {
+    if (cancelledRef.current) {
+      logVoiceDebugEvent('voice_session_cancelled_before_upload', {
+        blobSize: blob.size,
+        mimeType: format.mimeType,
+        extension: format.extension,
+      });
+      setState('idle');
       return;
     }
 
-    uploadInFlightRef.current = true;
-    uploadStartedAtRef.current = Date.now();
+    if (blob.size < MIN_AUDIO_BYTES) {
+      logVoiceDebugEvent('audio_blob_too_small', {
+        blobSize: blob.size,
+        mimeType: format.mimeType,
+        extension: format.extension,
+      });
+      setError('no-speech');
+      setState('idle');
+      return;
+    }
+
+    const uploadStartedAt = Date.now();
     setState('uploading');
-    logVoiceDebugEvent('transcribe_request_sent', { blobSize: blob.size, mimeType: format.mimeType, extension: format.extension });
+    logVoiceDebugEvent('transcribe_request_sent', {
+      blobSize: blob.size,
+      mimeType: format.mimeType,
+      extension: format.extension,
+    });
 
     try {
       const result = await transcribeVoice(blob, `voice.${format.extension}`, toSttLanguage(lang), TRANSCRIBE_CLIENT_TIMEOUT_MS);
-      softFailuresRef.current = 0;
       const text = result.text?.trim();
       logVoiceDebugEvent('transcribe_request_success', {
         status: 200,
         blobSize: blob.size,
         mimeType: format.mimeType,
         extension: format.extension,
-        elapsedMs: uploadStartedAtRef.current ? Date.now() - uploadStartedAtRef.current : 0,
+        elapsedMs: Date.now() - uploadStartedAt,
         textLength: text?.length ?? 0,
         hasText: Boolean(text),
       });
+
       if (text) {
         await onTextRef.current(text);
+      } else {
+        setError('no-speech');
       }
+
+      setState('idle');
     } catch (err) {
       const code = typeof err === 'object' && err !== null && 'code' in err ? String((err as { code?: unknown }).code) : '';
       const status = typeof err === 'object' && err !== null && 'status' in err ? Number((err as { status?: unknown }).status) : 0;
@@ -154,32 +156,48 @@ export function useVoiceRecorder({ onText, lang = 'ru-RU', chunkMs = DEFAULT_CHU
         blobSize: blob.size,
         mimeType: format.mimeType,
         extension: format.extension,
-        elapsedMs: uploadStartedAtRef.current ? Date.now() - uploadStartedAtRef.current : 0,
+        elapsedMs: Date.now() - uploadStartedAt,
       });
 
       if (code === 'VOICE_TRANSCRIPTION_NOT_CONFIGURED' || status === 503) {
         setError('transcription-not-configured');
         setState('error');
-        stopInternal();
         return;
       }
 
-      softFailuresRef.current += 1;
-      if (softFailuresRef.current >= MAX_SOFT_FAILURES) {
-        setError('transcription-error');
-        setState('error');
-        stopInternal();
-      }
-    } finally {
-      uploadInFlightRef.current = false;
-      uploadStartedAtRef.current = 0;
-      setState((current) => (current === 'uploading' ? 'recording' : current));
+      setError(code === 'VOICE_TRANSCRIPTION_CLIENT_TIMEOUT' || status === 504 ? 'transcription-timeout' : 'transcription-error');
+      setState('idle');
     }
-  }, [lang, stopInternal]);
+  }, [lang]);
+
+  const finalizeRecording = useCallback((cancelled = false) => {
+    clearFinalizeTimer();
+    cancelledRef.current = cancelled;
+
+    const recorder = mediaRecorderRef.current;
+    if (!recorder || recorder.state === 'inactive') {
+      hardCleanup();
+      setState('idle');
+      return;
+    }
+
+    try {
+      recorder.stop();
+    } catch {
+      hardCleanup();
+      setError('recording-error');
+      setState('idle');
+    }
+  }, [clearFinalizeTimer, hardCleanup]);
 
   const startRecording = useCallback(async () => {
     if (startInProgressRef.current) {
       logVoiceDebugEvent('voice_start_ignored_in_progress', { state });
+      return;
+    }
+
+    if (state === 'recording' || state === 'uploading') {
+      logVoiceDebugEvent('voice_start_ignored_busy', { state });
       return;
     }
 
@@ -190,19 +208,13 @@ export function useVoiceRecorder({ onText, lang = 'ru-RU', chunkMs = DEFAULT_CHU
       return;
     }
 
-    if (mediaRecorderRef.current?.state === 'recording') {
-      logVoiceDebugEvent('voice_start_ignored_already_recording', { state: mediaRecorderRef.current.state });
-      return;
-    }
-
     startInProgressRef.current = true;
+    cancelledRef.current = false;
 
     try {
       setError(null);
-      softFailuresRef.current = 0;
       chunksRef.current = [];
       activeFormatRef.current = recorderFormat;
-      intentionallyStoppedRef.current = false;
 
       logVoiceDebugEvent('permission_requested', { mimeType: recorderFormat.mimeType, extension: recorderFormat.extension });
 
@@ -219,27 +231,20 @@ export function useVoiceRecorder({ onText, lang = 'ru-RU', chunkMs = DEFAULT_CHU
 
       stream.getAudioTracks().forEach((track) => {
         track.onended = () => {
-          if (!intentionallyStoppedRef.current) {
+          if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
             logVoiceDebugEvent('microphone_track_ended', { mimeType: recorderFormat.mimeType, extension: recorderFormat.extension });
-            setError('microphone-ended');
-            setState('error');
           }
         };
       });
 
-      const recorder = new MediaRecorder(stream, {
-        mimeType: recorderFormat.mimeType,
-      });
+      const recorder = new MediaRecorder(stream, { mimeType: recorderFormat.mimeType });
 
       recorder.ondataavailable = (event) => {
-        const format = activeFormatRef.current ?? recorderFormat;
         if (!event.data || event.data.size <= 0) {
-          logVoiceDebugEvent('audio_blob_empty', { mimeType: format.mimeType, extension: format.extension, blobSize: event.data?.size ?? 0 });
+          logVoiceDebugEvent('audio_blob_empty', { mimeType: recorderFormat.mimeType, extension: recorderFormat.extension, blobSize: event.data?.size ?? 0 });
           return;
         }
-
-        logVoiceDebugEvent('audio_blob_ready', { mimeType: format.mimeType, extension: format.extension, blobSize: event.data.size });
-        void uploadChunk(event.data, format);
+        chunksRef.current.push(event.data);
       };
 
       recorder.onstart = () => {
@@ -249,37 +254,56 @@ export function useVoiceRecorder({ onText, lang = 'ru-RU', chunkMs = DEFAULT_CHU
           mimeType: recorder.mimeType || recorderFormat.mimeType,
           extension: recorderFormat.extension,
           recordingState: recorder.state,
+          sessionMs: clampSessionMs(chunkMs),
         });
         setState('recording');
+
+        finalizeTimerRef.current = window.setTimeout(() => {
+          finalizeRecording(false);
+        }, clampSessionMs(chunkMs));
       };
 
       recorder.onerror = () => {
         logVoiceDebugEvent('recorder_error', { mimeType: recorder.mimeType || recorderFormat.mimeType, extension: recorderFormat.extension, recordingState: recorder.state });
         setError('recording-error');
-        setState('error');
-        stopInternal();
+        finalizeRecording(true);
       };
 
       recorder.onstop = () => {
-        startInProgressRef.current = false;
+        const format = activeFormatRef.current ?? recorderFormat;
+        const elapsedMs = recordingStartedAtRef.current ? Date.now() - recordingStartedAtRef.current : 0;
+        const blob = new Blob(chunksRef.current, { type: format.mimeType });
+
         logVoiceDebugEvent('recorder_stopped', {
-          mimeType: recorder.mimeType || recorderFormat.mimeType,
-          extension: recorderFormat.extension,
-          elapsedMs: recordingStartedAtRef.current ? Date.now() - recordingStartedAtRef.current : 0,
+          mimeType: recorder.mimeType || format.mimeType,
+          extension: format.extension,
+          elapsedMs,
+          blobSize: blob.size,
+          cancelled: cancelledRef.current,
         });
+
         cleanupStream();
         mediaRecorderRef.current = null;
         chunksRef.current = [];
         activeFormatRef.current = null;
-        uploadInFlightRef.current = false;
-        uploadStartedAtRef.current = 0;
-        setState((current) => (current === 'error' ? current : 'idle'));
+        recordingStartedAtRef.current = 0;
+        startInProgressRef.current = false;
+
+        if (cancelledRef.current) {
+          hardCleanup();
+          setState('idle');
+          return;
+        }
+
+        logVoiceDebugEvent('audio_blob_ready', { mimeType: format.mimeType, extension: format.extension, blobSize: blob.size });
+        void uploadFinalBlob(blob, format).finally(() => {
+          cancelledRef.current = false;
+        });
       };
 
       mediaRecorderRef.current = recorder;
-      const timeslice = Math.max(4500, Math.min(12000, chunkMs));
-      logVoiceDebugEvent('recorder_start_call', { mimeType: recorderFormat.mimeType, extension: recorderFormat.extension, elapsedMs: timeslice });
-      recorder.start(timeslice);
+      logVoiceDebugEvent('recorder_start_call', { mimeType: recorderFormat.mimeType, extension: recorderFormat.extension, sessionMs: clampSessionMs(chunkMs) });
+      recorder.start();
     } catch (err) {
       startInProgressRef.current = false;
       console.error(err);
@@ -288,25 +312,24 @@ export function useVoiceRecorder({ onText, lang = 'ru-RU', chunkMs = DEFAULT_CHU
       setState('error');
       cleanupStream();
     }
-  }, [chunkMs, cleanupStream, isSupported, recorderFormat, stopInternal, uploadChunk]);
+  }, [chunkMs, cleanupStream, finalizeRecording, hardCleanup, isSupported, recorderFormat, state, uploadFinalBlob]);
 
   const stopRecording = useCallback(() => {
-    stopInternal();
-  }, [stopInternal]);
+    logVoiceDebugEvent('voice_session_stop_and_send', { state });
+    finalizeRecording(false);
+  }, [finalizeRecording, state]);
 
   const cancelRecording = useCallback(() => {
-    stopInternal();
-  }, [stopInternal]);
+    logVoiceDebugEvent('voice_session_cancel', { state });
+    finalizeRecording(true);
+  }, [finalizeRecording, state]);
 
   const reset = useCallback(() => {
-    stopInternal();
+    finalizeRecording(true);
     setError(null);
     setState('idle');
-    softFailuresRef.current = 0;
-    uploadInFlightRef.current = false;
-    uploadStartedAtRef.current = 0;
     startInProgressRef.current = false;
-  }, [stopInternal]);
+  }, [finalizeRecording]);
 
   return {
     state,

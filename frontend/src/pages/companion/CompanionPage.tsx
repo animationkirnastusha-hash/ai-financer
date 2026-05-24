@@ -13,10 +13,8 @@ function progressPercent(xp: number, level: number) {
 
 export default function CompanionPage() {
   const navigateTo = useNavigationStore((state) => state.navigateTo);
-  const voiceAlwaysOnEnabled = useSettingsStore((state) => state.voiceAlwaysOnEnabled);
   const voiceRepliesEnabled = useSettingsStore((state) => state.voiceRepliesEnabled);
   const textInputEnabled = useSettingsStore((state) => state.textInputEnabled);
-  const setVoiceAlwaysOnEnabled = useSettingsStore((state) => state.setVoiceAlwaysOnEnabled);
   const setVoiceRepliesEnabled = useSettingsStore((state) => state.setVoiceRepliesEnabled);
   const setTextInputEnabled = useSettingsStore((state) => state.setTextInputEnabled);
   const [state, setState] = useState<CompanionStateDto | null>(null);
@@ -90,17 +88,14 @@ export default function CompanionPage() {
 
         <section className="app-card">
           <div className="app-section-title">Голос</div>
+          <p className="mt-2 text-sm leading-6 text-white/45">Нажми на Фину, скажи одну команду и дождись результата. Подтверждения остаются в обычных модалках.</p>
           <div className="mt-4 space-y-3">
-            <label className="app-toggle-row">
-              <span><span>Голос всегда готов</span><small>Фина ждёт своё имя, пока приложение открыто.</small></span>
-              <input type="checkbox" checked={voiceAlwaysOnEnabled} onChange={(event) => setVoiceAlwaysOnEnabled(event.target.checked)} />
-            </label>
             <label className="app-toggle-row">
               <span><span>Ответы голосом</span><small>Коротко озвучивать ответы. Можно выключить, чтобы не мешало.</small></span>
               <input type="checkbox" checked={voiceRepliesEnabled} onChange={(event) => setVoiceRepliesEnabled(event.target.checked)} />
             </label>
             <label className="app-toggle-row">
-              <span><span>Текстовое поле</span><small>Оставить запасной способ ввода, если говорить неудобно.</small></span>
+              <span><span>Текстовое поле</span><small>Оставить запасной способ ввода, если говорить неудобно или STT недоступен.</small></span>
               <input type="checkbox" checked={textInputEnabled} onChange={(event) => setTextInputEnabled(event.target.checked)} />
             </label>
           </div>
