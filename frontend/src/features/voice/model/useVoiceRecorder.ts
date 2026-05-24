@@ -5,12 +5,18 @@ type VoiceRecorderState = 'idle' | 'recording' | 'uploading' | 'error';
 
 type UseVoiceRecorderParams = {
   onText: (text: string) => Promise<void> | void;
+  lang?: string;
+  chunkMs?: number;
 };
 
 type RecorderFormat = {
   mimeType: string;
   extension: string;
 };
+
+const DEFAULT_CHUNK_MS = 4200;
+const MIN_AUDIO_BYTES = 900;
+const MAX_SOFT_FAILURES = 3;
 
 function getBestRecorderFormat(): RecorderFormat | null {
   if (typeof MediaRecorder === 'undefined') return null;
@@ -25,15 +31,24 @@ function getBestRecorderFormat(): RecorderFormat | null {
   return formats.find((format) => MediaRecorder.isTypeSupported(format.mimeType)) ?? null;
 }
 
-export function useVoiceRecorder({ onText }: UseVoiceRecorderParams) {
+function toSttLanguage(lang: string) {
+  return lang.toLowerCase().startsWith('en') ? 'en' : 'ru';
+}
+
+export function useVoiceRecorder({ onText, lang = 'ru-RU', chunkMs = DEFAULT_CHUNK_MS }: UseVoiceRecorderParams) {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const chunksRef = useRef<BlobPart[]>([]);
-  const shouldSubmitRef = useRef(true);
   const activeFormatRef = useRef<RecorderFormat | null>(null);
+  const uploadInFlightRef = useRef(false);
+  const intentionallyStoppedRef = useRef(false);
+  const softFailuresRef = useRef(0);
+  const onTextRef = useRef(onText);
 
   const [state, setState] = useState<VoiceRecorderState>('idle');
   const [error, setError] = useState<string | null>(null);
+
+  onTextRef.current = onText;
 
   const recorderFormat = useMemo(() => getBestRecorderFormat(), []);
   const isSupported = Boolean(
@@ -51,6 +66,61 @@ export function useVoiceRecorder({ onText }: UseVoiceRecorderParams) {
     }
   }, []);
 
+  const stopInternal = useCallback(() => {
+    intentionallyStoppedRef.current = true;
+
+    const recorder = mediaRecorderRef.current;
+    if (recorder && recorder.state !== 'inactive') {
+      try {
+        recorder.stop();
+      } catch {
+        // ignore
+      }
+    } else {
+      cleanupStream();
+      mediaRecorderRef.current = null;
+      chunksRef.current = [];
+      activeFormatRef.current = null;
+      setState((current) => (current === 'error' ? current : 'idle'));
+    }
+  }, [cleanupStream]);
+
+  const uploadChunk = useCallback(async (blob: Blob, format: RecorderFormat) => {
+    if (uploadInFlightRef.current) return;
+    if (blob.size < MIN_AUDIO_BYTES) return;
+
+    uploadInFlightRef.current = true;
+
+    try {
+      const result = await transcribeVoice(blob, `voice.${format.extension}`, toSttLanguage(lang));
+      softFailuresRef.current = 0;
+
+      const text = result.text?.trim();
+      if (text) {
+        await onTextRef.current(text);
+      }
+    } catch (err) {
+      const code = typeof err === 'object' && err !== null && 'code' in err ? String((err as { code?: unknown }).code) : '';
+      const status = typeof err === 'object' && err !== null && 'status' in err ? Number((err as { status?: unknown }).status) : 0;
+
+      if (code === 'VOICE_TRANSCRIPTION_NOT_CONFIGURED' || status === 503) {
+        setError('transcription-not-configured');
+        setState('error');
+        stopInternal();
+        return;
+      }
+
+      softFailuresRef.current += 1;
+      if (softFailuresRef.current >= MAX_SOFT_FAILURES) {
+        setError('transcription-error');
+        setState('error');
+        stopInternal();
+      }
+    } finally {
+      uploadInFlightRef.current = false;
+    }
+  }, [lang, stopInternal]);
+
   const startRecording = useCallback(async () => {
     if (!isSupported || !recorderFormat) {
       setError('unsupported');
@@ -58,23 +128,42 @@ export function useVoiceRecorder({ onText }: UseVoiceRecorderParams) {
       return;
     }
 
+    if (mediaRecorderRef.current?.state === 'recording') return;
+
     try {
       setError(null);
+      softFailuresRef.current = 0;
       chunksRef.current = [];
-      shouldSubmitRef.current = true;
       activeFormatRef.current = recorderFormat;
+      intentionallyStoppedRef.current = false;
 
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+          channelCount: 1,
+        },
+      });
       streamRef.current = stream;
+
+      stream.getAudioTracks().forEach((track) => {
+        track.onended = () => {
+          if (!intentionallyStoppedRef.current) {
+            setError('microphone-ended');
+            setState('error');
+          }
+        };
+      });
 
       const recorder = new MediaRecorder(stream, {
         mimeType: recorderFormat.mimeType,
       });
 
       recorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          chunksRef.current.push(event.data);
-        }
+        if (!event.data || event.data.size <= 0) return;
+        const format = activeFormatRef.current ?? recorderFormat;
+        void uploadChunk(event.data, format);
       };
 
       recorder.onstart = () => {
@@ -84,81 +173,42 @@ export function useVoiceRecorder({ onText }: UseVoiceRecorderParams) {
       recorder.onerror = () => {
         setError('recording-error');
         setState('error');
+        stopInternal();
       };
 
-      recorder.onstop = async () => {
-        try {
-          if (!shouldSubmitRef.current) {
-            setState('idle');
-            return;
-          }
-
-          setState('uploading');
-
-          const format = activeFormatRef.current ?? recorderFormat;
-          const blob = new Blob(chunksRef.current, { type: format.mimeType });
-          const result = await transcribeVoice(blob, `voice.${format.extension}`);
-
-          if (!result.text?.trim()) {
-            setError('no-speech');
-            setState('idle');
-            return;
-          }
-
-          await onText(result.text.trim());
-          setState('idle');
-        } catch (err) {
-          console.error(err);
-          setError(err instanceof Error ? err.message : 'transcription-error');
-          setState('error');
-        } finally {
-          cleanupStream();
-          chunksRef.current = [];
-          shouldSubmitRef.current = true;
-          activeFormatRef.current = null;
-        }
+      recorder.onstop = () => {
+        cleanupStream();
+        mediaRecorderRef.current = null;
+        chunksRef.current = [];
+        activeFormatRef.current = null;
+        uploadInFlightRef.current = false;
+        setState((current) => (current === 'error' ? current : 'idle'));
       };
 
       mediaRecorderRef.current = recorder;
-      recorder.start();
+      recorder.start(Math.max(2200, Math.min(9000, chunkMs)));
     } catch (err) {
       console.error(err);
       setError('microphone-denied');
       setState('error');
       cleanupStream();
     }
-  }, [cleanupStream, isSupported, onText, recorderFormat]);
+  }, [chunkMs, cleanupStream, isSupported, recorderFormat, stopInternal, uploadChunk]);
 
   const stopRecording = useCallback(() => {
-    const recorder = mediaRecorderRef.current;
-    if (!recorder) return;
-
-    shouldSubmitRef.current = true;
-
-    if (recorder.state !== 'inactive') {
-      recorder.stop();
-    }
-  }, []);
+    stopInternal();
+  }, [stopInternal]);
 
   const cancelRecording = useCallback(() => {
-    const recorder = mediaRecorderRef.current;
-    shouldSubmitRef.current = false;
-
-    if (recorder && recorder.state !== 'inactive') {
-      recorder.stop();
-    } else {
-      cleanupStream();
-      chunksRef.current = [];
-      activeFormatRef.current = null;
-      setState('idle');
-    }
-  }, [cleanupStream]);
+    stopInternal();
+  }, [stopInternal]);
 
   const reset = useCallback(() => {
-    cancelRecording();
+    stopInternal();
     setError(null);
     setState('idle');
-  }, [cancelRecording]);
+    softFailuresRef.current = 0;
+  }, [stopInternal]);
 
   return {
     state,

@@ -34,18 +34,21 @@ export function useVoiceInput({
   const [permissionError, setPermissionError] = useState<string | null>(null);
   const permissionRequestInFlightRef = useRef(false);
 
+  const recorder = useVoiceRecorder({
+    onText,
+    lang,
+  });
+
+  // Web Speech remains only as a last-resort fallback. The main product path is
+  // server STT through MediaRecorder, which behaves the same on iOS and Android.
   const speech = useVoiceRecognition({
     lang,
     onFinalText: onText,
   });
 
-  const recorder = useVoiceRecorder({
-    onText,
-  });
-
   const mode = useMemo<VoiceInputMode>(() => {
-    return speech.isSupported ? 'speech' : 'recorder';
-  }, [speech.isSupported]);
+    return recorder.isSupported ? 'recorder' : 'speech';
+  }, [recorder.isSupported]);
 
   const ensurePermissionBeforeRecording = useCallback(async (): Promise<boolean> => {
     setPermissionError(null);
@@ -63,7 +66,14 @@ export function useVoiceInput({
     permissionRequestInFlightRef.current = true;
 
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+          channelCount: 1,
+        },
+      });
       stream.getTracks().forEach((track) => track.stop());
       setPermissionPrimed(true);
       return true;
@@ -87,42 +97,46 @@ export function useVoiceInput({
         return 'permission-ready';
       }
 
+      if (mode === 'recorder') {
+        await recorder.startRecording();
+        return 'started';
+      }
+
       if (speech.isSupported) {
         return speech.startListening() ? 'started' : 'permission-ready';
       }
 
-      await recorder.startRecording();
-      return 'started';
+      return 'error';
     } catch (err) {
       console.error(err);
       return 'error';
     }
-  }, [ensurePermissionBeforeRecording, recorder, speech]);
+  }, [ensurePermissionBeforeRecording, mode, recorder, speech]);
 
   const stop = useCallback(() => {
-    if (speech.isSupported) {
-      speech.stopListening();
+    if (mode === 'recorder') {
+      recorder.stopRecording();
       return;
     }
 
-    recorder.stopRecording();
-  }, [recorder, speech]);
+    speech.stopListening();
+  }, [mode, recorder, speech]);
 
   const cancel = useCallback(() => {
-    if (speech.isSupported) {
-      speech.cancelListening();
+    if (mode === 'recorder') {
+      recorder.cancelRecording();
       return;
     }
 
-    recorder.cancelRecording();
-  }, [recorder, speech]);
+    speech.cancelListening();
+  }, [mode, recorder, speech]);
 
   const reset = useCallback(() => {
     window.speechSynthesis?.cancel();
     setIsSpeaking(false);
     setPermissionError(null);
-    speech.reset();
     recorder.reset();
+    speech.reset();
   }, [recorder, speech]);
 
   const speak = useCallback(
@@ -141,19 +155,19 @@ export function useVoiceInput({
   const state = useMemo<VoiceInputState>(() => {
     if (isSpeaking) return 'speaking';
 
-    if (mode === 'speech') {
-      if (speech.state === 'listening') return 'recording';
-      if (speech.state === 'processing') return 'uploading';
-      if (speech.state === 'error') return 'error';
-      return 'idle';
+    if (mode === 'recorder') {
+      return recorder.state;
     }
 
-    return recorder.state;
+    if (speech.state === 'listening') return 'recording';
+    if (speech.state === 'processing') return 'uploading';
+    if (speech.state === 'error') return 'error';
+    return 'idle';
   }, [isSpeaking, mode, recorder.state, speech.state]);
 
-  const error = permissionError ?? (mode === 'speech' ? speech.error : recorder.error);
+  const error = permissionError ?? (mode === 'recorder' ? recorder.error : speech.error);
   const transcript = mode === 'speech' ? speech.transcript : '';
-  const isSupported = speech.isSupported || recorder.isSupported;
+  const isSupported = recorder.isSupported || speech.isSupported;
 
   return {
     mode,

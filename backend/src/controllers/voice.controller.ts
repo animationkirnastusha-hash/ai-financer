@@ -1,11 +1,24 @@
 import type { Request, Response } from 'express';
-import { VoiceTranscriptionNotConfiguredError, voiceService } from '../services/voice.service';
+import {
+  VoiceAudioTooLargeError,
+  VoiceAudioUnsupportedError,
+  VoiceTranscriptionNotConfiguredError,
+  voiceService,
+} from '../services/voice.service';
+
+export async function getVoiceStatus(_req: Request, res: Response) {
+  return res.json({
+    success: true,
+    ...voiceService.getStatus(),
+  });
+}
 
 export async function transcribeVoice(req: Request, res: Response) {
   try {
     if (!req.file) {
       return res.status(400).json({
         success: false,
+        code: 'VOICE_AUDIO_REQUIRED',
         message: 'Audio file is required.',
       });
     }
@@ -14,11 +27,15 @@ export async function transcribeVoice(req: Request, res: Response) {
       buffer: req.file.buffer,
       mimeType: req.file.mimetype,
       originalName: req.file.originalname,
+      language: typeof req.body?.language === 'string' ? req.body.language : undefined,
     });
 
     return res.json({
       success: true,
       text: result.text,
+      provider: result.provider,
+      model: result.model,
+      language: result.language,
     });
   } catch (error) {
     if (error instanceof VoiceTranscriptionNotConfiguredError) {
@@ -29,11 +46,28 @@ export async function transcribeVoice(req: Request, res: Response) {
       });
     }
 
+    if (error instanceof VoiceAudioTooLargeError) {
+      return res.status(413).json({
+        success: false,
+        message: 'Audio file is too large.',
+        code: 'VOICE_AUDIO_TOO_LARGE',
+      });
+    }
+
+    if (error instanceof VoiceAudioUnsupportedError) {
+      return res.status(415).json({
+        success: false,
+        message: 'Unsupported audio format.',
+        code: 'VOICE_AUDIO_UNSUPPORTED',
+      });
+    }
+
     console.error('Voice transcription failed:', error);
 
     return res.status(500).json({
       success: false,
       message: 'Voice transcription failed.',
+      code: 'VOICE_TRANSCRIPTION_FAILED',
     });
   }
 }
