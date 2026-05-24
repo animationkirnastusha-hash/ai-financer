@@ -1,20 +1,17 @@
-# HTTP confirm smoke
+# HTTP confirm smoke test
 
-`npm run test:http-confirm` checks only the public HTTP confirmation endpoint.
+`npm run test:http-confirm` verifies only the public HTTP confirmation endpoint.
 
-It does not use the external AI provider and does not parse financial text. The test creates a ready pending action with a structured tool contract directly in the database, then confirms it through:
+The test creates a ready pending action directly in the database, calls:
 
-```text
+```http
 POST /api/ai/confirm/:pendingActionId
 ```
 
-Use it to separate frontend/controller confirmation problems from planner/provider problems.
+and then checks three things:
 
-Recommended order:
+1. the HTTP response has `success: true` and `executed: true`;
+2. the account was actually created in the database;
+3. the pending action status became `confirmed`.
 
-```bash
-npm run build
-TEST_TELEGRAM_ID=516730814 TEST_ADMIN=1 npm run test:backend-integrity
-TEST_BASE_URL="http://localhost:3000/api" TEST_HEALTH_URL="http://localhost:3000/health" TEST_TELEGRAM_ID=516730814 TEST_ADMIN=1 npm run test:http-confirm
-TEST_BASE_URL="http://localhost:3000/api" TEST_HEALTH_URL="http://localhost:3000/health" TEST_TELEGRAM_ID=516730814 TEST_ADMIN=1 npm run test:base-ai
-```
+This test does not call the external AI provider and does not parse financial natural language.

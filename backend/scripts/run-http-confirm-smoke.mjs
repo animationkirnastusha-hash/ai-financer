@@ -148,15 +148,15 @@ async function main() {
       headers: { Authorization: `Bearer ${context.token}` },
       body: { pendingActionId: pending.id },
     });
-    const result = response?.result ?? response;
-    assert(result?.success === true && result?.executed === true, 'HTTP confirm returned non-executed result', { result, response });
+    const executionResult = response?.result ?? null;
+    assert(response?.success === true && response?.executed === true, 'HTTP confirm returned non-executed response', { response, executionResult });
     const [account, pendingAfter] = await Promise.all([
       prisma.account.findFirst({ where: { userId: context.user.id, name: accountName } }),
       prisma.aIPendingAction.findUnique({ where: { id: pending.id } }),
     ]);
-    assert(Boolean(account), 'HTTP confirm did not create account', { accountName, result, pendingAfter });
-    assert(pendingAfter?.status === 'confirmed', 'pending action was not marked confirmed by HTTP endpoint', { pendingAfter, result });
-    return { accountId: account.id, pendingStatus: pendingAfter.status };
+    assert(Boolean(account), 'HTTP confirm did not create account', { accountName, response, executionResult, pendingAfter });
+    assert(pendingAfter?.status === 'confirmed', 'pending action was not marked confirmed by HTTP endpoint', { pendingAfter, response, executionResult });
+    return { accountId: account.id, pendingStatus: pendingAfter.status, executed: response.executed };
   });
 
   if (!fs.existsSync(reportDir)) fs.mkdirSync(reportDir, { recursive: true });
