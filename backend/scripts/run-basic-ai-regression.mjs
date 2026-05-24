@@ -10,6 +10,11 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { performance } from 'node:perf_hooks';
+import dotenv from 'dotenv';
+import jwt from 'jsonwebtoken';
+import { PrismaClient } from '@prisma/client';
+
+dotenv.config({ override: true });
 
 const args = new Set(process.argv.slice(2));
 const startedAt = new Date();
@@ -21,13 +26,17 @@ const reportMdPath = join(reportDir, `base-ai-regression-${stamp}.md`);
 const config = {
   baseUrl: normalizeBaseUrl(process.env.TEST_BASE_URL || 'http://127.0.0.1:3000/api'),
   healthUrl: process.env.TEST_HEALTH_URL || inferHealthUrl(process.env.TEST_BASE_URL || 'http://127.0.0.1:3000/api'),
-  token: readToken(),
+  token: await readOrCreateToken(),
   timeoutMs: Number(process.env.TEST_TIMEOUT_MS || 30_000),
   runAI: bool(process.env.TEST_AI, true),
   strictAI: bool(process.env.TEST_STRICT_AI, true),
   expectAdmin: bool(process.env.TEST_ADMIN, false),
   allowDestructive: bool(process.env.TEST_DESTRUCTIVE, false),
   keepData: bool(process.env.TEST_KEEP_DATA, false),
+  resetBefore: bool(process.env.TEST_RESET_BEFORE, true),
+  aiDelayMs: Number(process.env.TEST_AI_DELAY_MS || 900),
+  aiRetryMax: Number(process.env.TEST_AI_RETRY_MAX || 6),
+  aiLimitResetMs: Number(process.env.TEST_AI_LIMIT_RESET_MS || 65_000),
   reportOnly: args.has('--report-only'),
 };
 
@@ -60,7 +69,7 @@ function inferHealthUrl(baseUrl) {
   return clean.endsWith('/api') ? `${clean.slice(0, -4)}/health` : `${clean}/health`;
 }
 
-function readToken() {
+async function readOrCreateToken() {
   const direct = String(process.env.TEST_AUTH_TOKEN || '').trim();
   if (direct) return direct;
 
@@ -70,7 +79,68 @@ function readToken() {
     if (saved) return saved;
   }
 
+  if (bool(process.env.TEST_AUTO_TOKEN, true)) {
+    const token = await createAndSaveTestToken(tokenFile);
+    if (token) return token;
+  }
+
   return '';
+}
+
+function readTelegramId() {
+  const raw = process.env.TEST_TELEGRAM_ID || process.env.DEV_TELEGRAM_ID || process.env.ADMIN_TELEGRAM_ID || '516730814';
+  const parsed = BigInt(String(raw));
+  if (parsed <= 0n) throw new Error('TEST_TELEGRAM_ID must be a positive integer');
+  return parsed;
+}
+
+function readAdminTelegramIds() {
+  const values = [process.env.ADMIN_TELEGRAM_ID, ...(process.env.ADMIN_TELEGRAM_IDS || '').split(',')]
+    .map((item) => String(item || '').trim())
+    .filter(Boolean);
+  return new Set(values);
+}
+
+async function createAndSaveTestToken(tokenFile) {
+  const prisma = new PrismaClient();
+  try {
+    const jwtSecret = process.env.JWT_SECRET || 'dev-secret';
+    const telegramId = readTelegramId();
+    const telegramIdText = telegramId.toString();
+    const adminIds = readAdminTelegramIds();
+    const isAdmin = process.env.TEST_ADMIN === '1' || adminIds.has(telegramIdText);
+
+    const user = await prisma.user.upsert({
+      where: { telegramId },
+      update: {
+        firstName: isAdmin ? 'Admin' : 'Test',
+        lastName: 'User',
+        username: isAdmin ? 'admin_test' : `test_${telegramIdText}`,
+        isAdmin,
+      },
+      create: {
+        telegramId,
+        firstName: isAdmin ? 'Admin' : 'Test',
+        lastName: 'User',
+        username: isAdmin ? 'admin_test' : `test_${telegramIdText}`,
+        isAdmin,
+      },
+    });
+
+    const token = jwt.sign({ userId: user.id }, jwtSecret, { expiresIn: '30d' });
+    const envPath = join(process.cwd(), '.test-auth-token.env');
+    writeFileSync(tokenFile, `${token}
+`, 'utf8');
+    writeFileSync(envPath, `TEST_AUTH_TOKEN=${token}
+TEST_TELEGRAM_ID=${telegramIdText}
+TEST_ADMIN=${isAdmin ? '1' : '0'}
+`, 'utf8');
+    console.error(`Auto-created test token for user: ${user.id} telegramId=${telegramIdText} admin=${user.isAdmin}`);
+    console.error(`Saved token to: ${tokenFile}`);
+    return token;
+  } finally {
+    await prisma.$disconnect();
+  }
 }
 
 function randomCyrillic(length = 8) {
@@ -87,6 +157,15 @@ function short(value, length = 900) {
 
 function nowMs() {
   return Math.round(performance.now());
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function isTooManyRequests(error) {
+  const code = error?.payload?.code || error?.payload?.error?.code;
+  return error?.status === 429 || code === 'TOO_MANY_REQUESTS';
 }
 
 function assert(condition, message, details) {
@@ -214,6 +293,50 @@ async function ensureAuth() {
   return me.data.user;
 }
 
+async function resetBeforeRun() {
+  if (!config.resetBefore) return { skipped: true };
+  const res = await maybeApi('/users/me/reset', { method: 'POST', body: { mode: 'finance' } });
+  if (res.error) {
+    warn('Pre-test finance reset failed; continuing with existing test user data', res.error.payload ?? res.error.message);
+    return { ok: false, error: res.error.payload ?? res.error.message };
+  }
+  state.accounts = [];
+  state.sections = [];
+  state.categories = [];
+  state.transactions = [];
+  state.goals = [];
+  state.budgets = [];
+  state.recurring = [];
+  state.cleanup = [];
+  return { ok: true, result: res.data };
+}
+
+async function resetFinanceContext(label = 'finance context') {
+  const res = await maybeApi('/users/me/reset', { method: 'POST', body: { mode: 'finance' } });
+  if (res.error) {
+    throw Object.assign(new Error(`${label} reset failed`), { details: res.error.payload ?? res.error.message });
+  }
+  state.accounts = [];
+  state.sections = [];
+  state.categories = [];
+  state.transactions = [];
+  state.goals = [];
+  state.budgets = [];
+  state.recurring = [];
+  state.cleanup = [];
+  return res.data;
+}
+
+function cleanAiName(value) {
+  return String(value || '')
+    .replace(/\bai\b/gi, '')
+    .replace(/\btransfer\b/gi, '')
+    .replace(/\bfrom\b/gi, '')
+    .replace(/\bto\b/gi, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 async function createAccount(name, balance = 10000, type = 'cash') {
   const res = await api('/accounts', { method: 'POST', body: { name, type, currency: 'RUB', balance } });
   const account = res.data?.account ?? res.data;
@@ -250,12 +373,12 @@ async function createTransaction(payload) {
   return tx;
 }
 
-async function createGoal(name, targetAmount = 50000) {
-  const res = await api('/goals', { method: 'POST', body: { name, targetAmount, currentAmount: 0, currency: 'RUB' } });
+async function createGoal(title, targetAmount = 50000) {
+  const res = await api('/goals', { method: 'POST', body: { title, targetAmount, currentAmount: 0, currency: 'RUB' } });
   const goal = res.data?.goal ?? res.data;
   assert(goal?.id, 'Goal create returned no id', res.data);
   state.goals.push(goal.id);
-  addCleanup(`goal:${name}`, () => maybeApi(`/goals/${goal.id}`, { method: 'DELETE' }));
+  addCleanup(`goal:${title}`, () => maybeApi(`/goals/${goal.id}`, { method: 'DELETE' }));
   return goal;
 }
 
@@ -267,46 +390,108 @@ function aiResult(data) {
   return data?.result ?? data;
 }
 
+async function aiApi(path, options = {}) {
+  let lastError = null;
+  for (let attempt = 0; attempt <= config.aiRetryMax; attempt += 1) {
+    if (attempt > 0) {
+      const waitMs = attempt >= 3 ? config.aiLimitResetMs : Math.max(config.aiDelayMs, 1200 * attempt);
+      console.log(`  waiting ${waitMs}ms after AI rate limit...`);
+      await sleep(waitMs);
+    } else if (config.aiDelayMs > 0) {
+      await sleep(config.aiDelayMs);
+    }
+
+    try {
+      return await api(path, options);
+    } catch (error) {
+      if (!isTooManyRequests(error)) throw error;
+      lastError = error;
+    }
+  }
+  throw lastError || new Error(`AI request failed: ${path}`);
+}
+
 async function aiParse(command) {
-  const res = await api('/ai/parse', { method: 'POST', body: aiPayload(command) });
+  const res = await aiApi('/ai/parse', { method: 'POST', body: aiPayload(command) });
   return aiResult(res.data);
 }
 
 async function aiConfirm(pendingActionId) {
-  const id = typeof pendingActionId === 'string' ? pendingActionId.trim() : '';
-  const body = id ? { pendingActionId: id } : {};
-
-  if (id) {
-    const byUrl = await maybeApi(`/ai/confirm/${encodeURIComponent(id)}`, { method: 'POST', body });
-    if (byUrl.ok) return aiResult(byUrl.data);
+  const body = pendingActionId ? { pendingActionId } : {};
+  if (pendingActionId) {
+    const viaUrl = await maybeAiApi(`/ai/confirm/${encodeURIComponent(pendingActionId)}`, { method: 'POST', body });
+    if (!viaUrl.error) return aiResult(viaUrl.data);
   }
-
-  const res = await api('/ai/confirm', { method: 'POST', body });
+  const res = await aiApi('/ai/confirm', { method: 'POST', body });
   return aiResult(res.data);
 }
 
 async function aiCancel(pendingActionId) {
   const body = pendingActionId ? { pendingActionId } : {};
-  const res = await api('/ai/cancel', { method: 'POST', body });
+  if (pendingActionId) {
+    const viaUrl = await maybeAiApi(`/ai/cancel/${encodeURIComponent(pendingActionId)}`, { method: 'POST', body });
+    if (!viaUrl.error) return aiResult(viaUrl.data);
+  }
+  const res = await aiApi('/ai/cancel', { method: 'POST', body });
   return aiResult(res.data);
+}
+
+async function maybeAiApi(path, options = {}) {
+  try { return await aiApi(path, options); } catch (error) { return { error }; }
 }
 
 function pendingId(result) {
   return result?.pendingActionId || result?.result?.pendingActionId || result?.pendingAction?.id || result?.meta?.pendingActionId || '';
 }
 
+async function latestPending(command = '', sinceMs = 0) {
+  const res = await maybeApi('/ai/pending-actions');
+  if (res.error) return null;
+  const items = pickArrayPayload(res.data);
+  const normalizedCommand = String(command || '').trim();
+  const pending = items
+    .filter((item) => item?.status === 'pending')
+    .filter((item) => {
+      if (!sinceMs) return true;
+      const created = new Date(item.createdAt || item.updatedAt || 0).getTime();
+      return Number.isFinite(created) && created >= sinceMs - 2_000;
+    })
+    .sort((a, b) => {
+      const aCommand = String(a.command || '').trim();
+      const bCommand = String(b.command || '').trim();
+      const aExact = normalizedCommand && aCommand === normalizedCommand ? 1 : 0;
+      const bExact = normalizedCommand && bCommand === normalizedCommand ? 1 : 0;
+      if (aExact !== bExact) return bExact - aExact;
+      return new Date(b.createdAt || b.updatedAt || 0).getTime() - new Date(a.createdAt || a.updatedAt || 0).getTime();
+    });
+  return pending[0] || null;
+}
+
+async function latestPendingId(command = '', sinceMs = 0) {
+  const pending = await latestPending(command, sinceMs);
+  return pending?.id || '';
+}
+
 async function executeAi(command) {
+  const beforeParseMs = Date.now();
   const prepared = await aiParse(command);
   assert(prepared?.success !== false, `AI prepare failed for: ${command}`, prepared);
 
-  if (prepared?.requiresConfirmation) {
-    const id = pendingId(prepared);
-    const confirmed = await aiConfirm(id || undefined);
-    assert(confirmed?.success !== false, `AI confirm failed for: ${command}`, { prepared, confirmed, pendingActionId: id });
-    assert(confirmed?.executed === true, `AI confirm did not execute for: ${command}`, { prepared, confirmed, pendingActionId: id });
-    return { prepared, confirmed };
+  let id = pendingId(prepared);
+  if (!id && (prepared?.requiresConfirmation || (prepared?.intent === 'batch' && !prepared?.executed))) {
+    id = await latestPendingId(command, beforeParseMs);
   }
 
+  const shouldConfirm = Boolean(prepared?.requiresConfirmation || (prepared?.intent === 'batch' && !prepared?.executed));
+  if (shouldConfirm) {
+    assert(Boolean(id), `AI prepared an unexecuted action but did not expose pendingActionId: ${command}`, { prepared, latestPending: await latestPending(command, beforeParseMs) });
+    const confirmed = await aiConfirm(id);
+    assert(confirmed?.success !== false, `AI confirm failed for: ${command}`, { prepared, confirmed, pendingActionId: id });
+    assert(confirmed?.executed === true, `AI confirm did not execute action: ${command}`, { prepared, confirmed, pendingActionId: id });
+    return { prepared, confirmed, pendingActionId: id };
+  }
+
+  assert(prepared?.executed === true || prepared?.intent !== 'batch', `AI returned unexecuted batch without pending action: ${command}`, prepared);
   return { prepared, confirmed: prepared };
 }
 
@@ -393,6 +578,7 @@ async function main() {
   console.log(`AI tests: ${config.runAI ? 'on' : 'off'}`);
   console.log(`Strict AI: ${config.strictAI ? 'on' : 'off'}`);
   console.log(`Token source: ${config.token ? 'ok' : 'missing'}`);
+  console.log(`Reset before run: ${config.resetBefore ? 'on' : 'off'}`);
   console.log('');
 
   if (config.reportOnly) return writeReport();
@@ -407,6 +593,10 @@ async function main() {
     const user = await ensureAuth();
     return { userId: user.id, isAdmin: Boolean(user.isAdmin) };
   });
+
+  await test('test isolation: reset finance data for test user', async () => {
+    return resetBeforeRun();
+  }, { skip: !config.resetBefore && 'TEST_RESET_BEFORE=0' });
 
   await test('read contracts: all base endpoints', async () => {
     await requireToken();
@@ -452,13 +642,14 @@ async function main() {
 
   await test('manual CRUD: goals', async () => {
     const goal = await createGoal(`${state.prefix} цель`, 90000);
-    await api(`/goals/${goal.id}`, { method: 'PATCH', body: { currentAmount: 10000, name: `${state.prefix} цель новая` } });
+    await api(`/goals/${goal.id}`, { method: 'PATCH', body: { currentAmount: 10000, title: `${state.prefix} цель новая` } });
     return { goalId: goal.id };
   });
 
   await test('manual CRUD: budgets', async () => {
     const section = await createSection(`${state.prefix} бюджет`);
-    const res = await api('/budgets', { method: 'POST', body: { name: `${state.prefix} бюджет`, amount: 30000, limit: 30000, period: 'monthly', sectionId: section.id } });
+    const category = await createCategory(`${state.prefix} бюджет категория`, section.id, 'expense');
+    const res = await api('/budgets', { method: 'POST', body: { name: `${state.prefix} бюджет`, amount: 30000, limit: 30000, period: 'monthly', categoryId: category.id } });
     const budget = res.data?.budget ?? res.data;
     assert(budget?.id, 'Budget create returned no id', res.data);
     state.budgets.push(budget.id);
@@ -469,7 +660,7 @@ async function main() {
 
   await test('manual CRUD: recurring payments', async () => {
     const account = await createAccount(`${state.prefix} recurring`, 10000, 'card');
-    const res = await api('/recurring', { method: 'POST', body: { name: `${state.prefix} подписка`, amount: 499, accountId: account.id, type: 'expense', interval: 'monthly', nextDate: new Date(Date.now() + 86400000).toISOString() } });
+    const res = await api('/recurring', { method: 'POST', body: { name: `${state.prefix} подписка`, amount: 499, accountId: account.id, type: 'expense', category: `${state.prefix} подписки`, period: 'monthly', nextDate: new Date(Date.now() + 86400000).toISOString() } });
     const recurring = res.data?.recurringPayment ?? res.data;
     assert(recurring?.id, 'Recurring create returned no id', res.data);
     state.recurring.push(recurring.id);
@@ -485,7 +676,7 @@ async function main() {
     await api('/ai-settings/onboarding', { method: 'PATCH', body: { completed: true } });
     await api('/progression/me');
     await api('/referral');
-    await api('/analytics/events', { method: 'POST', body: { event: 'test_base_ai_regression', screen: 'console', meta: { prefix: state.prefix } } });
+    await api('/analytics/events', { method: 'POST', body: { event: 'screen_view', screen: 'console_regression', meta: { prefix: state.prefix } } });
     return { ok: true };
   });
 
@@ -516,36 +707,53 @@ async function main() {
     return result;
   }, { skip: !config.runAI && 'TEST_AI=0' });
 
+  await test('AI isolation: reset finance data before mutation AI tests', async () => {
+    const result = await resetFinanceContext('AI mutation phase');
+    state.prefix = `База ${randomCyrillic(7)}`;
+    return { ok: true, prefix: state.prefix, result };
+  }, { skip: !config.runAI && 'TEST_AI=0' });
+
   await test('AI: create account with confirmation', async () => {
     const before = await listAccounts();
-    const name = `${state.prefix} ai карта`;
-    await executeAi(`Фина, создай счёт ${name} с балансом 1000 рублей`);
+    const expectedName = cleanAiName(`${state.prefix} новый счёт`);
+    const beforeMatches = before.filter((item) => String(item.name || '').includes(expectedName)).length;
+    const execution = await executeAi(`Фина, создай новый наличный счёт с названием ${expectedName}, валюта рубли, баланс 0 рублей`);
     const after = await listAccounts();
-    assert(after.length >= before.length + 1 || after.some((item) => String(item.name || '').includes(name)), 'AI did not create account', { before: before.length, after });
-    return { before: before.length, after: after.length };
+    const afterMatches = after.filter((item) => String(item.name || '').includes(expectedName)).length;
+    assert(after.length >= before.length + 1 || afterMatches > beforeMatches, 'AI did not create account', {
+      expectedName,
+      before: before.length,
+      after: after.length,
+      beforeMatches,
+      afterMatches,
+      prepared: execution.prepared,
+      confirmed: execution.confirmed,
+      accountNames: after.map((item) => item.name),
+    });
+    return { expectedName, before: before.length, after: after.length };
   }, { skip: !config.runAI && 'TEST_AI=0' });
 
   await test('AI: rename account and make it primary/default', async () => {
     const account = await createAccount(`${state.prefix} старое имя`, 1000, 'card');
     const newName = `${state.prefix} основная карта`;
-    await executeAi(`Фина, переименуй счёт ${account.name} в ${newName}`);
-    await executeAi(`Фина, сделай счёт ${newName} основным`);
+    const renameExecution = await executeAi(`Фина, переименуй счёт ${account.name} в ${newName}`);
+    const primaryExecution = await executeAi(`Фина, сделай счёт ${newName} основным`);
     const accounts = await listAccounts();
-    assert(accounts.some((item) => item.id === account.id || String(item.name || '').includes(newName)), 'Renamed/default account not found', accounts);
+    assert(accounts.some((item) => item.id === account.id || String(item.name || '').includes(newName)), 'Renamed/default account not found', { accountNames: accounts.map((item) => item.name), renameExecution, primaryExecution });
     return { accountId: account.id };
   }, { skip: !config.runAI && 'TEST_AI=0' });
 
   await test('AI: create expense with category/section through planner contract', async () => {
-    const account = await createAccount(`${state.prefix} ai расход`, 20000, 'card');
+    const account = await createAccount(cleanAiName(`${state.prefix} счёт расходов`), 20000, 'card');
     const before = await listTransactions();
-    await executeAi(`Фина, такси 650 рублей со счёта ${account.name}, категория такси, раздел транспорт`);
+    const execution = await executeAi(`Фина, создай расход такси 650 рублей со счёта ${account.name}, категория такси, раздел транспорт`);
     const after = await listTransactions();
-    assert(after.length >= before.length + 1, 'AI did not create expense transaction', { before: before.length, after: after.length });
+    assert(after.length >= before.length + 1, 'AI did not create expense transaction', { before: before.length, after: after.length, execution });
     return { before: before.length, after: after.length };
   }, { skip: !config.runAI && 'TEST_AI=0' });
 
   await test('AI: create income and then edit last income without duplicate', async () => {
-    const account = await createAccount(`${state.prefix} ai доход`, 1000, 'cash');
+    const account = await createAccount(cleanAiName(`${state.prefix} счёт доходов`), 1000, 'cash');
     await executeAi(`Фина, доход 3000 рублей на счёт ${account.name}, описание тестовый доход`);
     const afterIncome = await listTransactions();
     const incomeCount = afterIncome.length;
@@ -559,35 +767,35 @@ async function main() {
   }, { skip: !config.runAI && 'TEST_AI=0' });
 
   await test('AI: transfer between accounts', async () => {
-    const from = await createAccount(`${state.prefix} transfer from`, 10000, 'card');
-    const to = await createAccount(`${state.prefix} transfer to`, 1000, 'cash');
+    const from = await createAccount(cleanAiName(`${state.prefix} счёт источник`), 10000, 'card');
+    const to = await createAccount(cleanAiName(`${state.prefix} счёт получатель`), 1000, 'cash');
     const before = await listTransactions();
-    await executeAi(`Фина, переведи 1200 рублей со счёта ${from.name} на счёт ${to.name}`);
+    const execution = await executeAi(`Фина, переведи 1200 рублей со счёта ${from.name} на счёт ${to.name}`);
     const after = await listTransactions();
-    assert(after.length >= before.length + 1, 'AI did not create transfer', { before: before.length, after: after.length });
+    assert(after.length >= before.length + 1, 'AI did not create transfer', { before: before.length, after: after.length, execution });
     return { before: before.length, after: after.length };
   }, { skip: !config.runAI && 'TEST_AI=0' });
 
   await test('AI: goals lifecycle', async () => {
-    const name = `${state.prefix} ai цель`;
-    await executeAi(`Фина, создай цель ${name} на 75000 рублей`);
+    const name = cleanAiName(`${state.prefix} цель отпуска`);
+    const createExecution = await executeAi(`Фина, создай цель ${name} на 75000 рублей`);
     let goals = await listGoals();
-    assert(goals.some((item) => String(item.name || '').includes(name)), 'AI did not create goal', goals);
+    assert(goals.some((item) => String(item.title || item.name || '').includes(name)), 'AI did not create goal', { goalNames: goals.map((item) => item.title || item.name), createExecution });
     await executeAi(`Фина, измени цель ${name}, сумма 80000 рублей`);
     goals = await listGoals();
-    assert(goals.some((item) => String(item.name || '').includes(name)), 'AI goal disappeared after update', goals);
+    assert(goals.some((item) => String(item.title || item.name || '').includes(name)), 'AI goal disappeared after update', goals);
     return { goals: goals.length };
   }, { skip: !config.runAI && 'TEST_AI=0' });
 
   await test('AI: taxonomy lifecycle', async () => {
-    const sectionName = `${state.prefix} ai раздел`;
-    const categoryName = `${state.prefix} ai категория`;
-    await executeAi(`Фина, создай раздел ${sectionName}`);
-    await executeAi(`Фина, создай категорию ${categoryName} в разделе ${sectionName}`);
+    const sectionName = cleanAiName(`${state.prefix} раздел покупок`);
+    const categoryName = cleanAiName(`${state.prefix} категория такси`);
+    const sectionExecution = await executeAi(`Фина, создай раздел ${sectionName}`);
+    const categoryExecution = await executeAi(`Фина, создай категорию ${categoryName} в разделе ${sectionName}`);
     const sections = await listSections();
     const categories = await listCategories();
-    assert(sections.some((item) => String(item.name || '').includes(sectionName)), 'AI did not create section', sections);
-    assert(categories.some((item) => String(item.name || '').includes(categoryName)), 'AI did not create category', categories);
+    assert(sections.some((item) => String(item.name || '').includes(sectionName)), 'AI did not create section', { sectionNames: sections.map((item) => item.name), sectionExecution });
+    assert(categories.some((item) => String(item.name || '').includes(categoryName)), 'AI did not create category', { categoryNames: categories.map((item) => item.name), categoryExecution });
     return { sections: sections.length, categories: categories.length };
   }, { skip: !config.runAI && 'TEST_AI=0' });
 
