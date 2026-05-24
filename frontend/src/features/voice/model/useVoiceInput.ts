@@ -60,8 +60,7 @@ export function useVoiceInput({
     const currentAudio = audioRef.current;
     if (currentAudio) {
       currentAudio.pause();
-      currentAudio.removeAttribute('src');
-      currentAudio.load();
+      currentAudio.src = '';
       audioRef.current = null;
     }
 
@@ -123,10 +122,9 @@ export function useVoiceInput({
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: {
           echoCancellation: true,
-          noiseSuppression: false,
+          noiseSuppression: true,
           autoGainControl: true,
-          channelCount: { ideal: 1 },
-          sampleRate: { ideal: 48000 },
+          channelCount: 1,
         },
       });
       stream.getTracks().forEach((track) => track.stop());

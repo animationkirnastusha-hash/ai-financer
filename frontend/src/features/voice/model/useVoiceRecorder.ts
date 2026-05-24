@@ -14,12 +14,17 @@ type RecorderFormat = {
   extension: string;
 };
 
-const DEFAULT_SESSION_MS = 9000;
-const MIN_SESSION_MS = 5200;
-const MAX_SESSION_MS = 14000;
+const DEFAULT_SESSION_MS = 8500;
+const MIN_SESSION_MS = 3600;
+const MAX_SESSION_MS = 12000;
 const MIN_AUDIO_BYTES = 900;
 const TRANSCRIBE_CLIENT_TIMEOUT_MS = 45_000;
-const MICROPHONE_GAIN = 2.6;
+const MICROPHONE_GAIN = 3.0;
+const VAD_CHECK_INTERVAL_MS = 80;
+const VAD_MIN_RECORDING_MS = 1500;
+const VAD_MIN_AFTER_VOICE_MS = 780;
+const VAD_VOICE_RMS = 0.022;
+const VAD_STRONG_VOICE_RMS = 0.045;
 
 function getBestRecorderFormat(): RecorderFormat | null {
   if (typeof MediaRecorder === 'undefined') {
@@ -53,6 +58,13 @@ export function useVoiceRecorder({ onText, lang = 'ru-RU', chunkMs = DEFAULT_SES
   const streamRef = useRef<MediaStream | null>(null);
   const rawStreamRef = useRef<MediaStream | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
+  const analyserRef = useRef<AnalyserNode | null>(null);
+  const vadTimerRef = useRef<number | null>(null);
+  const vadBufferRef = useRef<Uint8Array | null>(null);
+  const voiceDetectedRef = useRef(false);
+  const lastVoiceAtRef = useRef(0);
+  const vadStartedAtRef = useRef(0);
+  const vadPeakRmsRef = useRef(0);
   const chunksRef = useRef<BlobPart[]>([]);
   const activeFormatRef = useRef<RecorderFormat | null>(null);
   const onTextRef = useRef(onText);
@@ -82,7 +94,22 @@ export function useVoiceRecorder({ onText, lang = 'ru-RU', chunkMs = DEFAULT_SES
     }
   }, []);
 
+  const stopVoiceActivityWatcher = useCallback(() => {
+    if (vadTimerRef.current !== null) {
+      window.clearInterval(vadTimerRef.current);
+      vadTimerRef.current = null;
+    }
+
+    analyserRef.current = null;
+    vadBufferRef.current = null;
+    voiceDetectedRef.current = false;
+    lastVoiceAtRef.current = 0;
+    vadStartedAtRef.current = 0;
+    vadPeakRmsRef.current = 0;
+  }, []);
+
   const cleanupStream = useCallback(() => {
+    stopVoiceActivityWatcher();
     if (streamRef.current) {
       streamRef.current.getTracks().forEach((track) => track.stop());
       streamRef.current = null;
@@ -97,7 +124,7 @@ export function useVoiceRecorder({ onText, lang = 'ru-RU', chunkMs = DEFAULT_SES
       void audioContextRef.current.close().catch(() => undefined);
       audioContextRef.current = null;
     }
-  }, []);
+  }, [stopVoiceActivityWatcher]);
 
   const createAmplifiedStream = useCallback((rawStream: MediaStream, format: RecorderFormat): MediaStream => {
     if (typeof window === 'undefined') return rawStream;
@@ -113,12 +140,20 @@ export function useVoiceRecorder({ onText, lang = 'ru-RU', chunkMs = DEFAULT_SES
 
       const source = context.createMediaStreamSource(rawStream);
       const gain = context.createGain();
+      const analyser = context.createAnalyser();
       const destination = context.createMediaStreamDestination();
 
       gain.gain.value = MICROPHONE_GAIN;
+      analyser.fftSize = 1024;
+      analyser.smoothingTimeConstant = 0.35;
+
       source.connect(gain);
       gain.connect(destination);
+      gain.connect(analyser);
+
       audioContextRef.current = context;
+      analyserRef.current = analyser;
+      vadBufferRef.current = new Uint8Array(analyser.fftSize);
 
       logVoiceDebugEvent('microphone_gain_applied', {
         gain: MICROPHONE_GAIN,
@@ -140,6 +175,7 @@ export function useVoiceRecorder({ onText, lang = 'ru-RU', chunkMs = DEFAULT_SES
 
   const hardCleanup = useCallback(() => {
     clearFinalizeTimer();
+    stopVoiceActivityWatcher();
     cleanupStream();
     mediaRecorderRef.current = null;
     chunksRef.current = [];
@@ -147,7 +183,7 @@ export function useVoiceRecorder({ onText, lang = 'ru-RU', chunkMs = DEFAULT_SES
     recordingStartedAtRef.current = 0;
     startInProgressRef.current = false;
     cancelledRef.current = false;
-  }, [clearFinalizeTimer, cleanupStream]);
+  }, [clearFinalizeTimer, cleanupStream, stopVoiceActivityWatcher]);
 
   const uploadFinalBlob = useCallback(async (blob: Blob, format: RecorderFormat) => {
     if (cancelledRef.current) {
@@ -242,6 +278,79 @@ export function useVoiceRecorder({ onText, lang = 'ru-RU', chunkMs = DEFAULT_SES
     }
   }, [clearFinalizeTimer, hardCleanup]);
 
+
+  const startVoiceActivityWatcher = useCallback((format: RecorderFormat) => {
+    stopVoiceActivityWatcher();
+
+    const analyser = analyserRef.current;
+    const buffer = vadBufferRef.current as Uint8Array<ArrayBuffer> | null;
+    if (!analyser || !buffer) {
+      logVoiceDebugEvent('voice_vad_unavailable', {
+        mimeType: format.mimeType,
+        extension: format.extension,
+      });
+      return;
+    }
+
+    vadStartedAtRef.current = Date.now();
+    lastVoiceAtRef.current = 0;
+    voiceDetectedRef.current = false;
+    vadPeakRmsRef.current = 0;
+
+    vadTimerRef.current = window.setInterval(() => {
+      const recorder = mediaRecorderRef.current;
+      if (!recorder || recorder.state !== 'recording') return;
+
+      analyser.getByteTimeDomainData(buffer);
+      let sum = 0;
+      for (let index = 0; index < buffer.length; index += 1) {
+        const centered = (buffer[index] - 128) / 128;
+        sum += centered * centered;
+      }
+
+      const rms = Math.sqrt(sum / Math.max(1, buffer.length));
+      vadPeakRmsRef.current = Math.max(vadPeakRmsRef.current, rms);
+
+      const now = Date.now();
+      const elapsedMs = recordingStartedAtRef.current ? now - recordingStartedAtRef.current : now - vadStartedAtRef.current;
+      const isVoiceNow = rms >= VAD_VOICE_RMS || (voiceDetectedRef.current && rms >= VAD_VOICE_RMS * 0.72);
+
+      if (isVoiceNow) {
+        if (!voiceDetectedRef.current) {
+          logVoiceDebugEvent('voice_vad_speech_detected', {
+            elapsedMs,
+            rms: Number(rms.toFixed(4)),
+            peakRms: Number(vadPeakRmsRef.current.toFixed(4)),
+            mimeType: format.mimeType,
+            extension: format.extension,
+          });
+        }
+
+        voiceDetectedRef.current = true;
+        lastVoiceAtRef.current = now;
+        return;
+      }
+
+      if (!voiceDetectedRef.current) return;
+      if (elapsedMs < VAD_MIN_RECORDING_MS) return;
+
+      const silenceMs = now - lastVoiceAtRef.current;
+      const hadStrongVoice = vadPeakRmsRef.current >= VAD_STRONG_VOICE_RMS;
+      const requiredSilenceMs = hadStrongVoice ? VAD_MIN_AFTER_VOICE_MS : VAD_MIN_AFTER_VOICE_MS + 220;
+
+      if (silenceMs >= requiredSilenceMs) {
+        logVoiceDebugEvent('voice_vad_auto_stop', {
+          elapsedMs,
+          silenceMs,
+          peakRms: Number(vadPeakRmsRef.current.toFixed(4)),
+          mimeType: format.mimeType,
+          extension: format.extension,
+        });
+        finalizeRecording(false);
+      }
+    }, VAD_CHECK_INTERVAL_MS);
+  }, [finalizeRecording, stopVoiceActivityWatcher]);
+
   const startRecording = useCallback(async () => {
     if (startInProgressRef.current) {
       logVoiceDebugEvent('voice_start_ignored_in_progress', { state });
@@ -318,7 +427,16 @@ export function useVoiceRecorder({ onText, lang = 'ru-RU', chunkMs = DEFAULT_SES
         });
         setState('recording');
 
+        startVoiceActivityWatcher(recorderFormat);
+
         finalizeTimerRef.current = window.setTimeout(() => {
+          logVoiceDebugEvent('voice_max_session_reached', {
+            elapsedMs: Date.now() - recordingStartedAtRef.current,
+            peakRms: Number(vadPeakRmsRef.current.toFixed(4)),
+            sessionMs: clampSessionMs(chunkMs),
+            mimeType: recorderFormat.mimeType,
+            extension: recorderFormat.extension,
+          });
           finalizeRecording(false);
         }, clampSessionMs(chunkMs));
       };
@@ -342,6 +460,7 @@ export function useVoiceRecorder({ onText, lang = 'ru-RU', chunkMs = DEFAULT_SES
           cancelled: cancelledRef.current,
         });
 
+        stopVoiceActivityWatcher();
         cleanupStream();
         mediaRecorderRef.current = null;
         chunksRef.current = [];
@@ -372,7 +491,7 @@ export function useVoiceRecorder({ onText, lang = 'ru-RU', chunkMs = DEFAULT_SES
       setState('error');
       cleanupStream();
     }
-  }, [chunkMs, cleanupStream, createAmplifiedStream, finalizeRecording, hardCleanup, isSupported, recorderFormat, state, uploadFinalBlob]);
+  }, [chunkMs, cleanupStream, createAmplifiedStream, finalizeRecording, hardCleanup, isSupported, recorderFormat, startVoiceActivityWatcher, state, stopVoiceActivityWatcher, uploadFinalBlob]);
 
   const stopRecording = useCallback(() => {
     logVoiceDebugEvent('voice_session_stop_and_send', { state });
