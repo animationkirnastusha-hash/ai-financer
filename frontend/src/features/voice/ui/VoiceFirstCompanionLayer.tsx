@@ -3,6 +3,7 @@ import { useChatController } from '@/features/chat/model/useChatController';
 import { parseNavigationIntent } from '@/features/navigation/lib/parseNavigationIntent';
 import { useNavigationStore } from '@/features/navigation/model/navigation.store';
 import { useSettingsStore } from '@/features/settings/model/settings.store';
+import { logVoiceDebugEvent } from '@/features/voice/api/voice.api';
 import { useVoiceInput } from '@/features/voice/model/useVoiceInput';
 import { PendingActionCard } from '@/features/pending-actions/ui/PendingActionCard';
 import { CompanionButton } from '@/shared/ui/CompanionButton';
@@ -19,7 +20,8 @@ type Thought = {
 
 const BUBBLE_TIMEOUT_MS = 2800;
 const DUPLICATE_WINDOW_MS = 1000;
-const DEFAULT_VOICE_SESSION_MS = 8500;
+const DEFAULT_VOICE_SESSION_MS = 5500;
+const AUTO_LISTEN_RESTART_MS = 420;
 
 function compactBubble(text: string) {
   return text
@@ -108,6 +110,8 @@ export function VoiceFirstCompanionLayer() {
   const lastThoughtRef = useRef<{ text: string; tone: BubbleTone; at: number }>({ text: '', tone: 'neutral', at: 0 });
   const isProcessingVoiceRef = useRef(false);
   const voiceCancelRef = useRef<() => void>(() => undefined);
+  const autoListenTimerRef = useRef<number | null>(null);
+  const autoListenInFlightRef = useRef(false);
 
   const showThought = useCallback((text: string, tone: BubbleTone = 'neutral', timeoutMs = BUBBLE_TIMEOUT_MS) => {
     const cleanText = compactBubble(text);
@@ -141,9 +145,14 @@ export function VoiceFirstCompanionLayer() {
     if (!originalText || isProcessingVoiceRef.current) return;
 
     const wake = stripWakeWord(originalText);
-    const text = cleanVoiceText(wake.hasWakeWord ? wake.command : originalText);
+    if (!wake.hasWakeWord) {
+      logVoiceDebugEvent('wake_word_not_detected', { textLength: originalText.length });
+      return;
+    }
+
+    const text = cleanVoiceText(wake.command);
     if (!text) {
-      showThought('Скажи задачу после имени.', 'listening', 2200);
+      showThought('Слушаю задачу после имени.', 'listening', 2200);
       return;
     }
 
@@ -189,8 +198,8 @@ export function VoiceFirstCompanionLayer() {
     try {
       const ready = await voice.primePermission();
       setVoicePermissionPrompted(true);
-      if (ready) showThought('Готово. Нажми на Фину и скажи команду.', 'success', 3600);
-      else showThought('Нажми на Фину, когда будешь готов сказать команду.', 'neutral', 3200);
+      if (ready) showThought('Готово. Скажи: Фина, и команду.', 'success', 3600);
+      else showThought('Скажи “Фина” и команду, когда микрофон будет готов.', 'neutral', 3200);
     } catch {
       showThought('Нужен доступ к микрофону.', 'warning', 3600);
     } finally {
@@ -228,7 +237,7 @@ export function VoiceFirstCompanionLayer() {
     telegramHaptic('light');
     const result = await voice.start();
     if (result === 'started') {
-      showThought('Слушаю.', 'listening', DEFAULT_VOICE_SESSION_MS);
+      showThought('Слушаю имя Фина.', 'listening', DEFAULT_VOICE_SESSION_MS);
       return;
     }
 
@@ -238,7 +247,7 @@ export function VoiceFirstCompanionLayer() {
     }
 
     if (result === 'permission-ready') {
-      showThought('Доступ к микрофону готов. Нажми ещё раз и скажи команду.', 'neutral', 3200);
+      showThought('Доступ к микрофону готов. Скажи: Фина, и команду.', 'neutral', 3200);
       return;
     }
 
@@ -248,6 +257,46 @@ export function VoiceFirstCompanionLayer() {
   useEffect(() => {
     isProcessingVoiceRef.current = isProcessingVoice;
   }, [isProcessingVoice]);
+
+  useEffect(() => {
+    if (autoListenTimerRef.current !== null) {
+      window.clearTimeout(autoListenTimerRef.current);
+      autoListenTimerRef.current = null;
+    }
+
+    const shouldAutoListen =
+      canUseVoice &&
+      voicePermissionPrompted &&
+      chat.pendingActions.length === 0 &&
+      !chat.isSending &&
+      !isProcessingVoice &&
+      voice.state === 'idle' &&
+      typeof document !== 'undefined' &&
+      document.visibilityState === 'visible';
+
+    if (!shouldAutoListen) return undefined;
+
+    autoListenTimerRef.current = window.setTimeout(() => {
+      if (autoListenInFlightRef.current) return;
+      autoListenInFlightRef.current = true;
+
+      logVoiceDebugEvent('wake_listener_auto_start');
+      void voice.start()
+        .then((result) => {
+          logVoiceDebugEvent('wake_listener_auto_start_result', { result });
+        })
+        .finally(() => {
+          autoListenInFlightRef.current = false;
+        });
+    }, AUTO_LISTEN_RESTART_MS);
+
+    return () => {
+      if (autoListenTimerRef.current !== null) {
+        window.clearTimeout(autoListenTimerRef.current);
+        autoListenTimerRef.current = null;
+      }
+    };
+  }, [canUseVoice, chat.isSending, chat.pendingActions.length, isProcessingVoice, voice, voice.state, voicePermissionPrompted]);
 
   useEffect(() => {
     if (!voice.error) return;
@@ -262,18 +311,8 @@ export function VoiceFirstCompanionLayer() {
       return;
     }
 
-    if (voice.error === 'no-speech') {
-      showThought('Не расслышала. Нажми и повтори.', 'warning', 2800);
+    if (voice.error === 'no-speech' || voice.error === 'transcription-timeout' || voice.error === 'transcription-error') {
       return;
-    }
-
-    if (voice.error === 'transcription-timeout') {
-      showThought('Не дождалась распознавания. Повтори ещё раз.', 'warning', 3400);
-      return;
-    }
-
-    if (voice.error === 'transcription-error') {
-      showThought('Не расслышала. Повтори ещё раз.', 'warning', 3000);
     }
   }, [showThought, voice.error]);
 
@@ -307,6 +346,7 @@ export function VoiceFirstCompanionLayer() {
 
   useEffect(() => () => {
     if (bubbleTimerRef.current !== null) window.clearTimeout(bubbleTimerRef.current);
+    if (autoListenTimerRef.current !== null) window.clearTimeout(autoListenTimerRef.current);
     voiceCancelRef.current();
   }, []);
 
@@ -335,17 +375,17 @@ export function VoiceFirstCompanionLayer() {
             <div className="voice-first-intro__eyebrow">Знакомься</div>
             <div className="voice-first-intro__title">Это Фина</div>
             <p>
-              Нажми на Фину, скажи финансовую команду обычным языком, а подтверждение появится в обычной модалке.
+              После разрешения микрофона Фина ждёт своё имя. Скажи “Фина” и финансовую команду обычным языком.
             </p>
 
             <div className="voice-first-intro__steps">
               <div><b>1</b><span>Разреши микрофон</span></div>
-              <div><b>2</b><span>Нажми на Фину</span></div>
-              <div><b>3</b><span>Скажи команду</span></div>
+              <div><b>2</b><span>Скажи “Фина”</span></div>
+              <div><b>3</b><span>Добавь команду</span></div>
             </div>
 
             <div className="voice-first-intro__hint">
-              Примеры: “Фина, кофе 300”, “создай цель отпуск 120000”, “сделай наличку основной”.
+              Примеры: “Фина, кофе 300”, “Фина, создай цель отпуск 120000”, “Фина, сделай наличку основной”.
             </div>
 
             <div className="voice-first-intro__actions">
@@ -402,7 +442,7 @@ export function VoiceFirstCompanionLayer() {
                       ? 'Распознаю'
                       : chat.isSending || isProcessingVoice
                         ? 'Думаю'
-                        : 'Нажми и скажи команду'
+                        : 'Жду “Фина”'
                   : 'Голос выключен'}
               </div>
             </div>
@@ -410,7 +450,7 @@ export function VoiceFirstCompanionLayer() {
             <CompanionButton
               mood={mood}
               size="md"
-              label="Сказать команду"
+              label="Фина"
               onClick={startVoiceSession}
             />
           </div>
