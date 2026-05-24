@@ -32,3 +32,9 @@ test-results/base-ai-regression-*.json
 - The runner now resets finance data once before mutation AI tests as well as before the whole run.
 - AI test entity names avoid the literal `ai` and English helper words because production planner can treat them as technical/non-user words.
 - This remains a black-box test runner and does not parse financial commands.
+
+## Patch 69 note
+
+The runner now confirms pending AI actions through `/ai/confirm/:pendingActionId` first and falls back to `/ai/confirm` with a JSON body. This matches the backend hardening that accepts the pending action id from route params, `pendingActionId`, or `id`.
+
+The backend confirmation flow now claims pending actions inside the same Prisma transaction before executing the planned actions and marks them confirmed after execution. If execution fails, the transaction rolls back and the pending action is marked failed by the orchestrator.

@@ -273,7 +273,7 @@ export class AIOrchestratorService {
         message: this.preview.buildExecutedMessage(parsed),
         parsed: parsed as unknown as Record<string, unknown>,
         result,
-        meta: { auditLogId: audit.id, undo: { available: true } },
+        meta: { auditLogId: audit.id, pendingActionId, undo: { available: true } },
       };
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Confirm failed';

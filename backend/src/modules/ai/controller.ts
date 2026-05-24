@@ -23,12 +23,23 @@ function parseLimit(value: unknown, fallback = 50) {
   return parsed;
 }
 
+function firstString(value: unknown) {
+  if (typeof value === 'string') return value;
+  if (Array.isArray(value)) return typeof value[0] === 'string' ? value[0] : '';
+  return '';
+}
+
 function readPendingActionId(req: Request) {
-  return typeof req.params.pendingActionId === 'string'
-    ? req.params.pendingActionId
-    : typeof req.body.pendingActionId === 'string'
-      ? req.body.pendingActionId
-      : '';
+  const fromParams = firstString(req.params.pendingActionId);
+  if (fromParams.trim()) return fromParams;
+
+  const fromBody = firstString(req.body?.pendingActionId);
+  if (fromBody.trim()) return fromBody;
+
+  const fromBodyId = firstString(req.body?.id);
+  if (fromBodyId.trim()) return fromBodyId;
+
+  return '';
 }
 
 function readIdempotencyKey(req: Request) {

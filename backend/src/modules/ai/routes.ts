@@ -20,7 +20,9 @@ router.get('/audit-logs', getAuditLogs);
 router.get('/observability', getObservabilityEvents);
 
 router.post('/parse', parseCommand);
+router.post('/confirm/:pendingActionId', confirmCommand);
 router.post('/confirm', confirmCommand);
+router.post('/cancel/:pendingActionId', cancelCommand);
 router.post('/cancel', cancelCommand);
 router.post('/undo', undoCommand);
 router.patch('/pending-actions/:pendingActionId', updatePendingAction);

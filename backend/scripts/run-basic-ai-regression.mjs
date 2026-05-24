@@ -318,13 +318,25 @@ async function aiParse(command) {
 }
 
 async function aiConfirm(pendingActionId) {
-  const body = pendingActionId ? { pendingActionId } : {};
+  const id = String(pendingActionId || '').trim();
+  if (id) {
+    const direct = await maybeApi(`/ai/confirm/${encodeURIComponent(id)}`, { method: 'POST', body: { pendingActionId: id } });
+    if (!direct.error) return aiResult(direct.data);
+  }
+
+  const body = id ? { pendingActionId: id, id } : {};
   const res = await api('/ai/confirm', { method: 'POST', body });
   return aiResult(res.data);
 }
 
 async function aiCancel(pendingActionId) {
-  const body = pendingActionId ? { pendingActionId } : {};
+  const id = String(pendingActionId || '').trim();
+  if (id) {
+    const direct = await maybeApi(`/ai/cancel/${encodeURIComponent(id)}`, { method: 'POST', body: { pendingActionId: id } });
+    if (!direct.error) return aiResult(direct.data);
+  }
+
+  const body = id ? { pendingActionId: id, id } : {};
   const res = await api('/ai/cancel', { method: 'POST', body });
   return aiResult(res.data);
 }

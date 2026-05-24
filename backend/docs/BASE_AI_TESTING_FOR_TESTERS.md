@@ -21,3 +21,7 @@ TEST_RESET_BEFORE=0 npm run test:base-ai # keep existing test data
 ## Patch 68 update
 
 The base AI suite isolates manual CRUD tests from AI mutation tests. This prevents the AI planner from selecting accounts created by the earlier manual CRUD phase. The suite still sends normal user commands and verifies results through API state.
+
+## Patch 69 confirmation hardening
+
+If AI returns `requiresConfirmation: true`, the test runner confirms the pending action with an explicit pending action id. This is required for all mutation tests: accounts, transactions, transfers, goals, sections and categories.
