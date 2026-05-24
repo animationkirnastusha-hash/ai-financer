@@ -14,12 +14,12 @@ type RecorderFormat = {
   extension: string;
 };
 
-const DEFAULT_SESSION_MS = 7800;
-const MIN_SESSION_MS = 4200;
-const MAX_SESSION_MS = 12000;
+const DEFAULT_SESSION_MS = 9000;
+const MIN_SESSION_MS = 5200;
+const MAX_SESSION_MS = 14000;
 const MIN_AUDIO_BYTES = 900;
 const TRANSCRIBE_CLIENT_TIMEOUT_MS = 45_000;
-const MICROPHONE_GAIN = 1.8;
+const MICROPHONE_GAIN = 2.6;
 
 function getBestRecorderFormat(): RecorderFormat | null {
   if (typeof MediaRecorder === 'undefined') {
@@ -107,6 +107,10 @@ export function useVoiceRecorder({ onText, lang = 'ru-RU', chunkMs = DEFAULT_SES
       if (!AudioContextCtor) return rawStream;
 
       const context = new AudioContextCtor();
+      if (context.state === 'suspended') {
+        void context.resume().catch(() => undefined);
+      }
+
       const source = context.createMediaStreamSource(rawStream);
       const gain = context.createGain();
       const destination = context.createMediaStreamDestination();
@@ -269,10 +273,11 @@ export function useVoiceRecorder({ onText, lang = 'ru-RU', chunkMs = DEFAULT_SES
       const rawStream = await navigator.mediaDevices.getUserMedia({
         audio: {
           echoCancellation: true,
-          noiseSuppression: true,
+          noiseSuppression: false,
           autoGainControl: true,
           channelCount: { ideal: 1 },
           sampleRate: { ideal: 48000 },
+          sampleSize: { ideal: 16 },
         },
       });
       rawStreamRef.current = rawStream;

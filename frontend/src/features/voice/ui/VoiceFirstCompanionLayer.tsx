@@ -20,9 +20,10 @@ type Thought = {
 
 const BUBBLE_TIMEOUT_MS = 2800;
 const DUPLICATE_WINDOW_MS = 1000;
-const DEFAULT_VOICE_SESSION_MS = 7800;
-const AUTO_LISTENER_RESTART_MS = 350;
-const WAKE_COMMAND_WINDOW_MS = 10500;
+const DEFAULT_VOICE_SESSION_MS = 9000;
+const AUTO_LISTENER_RESTART_MS = 650;
+const WAKE_COMMAND_WINDOW_MS = 12500;
+const TTS_MIN_GAP_MS = 1800;
 
 function compactBubble(text: string) {
   return text
@@ -141,6 +142,7 @@ export function VoiceFirstCompanionLayer() {
   const isProcessingVoiceRef = useRef(false);
   const voiceCancelRef = useRef<() => void>(() => undefined);
   const wakeCommandUntilRef = useRef(0);
+  const lastTtsCueRef = useRef<{ cue: VoiceCue | null; at: number }>({ cue: null, at: 0 });
 
   const showThought = useCallback((text: string, tone: BubbleTone = 'neutral', timeoutMs = BUBBLE_TIMEOUT_MS) => {
     const cleanText = compactBubble(text);
@@ -171,9 +173,17 @@ export function VoiceFirstCompanionLayer() {
 
   const speakThought = useCallback((text: string, tone: BubbleTone = 'neutral', cue?: VoiceCue, timeoutMs = BUBBLE_TIMEOUT_MS) => {
     showThought(text, tone, timeoutMs);
-    if (voiceRepliesEnabled && cue) {
-      voice.speak(text, { cue, maxDurationMs: Math.min(3000, timeoutMs + 500) });
+    if (!voiceRepliesEnabled || !cue) return;
+
+    const now = Date.now();
+    const lastCue = lastTtsCueRef.current;
+    if (lastCue.cue === cue && now - lastCue.at < TTS_MIN_GAP_MS) {
+      logVoiceDebugEvent('tts_cue_skipped_duplicate', { cue, textLength: text.length });
+      return;
     }
+
+    lastTtsCueRef.current = { cue, at: now };
+    voice.speak(text, { cue, maxDurationMs: Math.min(2600, timeoutMs + 350) });
   }, [showThought, voice, voiceRepliesEnabled]);
 
   const handleText = useCallback(async (rawText: string) => {
@@ -220,7 +230,6 @@ export function VoiceFirstCompanionLayer() {
     lastHandledRef.current = { text, at: now };
 
     setIsProcessingVoice(true);
-    speakThought('Слушаю.', 'listening', 'listening', 1200);
     showThought('Думаю...', 'thinking', 1800);
 
     try {
@@ -332,12 +341,12 @@ export function VoiceFirstCompanionLayer() {
 
     if (lastMessage.kind === 'error') {
       voice.stopSpeaking();
-      speakThought(lastMessage.text || 'Нужно уточнение.', 'warning', 'not-heard', 5000);
+      showThought(lastMessage.text || 'Нужно уточнение.', 'warning', 5000);
       return;
     }
 
     voice.stopSpeaking();
-    speakThought(lastMessage.text || 'Готово.', 'success', 'done', 2200);
+    showThought(lastMessage.text || 'Готово.', 'success', 2200);
   }, [chat.messages, showThought, speakThought, voice]);
 
   useEffect(() => {

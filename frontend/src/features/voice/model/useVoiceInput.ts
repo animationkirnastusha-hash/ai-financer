@@ -37,6 +37,7 @@ export function useVoiceInput({
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const audioUrlRef = useRef<string | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
+  const playbackSeqRef = useRef(0);
   const [permissionPrimed, setPermissionPrimed] = useState(false);
   const [permissionError, setPermissionError] = useState<string | null>(null);
   const permissionRequestInFlightRef = useRef(false);
@@ -54,10 +55,13 @@ export function useVoiceInput({
   });
 
   const stopCurrentAudio = useCallback(() => {
+    playbackSeqRef.current += 1;
+
     const currentAudio = audioRef.current;
     if (currentAudio) {
       currentAudio.pause();
-      currentAudio.src = '';
+      currentAudio.removeAttribute('src');
+      currentAudio.load();
       audioRef.current = null;
     }
 
@@ -119,9 +123,10 @@ export function useVoiceInput({
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: {
           echoCancellation: true,
-          noiseSuppression: true,
+          noiseSuppression: false,
           autoGainControl: true,
-          channelCount: 1,
+          channelCount: { ideal: 1 },
+          sampleRate: { ideal: 48000 },
         },
       });
       stream.getTracks().forEach((track) => track.stop());
@@ -198,10 +203,18 @@ export function useVoiceInput({
 
     window.speechSynthesis?.cancel();
     stopCurrentAudio();
+
+    const requestSeq = playbackSeqRef.current + 1;
+    playbackSeqRef.current = requestSeq;
     setIsSpeaking(true);
 
     void getVoiceCueAudio(cue)
       .then((blob) => {
+        if (playbackSeqRef.current !== requestSeq) {
+          logVoiceDebugEvent('tts_playback_discarded_stale', { code: cue, textLength: text.length });
+          return;
+        }
+
         const url = URL.createObjectURL(blob);
         const audio = new Audio(url);
         audio.preload = 'auto';
@@ -211,14 +224,21 @@ export function useVoiceInput({
 
         const cleanup = () => {
           if (audioRef.current === audio) audioRef.current = null;
-          if (audioUrlRef.current === url) audioUrlRef.current = null;
-          URL.revokeObjectURL(url);
-          setIsSpeaking(false);
+          if (audioUrlRef.current === url) {
+            URL.revokeObjectURL(url);
+            audioUrlRef.current = null;
+          }
+          if (playbackSeqRef.current === requestSeq) setIsSpeaking(false);
         };
 
         audio.onended = cleanup;
         audio.onerror = cleanup;
         void audio.play().then(() => {
+          if (playbackSeqRef.current !== requestSeq) {
+            audio.pause();
+            cleanup();
+            return;
+          }
           logVoiceDebugEvent('tts_playback_started', { code: cue, textLength: text.length });
         }).catch((error) => {
           logVoiceDebugEvent('tts_playback_failed', {
@@ -230,7 +250,7 @@ export function useVoiceInput({
 
         if (options?.maxDurationMs) {
           window.setTimeout(() => {
-            if (audioRef.current === audio) {
+            if (audioRef.current === audio && playbackSeqRef.current === requestSeq) {
               audio.pause();
               cleanup();
             }
@@ -238,6 +258,7 @@ export function useVoiceInput({
         }
       })
       .catch((error) => {
+        if (playbackSeqRef.current !== requestSeq) return;
         logVoiceDebugEvent('tts_request_failed', {
           error: error instanceof Error ? error.name || error.message : 'unknown',
           code: typeof error === 'object' && error !== null && 'code' in error ? String((error as { code?: unknown }).code) : cue,
