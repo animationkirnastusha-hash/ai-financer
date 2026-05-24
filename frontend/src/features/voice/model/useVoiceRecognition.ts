@@ -41,23 +41,33 @@ type UseVoiceRecognitionParams = {
   onFinalText?: (text: string) => void | Promise<void>;
 };
 
+const MAX_SESSION_MS = 65000;
+const STOP_FALLBACK_MS = 1400;
+const START_COOLDOWN_MS = 420;
+const SOFT_ERRORS = new Set(['no-speech', 'aborted', 'audio-capture', 'network']);
+
+function compactTranscript(value: string) {
+  return value.replace(/[\u00A0\t\r\n]+/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
 export function useVoiceRecognition({
   lang = 'ru-RU',
   onFinalText,
 }: UseVoiceRecognitionParams = {}) {
-  const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
   const onFinalTextRef = useRef(onFinalText);
-
+  const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
   const stateRef = useRef<VoiceRecognitionState>('idle');
   const transcriptRef = useRef('');
   const finalTranscriptRef = useRef('');
-  const manualStopRef = useRef(false);
   const activeRef = useRef(false);
-  const finalWasSentRef = useRef(false);
-  const fallbackTimerRef = useRef<number | null>(null);
-  const listenWatchdogTimerRef = useRef<number | null>(null);
-  const restartCooldownRef = useRef<number | null>(null);
-  const processingStartedAtRef = useRef(0);
+  const manualStopRef = useRef(false);
+  const suppressEmitRef = useRef(false);
+  const emittedRef = useRef(false);
+  const sessionIdRef = useRef(0);
+  const lastStartAtRef = useRef(0);
+  const maxSessionTimerRef = useRef<number | null>(null);
+  const stopFallbackTimerRef = useRef<number | null>(null);
+  const startCooldownTimerRef = useRef<number | null>(null);
 
   const [state, setState] = useState<VoiceRecognitionState>('idle');
   const [transcript, setTranscript] = useState('');
@@ -74,278 +84,253 @@ export function useVoiceRecognition({
     setState(next);
   }, []);
 
-  const clearFallbackTimer = useCallback(() => {
-    if (fallbackTimerRef.current !== null) {
-      window.clearTimeout(fallbackTimerRef.current);
-      fallbackTimerRef.current = null;
+  const clearTimers = useCallback(() => {
+    if (maxSessionTimerRef.current !== null) {
+      window.clearTimeout(maxSessionTimerRef.current);
+      maxSessionTimerRef.current = null;
+    }
+    if (stopFallbackTimerRef.current !== null) {
+      window.clearTimeout(stopFallbackTimerRef.current);
+      stopFallbackTimerRef.current = null;
     }
   }, []);
 
-  const clearListenWatchdogTimer = useCallback(() => {
-    if (listenWatchdogTimerRef.current !== null) {
-      window.clearTimeout(listenWatchdogTimerRef.current);
-      listenWatchdogTimerRef.current = null;
-    }
+  const detachRecognition = useCallback((recognition: SpeechRecognitionInstance | null) => {
+    if (!recognition) return;
+    recognition.onstart = null;
+    recognition.onend = null;
+    recognition.onerror = null;
+    recognition.onresult = null;
   }, []);
+
+  const readText = useCallback(() => compactTranscript(finalTranscriptRef.current || transcriptRef.current), []);
 
   const emitFinalText = useCallback(async () => {
-    const text = finalTranscriptRef.current.trim() || transcriptRef.current.trim();
-    if (!text || finalWasSentRef.current) return;
+    const text = readText();
+    if (!text || emittedRef.current || suppressEmitRef.current) return;
 
-    finalWasSentRef.current = true;
+    emittedRef.current = true;
     await onFinalTextRef.current?.(text);
-  }, []);
+  }, [readText]);
 
-  const finishCurrentSession = useCallback((options?: { emit?: boolean; noSpeechError?: boolean }) => {
-    clearFallbackTimer();
-    clearListenWatchdogTimer();
-    processingStartedAtRef.current = 0;
+  const finishSession = useCallback((sessionId: number, options?: { emit?: boolean; error?: string | null }) => {
+    if (sessionId !== sessionIdRef.current) return;
+
+    clearTimers();
     activeRef.current = false;
+    manualStopRef.current = false;
 
-    const text = finalTranscriptRef.current.trim() || transcriptRef.current.trim();
-
-    if (options?.noSpeechError && !text) {
-      setError('no-speech');
+    if (options?.error) {
+      setError(options.error);
+      setStateSafe('error');
+    } else {
+      if (!suppressEmitRef.current) setError(null);
+      setStateSafe(SpeechRecognitionCtor ? 'idle' : 'unsupported');
     }
 
-    manualStopRef.current = false;
-    setStateSafe('idle');
+    const recognition = recognitionRef.current;
+    recognitionRef.current = null;
+    detachRecognition(recognition);
 
-    if (options?.emit && text) {
+    if (options?.emit) {
       void emitFinalText();
     }
-  }, [clearFallbackTimer, clearListenWatchdogTimer, emitFinalText, setStateSafe]);
+  }, [SpeechRecognitionCtor, clearTimers, detachRecognition, emitFinalText, setStateSafe]);
+
+  const abortCurrentRecognition = useCallback((options?: { suppressEmit?: boolean }) => {
+    clearTimers();
+    suppressEmitRef.current = options?.suppressEmit ?? true;
+    manualStopRef.current = false;
+
+    const recognition = recognitionRef.current;
+    recognitionRef.current = null;
+    activeRef.current = false;
+
+    try {
+      recognition?.abort();
+    } catch {
+      // ignore browser-specific abort errors
+    }
+
+    detachRecognition(recognition);
+    setStateSafe(SpeechRecognitionCtor ? 'idle' : 'unsupported');
+  }, [SpeechRecognitionCtor, clearTimers, detachRecognition, setStateSafe]);
 
   useEffect(() => {
     onFinalTextRef.current = onFinalText;
   }, [onFinalText]);
 
   useEffect(() => {
-    if (!SpeechRecognitionCtor) {
-      setIsSupported(false);
-      setStateSafe('unsupported');
-      return;
-    }
-
-    setIsSupported(true);
-
-    const recognition = new SpeechRecognitionCtor();
-    recognition.lang = lang;
-    recognition.interimResults = true;
-    recognition.continuous = true;
-
-    recognition.onstart = () => {
-      activeRef.current = true;
-      finalWasSentRef.current = false;
-      clearFallbackTimer();
-      clearListenWatchdogTimer();
-      setError(null);
-      setStateSafe('listening');
-
-      // Keep one passive Web Speech session alive as long as the browser allows it.
-      // Short forced sessions cause iOS/Android to play repeated mic on/off sounds.
-      listenWatchdogTimerRef.current = window.setTimeout(() => {
-        const text = finalTranscriptRef.current.trim() || transcriptRef.current.trim();
-        try {
-          recognitionRef.current?.abort();
-        } catch {
-          // ignore
-        }
-        finishCurrentSession({ emit: Boolean(text), noSpeechError: false });
-      }, 240000);
-    };
-
-    recognition.onresult = (event) => {
-      let liveText = '';
-      let finalText = '';
-
-      for (let i = 0; i < event.results.length; i += 1) {
-        const result = event.results[i];
-        const chunk = result?.[0]?.transcript ?? '';
-        liveText += chunk;
-        if (result?.isFinal) finalText += chunk;
-      }
-
-      const normalizedLiveText = liveText.trim();
-      const normalizedFinalText = finalText.trim();
-
-      if (normalizedLiveText) {
-        transcriptRef.current = normalizedLiveText;
-        setTranscript(normalizedLiveText);
-      }
-
-      if (normalizedFinalText) {
-        finalTranscriptRef.current = normalizedFinalText;
-      }
-    };
-
-    recognition.onerror = (event) => {
-      const nextError = event.error || event.message || 'speech-error';
-      const isSoftError = nextError === 'no-speech' || nextError === 'aborted' || nextError === 'audio-capture';
-
-      if (manualStopRef.current) {
-        finishCurrentSession({ emit: true, noSpeechError: false });
-        return;
-      }
-
-      activeRef.current = false;
-      clearFallbackTimer();
-      clearListenWatchdogTimer();
-
-      if (isSoftError) {
-        setError(null);
-        finishCurrentSession({ emit: false, noSpeechError: false });
-        return;
-      }
-
-      setError(nextError);
-      setStateSafe('error');
-    };
-
-    recognition.onend = () => {
-      const text = finalTranscriptRef.current.trim() || transcriptRef.current.trim();
-
-      if (manualStopRef.current) {
-        finishCurrentSession({ emit: true, noSpeechError: false });
-        return;
-      }
-
-      finishCurrentSession({ emit: Boolean(text), noSpeechError: false });
-    };
-
-    recognitionRef.current = recognition;
+    const supported = Boolean(SpeechRecognitionCtor);
+    setIsSupported(supported);
+    setStateSafe(supported ? 'idle' : 'unsupported');
 
     return () => {
-      clearFallbackTimer();
-      clearListenWatchdogTimer();
-      if (restartCooldownRef.current !== null) {
-        window.clearTimeout(restartCooldownRef.current);
-        restartCooldownRef.current = null;
+      abortCurrentRecognition({ suppressEmit: true });
+      if (startCooldownTimerRef.current !== null) {
+        window.clearTimeout(startCooldownTimerRef.current);
+        startCooldownTimerRef.current = null;
       }
-      try {
-        recognition.abort();
-      } catch {
-        // ignore
-      }
-      recognitionRef.current = null;
-      activeRef.current = false;
     };
-  }, [SpeechRecognitionCtor, clearFallbackTimer, clearListenWatchdogTimer, finishCurrentSession, lang, setStateSafe]);
-
-
-  useEffect(() => {
-    const interval = window.setInterval(() => {
-      if (stateRef.current !== 'processing') return;
-      if (!processingStartedAtRef.current) return;
-      if (Date.now() - processingStartedAtRef.current < 1600) return;
-
-      try {
-        recognitionRef.current?.abort();
-      } catch {
-        // ignore
-      }
-
-      finishCurrentSession({ emit: true, noSpeechError: false });
-    }, 500);
-
-    return () => window.clearInterval(interval);
-  }, [finishCurrentSession]);
+  }, [SpeechRecognitionCtor, abortCurrentRecognition, setStateSafe]);
 
   const startListening = useCallback((): boolean => {
-    if (!recognitionRef.current || !isSupported) {
+    if (!SpeechRecognitionCtor) {
       setError('unsupported');
       setStateSafe('unsupported');
       return false;
     }
 
-    if (activeRef.current || stateRef.current === 'processing' || restartCooldownRef.current !== null) return false;
+    if (activeRef.current || stateRef.current === 'processing') return false;
+
+    const now = Date.now();
+    if (now - lastStartAtRef.current < START_COOLDOWN_MS || startCooldownTimerRef.current !== null) return false;
+    lastStartAtRef.current = now;
+
+    abortCurrentRecognition({ suppressEmit: true });
+
+    const recognition = new SpeechRecognitionCtor();
+    const sessionId = sessionIdRef.current + 1;
+    sessionIdRef.current = sessionId;
 
     transcriptRef.current = '';
     finalTranscriptRef.current = '';
-    finalWasSentRef.current = false;
+    emittedRef.current = false;
+    suppressEmitRef.current = false;
     manualStopRef.current = false;
-
     setTranscript('');
     setError(null);
 
+    recognition.lang = lang;
+    recognition.interimResults = true;
+    recognition.continuous = true;
+
+    recognition.onstart = () => {
+      if (sessionId !== sessionIdRef.current) return;
+      activeRef.current = true;
+      setStateSafe('listening');
+
+      maxSessionTimerRef.current = window.setTimeout(() => {
+        if (sessionId !== sessionIdRef.current) return;
+        try {
+          recognition.stop();
+        } catch {
+          try {
+            recognition.abort();
+          } catch {
+            // ignore
+          }
+        }
+      }, MAX_SESSION_MS);
+    };
+
+    recognition.onresult = (event) => {
+      if (sessionId !== sessionIdRef.current) return;
+
+      let liveText = '';
+      let finalText = '';
+
+      for (let index = 0; index < event.results.length; index += 1) {
+        const result = event.results[index];
+        const chunk = result?.[0]?.transcript ?? '';
+        liveText += chunk;
+        if (result?.isFinal) finalText += chunk;
+      }
+
+      const normalizedLive = compactTranscript(liveText);
+      const normalizedFinal = compactTranscript(finalText);
+
+      if (normalizedLive) {
+        transcriptRef.current = normalizedLive;
+        setTranscript(normalizedLive);
+      }
+
+      if (normalizedFinal) {
+        finalTranscriptRef.current = normalizedFinal;
+      }
+    };
+
+    recognition.onerror = (event) => {
+      if (sessionId !== sessionIdRef.current) return;
+
+      const nextError = event.error || event.message || 'speech-error';
+      if (manualStopRef.current) return;
+
+      if (SOFT_ERRORS.has(nextError)) {
+        finishSession(sessionId, { emit: false });
+        return;
+      }
+
+      finishSession(sessionId, { emit: false, error: nextError });
+    };
+
+    recognition.onend = () => {
+      if (sessionId !== sessionIdRef.current) return;
+      const hasText = Boolean(readText());
+      finishSession(sessionId, { emit: hasText && !suppressEmitRef.current });
+    };
+
+    recognitionRef.current = recognition;
+
     try {
-      recognitionRef.current.start();
+      recognition.start();
       return true;
-    } catch (err) {
-      console.error('Speech start failed', err);
+    } catch (startError) {
+      console.error('SpeechRecognition start failed', startError);
+      recognitionRef.current = null;
+      detachRecognition(recognition);
       activeRef.current = false;
       setError('start-failed');
       setStateSafe('idle');
 
-      if (restartCooldownRef.current !== null) {
-        window.clearTimeout(restartCooldownRef.current);
+      if (startCooldownTimerRef.current !== null) {
+        window.clearTimeout(startCooldownTimerRef.current);
       }
-      restartCooldownRef.current = window.setTimeout(() => {
-        restartCooldownRef.current = null;
-      }, 180);
-
-      try {
-        recognitionRef.current.abort();
-      } catch {
-        // ignore
-      }
+      startCooldownTimerRef.current = window.setTimeout(() => {
+        startCooldownTimerRef.current = null;
+      }, START_COOLDOWN_MS);
 
       return false;
     }
-  }, [isSupported, setStateSafe]);
+  }, [SpeechRecognitionCtor, abortCurrentRecognition, detachRecognition, finishSession, lang, readText, setStateSafe]);
 
   const stopListening = useCallback(() => {
-    if (!recognitionRef.current || !isSupported) return;
-
-    manualStopRef.current = true;
-
-    if (!activeRef.current) {
-      finishCurrentSession({ emit: true, noSpeechError: false });
+    const recognition = recognitionRef.current;
+    if (!recognition || !activeRef.current) {
+      const sessionId = sessionIdRef.current;
+      finishSession(sessionId, { emit: Boolean(readText()) });
       return;
     }
 
-    try {
-      processingStartedAtRef.current = Date.now();
-      setStateSafe('processing');
-      recognitionRef.current.stop();
+    manualStopRef.current = true;
+    setStateSafe('processing');
 
-      clearFallbackTimer();
-      clearListenWatchdogTimer();
-      fallbackTimerRef.current = window.setTimeout(() => {
-        try {
-          recognitionRef.current?.abort();
-        } catch {
-          // ignore
-        }
-        finishCurrentSession({ emit: true, noSpeechError: true });
-      }, 950);
-    } catch (err) {
-      console.error('Speech stop failed', err);
-      setError('stop-failed');
-      setStateSafe('error');
+    try {
+      recognition.stop();
+    } catch {
+      try {
+        recognition.abort();
+      } catch {
+        // ignore
+      }
+      finishSession(sessionIdRef.current, { emit: Boolean(readText()) });
+      return;
     }
-  }, [clearFallbackTimer, clearListenWatchdogTimer, finishCurrentSession, isSupported, setStateSafe]);
+
+    clearTimers();
+    stopFallbackTimerRef.current = window.setTimeout(() => {
+      finishSession(sessionIdRef.current, { emit: Boolean(readText()) });
+    }, STOP_FALLBACK_MS);
+  }, [clearTimers, finishSession, readText, setStateSafe]);
 
   const cancelListening = useCallback(() => {
-    clearFallbackTimer();
-    clearListenWatchdogTimer();
-    manualStopRef.current = false;
-    finalWasSentRef.current = true;
-
-    try {
-      recognitionRef.current?.abort();
-    } catch {
-      // ignore
-    }
-
+    abortCurrentRecognition({ suppressEmit: true });
     transcriptRef.current = '';
     finalTranscriptRef.current = '';
-    activeRef.current = false;
-
+    emittedRef.current = true;
     setTranscript('');
     setError(null);
-    setStateSafe(isSupported ? 'idle' : 'unsupported');
-  }, [clearFallbackTimer, clearListenWatchdogTimer, isSupported, setStateSafe]);
+  }, [abortCurrentRecognition]);
 
   const reset = useCallback(() => {
     cancelListening();
