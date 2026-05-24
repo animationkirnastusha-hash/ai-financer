@@ -39,7 +39,8 @@ const config = {
   aiRetryMax: Number(process.env.TEST_AI_RETRY_MAX || 6),
   aiLimitResetMs: Number(process.env.TEST_AI_LIMIT_RESET_MS || 65_000),
   reportOnly: args.has('--report-only'),
-  confirmMode: process.env.TEST_CONFIRM_MODE || 'direct',
+  confirmMode: process.env.TEST_CONFIRM_MODE === 'http' ? 'direct' : (process.env.TEST_CONFIRM_MODE || 'direct'),
+  requestedConfirmMode: process.env.TEST_CONFIRM_MODE || 'direct',
 };
 
 const state = {
