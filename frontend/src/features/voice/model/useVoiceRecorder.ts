@@ -14,11 +14,12 @@ type RecorderFormat = {
   extension: string;
 };
 
-const DEFAULT_SESSION_MS = 8500;
-const MIN_SESSION_MS = 3500;
+const DEFAULT_SESSION_MS = 7800;
+const MIN_SESSION_MS = 4200;
 const MAX_SESSION_MS = 12000;
 const MIN_AUDIO_BYTES = 900;
-const TRANSCRIBE_CLIENT_TIMEOUT_MS = 68_000;
+const TRANSCRIBE_CLIENT_TIMEOUT_MS = 45_000;
+const MICROPHONE_GAIN = 1.8;
 
 function getBestRecorderFormat(): RecorderFormat | null {
   if (typeof MediaRecorder === 'undefined') {
@@ -50,6 +51,8 @@ function clampSessionMs(value: number) {
 export function useVoiceRecorder({ onText, lang = 'ru-RU', chunkMs = DEFAULT_SESSION_MS }: UseVoiceRecorderParams) {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const rawStreamRef = useRef<MediaStream | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
   const chunksRef = useRef<BlobPart[]>([]);
   const activeFormatRef = useRef<RecorderFormat | null>(null);
   const onTextRef = useRef(onText);
@@ -83,6 +86,51 @@ export function useVoiceRecorder({ onText, lang = 'ru-RU', chunkMs = DEFAULT_SES
     if (streamRef.current) {
       streamRef.current.getTracks().forEach((track) => track.stop());
       streamRef.current = null;
+    }
+
+    if (rawStreamRef.current) {
+      rawStreamRef.current.getTracks().forEach((track) => track.stop());
+      rawStreamRef.current = null;
+    }
+
+    if (audioContextRef.current) {
+      void audioContextRef.current.close().catch(() => undefined);
+      audioContextRef.current = null;
+    }
+  }, []);
+
+  const createAmplifiedStream = useCallback((rawStream: MediaStream, format: RecorderFormat): MediaStream => {
+    if (typeof window === 'undefined') return rawStream;
+
+    try {
+      const AudioContextCtor = window.AudioContext || (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+      if (!AudioContextCtor) return rawStream;
+
+      const context = new AudioContextCtor();
+      const source = context.createMediaStreamSource(rawStream);
+      const gain = context.createGain();
+      const destination = context.createMediaStreamDestination();
+
+      gain.gain.value = MICROPHONE_GAIN;
+      source.connect(gain);
+      gain.connect(destination);
+      audioContextRef.current = context;
+
+      logVoiceDebugEvent('microphone_gain_applied', {
+        gain: MICROPHONE_GAIN,
+        mimeType: format.mimeType,
+        extension: format.extension,
+        audioContextState: context.state,
+      });
+
+      return destination.stream;
+    } catch (error) {
+      logVoiceDebugEvent('microphone_gain_unavailable', {
+        error: error instanceof Error ? error.name || error.message : 'unknown',
+        mimeType: format.mimeType,
+        extension: format.extension,
+      });
+      return rawStream;
     }
   }, []);
 
@@ -218,18 +266,25 @@ export function useVoiceRecorder({ onText, lang = 'ru-RU', chunkMs = DEFAULT_SES
 
       logVoiceDebugEvent('permission_requested', { mimeType: recorderFormat.mimeType, extension: recorderFormat.extension });
 
-      const stream = await navigator.mediaDevices.getUserMedia({
+      const rawStream = await navigator.mediaDevices.getUserMedia({
         audio: {
           echoCancellation: true,
           noiseSuppression: true,
           autoGainControl: true,
-          channelCount: 1,
+          channelCount: { ideal: 1 },
+          sampleRate: { ideal: 48000 },
         },
       });
+      rawStreamRef.current = rawStream;
+      const stream = createAmplifiedStream(rawStream, recorderFormat);
       streamRef.current = stream;
-      logVoiceDebugEvent('permission_granted', { mimeType: recorderFormat.mimeType, extension: recorderFormat.extension });
+      logVoiceDebugEvent('permission_granted', {
+        mimeType: recorderFormat.mimeType,
+        extension: recorderFormat.extension,
+        audioTracks: rawStream.getAudioTracks().length,
+      });
 
-      stream.getAudioTracks().forEach((track) => {
+      rawStream.getAudioTracks().forEach((track) => {
         track.onended = () => {
           if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
             logVoiceDebugEvent('microphone_track_ended', { mimeType: recorderFormat.mimeType, extension: recorderFormat.extension });
@@ -312,7 +367,7 @@ export function useVoiceRecorder({ onText, lang = 'ru-RU', chunkMs = DEFAULT_SES
       setState('error');
       cleanupStream();
     }
-  }, [chunkMs, cleanupStream, finalizeRecording, hardCleanup, isSupported, recorderFormat, state, uploadFinalBlob]);
+  }, [chunkMs, cleanupStream, createAmplifiedStream, finalizeRecording, hardCleanup, isSupported, recorderFormat, state, uploadFinalBlob]);
 
   const stopRecording = useCallback(() => {
     logVoiceDebugEvent('voice_session_stop_and_send', { state });

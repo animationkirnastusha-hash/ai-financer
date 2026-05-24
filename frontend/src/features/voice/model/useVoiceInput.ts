@@ -36,6 +36,7 @@ export function useVoiceInput({
   const [isSpeaking, setIsSpeaking] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const audioUrlRef = useRef<string | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
   const [permissionPrimed, setPermissionPrimed] = useState(false);
   const [permissionError, setPermissionError] = useState<string | null>(null);
   const permissionRequestInFlightRef = useRef(false);
@@ -68,6 +69,32 @@ export function useVoiceInput({
     setIsSpeaking(false);
   }, []);
 
+  const unlockAudioPlayback = useCallback(() => {
+    if (typeof window === 'undefined') return;
+
+    try {
+      const AudioContextCtor = window.AudioContext || (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+      if (!AudioContextCtor) return;
+
+      const context = audioContextRef.current ?? new AudioContextCtor();
+      audioContextRef.current = context;
+
+      if (context.state === 'suspended') {
+        void context.resume().catch((error) => {
+          logVoiceDebugEvent('tts_audio_unlock_failed', {
+            error: error instanceof Error ? error.name || error.message : 'unknown',
+          });
+        });
+      }
+
+      logVoiceDebugEvent('tts_audio_unlock_ready', { state: context.state });
+    } catch (error) {
+      logVoiceDebugEvent('tts_audio_unlock_failed', {
+        error: error instanceof Error ? error.name || error.message : 'unknown',
+      });
+    }
+  }, []);
+
   const mode = useMemo<VoiceInputMode>(() => {
     return recorder.isSupported ? 'recorder' : 'speech';
   }, [recorder.isSupported]);
@@ -86,6 +113,7 @@ export function useVoiceInput({
     if (permissionRequestInFlightRef.current) return false;
     permissionRequestInFlightRef.current = true;
     logVoiceDebugEvent('permission_prime_requested');
+    unlockAudioPlayback();
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -97,6 +125,7 @@ export function useVoiceInput({
         },
       });
       stream.getTracks().forEach((track) => track.stop());
+      unlockAudioPlayback();
       setPermissionPrimed(true);
       logVoiceDebugEvent('permission_prime_granted');
       return true;
@@ -108,10 +137,11 @@ export function useVoiceInput({
     } finally {
       permissionRequestInFlightRef.current = false;
     }
-  }, [permissionPrimed]);
+  }, [permissionPrimed, unlockAudioPlayback]);
 
   const start = useCallback(async (): Promise<VoiceStartResult> => {
     window.speechSynthesis?.cancel();
+    unlockAudioPlayback();
     setPermissionError(null);
 
     if (mode === 'recorder' && (recorder.state === 'recording' || recorder.state === 'uploading')) return 'busy';
@@ -135,7 +165,7 @@ export function useVoiceInput({
       console.error(err);
       return 'error';
     }
-  }, [mode, primePermission, recorder, speech]);
+  }, [mode, primePermission, recorder, speech, unlockAudioPlayback]);
 
   const stop = useCallback(() => {
     if (mode === 'recorder') {
@@ -174,6 +204,8 @@ export function useVoiceInput({
       .then((blob) => {
         const url = URL.createObjectURL(blob);
         const audio = new Audio(url);
+        audio.preload = 'auto';
+        audio.volume = 1;
         audioRef.current = audio;
         audioUrlRef.current = url;
 
@@ -186,7 +218,9 @@ export function useVoiceInput({
 
         audio.onended = cleanup;
         audio.onerror = cleanup;
-        void audio.play().catch((error) => {
+        void audio.play().then(() => {
+          logVoiceDebugEvent('tts_playback_started', { code: cue, textLength: text.length });
+        }).catch((error) => {
           logVoiceDebugEvent('tts_playback_failed', {
             error: error instanceof Error ? error.name || error.message : 'unknown',
             code: cue,

@@ -125,6 +125,10 @@ function detectScreen(input: string): AppScreen | null {
     includesAny(input, [
       'разделы и категории',
       'категории и разделы',
+      'категории',
+      'категорию',
+      'разделы',
+      'раздел',
       'taxonomy',
       'таксономия',
       'структура категорий',
@@ -197,6 +201,36 @@ function detectScreen(input: string): AppScreen | null {
   return null;
 }
 
+function isBareNavigationTarget(input: string, screen: AppScreen) {
+  const words = input.split(' ').filter(Boolean);
+  if (words.length > 4) return false;
+
+  const blockedActionWords = [
+    'создай', 'создать', 'добавь', 'добавить', 'удали', 'удалить', 'переименуй', 'переименовать',
+    'измени', 'изменить', 'сделай', 'назначь', 'переведи', 'перевод', 'потратил', 'потратила',
+    'доход', 'расход', 'запиши', 'записать', 'оплати', 'оплатить', 'пополни', 'пополнить',
+  ];
+
+  if (blockedActionWords.some((word) => input.includes(word))) return false;
+
+  const bareAliases: Partial<Record<AppScreen, string[]>> = {
+    dashboard: ['главная', 'домой', 'главный экран', 'сводка'],
+    accounts: ['счета', 'счет', 'мои счета', 'кошельки', 'карты'],
+    transactions: ['операции', 'транзакции', 'история', 'платежи'],
+    analytics: ['аналитика', 'анализ', 'статистика', 'отчеты'],
+    goals: ['цели', 'цель', 'копилки', 'копилка'],
+    settings: ['настройки', 'параметры', 'профиль'],
+    'taxonomy-settings': ['категории', 'разделы', 'категории и разделы', 'разделы и категории'],
+    companion: ['компаньон', 'фина', 'помощник'],
+    premium: ['премиум', 'подписка', 'тариф'],
+    referral: ['рефералы', 'приглашения'],
+    admin: ['админка', 'админ'],
+    'ai-core': ['чат', 'текстовый ввод', 'ии чат'],
+  };
+
+  return (bareAliases[screen] ?? []).some((alias) => input === alias || input === `страница ${alias}` || input === `экран ${alias}`);
+}
+
 export function parseNavigationIntent(command: string): NavigationIntent {
   const input = normalize(command);
 
@@ -224,12 +258,13 @@ export function parseNavigationIntent(command: string): NavigationIntent {
   if (!screen) return { type: 'none' };
 
   if (
+    isBareNavigationTarget(input, screen) ||
     includesAny(input, [
       'открой',
       'покажи',
       'перейди',
       'зайди',
-      'перемести',
+      'перемести меня',
       'перекинь меня',
       'хочу посмотреть',
       'дай посмотреть',
