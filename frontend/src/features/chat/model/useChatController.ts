@@ -9,9 +9,39 @@ import type { ChatMessage } from '@/features/chat/model/chat.types';
 
 const MAX_LOCAL_MESSAGES = 50;
 
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+}
+
+function isClarificationPending(item: any) {
+  const parsed = isRecord(item?.parsed) ? item.parsed : isRecord(item?.payload) ? item.payload : null;
+  return Boolean(parsed && isRecord(parsed.clarification));
+}
+
+function isConfirmationPending(item: any) {
+  if (!item || item.status && item.status !== 'pending') return false;
+  return !isClarificationPending(item);
+}
+
 function appendLocalMessages(prev: ChatMessage[], next: ChatMessage | ChatMessage[]) {
   const additions = Array.isArray(next) ? next : [next];
   return [...prev, ...additions].slice(-MAX_LOCAL_MESSAGES);
+}
+
+function sleep(ms: number) {
+  return new Promise((resolve) => window.setTimeout(resolve, ms));
+}
+
+function isTransientNetworkError(error: unknown) {
+  if (!navigator.onLine) return true;
+  if (error instanceof TypeError) return true;
+  const status = typeof error === 'object' && error !== null && 'status' in error ? Number((error as { status?: unknown }).status) : 0;
+  return status === 408 || status === 429 || status === 500 || status === 502 || status === 503 || status === 504;
+}
+
+function emitPendingSync() {
+  window.dispatchEvent(new CustomEvent('ai-financer:pending-sync'));
 }
 
 export function useChatController() {
@@ -36,7 +66,7 @@ export function useChatController() {
 
     try {
       const items = await pendingActionsApi.list();
-      setPendingActions(Array.isArray(items) ? items : []);
+      setPendingActions(Array.isArray(items) ? items.filter(isConfirmationPending) : []);
     } catch (error) {
       console.error('Failed to load pending actions', error);
       setPendingActions([]);
@@ -82,6 +112,14 @@ export function useChatController() {
     void refreshFinanceState();
   }, [refreshFinanceState]);
 
+  useEffect(() => {
+    const handler = () => {
+      void refreshFinanceState();
+    };
+    window.addEventListener('ai-financer:pending-sync', handler);
+    return () => window.removeEventListener('ai-financer:pending-sync', handler);
+  }, [refreshFinanceState]);
+
   const sendMessage = useCallback(
     async (text: string) => {
       if (!text.trim() || isSending) return;
@@ -100,7 +138,14 @@ export function useChatController() {
       setMessages((prev) => appendLocalMessages(prev, userMessage));
 
       try {
-        const response = await chatApi.sendMessage({ text });
+        let response;
+        try {
+          response = await chatApi.sendMessage({ text });
+        } catch (error) {
+          if (!isTransientNetworkError(error)) throw error;
+          await sleep(navigator.onLine ? 1400 : 2400);
+          response = await chatApi.sendMessage({ text });
+        }
         const assistantText = response.message || 'Готово';
 
         const assistantMessage: ChatMessage = {
@@ -109,7 +154,7 @@ export function useChatController() {
           text: assistantText,
           content: assistantText,
           createdAt: new Date().toISOString(),
-          kind: response.requiresConfirmation ? 'preview' : 'text',
+          kind: 'text',
           actionType: response.intent,
           actionId: response.meta?.pendingActionId || response.meta?.auditLogId,
           auditLogId: response.meta?.auditLogId,
@@ -122,14 +167,18 @@ export function useChatController() {
 
         setMessages((prev) => appendLocalMessages(prev, assistantMessage));
         await refreshFinanceState();
+        if (response.requiresConfirmation && response.meta?.pendingActionId) {
+          setIsPendingOpen(true);
+          emitPendingSync();
+        }
       } catch (error) {
         console.error('Send message failed', error);
 
         setMessages((prev) => appendLocalMessages(prev, {
           id: crypto.randomUUID(),
           role: 'assistant',
-          text: 'Не удалось обработать запрос.',
-          content: 'Не удалось обработать запрос.',
+          text: 'Связь нестабильна. Команда не выполнена, повтори позже или отправь текстом ещё раз.',
+          content: 'Связь нестабильна. Команда не выполнена, повтори позже или отправь текстом ещё раз.',
           createdAt: new Date().toISOString(),
           kind: 'error',
         }));
@@ -173,7 +222,9 @@ export function useChatController() {
           kind: 'error',
         }));
       } finally {
+        setIsPendingOpen(false);
         await refreshFinanceState();
+        emitPendingSync();
       }
     },
     [refreshFinanceState],
@@ -202,7 +253,9 @@ export function useChatController() {
       } catch (error) {
         console.error('Cancel action failed', error);
       } finally {
+        setIsPendingOpen(false);
         await refreshFinanceState();
+        emitPendingSync();
       }
     },
     [refreshFinanceState],
@@ -258,7 +311,10 @@ export function useChatController() {
     [refreshFinanceState],
   );
 
-  const openPending = useCallback(() => setIsPendingOpen(true), []);
+  const openPending = useCallback(() => {
+    setIsPendingOpen(true);
+    emitPendingSync();
+  }, []);
   const closePending = useCallback(() => setIsPendingOpen(false), []);
   const openAudit = useCallback(() => setIsAuditOpen(true), []);
   const closeAudit = useCallback(() => setIsAuditOpen(false), []);

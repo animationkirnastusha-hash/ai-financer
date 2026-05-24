@@ -110,12 +110,11 @@ export const confirmCommand = asyncHandler(async (req: Request, res: Response) =
   const pendingActionId = readPendingActionId(req);
   if (!pendingActionId.trim()) throw new BadRequestError('pendingActionId is required');
 
-  const key = readIdempotencyKey(req) || `confirm:${pendingActionId}`;
-
-  const result = await withIdempotency(userId, 'ai_confirm', key, { pendingActionId }, async () => {
-    const raw = await aiService.confirmCommand(userId, pendingActionId);
-    return aiResponseNormalizer.normalize(raw);
-  });
+  // Confirmation must never be served from a cached idempotency response.
+  // A stale confirm cache can make the UI believe an action was handled while
+  // the business executor did not mutate accounts/transactions/goals.
+  const raw = await aiService.confirmCommand(userId, pendingActionId);
+  const result = aiResponseNormalizer.normalize(raw);
 
   await aiObservability.log({
     userId,

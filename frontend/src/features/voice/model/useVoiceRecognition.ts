@@ -142,6 +142,8 @@ export function useVoiceRecognition({
       setError(null);
       setStateSafe('listening');
 
+      // Keep one passive Web Speech session alive as long as the browser allows it.
+      // Short forced sessions cause iOS/Android to play repeated mic on/off sounds.
       listenWatchdogTimerRef.current = window.setTimeout(() => {
         const text = finalTranscriptRef.current.trim() || transcriptRef.current.trim();
         try {
@@ -150,7 +152,7 @@ export function useVoiceRecognition({
           // ignore
         }
         finishCurrentSession({ emit: Boolean(text), noSpeechError: false });
-      }, 24000);
+      }, 240000);
     };
 
     recognition.onresult = (event) => {
@@ -192,7 +194,7 @@ export function useVoiceRecognition({
 
       if (isSoftError) {
         setError(null);
-        setStateSafe('idle');
+        finishCurrentSession({ emit: false, noSpeechError: false });
         return;
       }
 

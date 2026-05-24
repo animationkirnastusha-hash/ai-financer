@@ -38,7 +38,10 @@ export function AICoreInput({
   const submit = async () => {
     if (disabled || !value.trim()) return;
     await onSubmit();
-    window.setTimeout(() => inputRef.current?.focus(), 40);
+    window.setTimeout(() => {
+      inputRef.current?.blur();
+      window.scrollTo({ top: window.scrollY, behavior: 'smooth' });
+    }, 40);
   };
 
   const handleKeyDown = async (event: React.KeyboardEvent<HTMLTextAreaElement>) => {

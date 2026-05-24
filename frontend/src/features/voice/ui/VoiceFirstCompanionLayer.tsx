@@ -18,9 +18,9 @@ type Thought = {
   tone: BubbleTone;
 };
 
-const SILENCE_SUBMIT_MS = 880;
-const RESUME_DELAY_MS = 420;
-const WATCHDOG_INTERVAL_MS = 1350;
+const SILENCE_SUBMIT_MS = 980;
+const RESUME_DELAY_MS = 850;
+const WATCHDOG_INTERVAL_MS = 2200;
 const BUBBLE_TIMEOUT_MS = 2800;
 const DUPLICATE_WINDOW_MS = 850;
 const DEFAULT_ACTIVE_WINDOW_SECONDS = 7;
@@ -71,6 +71,11 @@ function isVoiceConfirm(text: string) {
 function isVoiceCancel(text: string) {
   const value = normalizeDecision(text);
   return ['нет', 'не надо', 'отмена', 'отмени', 'отменить', 'cancel', 'no'].includes(value);
+}
+
+function isWakeOnlyCommand(text: string) {
+  const value = normalizeDecision(text);
+  return value === normalizeForWake(FIXED_COMPANION_NAME) || value === 'финна';
 }
 
 function pendingHasClarification(pending: unknown) {
@@ -237,11 +242,6 @@ export function VoiceFirstCompanionLayer() {
     const result = await voice.start();
     if (result === 'started') {
       shouldResumeRef.current = true;
-      const hasCombatWindow = activeUntilRef.current > Date.now() || Date.now() - lastWakeAcceptedAtRef.current < activeWindowMs;
-
-      if (hasCombatWindow) {
-        showThought('Слушаю задачу.', 'listening', 900);
-      }
       return;
     }
 
@@ -255,7 +255,7 @@ export function VoiceFirstCompanionLayer() {
       shouldResumeRef.current = false;
       showThought('Микрофон недоступен. Можно написать команду текстом.', 'warning');
     }
-  }, [canUseVoiceFirst, resumeListeningSoon, showThought, voice, voiceWakeWordEnabled]);
+  }, [canUseVoiceFirst, resumeListeningSoon, showThought, voice]);
 
   useEffect(() => {
     startListeningRef.current = startListening;
@@ -294,12 +294,15 @@ export function VoiceFirstCompanionLayer() {
     if (wake.hasWakeWord) lastWakeAcceptedAtRef.current = now;
 
     const text = cleanVoiceText(wake.hasWakeWord ? wake.command : originalText);
-    if (!text) {
-      resumeListeningSoon(180);
+    if (!text || isWakeOnlyCommand(text)) {
+      resumeListeningSoon(240);
       return;
     }
 
-    armCombatMode();
+    // After wake + command we process one command and then return to passive wake mode.
+    // This prevents random speech after the action from being sent to AI.
+    activeUntilRef.current = 0;
+    setActiveUntil(0);
 
     const last = lastHandledRef.current;
     if (last.text === text && now - last.at < DUPLICATE_WINDOW_MS) {
@@ -319,7 +322,8 @@ export function VoiceFirstCompanionLayer() {
         telegramHaptic('light');
         navigateTo(navigationIntent.screen);
         showThought('Открываю.', 'success');
-        armCombatMode(activeWindowMs);
+        activeUntilRef.current = 0;
+        setActiveUntil(0);
         return;
       }
 
@@ -327,7 +331,8 @@ export function VoiceFirstCompanionLayer() {
         telegramHaptic('light');
         goBack();
         showThought('Вернулся назад.', 'success');
-        armCombatMode(activeWindowMs);
+        activeUntilRef.current = 0;
+        setActiveUntil(0);
         return;
       }
 
@@ -335,24 +340,27 @@ export function VoiceFirstCompanionLayer() {
       if (latestPending?.id && isVoiceCancel(text)) {
         await chat.cancelAction(latestPending.id);
         showThought('Отменил действие.', 'success', 1800);
-        armCombatMode(activeWindowMs);
+        activeUntilRef.current = 0;
+        setActiveUntil(0);
         return;
       }
 
       if (latestPending?.id && !pendingHasClarification(latestPending) && isVoiceConfirm(text)) {
         await chat.confirmAction(latestPending.id);
         showThought('Подтвердил.', 'success', 1800);
-        armCombatMode(activeWindowMs);
+        activeUntilRef.current = 0;
+        setActiveUntil(0);
         return;
       }
 
       await chat.sendMessage(text);
-      armCombatMode();
+      activeUntilRef.current = 0;
+      setActiveUntil(0);
     } finally {
       setIsProcessingVoice(false);
       resumeListeningSoon(RESUME_DELAY_MS);
     }
-  }, [activeWindowMs, armCombatMode, chat, clearSilenceTimer, goBack, navigateTo, resumeListeningSoon, showThought, voiceWakeWordEnabled]);
+  }, [activeWindowMs, armCombatMode, chat, clearSilenceTimer, goBack, navigateTo, resumeListeningSoon, showThought]);
 
   useEffect(() => {
     handleTextRef.current = handleText;
@@ -460,27 +468,30 @@ export function VoiceFirstCompanionLayer() {
     lastAssistantMessageKeyRef.current = messageKey;
 
     if (lastMessage.kind === 'preview') {
-      armCombatMode(Math.max(activeWindowMs, 12000));
+      activeUntilRef.current = 0;
+      setActiveUntil(0);
       voice.stopSpeaking();
-      showThought('Проверь действие. Ответь: “подтверди”, “отмени” или скажи, что изменить: сумму, счёт, категорию, дату.', 'warning', 5200);
-      resumeListeningSoon(420);
+      showThought('Проверь действие в модалке.', 'warning', 3600);
+      resumeListeningSoon(700);
       return;
     }
 
     if (lastMessage.kind === 'error') {
-      armCombatMode(Math.max(activeWindowMs, 12000));
+      activeUntilRef.current = 0;
+      setActiveUntil(0);
       voice.stopSpeaking();
-      showThought(lastMessage.text || 'Нужно уточнение. Ответь коротко или скажи “отмени”.', 'warning', 5000);
-      resumeListeningSoon(420);
+      showThought(lastMessage.text || 'Нужно уточнение. Скажи “Фина” и ответ.', 'warning', 5000);
+      resumeListeningSoon(700);
       return;
     }
 
-    armCombatMode(activeWindowMs);
-    showThought(lastMessage.text || 'Готово. Ещё несколько секунд можно говорить без “Фина”.', 'success', 2200);
+    activeUntilRef.current = 0;
+    setActiveUntil(0);
+    showThought(lastMessage.text || 'Готово.', 'success', 1800);
 
     voice.stopSpeaking();
-    resumeListeningSoon(360);
-  }, [activeWindowMs, armCombatMode, chat.messages, chat.pendingActions.length, resumeListeningSoon, showThought, voice]);
+    resumeListeningSoon(900);
+  }, [chat.messages, chat.pendingActions.length, resumeListeningSoon, showThought, voice]);
 
 
   useEffect(() => {
@@ -517,10 +528,10 @@ export function VoiceFirstCompanionLayer() {
   }, [chat.isSending, chat.pendingActions.length, isCombatActive, isProcessingVoice, thought?.tone, voice.state]);
 
   const needsIntro = canUseVoiceFirst && !voicePermissionPrompted;
-  const showLayer = currentScreen !== 'ai-core';
+  const showFloatingCompanion = currentScreen !== 'ai-core';
   const displayName = FIXED_COMPANION_NAME;
 
-  if (!showLayer) return null;
+  if (!showFloatingCompanion && !needsIntro && chat.pendingActions.length === 0) return null;
 
   return (
     <>
@@ -583,6 +594,7 @@ export function VoiceFirstCompanionLayer() {
         </div>
       ) : null}
 
+      {showFloatingCompanion ? (
       <div className="voice-first-companion" data-no-swipe="true">
         {thought ? (
           <div className={`voice-first-bubble voice-first-bubble--${thought.tone}`}>
@@ -628,6 +640,7 @@ export function VoiceFirstCompanionLayer() {
           />
         </div>
       </div>
+      ) : null}
     </>
   );
 }

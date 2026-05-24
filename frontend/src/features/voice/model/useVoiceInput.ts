@@ -126,44 +126,11 @@ export function useVoiceInput({
   }, [recorder, speech]);
 
   const speak = useCallback(
-    (text: string, options?: { maxDurationMs?: number }) => {
-      const cleanText = text.trim();
-
-      if (!cleanText || typeof window === 'undefined') return;
-      if (!('speechSynthesis' in window)) return;
-
-      window.speechSynthesis.cancel();
-
-      const utterance = new SpeechSynthesisUtterance(cleanText);
-      utterance.lang = lang;
-      utterance.rate = 1;
-      utterance.pitch = 1;
-
-      let fallbackTimer: number | null = null;
-
-      const finish = () => {
-        if (fallbackTimer !== null) {
-          window.clearTimeout(fallbackTimer);
-          fallbackTimer = null;
-        }
-        setIsSpeaking(false);
-      };
-
-      utterance.onstart = () => {
-        setIsSpeaking(true);
-        if (options?.maxDurationMs) {
-          fallbackTimer = window.setTimeout(() => {
-            window.speechSynthesis.cancel();
-            finish();
-          }, options.maxDurationMs);
-        }
-      };
-      utterance.onend = finish;
-      utterance.onerror = finish;
-
-      window.speechSynthesis.speak(utterance);
+    (_text: string, _options?: { maxDurationMs?: number }) => {
+      window.speechSynthesis?.cancel();
+      setIsSpeaking(false);
     },
-    [lang],
+    [],
   );
 
   const stopSpeaking = useCallback(() => {

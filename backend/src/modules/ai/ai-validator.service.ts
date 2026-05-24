@@ -69,7 +69,7 @@ export class AIValidatorService {
 
 
     const issues: AIValidatedPlan['issues'] = [];
-    const actions: AIValidatedAction[] = [];
+    let actions: AIValidatedAction[] = [];
     const plannedAccounts = new Map<string, { name: string; currency: AICurrency }>();
 
     for (const [index, action] of plan.actions.entries()) {
@@ -607,6 +607,8 @@ export class AIValidatorService {
       actions.push({ ...action, input, resolved, riskLevel, requiresConfirmation });
     }
 
+    actions = this.collapseTransactionSupportActions(actions);
+
     const maxRisk = this.maxRisk(actions.map((action) => action.riskLevel));
 
     return {
@@ -617,6 +619,44 @@ export class AIValidatorService {
       riskLevel: maxRisk,
       requiresConfirmation: actions.some((action) => action.requiresConfirmation),
     };
+  }
+
+
+  private collapseTransactionSupportActions(actions: AIValidatedAction[]): AIValidatedAction[] {
+    const transactions = actions.filter((action) => action.tool === 'create_transaction');
+    if (transactions.length === 0) return actions;
+
+    const supportIndexes = new Set<number>();
+
+    for (const transaction of transactions) {
+      const transactionInput = transaction.input ?? {};
+      const transactionCategory = this.key(this.cleanString(transactionInput.category));
+      const transactionSection = this.key(this.cleanString(transactionInput.section));
+
+      actions.forEach((action, index) => {
+        if (action.tool === 'create_category') {
+          const categoryName = this.key(this.cleanString(action.input?.name));
+          const categorySection = this.key(this.cleanString(action.input?.section));
+          if (categoryName && transactionCategory && categoryName === transactionCategory) {
+            if (!transactionInput.section && action.input?.section) transactionInput.section = action.input.section;
+            supportIndexes.add(index);
+          }
+          if (categorySection && transactionSection && categorySection === transactionSection && categoryName === transactionCategory) {
+            supportIndexes.add(index);
+          }
+        }
+
+        if (action.tool === 'create_section') {
+          const sectionName = this.key(this.cleanString(action.input?.name));
+          if (sectionName && transactionSection && sectionName === transactionSection) {
+            supportIndexes.add(index);
+          }
+        }
+      });
+    }
+
+    if (supportIndexes.size === 0) return actions;
+    return actions.filter((_, index) => !supportIndexes.has(index));
   }
 
   private resolveRequiresConfirmation(

@@ -23,7 +23,10 @@
     "db:recover": "npm run db:sync",
     "test:token": "node scripts/create-test-token.mjs",
     "test:base-ai": "node scripts/run-basic-ai-regression.mjs",
-    "test:base-ai:report": "node scripts/run-basic-ai-regression.mjs --report-only"
+    "test:base-ai:report": "node scripts/run-basic-ai-regression.mjs --report-only",
+    "test:backend-integrity": "node scripts/run-backend-integrity-suite.mjs",
+    "test:ai-confirm": "node scripts/run-backend-integrity-suite.mjs",
+    "test:base-full": "npm run test:backend-integrity && npm run test:base-ai"
   },
   "keywords": [],
   "author": "",

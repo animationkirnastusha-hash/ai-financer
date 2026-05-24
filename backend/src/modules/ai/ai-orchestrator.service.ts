@@ -234,7 +234,7 @@ export class AIOrchestratorService {
     let parsed: AIParsedCommand | null = null;
 
     try {
-      pending = await this.pending.claimForConfirm(userId, pendingActionId);
+      pending = await this.pending.getForConfirm(userId, pendingActionId);
       parsed = pending.parsed as unknown as AIParsedCommand | null;
 
       if (!parsed || parsed.intent !== 'batch' || !Array.isArray(parsed.actions)) {
@@ -243,7 +243,7 @@ export class AIOrchestratorService {
 
       const result = await this.executor.execute(userId, parsed, { pendingActionId });
 
-      const confirmedPending = await this.pending.markConfirmedFlexible(userId, pendingActionId);
+      const confirmedPending = await this.pending.markConfirmed(userId, pendingActionId);
       if (!confirmedPending) throw new BadRequestError('Pending action could not be marked as confirmed');
 
       await aiSessionService.clear(userId);

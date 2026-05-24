@@ -105,6 +105,8 @@ export class AIPlannerService {
       'For companion/reactions, use show_companion_reactions.',
       'For premium/tariff/capabilities, use show_premium_capabilities.',
       'For financial mutations, choose the relevant financial tool from the contract: transactions, transfers, accounts, goals, taxonomy, settings, or onboarding.',
+      'When the user says they have money in a new place/account, treat it as account setup plus balance/income to that account, not as an expense from an existing account.',
+      'Do not return both clarification-only intent and executable confirmation for the same action. If essential data is missing, leave it missing and let validator ask only clarification.',
       'If the user asks to change, edit, fix, correct, rename or update an existing operation/transaction, use update_transaction. Do not create a new transaction for corrections to existing records.',
       'For every transaction, provide category and section when the meaning is clear from the whole request; leave them absent only when genuinely unclear.',
       'If several actions are needed to satisfy one user request, return several tool calls in the correct order.',

@@ -15,10 +15,10 @@ export const pendingActionsApi = {
   },
 
   confirm: (pendingActionId: string) =>
-    apiClient.post('/ai/confirm', { pendingActionId }),
+    apiClient.post(`/ai/confirm/${pendingActionId}`, { pendingActionId }),
 
   cancel: (pendingActionId: string) =>
-    apiClient.post('/ai/cancel', { pendingActionId }),
+    apiClient.post(`/ai/cancel/${pendingActionId}`, { pendingActionId }),
 
   update: (pendingActionId: string, parsed: Record<string, unknown>) =>
     apiClient.patch(`/ai/pending-actions/${pendingActionId}`, { parsed }),

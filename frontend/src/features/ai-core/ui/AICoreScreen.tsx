@@ -1,7 +1,5 @@
 import { useEffect, useState } from 'react';
 import { ScreenTopBar } from '@/shared/ui/ScreenTopBar';
-import { PendingActionsDrawer } from '@/features/pending-actions/ui/PendingActionsDrawer';
-import { FinancePreviewCard } from '@/features/chat/ui/FinancePreviewCard';
 import { AICoreInput } from '@/features/ai-core/ui/AICoreInput';
 import { AICoreBalanceHero } from '@/features/ai-core/ui/AICoreBalanceHero';
 import { useAICoreController } from '@/features/ai-core/model/useAICoreController';
@@ -35,12 +33,7 @@ export function AICoreScreen() {
     submit,
     latestAssistantMessage,
     pendingActions,
-    confirmAction,
-    cancelAction,
-    updatePendingAction,
-    isPendingOpen,
     openPending,
-    closePending,
     isSending,
     isCommandListOpen,
     openCommandList,
@@ -62,10 +55,6 @@ export function AICoreScreen() {
     openEdit(transaction);
   };
 
-  const handleAfterConfirm = async (actionId: string) => {
-    await confirmAction(actionId);
-    await refreshDashboard();
-  };
 
   return (
     <div className="app-page app-ai-text-page text-white">
@@ -85,22 +74,7 @@ export function AICoreScreen() {
           </div>
         </section>
 
-        <section className="app-card app-ai-text-input-card">
-          <AICoreInput value={inputValue} onChange={setInputValue} onSubmit={submit} disabled={isSending} inline />
-        </section>
-
-        {latestAssistantMessage?.kind === 'preview' ? (
-          <FinancePreviewCard
-            title={latestAssistantMessage.text}
-            intent={latestAssistantMessage.actionType}
-            actionId={latestAssistantMessage.actionId}
-            data={latestAssistantMessage.data}
-            onConfirm={handleAfterConfirm}
-            onCancel={cancelAction}
-          />
-        ) : null}
-
-        {latestAssistantMessage && latestAssistantMessage.kind !== 'preview' ? (
+        {latestAssistantMessage ? (
           <section className="app-card app-ai-text-response">
             <div className="app-eyebrow">Ответ Фины</div>
             <div>{latestAssistantMessage.text}</div>
@@ -113,7 +87,7 @@ export function AICoreScreen() {
         </div>
       </div>
 
-      <PendingActionsDrawer open={isPendingOpen} items={pendingActions} onClose={closePending} onConfirm={handleAfterConfirm} onCancel={cancelAction} onUpdate={updatePendingAction} />
+      <AICoreInput value={inputValue} onChange={setInputValue} onSubmit={submit} disabled={isSending} />
       <TransactionsHistoryDrawer open={historyOpen} items={items} isMutating={isMutating} onClose={() => setHistoryOpen(false)} onEdit={handleEdit} onDelete={handleDelete} />
       <EditTransactionModal open={Boolean(editing)} transaction={editing} isSaving={isMutating} onClose={closeEdit} onSave={saveEdit} />
       <CommandListSheet open={isCommandListOpen} onClose={closeCommandList} onRunCommand={runQuickCommand} />

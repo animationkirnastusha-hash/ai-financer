@@ -45,7 +45,6 @@ export class AIPendingActionService {
     return this.serialize(pending as PrismaPendingActionRow);
   }
 
-
   async getLatestClarification(userId: string): Promise<AIPendingActionView | null> {
     await this.expireOld(userId);
 
@@ -64,7 +63,7 @@ export class AIPendingActionService {
       const clarification = view.parsed?.clarification;
       if (clarification && typeof clarification === 'object' && !Array.isArray(clarification)) {
         const type = (clarification as Record<string, unknown>).type;
-        if (type === 'account' || type === 'goal' || type === 'category' || type === 'section') return view;
+        if (type === 'account' || type === 'goal' || type === 'category' || type === 'section' || type === 'transaction') return view;
       }
     }
 
@@ -91,45 +90,6 @@ export class AIPendingActionService {
     return this.serialize(updated as PrismaPendingActionRow);
   }
 
-
-  async claimForConfirm(userId: string, pendingActionId: string): Promise<AIPendingActionView> {
-    await this.expireOld(userId);
-
-    const pending = await prisma.aIPendingAction.findFirst({
-      where: { id: pendingActionId, userId, status: 'pending', expiresAt: { gt: new Date() } },
-    });
-
-    if (!pending) throw new NotFoundError('Pending action not found');
-
-    const claimed = await prisma.aIPendingAction.updateMany({
-      where: { id: pending.id, userId, status: 'pending' },
-      data: { status: 'claimed' },
-    });
-
-    if (claimed.count !== 1) throw new NotFoundError('Pending action was already processed');
-
-    const row = await prisma.aIPendingAction.findFirst({ where: { id: pending.id, userId } });
-    if (!row) throw new NotFoundError('Pending action not found');
-
-    return this.serialize(row as PrismaPendingActionRow);
-  }
-
-  async markConfirmedFlexible(userId: string, pendingActionId: string): Promise<AIPendingActionView | null> {
-    const updated = await prisma.aIPendingAction.updateMany({
-      where: {
-        id: pendingActionId,
-        userId,
-        status: { in: ['pending', 'claimed'] },
-      },
-      data: { status: 'confirmed', confirmedAt: new Date() },
-    });
-
-    if (updated.count !== 1) return null;
-
-    const row = await prisma.aIPendingAction.findFirst({ where: { id: pendingActionId, userId } });
-    return row ? this.serialize(row as PrismaPendingActionRow) : null;
-  }
-
   async getForConfirm(userId: string, pendingActionId: string): Promise<AIPendingActionView> {
     const pending = await this.ensurePending(userId, pendingActionId);
     return this.serialize(pending);
@@ -147,22 +107,23 @@ export class AIPendingActionService {
   }
 
   async markFailed(userId: string, pendingActionId: string, reason?: string): Promise<AIPendingActionView | null> {
-    const updated = await prisma.aIPendingAction.updateMany({
-      where: {
-        id: pendingActionId,
-        userId,
-        status: { in: ['pending', 'claimed'] },
-      },
+    const row = await prisma.aIPendingAction.findFirst({ where: { id: pendingActionId, userId } });
+    if (!row || !['pending'].includes(row.status)) return null;
+
+    const currentParsed = this.parse(row.parsed) ?? {};
+    const updatedParsed = reason
+      ? { ...currentParsed, failureReason: reason }
+      : currentParsed;
+
+    const updated = await prisma.aIPendingAction.update({
+      where: { id: row.id },
       data: {
         status: 'failed',
-        parsed: reason ? JSON.stringify({ failureReason: reason }) : undefined,
+        parsed: JSON.stringify(updatedParsed),
       },
     });
 
-    if (updated.count !== 1) return null;
-
-    const row = await prisma.aIPendingAction.findFirst({ where: { id: pendingActionId, userId } });
-    return row ? this.serialize(row as PrismaPendingActionRow) : null;
+    return this.serialize(updated as PrismaPendingActionRow);
   }
 
   async cancel(userId: string, pendingActionId: string): Promise<AIPendingActionView> {
