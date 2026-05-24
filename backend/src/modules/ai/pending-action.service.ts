@@ -63,7 +63,7 @@ export class AIPendingActionService {
       const clarification = view.parsed?.clarification;
       if (clarification && typeof clarification === 'object' && !Array.isArray(clarification)) {
         const type = (clarification as Record<string, unknown>).type;
-        if (type === 'account' || type === 'goal' || type === 'category' || type === 'section' || type === 'transaction') return view;
+        if (type === 'account' || type === 'goal' || type === 'category' || type === 'section') return view;
       }
     }
 
@@ -91,8 +91,7 @@ export class AIPendingActionService {
   }
 
   async getForConfirm(userId: string, pendingActionId: string): Promise<AIPendingActionView> {
-    const pending = await this.ensurePending(userId, pendingActionId);
-    return this.serialize(pending);
+    return this.serialize(await this.ensurePending(userId, pendingActionId));
   }
 
   async markConfirmed(userId: string, pendingActionId: string): Promise<AIPendingActionView> {
@@ -107,23 +106,22 @@ export class AIPendingActionService {
   }
 
   async markFailed(userId: string, pendingActionId: string, reason?: string): Promise<AIPendingActionView | null> {
-    const row = await prisma.aIPendingAction.findFirst({ where: { id: pendingActionId, userId } });
-    if (!row || !['pending'].includes(row.status)) return null;
-
-    const currentParsed = this.parse(row.parsed) ?? {};
-    const updatedParsed = reason
-      ? { ...currentParsed, failureReason: reason }
-      : currentParsed;
-
-    const updated = await prisma.aIPendingAction.update({
-      where: { id: row.id },
+    const updated = await prisma.aIPendingAction.updateMany({
+      where: {
+        id: pendingActionId,
+        userId,
+        status: 'pending',
+      },
       data: {
         status: 'failed',
-        parsed: JSON.stringify(updatedParsed),
+        parsed: reason ? JSON.stringify({ failureReason: reason }) : undefined,
       },
     });
 
-    return this.serialize(updated as PrismaPendingActionRow);
+    if (updated.count !== 1) return null;
+
+    const row = await prisma.aIPendingAction.findFirst({ where: { id: pendingActionId, userId } });
+    return row ? this.serialize(row as PrismaPendingActionRow) : null;
   }
 
   async cancel(userId: string, pendingActionId: string): Promise<AIPendingActionView> {
