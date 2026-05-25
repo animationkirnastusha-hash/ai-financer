@@ -3,7 +3,23 @@ import { useEffect, useMemo, useState, type FormEvent, type PropsWithChildren } 
 import { authApi, type FallbackInfoResponse } from '@/features/chat/api/auth.api';
 import { useAuthStore } from '@/features/auth/model/auth.store';
 import { env } from '@/shared/config/env';
-import { getTelegramInitData, getTelegramUserPreview } from '@/shared/lib/telegram';
+import { getTelegramInitData, getTelegramUserPreview, initTelegramMiniApp } from '@/shared/lib/telegram';
+
+
+async function waitForTelegramInitData(timeoutMs = 1200) {
+  initTelegramMiniApp();
+
+  const startedAt = Date.now();
+  let initData = getTelegramInitData();
+
+  while (!initData && Date.now() - startedAt < timeoutMs) {
+    await new Promise((resolve) => window.setTimeout(resolve, 80));
+    initTelegramMiniApp();
+    initData = getTelegramInitData();
+  }
+
+  return initData;
+}
 
 function AuthLoadingState() {
   const previewUser = getTelegramUserPreview();
@@ -137,9 +153,15 @@ export function AuthBootstrap({ children }: PropsWithChildren) {
   const bootstrap = useAuthStore((state) => state.bootstrap);
 
   useEffect(() => {
-    const initData = getTelegramInitData();
+    let cancelled = false;
 
-    void bootstrap(initData);
+    void waitForTelegramInitData().then((initData) => {
+      if (!cancelled) void bootstrap(initData);
+    });
+
+    return () => {
+      cancelled = true;
+    };
   }, [bootstrap]);
 
   if (!isReady || isLoading) {

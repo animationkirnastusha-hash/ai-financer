@@ -21,7 +21,7 @@ type Thought = {
 const BUBBLE_TIMEOUT_MS = 2800;
 const DUPLICATE_WINDOW_MS = 1000;
 const DEFAULT_VOICE_SESSION_MS = 4200;
-const AUTO_LISTENER_RESTART_MS = 180;
+const AUTO_LISTENER_RESTART_MS = 650;
 const WAKE_COMMAND_WINDOW_MS = 18000;
 const TTS_MIN_GAP_MS = 1800;
 
@@ -74,7 +74,7 @@ function stripWakeWord(rawText: string) {
   const source = rawText.trim();
   const normalized = normalizeForWake(source);
   const words = normalized.split(' ').filter(Boolean);
-  const aliases = ['фина', 'финна', 'fina', 'фину', 'фине', 'фины', 'финой', 'фино', 'фена'];
+  const aliases = ['фина', 'финна', 'fina', 'фину', 'фине', 'фины', 'финой', 'фино', 'фена', 'финов', 'финав', 'финок', 'финокв', 'фиаков', 'фиа', 'финак'];
 
   const exactIndex = words.findIndex((word) => aliases.includes(word));
   const fuzzyIndex = exactIndex >= 0
@@ -262,6 +262,20 @@ export function VoiceFirstCompanionLayer() {
     handleTextRef.current = handleText;
   }, [handleText]);
 
+
+  useEffect(() => {
+    if (!canUseVoice || !voiceAlwaysOnEnabled || !voicePermissionPrompted) return;
+
+    if (voice.state === 'recording') {
+      showThought('Слушаю...', 'listening', 1200);
+      return;
+    }
+
+    if (voice.state === 'uploading') {
+      showThought('Распознаю...', 'thinking', 1400);
+    }
+  }, [canUseVoice, showThought, voice.state, voiceAlwaysOnEnabled, voicePermissionPrompted]);
+
   const primeVoicePermission = useCallback(async () => {
     setIsPriming(true);
     try {
@@ -309,7 +323,7 @@ export function VoiceFirstCompanionLayer() {
       return;
     }
 
-    if (voiceAlwaysOnEnabled && (voice.error === 'no-speech' || voice.error === 'transcription-timeout' || voice.error === 'transcription-error')) {
+    if (voiceAlwaysOnEnabled && (voice.error === 'no-speech' || voice.error === 'rate-limited' || voice.error === 'transcription-timeout' || voice.error === 'transcription-error')) {
       return;
     }
 

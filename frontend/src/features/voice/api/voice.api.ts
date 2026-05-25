@@ -26,6 +26,35 @@ function getAuthHeaders() {
 
 type VoiceDebugDetails = Record<string, string | number | boolean | null | undefined>;
 
+const voiceDebugLastSent = new Map<string, number>();
+let voiceDebugWindowStartedAt = 0;
+let voiceDebugWindowCount = 0;
+
+const VOICE_DEBUG_IMPORTANT_EVENTS = new Set([
+  'recorder_format_selected',
+  'permission_denied',
+  'permission_granted',
+  'recorder_start_failed',
+  'recorder_started',
+  'recorder_stopped',
+  'audio_blob_ready',
+  'transcribe_request_sent',
+  'transcribe_request_success',
+  'transcribe_request_failed',
+  'wake_word_detected',
+  'wake_word_not_detected',
+  'command_dispatched',
+]);
+
+const VOICE_DEBUG_NOISY_EVENTS = new Set([
+  'tts_audio_unlock_ready',
+  'microphone_stream_reused',
+  'recorder_start_call',
+  'wake_listener_auto_start',
+  'audio_blob_skipped_no_voice',
+  'vad_stop_no_speech',
+]);
+
 function getVoiceDebugHeaders() {
   return {
     'Content-Type': 'application/json',
@@ -33,7 +62,29 @@ function getVoiceDebugHeaders() {
   };
 }
 
+function shouldSendVoiceDebugEvent(event: string) {
+  const now = Date.now();
+
+  if (now - voiceDebugWindowStartedAt > 10_000) {
+    voiceDebugWindowStartedAt = now;
+    voiceDebugWindowCount = 0;
+  }
+
+  if (voiceDebugWindowCount >= 45) return false;
+
+  const lastSentAt = voiceDebugLastSent.get(event) || 0;
+  const minGapMs = VOICE_DEBUG_NOISY_EVENTS.has(event) ? 2500 : VOICE_DEBUG_IMPORTANT_EVENTS.has(event) ? 350 : 1200;
+
+  if (now - lastSentAt < minGapMs) return false;
+
+  voiceDebugLastSent.set(event, now);
+  voiceDebugWindowCount += 1;
+  return true;
+}
+
 export function logVoiceDebugEvent(event: string, details?: VoiceDebugDetails) {
+  if (!shouldSendVoiceDebugEvent(event)) return;
+
   const body = JSON.stringify({
     event,
     details: {

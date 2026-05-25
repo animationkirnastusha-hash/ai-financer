@@ -69,6 +69,7 @@ export function useVoiceRecorder({ onText, lang = 'ru-RU', chunkMs = DEFAULT_SES
   const startInProgressRef = useRef(false);
   const finalizeTimerRef = useRef<number | null>(null);
   const cancelledRef = useRef(false);
+  const lifecycleBusyRef = useRef(false);
 
   const [state, setState] = useState<VoiceRecorderState>('idle');
   const [error, setError] = useState<string | null>(null);
@@ -228,6 +229,7 @@ export function useVoiceRecorder({ onText, lang = 'ru-RU', chunkMs = DEFAULT_SES
     activeFormatRef.current = null;
     recordingStartedAtRef.current = 0;
     startInProgressRef.current = false;
+    lifecycleBusyRef.current = false;
     cancelledRef.current = false;
     finalHadVoiceRef.current = false;
     finalPeakRmsRef.current = 0;
@@ -240,6 +242,7 @@ export function useVoiceRecorder({ onText, lang = 'ru-RU', chunkMs = DEFAULT_SES
         mimeType: format.mimeType,
         extension: format.extension,
       });
+      lifecycleBusyRef.current = false;
       setState('idle');
       return;
     }
@@ -251,6 +254,7 @@ export function useVoiceRecorder({ onText, lang = 'ru-RU', chunkMs = DEFAULT_SES
         mimeType: format.mimeType,
         extension: format.extension,
       });
+      lifecycleBusyRef.current = false;
       setState('idle');
       return;
     }
@@ -263,6 +267,7 @@ export function useVoiceRecorder({ onText, lang = 'ru-RU', chunkMs = DEFAULT_SES
         extension: format.extension,
       });
       setError('no-speech');
+      lifecycleBusyRef.current = false;
       setState('idle');
       return;
     }
@@ -295,6 +300,7 @@ export function useVoiceRecorder({ onText, lang = 'ru-RU', chunkMs = DEFAULT_SES
         setError('no-speech');
       }
 
+      lifecycleBusyRef.current = false;
       setState('idle');
     } catch (err) {
       const code = typeof err === 'object' && err !== null && 'code' in err ? String((err as { code?: unknown }).code) : '';
@@ -310,11 +316,13 @@ export function useVoiceRecorder({ onText, lang = 'ru-RU', chunkMs = DEFAULT_SES
 
       if (code === 'VOICE_TRANSCRIPTION_NOT_CONFIGURED' || status === 503) {
         setError('transcription-not-configured');
+        lifecycleBusyRef.current = false;
         setState('error');
         return;
       }
 
-      setError(code === 'VOICE_TRANSCRIPTION_CLIENT_TIMEOUT' || status === 504 ? 'transcription-timeout' : 'transcription-error');
+      setError(status === 429 ? 'rate-limited' : code === 'VOICE_TRANSCRIPTION_CLIENT_TIMEOUT' || status === 504 ? 'transcription-timeout' : 'transcription-error');
+      lifecycleBusyRef.current = false;
       setState('idle');
     }
   }, [lang]);
@@ -326,6 +334,7 @@ export function useVoiceRecorder({ onText, lang = 'ru-RU', chunkMs = DEFAULT_SES
     const recorder = mediaRecorderRef.current;
     if (!recorder || recorder.state === 'inactive') {
       mediaRecorderRef.current = null;
+      lifecycleBusyRef.current = false;
       setState('idle');
       return;
     }
@@ -429,7 +438,7 @@ export function useVoiceRecorder({ onText, lang = 'ru-RU', chunkMs = DEFAULT_SES
   }, [finalizeRecording, platformConfig, stopVoiceActivityWatcher]);
 
   const startRecording = useCallback(async () => {
-    if (startInProgressRef.current) {
+    if (startInProgressRef.current || lifecycleBusyRef.current) {
       logVoiceDebugEvent('voice_start_ignored_in_progress', { state });
       return;
     }
@@ -442,11 +451,13 @@ export function useVoiceRecorder({ onText, lang = 'ru-RU', chunkMs = DEFAULT_SES
     if (!isSupported || !recorderFormat) {
       logVoiceDebugEvent('recorder_unsupported', { platform: platformConfig.platform, isSupported, mimeType: recorderFormat?.mimeType, extension: recorderFormat?.extension });
       setError('unsupported');
+      lifecycleBusyRef.current = false;
       setState('error');
       return;
     }
 
     startInProgressRef.current = true;
+    lifecycleBusyRef.current = true;
     cancelledRef.current = false;
 
     try {
@@ -543,6 +554,7 @@ export function useVoiceRecorder({ onText, lang = 'ru-RU', chunkMs = DEFAULT_SES
       recorder.start(250);
     } catch (err) {
       startInProgressRef.current = false;
+      lifecycleBusyRef.current = false;
       console.error(err);
       logVoiceDebugEvent('recorder_start_failed', { error: err instanceof Error ? err.name || err.message : 'unknown' });
       setError('microphone-denied');
@@ -566,6 +578,7 @@ export function useVoiceRecorder({ onText, lang = 'ru-RU', chunkMs = DEFAULT_SES
     setError(null);
     setState('idle');
     startInProgressRef.current = false;
+    lifecycleBusyRef.current = false;
   }, [hardCleanup]);
 
   return {
