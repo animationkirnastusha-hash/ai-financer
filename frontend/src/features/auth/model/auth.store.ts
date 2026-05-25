@@ -10,11 +10,17 @@ type AuthState = {
   error: string | null;
 
   bootstrap: (initData?: string) => Promise<void>;
+  loginWithFallbackCode: (code: string) => Promise<void>;
   logout: () => void;
 };
 
 const TOKEN_KEY = 'auth-token';
 const AUTH_MODE_KEY = 'auth-mode';
+
+function saveAuth(response: { token: string; mode: string; user: AuthUserDto }) {
+  localStorage.setItem(TOKEN_KEY, response.token);
+  localStorage.setItem(AUTH_MODE_KEY, response.mode);
+}
 
 export const useAuthStore = create<AuthState>((set) => ({
   user: null,
@@ -32,15 +38,14 @@ export const useAuthStore = create<AuthState>((set) => ({
 
       /**
        * Если приложение открыто внутри Telegram, но initData нет —
-       * НЕ используем старый dev-token, иначе разные люди увидят одну базу.
+       * не используем старый dev-token, иначе разные люди увидят одну базу.
+       * Дальше AuthBootstrap покажет безопасный вход через код из бота.
        */
       if (telegramRuntime && !hasTelegramInitData) {
         localStorage.removeItem(TOKEN_KEY);
         localStorage.removeItem(AUTH_MODE_KEY);
 
-        throw new Error(
-          'Telegram initData не получен. Открой приложение через кнопку бота или обнови Mini App.',
-        );
+        throw new Error('Не удалось подтвердить вход через Telegram');
       }
 
       /**
@@ -52,8 +57,7 @@ export const useAuthStore = create<AuthState>((set) => ({
 
         const response = await authApi.login(initData);
 
-        localStorage.setItem(TOKEN_KEY, response.token);
-        localStorage.setItem(AUTH_MODE_KEY, response.mode);
+        saveAuth(response);
 
         set({
           user: response.user,
@@ -90,8 +94,7 @@ export const useAuthStore = create<AuthState>((set) => ({
 
       const response = await authApi.login();
 
-      localStorage.setItem(TOKEN_KEY, response.token);
-      localStorage.setItem(AUTH_MODE_KEY, response.mode);
+      saveAuth(response);
 
       set({
         user: response.user,
@@ -114,6 +117,32 @@ export const useAuthStore = create<AuthState>((set) => ({
           error instanceof Error
             ? error.message
             : 'Не удалось авторизоваться',
+      });
+    }
+  },
+
+  loginWithFallbackCode: async (code) => {
+    set({ isLoading: true, error: null });
+
+    try {
+      const response = await authApi.verifyFallbackCode(code);
+
+      saveAuth(response);
+
+      set({
+        user: response.user,
+        token: response.token,
+        isReady: true,
+        isLoading: false,
+        error: null,
+      });
+    } catch (error) {
+      set({
+        user: null,
+        token: null,
+        isReady: true,
+        isLoading: false,
+        error: error instanceof Error ? error.message : 'Код входа не подошёл',
       });
     }
   },

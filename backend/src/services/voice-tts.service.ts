@@ -56,7 +56,7 @@ function getModel() {
 }
 
 function getVoice() {
-  return (process.env.VOICE_TTS_VOICE || 'nova').trim();
+  return (process.env.VOICE_TTS_VOICE || 'coral').trim();
 }
 
 function getFormat() {

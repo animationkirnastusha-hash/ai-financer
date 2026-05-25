@@ -91,3 +91,38 @@ export const getMe = asyncHandler(async (req: Request, res: Response) => {
     user: authService.serializeUser(user),
   });
 });
+
+export const getFallbackInfo = asyncHandler(async (_req: Request, res: Response) => {
+  res.json(authService.getFallbackInfo());
+});
+
+export const verifyFallbackCode = asyncHandler(async (req: Request, res: Response) => {
+  const user = await authService.verifyFallbackLoginCode(req.body?.code);
+
+  if (!user) {
+    throw new UnauthorizedError('Код входа неверный или уже истёк');
+  }
+
+  const token = authService.generateToken(user.id);
+
+  res.json({
+    user: authService.serializeUser(user),
+    token,
+    mode: 'telegram_fallback',
+  });
+});
+
+export const telegramFallbackWebhook = asyncHandler(async (req: Request, res: Response) => {
+  const expectedSecret = process.env.TELEGRAM_FALLBACK_WEBHOOK_SECRET?.trim();
+
+  if (expectedSecret) {
+    const actualSecret = String(req.headers['x-telegram-bot-api-secret-token'] || '');
+    if (actualSecret !== expectedSecret) {
+      throw new UnauthorizedError('Invalid Telegram webhook secret');
+    }
+  }
+
+  const result = await authService.handleFallbackTelegramUpdate(req.body);
+
+  res.json({ success: true, ...result });
+});

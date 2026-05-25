@@ -8,12 +8,9 @@ import { ProgressionMiniCard } from '@/features/progression/ui/ProgressionMiniCa
 import { ScreenTopBar } from '@/shared/ui/ScreenTopBar';
 import { formatMoney, formatTransactionDate } from '@/shared/lib/money';
 import type { AppCurrency } from '@/features/settings/model/settings.types';
+import { APP_CURRENCIES, convertCurrency, getCurrencyProfile } from '@/features/currency/lib/currency';
 
-const currencyLabels: Record<AppCurrency, string> = {
-  RUB: 'Рубли',
-  USD: 'Доллары',
-  EUR: 'Евро',
-};
+const currencyLabels: Record<AppCurrency, string> = Object.fromEntries(APP_CURRENCIES.map((item) => [item.code, item.label])) as Record<AppCurrency, string>;
 
 const menuLinks = [
   { label: 'Операции', caption: 'История и ручное добавление', screen: 'transactions' as const },
@@ -39,21 +36,17 @@ function titleOf(transaction: any) {
 }
 
 function convertRubToCurrency(amount: number, currency: AppCurrency, rates: { usd: number; eur: number }) {
-  if (currency === 'RUB') return amount;
-  if (currency === 'USD') return rates.usd > 0 ? amount / rates.usd : 0;
-  return rates.eur > 0 ? amount / rates.eur : 0;
+  return convertCurrency(amount, 'RUB', currency, { USD: rates.usd, EUR: rates.eur });
 }
 
 function convertCurrencyToRub(amount: number, currency: AppCurrency, rates: { usd: number; eur: number }) {
-  if (currency === 'RUB') return amount;
-  if (currency === 'USD') return amount * rates.usd;
-  return amount * rates.eur;
+  return convertCurrency(amount, currency, 'RUB', { USD: rates.usd, EUR: rates.eur });
 }
 
 function exchangeHint(currency: AppCurrency, rates: { usd: number; eur: number }) {
   if (currency === 'USD') return `1 USD ≈ ${formatMoney(rates.usd, 'RUB')}`;
   if (currency === 'EUR') return `1 EUR ≈ ${formatMoney(rates.eur, 'RUB')}`;
-  return `USD ≈ ${formatMoney(rates.usd, 'RUB')} · EUR ≈ ${formatMoney(rates.eur, 'RUB')}`;
+  return getCurrencyProfile(currency).label;
 }
 
 export default function DashboardPage() {

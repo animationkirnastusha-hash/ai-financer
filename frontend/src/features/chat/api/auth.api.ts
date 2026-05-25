@@ -14,7 +14,14 @@ export type AuthUserDto = {
 export type LoginResponse = {
   token: string;
   user: AuthUserDto;
-  mode: 'development' | 'telegram' | string;
+  mode: 'development' | 'telegram' | 'telegram_fallback' | string;
+};
+
+export type FallbackInfoResponse = {
+  enabled: boolean;
+  botUsername: string | null;
+  botUrl: string | null;
+  ttlSeconds: number;
 };
 
 export const authApi = {
@@ -27,4 +34,9 @@ export const authApi = {
     apiClient.get<{
       user: AuthUserDto;
     }>('/auth/me'),
+
+  fallbackInfo: () => apiClient.get<FallbackInfoResponse>('/auth/fallback/info'),
+
+  verifyFallbackCode: (code: string) =>
+    apiClient.post<LoginResponse>('/auth/fallback/verify-code', { code }),
 };

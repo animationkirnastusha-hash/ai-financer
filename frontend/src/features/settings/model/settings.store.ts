@@ -27,7 +27,7 @@ type SettingsState = AppSettings & {
   setIncomeAccountId: (accountId: string | null) => void;
 
   setSecondaryCurrencyEnabled: (value: boolean) => void;
-  setSecondaryCurrency: (currency: Exclude<AppCurrency, 'RUB'>) => void;
+  setSecondaryCurrency: (currency: AppCurrency) => void;
   setRubToUsdRate: (rate: number) => void;
   setRubToEurRate: (rate: number) => void;
 };

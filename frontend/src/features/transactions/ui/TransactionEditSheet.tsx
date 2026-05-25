@@ -54,6 +54,7 @@ export function TransactionEditSheet({
   const categories = useSectionsStore((state) => state.categories);
   const sections = useSectionsStore((state) => state.sections);
   const loadTaxonomy = useSectionsStore((state) => state.loadAll);
+  const createCategory = useSectionsStore((state) => state.createCategory);
 
   const [type, setType] = useState<TransactionType>('expense');
   const [amount, setAmount] = useState('');
@@ -63,6 +64,7 @@ export function TransactionEditSheet({
   const [categoryId, setCategoryId] = useState<string | null>(null);
   const [toAccountId, setToAccountId] = useState<string | null>(null);
   const [localError, setLocalError] = useState<string | null>(null);
+  const [isCreatingCategory, setIsCreatingCategory] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -98,6 +100,26 @@ export function TransactionEditSheet({
   const selectedAccount = accounts.find((account) => account.id === accountId) ?? transaction?.account ?? null;
   const parsedAmount = Number(amount.replace(',', '.'));
   const canSave = Number.isFinite(parsedAmount) && parsedAmount > 0 && Boolean(accountId) && !isSaving;
+
+  async function quickCreateCategory() {
+    const name = description.trim();
+    if (type === 'transfer') return;
+    if (name.length < 2) {
+      setLocalError('Напиши описание, чтобы создать категорию из него.');
+      return;
+    }
+    setIsCreatingCategory(true);
+    setLocalError(null);
+    try {
+      const category = await createCategory({ name, type, sectionId: selectedSection?.id ?? null });
+      setCategoryId(category.id);
+      await loadTaxonomy(true);
+    } catch (error) {
+      setLocalError(error instanceof Error ? error.message : 'Не удалось создать категорию.');
+    } finally {
+      setIsCreatingCategory(false);
+    }
+  }
 
   if (!open || !transaction) return null;
 
@@ -305,6 +327,12 @@ export function TransactionEditSheet({
               </div>
             </section>
           )}
+
+          {type !== 'transfer' ? (
+            <button type="button" className="app-secondary-button" onClick={quickCreateCategory} disabled={isCreatingCategory || !description.trim()}>
+              {isCreatingCategory ? 'Создаю категорию...' : 'Создать категорию из описания'}
+            </button>
+          ) : null}
 
           <section className="app-transaction-ai-advice">
             <div className="app-eyebrow">Совет Фины</div>

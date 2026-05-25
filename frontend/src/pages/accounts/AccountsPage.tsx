@@ -126,7 +126,7 @@ export default function AccountsPage() {
         </header>
 
         <section className="app-card app-accounts-actions">
-          <button type="button" onClick={() => openCreateAccount({ type: 'card', currency: mainCurrency })} className="app-action-card app-action-card--wide">
+          <button type="button" onClick={() => openCreateAccount({ type: 'card', currency: mainCurrency === 'USD' || mainCurrency === 'EUR' ? mainCurrency : 'RUB' })} className="app-action-card app-action-card--wide">
             <span className="app-action-card__icon">＋</span>
             <span><b>Создать счёт</b><small>Карта, наличные или цель</small></span>
           </button>

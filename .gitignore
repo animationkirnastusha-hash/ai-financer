@@ -21,3 +21,15 @@ desktop.ini
 frontend/dist/
 frontend/tsconfig*.tsbuildinfo
 frontend/certs/
+# local runtime/server files
+backend/.env
+frontend/.env
+backend/.test-auth-token
+backend/.test-auth-token.env
+backend/prod.db
+prod.db
+*.db
+*.sqlite
+*.sqlite3
+backend/test-results/
+frontend/dist/

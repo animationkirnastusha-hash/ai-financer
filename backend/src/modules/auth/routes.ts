@@ -1,10 +1,19 @@
 import { Router } from 'express';
-import { login, getMe } from './controller';
+import {
+  getFallbackInfo,
+  getMe,
+  login,
+  telegramFallbackWebhook,
+  verifyFallbackCode,
+} from './controller';
 import { authMiddleware } from '../../middleware/auth';
 
 const router = Router();
 
 router.post('/login', login);
 router.get('/me', authMiddleware, getMe);
+router.get('/fallback/info', getFallbackInfo);
+router.post('/fallback/verify-code', verifyFallbackCode);
+router.post('/fallback/telegram-webhook', telegramFallbackWebhook);
 
 export default router;

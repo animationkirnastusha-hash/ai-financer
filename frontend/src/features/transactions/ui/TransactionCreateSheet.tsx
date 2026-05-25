@@ -27,6 +27,7 @@ export function TransactionCreateSheet({ open, isSaving = false, onClose, onSave
   const loadAccounts = useAccountsStore((state) => state.loadAccounts);
   const categories = useSectionsStore((state) => state.categories);
   const loadTaxonomy = useSectionsStore((state) => state.loadAll);
+  const createCategory = useSectionsStore((state) => state.createCategory);
 
   const [type, setType] = useState<TransactionType>('expense');
   const [amount, setAmount] = useState('');
@@ -35,6 +36,7 @@ export function TransactionCreateSheet({ open, isSaving = false, onClose, onSave
   const [toAccountId, setToAccountId] = useState<string | null>(null);
   const [categoryId, setCategoryId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isCreatingCategory, setIsCreatingCategory] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -59,6 +61,26 @@ export function TransactionCreateSheet({ open, isSaving = false, onClose, onSave
     return categories.filter((category) => !category.type || category.type === 'both' || category.type === type);
   }, [categories, type]);
   const canSave = Number.isFinite(parsedAmount) && parsedAmount > 0 && Boolean(accountId) && !isSaving;
+
+  const quickCreateCategory = async () => {
+    const name = description.trim();
+    if (type === 'transfer') return;
+    if (name.length < 2) {
+      setError('Напиши описание, чтобы создать категорию из него.');
+      return;
+    }
+    setIsCreatingCategory(true);
+    setError(null);
+    try {
+      const category = await createCategory({ name, type, sectionId: null });
+      setCategoryId(category.id);
+      await loadTaxonomy(true);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Не удалось создать категорию.');
+    } finally {
+      setIsCreatingCategory(false);
+    }
+  };
 
   const submit = async () => {
     setError(null);
@@ -145,6 +167,12 @@ export function TransactionCreateSheet({ open, isSaving = false, onClose, onSave
             </select>
           </label>
         )}
+
+        {type !== 'transfer' ? (
+          <button type="button" className="app-secondary-button" onClick={quickCreateCategory} disabled={isCreatingCategory || !description.trim()}>
+            {isCreatingCategory ? 'Создаю категорию...' : 'Создать категорию из описания'}
+          </button>
+        ) : null}
 
         {error ? <div className="app-error-box">{error}</div> : null}
       </div>

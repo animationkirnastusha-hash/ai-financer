@@ -20,9 +20,9 @@ type Thought = {
 
 const BUBBLE_TIMEOUT_MS = 2800;
 const DUPLICATE_WINDOW_MS = 1000;
-const DEFAULT_VOICE_SESSION_MS = 9000;
-const AUTO_LISTENER_RESTART_MS = 650;
-const WAKE_COMMAND_WINDOW_MS = 12500;
+const DEFAULT_VOICE_SESSION_MS = 4200;
+const AUTO_LISTENER_RESTART_MS = 180;
+const WAKE_COMMAND_WINDOW_MS = 18000;
 const TTS_MIN_GAP_MS = 1800;
 
 function compactBubble(text: string) {
@@ -237,6 +237,7 @@ export function VoiceFirstCompanionLayer() {
 
       if (navigationIntent.type === 'open_screen') {
         telegramHaptic('light');
+        logVoiceDebugEvent('command_dispatched', { kind: 'navigation', target: navigationIntent.screen, textLength: text.length });
         navigateTo(navigationIntent.screen);
         speakThought(`Открываю ${getScreenVoiceLabel(navigationIntent.screen)}.`, 'success', 'done');
         return;
@@ -244,11 +245,13 @@ export function VoiceFirstCompanionLayer() {
 
       if (navigationIntent.type === 'go_back') {
         telegramHaptic('light');
+        logVoiceDebugEvent('command_dispatched', { kind: 'navigation', target: 'back', textLength: text.length });
         goBack();
         speakThought('Вернулся назад.', 'success', 'done');
         return;
       }
 
+      logVoiceDebugEvent('command_dispatched', { kind: 'ai', textLength: text.length });
       await chat.sendMessage(text);
     } finally {
       setIsProcessingVoice(false);
@@ -264,7 +267,7 @@ export function VoiceFirstCompanionLayer() {
     try {
       const ready = await voice.primePermission();
       setVoicePermissionPrompted(true);
-      if (ready) speakThought('Готово. Скажи «Фина», затем команду.', 'success', 'done', 3600);
+      if (ready) showThought('Готово. Скажи «Фина», затем команду.', 'success', 3200);
       else showThought('Скажи «Фина», когда будешь готов.', 'neutral', 3200);
     } catch {
       speakThought('Нужен доступ к микрофону.', 'warning', 'not-heard', 3600);

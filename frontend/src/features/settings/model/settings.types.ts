@@ -1,6 +1,6 @@
 export type SubscriptionPlan = 'free' | 'pro' | 'premium';
 
-export type AppCurrency = 'RUB' | 'USD' | 'EUR';
+export type AppCurrency = 'RUB' | 'USD' | 'EUR' | 'KZT' | 'UZS' | 'KGS' | 'AMD' | 'GEL' | 'AZN';
 
 export type AppLanguage = 'ru' | 'en';
 
@@ -25,7 +25,7 @@ export type AppSettings = {
   incomeAccountId: string | null;
 
   secondaryCurrencyEnabled: boolean;
-  secondaryCurrency: Exclude<AppCurrency, 'RUB'>;
+  secondaryCurrency: AppCurrency;
   rubToUsdRate: number;
   rubToEurRate: number;
 };

@@ -183,7 +183,7 @@ export class AIValidatorService {
         const explicitAccountRef = this.cleanString(input.account);
         const plannedAccountRef = this.lastPlannedAccountName(plannedAccounts);
         const defaultAccount = this.resolveDefaultTransactionAccount(accounts, kind, aiSettings);
-        const shouldAskAccount = !explicitAccountRef && !plannedAccountRef && !defaultAccount && kind === 'expense' && accounts.length > 1;
+        const shouldAskAccount = !explicitAccountRef && !plannedAccountRef && !defaultAccount && kind === 'expense' && accounts.length > 0;
         const accountRef = explicitAccountRef
           || plannedAccountRef
           || (defaultAccount?.name ?? '')

@@ -6,6 +6,7 @@ import type {
 } from '@/features/ai-core/model/aiCore.types';
 import { useChatController } from '@/features/chat/model/useChatController';
 import { parseNavigationIntent } from '@/features/navigation/lib/parseNavigationIntent';
+import { parseCurrencyIntent } from '@/features/currency/lib/parseCurrencyIntent';
 import { useNavigationStore } from '@/features/navigation/model/navigation.store';
 import { useSettingsStore } from '@/features/settings/model/settings.store';
 import { useVoiceInput } from '@/features/voice/model/useVoiceInput';
@@ -23,6 +24,9 @@ export function useAICoreController() {
   const voiceRepliesEnabled = useSettingsStore(
     (state) => state.voiceRepliesEnabled,
   );
+  const setMainCurrency = useSettingsStore((state) => state.setMainCurrency);
+  const setSecondaryCurrency = useSettingsStore((state) => state.setSecondaryCurrency);
+  const setSecondaryCurrencyEnabled = useSettingsStore((state) => state.setSecondaryCurrencyEnabled);
 
   const [coreState, setCoreState] = useState<AICoreState>('expanded');
   const [inputValue, setInputValue] = useState('');
@@ -38,6 +42,21 @@ export function useAICoreController() {
     async (rawText: string) => {
       const trimmed = rawText.trim();
       if (!trimmed) return;
+
+      const currencyIntent = parseCurrencyIntent(trimmed);
+      if (currencyIntent.type === 'set_main_currency') {
+        setMainCurrency(currencyIntent.currency);
+        telegramHaptic('light');
+        setInputValue('');
+        return;
+      }
+      if (currencyIntent.type === 'set_secondary_currency') {
+        setSecondaryCurrency(currencyIntent.currency);
+        setSecondaryCurrencyEnabled(true);
+        telegramHaptic('light');
+        setInputValue('');
+        return;
+      }
 
       const navigationIntent = parseNavigationIntent(trimmed);
 
@@ -59,7 +78,7 @@ export function useAICoreController() {
       await chat.sendMessage(trimmed);
       setInputValue('');
     },
-    [chat, goBack, navigateTo],
+    [chat, goBack, navigateTo, setMainCurrency, setSecondaryCurrency, setSecondaryCurrencyEnabled],
   );
 
   const voice = useVoiceInput({

@@ -9,7 +9,7 @@ import type { AppCurrency } from '@/features/settings/model/settings.types';
 
 type SettingsModal = 'voice' | 'fina' | 'ai' | 'currency' | 'data' | null;
 
-const currencyOptions: AppCurrency[] = ['RUB', 'USD', 'EUR'];
+const currencyOptions: AppCurrency[] = ['RUB', 'USD', 'EUR', 'KZT', 'UZS', 'KGS', 'AMD', 'GEL', 'AZN'];
 
 function ModalShell({ title, caption, children, onClose }: { title: string; caption?: string; children: ReactNode; onClose: () => void }) {
   return (
@@ -212,12 +212,12 @@ export default function SettingsPage() {
               </div>
             </div>
 
-            <ToggleLine title="Вторая валюта" caption="Показывать дополнительную валюту на главной." checked={secondaryCurrencyEnabled} onChange={setSecondaryCurrencyEnabled} />
+            <ToggleLine title="Конвертация" caption="Показывать пересчёт выбранного счёта в другой валюте." checked={secondaryCurrencyEnabled} onChange={setSecondaryCurrencyEnabled} />
 
             <div className="app-currency-row">
               <div className="app-currency-row__head"><b>Дополнительная</b><small>{secondaryCurrency}</small></div>
               <div className="app-currency-pills">
-                {(['USD', 'EUR'] as const).map((currency) => (
+                {currencyOptions.filter((currency) => currency !== mainCurrency).map((currency) => (
                   <button key={currency} type="button" data-active={currency === secondaryCurrency} onClick={() => setSecondaryCurrency(currency)}>{currency}</button>
                 ))}
               </div>

@@ -14,17 +14,20 @@ type RecorderFormat = {
   extension: string;
 };
 
-const DEFAULT_SESSION_MS = 8500;
-const MIN_SESSION_MS = 3600;
-const MAX_SESSION_MS = 12000;
-const MIN_AUDIO_BYTES = 900;
+const DEFAULT_SESSION_MS = 3800;
+const MIN_SESSION_MS = 1800;
+const MAX_SESSION_MS = 6500;
+const MIN_AUDIO_BYTES = 1200;
 const TRANSCRIBE_CLIENT_TIMEOUT_MS = 45_000;
-const MICROPHONE_GAIN = 3.0;
-const VAD_CHECK_INTERVAL_MS = 80;
-const VAD_MIN_RECORDING_MS = 1500;
-const VAD_MIN_AFTER_VOICE_MS = 780;
-const VAD_VOICE_RMS = 0.022;
-const VAD_STRONG_VOICE_RMS = 0.045;
+const MICROPHONE_GAIN = 7.5;
+const VAD_CHECK_INTERVAL_MS = 60;
+const VAD_MIN_RECORDING_MS = 620;
+const VAD_GRACE_AFTER_VOICE_MS = 1050;
+const VAD_GRACE_AFTER_STRONG_VOICE_MS = 900;
+const VAD_NO_VOICE_AUTO_STOP_MS = 2100;
+const VAD_VOICE_RMS = 0.015;
+const VAD_CONTINUE_RMS = 0.010;
+const VAD_STRONG_VOICE_RMS = 0.035;
 
 function getBestRecorderFormat(): RecorderFormat | null {
   if (typeof MediaRecorder === 'undefined') {
@@ -53,6 +56,10 @@ function clampSessionMs(value: number) {
   return Math.max(MIN_SESSION_MS, Math.min(MAX_SESSION_MS, Math.round(value)));
 }
 
+function hasActiveTracks(stream: MediaStream | null) {
+  return Boolean(stream?.getTracks().some((track) => track.readyState === 'live'));
+}
+
 export function useVoiceRecorder({ onText, lang = 'ru-RU', chunkMs = DEFAULT_SESSION_MS }: UseVoiceRecorderParams) {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -65,6 +72,8 @@ export function useVoiceRecorder({ onText, lang = 'ru-RU', chunkMs = DEFAULT_SES
   const lastVoiceAtRef = useRef(0);
   const vadStartedAtRef = useRef(0);
   const vadPeakRmsRef = useRef(0);
+  const finalHadVoiceRef = useRef(false);
+  const finalPeakRmsRef = useRef(0);
   const chunksRef = useRef<BlobPart[]>([]);
   const activeFormatRef = useRef<RecorderFormat | null>(null);
   const onTextRef = useRef(onText);
@@ -94,22 +103,24 @@ export function useVoiceRecorder({ onText, lang = 'ru-RU', chunkMs = DEFAULT_SES
     }
   }, []);
 
-  const stopVoiceActivityWatcher = useCallback(() => {
-    if (vadTimerRef.current !== null) {
-      window.clearInterval(vadTimerRef.current);
-      vadTimerRef.current = null;
-    }
-
-    analyserRef.current = null;
-    vadBufferRef.current = null;
+  const resetVadRuntime = useCallback(() => {
     voiceDetectedRef.current = false;
     lastVoiceAtRef.current = 0;
     vadStartedAtRef.current = 0;
     vadPeakRmsRef.current = 0;
   }, []);
 
-  const cleanupStream = useCallback(() => {
-    stopVoiceActivityWatcher();
+  const stopVoiceActivityWatcher = useCallback(() => {
+    if (vadTimerRef.current !== null) {
+      window.clearInterval(vadTimerRef.current);
+      vadTimerRef.current = null;
+    }
+    finalHadVoiceRef.current = voiceDetectedRef.current;
+    finalPeakRmsRef.current = vadPeakRmsRef.current;
+    resetVadRuntime();
+  }, [resetVadRuntime]);
+
+  const stopAllStreams = useCallback(() => {
     if (streamRef.current) {
       streamRef.current.getTracks().forEach((track) => track.stop());
       streamRef.current = null;
@@ -120,11 +131,14 @@ export function useVoiceRecorder({ onText, lang = 'ru-RU', chunkMs = DEFAULT_SES
       rawStreamRef.current = null;
     }
 
+    analyserRef.current = null;
+    vadBufferRef.current = null;
+
     if (audioContextRef.current) {
       void audioContextRef.current.close().catch(() => undefined);
       audioContextRef.current = null;
     }
-  }, [stopVoiceActivityWatcher]);
+  }, []);
 
   const createAmplifiedStream = useCallback((rawStream: MediaStream, format: RecorderFormat): MediaStream => {
     if (typeof window === 'undefined') return rawStream;
@@ -133,7 +147,7 @@ export function useVoiceRecorder({ onText, lang = 'ru-RU', chunkMs = DEFAULT_SES
       const AudioContextCtor = window.AudioContext || (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
       if (!AudioContextCtor) return rawStream;
 
-      const context = new AudioContextCtor();
+      const context = audioContextRef.current ?? new AudioContextCtor();
       if (context.state === 'suspended') {
         void context.resume().catch(() => undefined);
       }
@@ -145,7 +159,7 @@ export function useVoiceRecorder({ onText, lang = 'ru-RU', chunkMs = DEFAULT_SES
 
       gain.gain.value = MICROPHONE_GAIN;
       analyser.fftSize = 1024;
-      analyser.smoothingTimeConstant = 0.35;
+      analyser.smoothingTimeConstant = 0.28;
 
       source.connect(gain);
       gain.connect(destination);
@@ -173,19 +187,70 @@ export function useVoiceRecorder({ onText, lang = 'ru-RU', chunkMs = DEFAULT_SES
     }
   }, []);
 
+  const ensureStream = useCallback(async (format: RecorderFormat) => {
+    if (hasActiveTracks(rawStreamRef.current) && hasActiveTracks(streamRef.current) && analyserRef.current && vadBufferRef.current) {
+      logVoiceDebugEvent('microphone_stream_reused', {
+        mimeType: format.mimeType,
+        extension: format.extension,
+        audioTracks: rawStreamRef.current?.getAudioTracks().length ?? 0,
+      });
+      return streamRef.current as MediaStream;
+    }
+
+    stopAllStreams();
+
+    logVoiceDebugEvent('permission_requested', { mimeType: format.mimeType, extension: format.extension });
+    const rawStream = await navigator.mediaDevices.getUserMedia({
+      audio: {
+        echoCancellation: true,
+        noiseSuppression: false,
+        autoGainControl: true,
+        channelCount: { ideal: 1 },
+        sampleRate: { ideal: 48000 },
+        sampleSize: { ideal: 16 },
+      },
+    });
+
+    rawStreamRef.current = rawStream;
+    const stream = createAmplifiedStream(rawStream, format);
+    streamRef.current = stream;
+
+    logVoiceDebugEvent('permission_granted', {
+      mimeType: format.mimeType,
+      extension: format.extension,
+      audioTracks: rawStream.getAudioTracks().length,
+    });
+
+    rawStream.getAudioTracks().forEach((track) => {
+      track.onended = () => {
+        if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+          logVoiceDebugEvent('microphone_track_ended', { mimeType: format.mimeType, extension: format.extension });
+        }
+        rawStreamRef.current = null;
+        streamRef.current = null;
+        analyserRef.current = null;
+        vadBufferRef.current = null;
+      };
+    });
+
+    return stream;
+  }, [createAmplifiedStream, stopAllStreams]);
+
   const hardCleanup = useCallback(() => {
     clearFinalizeTimer();
     stopVoiceActivityWatcher();
-    cleanupStream();
+    stopAllStreams();
     mediaRecorderRef.current = null;
     chunksRef.current = [];
     activeFormatRef.current = null;
     recordingStartedAtRef.current = 0;
     startInProgressRef.current = false;
     cancelledRef.current = false;
-  }, [clearFinalizeTimer, cleanupStream, stopVoiceActivityWatcher]);
+    finalHadVoiceRef.current = false;
+    finalPeakRmsRef.current = 0;
+  }, [clearFinalizeTimer, stopAllStreams, stopVoiceActivityWatcher]);
 
-  const uploadFinalBlob = useCallback(async (blob: Blob, format: RecorderFormat) => {
+  const uploadFinalBlob = useCallback(async (blob: Blob, format: RecorderFormat, hadVoice: boolean, peakRms: number) => {
     if (cancelledRef.current) {
       logVoiceDebugEvent('voice_session_cancelled_before_upload', {
         blobSize: blob.size,
@@ -196,9 +261,21 @@ export function useVoiceRecorder({ onText, lang = 'ru-RU', chunkMs = DEFAULT_SES
       return;
     }
 
+    if (!hadVoice) {
+      logVoiceDebugEvent('audio_blob_skipped_no_voice', {
+        blobSize: blob.size,
+        peakRms: Number(peakRms.toFixed(4)),
+        mimeType: format.mimeType,
+        extension: format.extension,
+      });
+      setState('idle');
+      return;
+    }
+
     if (blob.size < MIN_AUDIO_BYTES) {
       logVoiceDebugEvent('audio_blob_too_small', {
         blobSize: blob.size,
+        peakRms: Number(peakRms.toFixed(4)),
         mimeType: format.mimeType,
         extension: format.extension,
       });
@@ -211,6 +288,7 @@ export function useVoiceRecorder({ onText, lang = 'ru-RU', chunkMs = DEFAULT_SES
     setState('uploading');
     logVoiceDebugEvent('transcribe_request_sent', {
       blobSize: blob.size,
+      peakRms: Number(peakRms.toFixed(4)),
       mimeType: format.mimeType,
       extension: format.extension,
     });
@@ -264,7 +342,7 @@ export function useVoiceRecorder({ onText, lang = 'ru-RU', chunkMs = DEFAULT_SES
 
     const recorder = mediaRecorderRef.current;
     if (!recorder || recorder.state === 'inactive') {
-      hardCleanup();
+      mediaRecorderRef.current = null;
       setState('idle');
       return;
     }
@@ -277,7 +355,6 @@ export function useVoiceRecorder({ onText, lang = 'ru-RU', chunkMs = DEFAULT_SES
       setState('idle');
     }
   }, [clearFinalizeTimer, hardCleanup]);
-
 
   const startVoiceActivityWatcher = useCallback((format: RecorderFormat) => {
     stopVoiceActivityWatcher();
@@ -293,6 +370,7 @@ export function useVoiceRecorder({ onText, lang = 'ru-RU', chunkMs = DEFAULT_SES
     }
 
     vadStartedAtRef.current = Date.now();
+    recordingStartedAtRef.current = Date.now();
     lastVoiceAtRef.current = 0;
     voiceDetectedRef.current = false;
     vadPeakRmsRef.current = 0;
@@ -312,12 +390,12 @@ export function useVoiceRecorder({ onText, lang = 'ru-RU', chunkMs = DEFAULT_SES
       vadPeakRmsRef.current = Math.max(vadPeakRmsRef.current, rms);
 
       const now = Date.now();
-      const elapsedMs = recordingStartedAtRef.current ? now - recordingStartedAtRef.current : now - vadStartedAtRef.current;
-      const isVoiceNow = rms >= VAD_VOICE_RMS || (voiceDetectedRef.current && rms >= VAD_VOICE_RMS * 0.72);
+      const elapsedMs = now - recordingStartedAtRef.current;
+      const isVoiceNow = rms >= VAD_VOICE_RMS || (voiceDetectedRef.current && rms >= VAD_CONTINUE_RMS);
 
       if (isVoiceNow) {
         if (!voiceDetectedRef.current) {
-          logVoiceDebugEvent('voice_vad_speech_detected', {
+          logVoiceDebugEvent('speech_started', {
             elapsedMs,
             rms: Number(rms.toFixed(4)),
             peakRms: Number(vadPeakRmsRef.current.toFixed(4)),
@@ -331,21 +409,35 @@ export function useVoiceRecorder({ onText, lang = 'ru-RU', chunkMs = DEFAULT_SES
         return;
       }
 
-      if (!voiceDetectedRef.current) return;
+      if (!voiceDetectedRef.current) {
+        if (elapsedMs >= VAD_NO_VOICE_AUTO_STOP_MS) {
+          logVoiceDebugEvent('vad_stop_no_speech', {
+            elapsedMs,
+            peakRms: Number(vadPeakRmsRef.current.toFixed(4)),
+            mimeType: format.mimeType,
+            extension: format.extension,
+          });
+          finalizeRecording(false);
+        }
+        return;
+      }
+
       if (elapsedMs < VAD_MIN_RECORDING_MS) return;
 
       const silenceMs = now - lastVoiceAtRef.current;
       const hadStrongVoice = vadPeakRmsRef.current >= VAD_STRONG_VOICE_RMS;
-      const requiredSilenceMs = hadStrongVoice ? VAD_MIN_AFTER_VOICE_MS : VAD_MIN_AFTER_VOICE_MS + 220;
+      const requiredSilenceMs = hadStrongVoice ? VAD_GRACE_AFTER_STRONG_VOICE_MS : VAD_GRACE_AFTER_VOICE_MS;
 
       if (silenceMs >= requiredSilenceMs) {
-        logVoiceDebugEvent('voice_vad_auto_stop', {
+        logVoiceDebugEvent('vad_stop_triggered', {
           elapsedMs,
           silenceMs,
+          graceMs: requiredSilenceMs,
           peakRms: Number(vadPeakRmsRef.current.toFixed(4)),
           mimeType: format.mimeType,
           extension: format.extension,
         });
+        logVoiceDebugEvent('speech_ended', { elapsedMs, silenceMs });
         finalizeRecording(false);
       }
     }, VAD_CHECK_INTERVAL_MS);
@@ -376,36 +468,10 @@ export function useVoiceRecorder({ onText, lang = 'ru-RU', chunkMs = DEFAULT_SES
       setError(null);
       chunksRef.current = [];
       activeFormatRef.current = recorderFormat;
+      finalHadVoiceRef.current = false;
+      finalPeakRmsRef.current = 0;
 
-      logVoiceDebugEvent('permission_requested', { mimeType: recorderFormat.mimeType, extension: recorderFormat.extension });
-
-      const rawStream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: false,
-          autoGainControl: true,
-          channelCount: { ideal: 1 },
-          sampleRate: { ideal: 48000 },
-          sampleSize: { ideal: 16 },
-        },
-      });
-      rawStreamRef.current = rawStream;
-      const stream = createAmplifiedStream(rawStream, recorderFormat);
-      streamRef.current = stream;
-      logVoiceDebugEvent('permission_granted', {
-        mimeType: recorderFormat.mimeType,
-        extension: recorderFormat.extension,
-        audioTracks: rawStream.getAudioTracks().length,
-      });
-
-      rawStream.getAudioTracks().forEach((track) => {
-        track.onended = () => {
-          if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-            logVoiceDebugEvent('microphone_track_ended', { mimeType: recorderFormat.mimeType, extension: recorderFormat.extension });
-          }
-        };
-      });
-
+      const stream = await ensureStream(recorderFormat);
       const recorder = new MediaRecorder(stream, { mimeType: recorderFormat.mimeType });
 
       recorder.ondataavailable = (event) => {
@@ -424,6 +490,7 @@ export function useVoiceRecorder({ onText, lang = 'ru-RU', chunkMs = DEFAULT_SES
           extension: recorderFormat.extension,
           recordingState: recorder.state,
           sessionMs: clampSessionMs(chunkMs),
+          persistentStream: hasActiveTracks(rawStreamRef.current),
         });
         setState('recording');
 
@@ -433,6 +500,7 @@ export function useVoiceRecorder({ onText, lang = 'ru-RU', chunkMs = DEFAULT_SES
           logVoiceDebugEvent('voice_max_session_reached', {
             elapsedMs: Date.now() - recordingStartedAtRef.current,
             peakRms: Number(vadPeakRmsRef.current.toFixed(4)),
+            hadVoice: voiceDetectedRef.current,
             sessionMs: clampSessionMs(chunkMs),
             mimeType: recorderFormat.mimeType,
             extension: recorderFormat.extension,
@@ -451,17 +519,21 @@ export function useVoiceRecorder({ onText, lang = 'ru-RU', chunkMs = DEFAULT_SES
         const format = activeFormatRef.current ?? recorderFormat;
         const elapsedMs = recordingStartedAtRef.current ? Date.now() - recordingStartedAtRef.current : 0;
         const blob = new Blob(chunksRef.current, { type: format.mimeType });
+        const hadVoice = finalHadVoiceRef.current || voiceDetectedRef.current;
+        const peakRms = Math.max(finalPeakRmsRef.current, vadPeakRmsRef.current);
 
         logVoiceDebugEvent('recorder_stopped', {
           mimeType: recorder.mimeType || format.mimeType,
           extension: format.extension,
           elapsedMs,
           blobSize: blob.size,
+          hadVoice,
+          peakRms: Number(peakRms.toFixed(4)),
           cancelled: cancelledRef.current,
         });
 
+        clearFinalizeTimer();
         stopVoiceActivityWatcher();
-        cleanupStream();
         mediaRecorderRef.current = null;
         chunksRef.current = [];
         activeFormatRef.current = null;
@@ -474,24 +546,24 @@ export function useVoiceRecorder({ onText, lang = 'ru-RU', chunkMs = DEFAULT_SES
           return;
         }
 
-        logVoiceDebugEvent('audio_blob_ready', { mimeType: format.mimeType, extension: format.extension, blobSize: blob.size });
-        void uploadFinalBlob(blob, format).finally(() => {
+        logVoiceDebugEvent('audio_blob_ready', { mimeType: format.mimeType, extension: format.extension, blobSize: blob.size, hadVoice });
+        void uploadFinalBlob(blob, format, hadVoice, peakRms).finally(() => {
           cancelledRef.current = false;
         });
       };
 
       mediaRecorderRef.current = recorder;
       logVoiceDebugEvent('recorder_start_call', { mimeType: recorderFormat.mimeType, extension: recorderFormat.extension, sessionMs: clampSessionMs(chunkMs) });
-      recorder.start();
+      recorder.start(250);
     } catch (err) {
       startInProgressRef.current = false;
       console.error(err);
       logVoiceDebugEvent('recorder_start_failed', { error: err instanceof Error ? err.name || err.message : 'unknown' });
       setError('microphone-denied');
       setState('error');
-      cleanupStream();
+      hardCleanup();
     }
-  }, [chunkMs, cleanupStream, createAmplifiedStream, finalizeRecording, hardCleanup, isSupported, recorderFormat, startVoiceActivityWatcher, state, stopVoiceActivityWatcher, uploadFinalBlob]);
+  }, [chunkMs, ensureStream, finalizeRecording, hardCleanup, isSupported, recorderFormat, startVoiceActivityWatcher, state, uploadFinalBlob, clearFinalizeTimer, stopVoiceActivityWatcher]);
 
   const stopRecording = useCallback(() => {
     logVoiceDebugEvent('voice_session_stop_and_send', { state });
@@ -504,11 +576,11 @@ export function useVoiceRecorder({ onText, lang = 'ru-RU', chunkMs = DEFAULT_SES
   }, [finalizeRecording, state]);
 
   const reset = useCallback(() => {
-    finalizeRecording(true);
+    hardCleanup();
     setError(null);
     setState('idle');
     startInProgressRef.current = false;
-  }, [finalizeRecording]);
+  }, [hardCleanup]);
 
   return {
     state,

@@ -167,3 +167,36 @@ body:has([data-drawer-panel="true"]) .voice-first-layer {
   .app-xp-hero__grid { grid-template-columns: 1fr !important; }
   .app-xp-hero__head { grid-template-columns: 1fr !important; }
 }
+
+/* Patch 99: compact taxonomy controls and stable finance forms */
+.app-taxonomy-actions {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.app-taxonomy-actions .app-action-card {
+  min-height: 72px;
+  padding: 12px;
+  align-items: center;
+}
+.app-taxonomy-actions .app-action-card__icon {
+  width: 34px;
+  height: 34px;
+  min-width: 34px;
+  font-size: 18px;
+}
+.app-taxonomy-actions .app-action-card b { font-size: 14px; }
+.app-taxonomy-actions .app-action-card small {
+  display: block;
+  margin-top: 2px;
+  font-size: 11px;
+  line-height: 1.25;
+  color: rgba(255,255,255,.48);
+}
+.app-field select,
+.app-field input {
+  color: rgba(255,255,255,.92);
+}
+.app-secondary-button[disabled], .app-primary-button[disabled] {
+  opacity: .45;
+  pointer-events: none;
+}

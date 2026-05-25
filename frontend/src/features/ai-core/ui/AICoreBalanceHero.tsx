@@ -2,34 +2,44 @@ import { useMemo, useRef, useState } from 'react';
 import type React from 'react';
 import { useAccountsStore } from '@/features/accounts/model/accounts.store';
 import { useSettingsStore } from '@/features/settings/model/settings.store';
+import { convertCurrency, getCurrencyProfile, normalizeCurrency, type AppCurrencyCode } from '@/features/currency/lib/currency';
 import { formatMoney } from '@/shared/lib/money';
 import { cn } from '@/shared/lib/cn';
 
-type CurrencyCode = 'RUB' | 'USD' | 'EUR';
-
-type BalanceView = {
-  currency: CurrencyCode;
+type BalanceAccountView = {
+  id: string;
+  name: string;
+  currency: AppCurrencyCode;
   amount: number;
-  accountsCount: number;
-  accountNames: string;
+  type: string;
+  exists: boolean;
 };
 
-function asCurrency(value: string): CurrencyCode | null {
-  return value === 'RUB' || value === 'USD' || value === 'EUR' ? value : null;
+function getAccountTypeLabel(type?: string | null) {
+  if (type === 'cash') return 'Наличные';
+  if (type === 'card') return 'Карта';
+  if (type === 'savings') return 'Накопления';
+  if (type === 'investment') return 'Инвестиции';
+  return 'Счёт';
 }
 
-function getCurrencyLabel(currency: CurrencyCode) {
-  if (currency === 'RUB') return 'RUB счета';
-  if (currency === 'USD') return 'USD счета';
-  return 'EUR счета';
+function fallbackAccountForCurrency(currency: AppCurrencyCode): BalanceAccountView {
+  const profile = getCurrencyProfile(currency);
+  return {
+    id: `virtual-${currency}`,
+    name: `${currency} счёт`,
+    currency,
+    amount: 0,
+    type: profile.label,
+    exists: false,
+  };
 }
 
 export function AICoreBalanceHero() {
   const accounts = useAccountsStore((state) => state.items);
-  const mainCurrency = useSettingsStore((state) => state.mainCurrency) as CurrencyCode;
-  const primaryAccountId = useSettingsStore((state) => state.primaryAccountId);
+  const mainCurrency = normalizeCurrency(useSettingsStore((state) => state.mainCurrency));
   const secondaryCurrencyEnabled = useSettingsStore((state) => state.secondaryCurrencyEnabled);
-  const secondaryCurrency = useSettingsStore((state) => state.secondaryCurrency) as CurrencyCode;
+  const secondaryCurrency = normalizeCurrency(useSettingsStore((state) => state.secondaryCurrency), 'USD');
   const rubToUsdRate = useSettingsStore((state) => state.rubToUsdRate);
   const rubToEurRate = useSettingsStore((state) => state.rubToEurRate);
 
@@ -38,60 +48,53 @@ export function AICoreBalanceHero() {
   const [activeIndex, setActiveIndex] = useState(0);
   const [swipeDirection, setSwipeDirection] = useState<'left' | 'right' | null>(null);
 
-  const balanceViews = useMemo<BalanceView[]>(() => {
-    const currencies = new Set<CurrencyCode>();
-    const primary = asCurrency(mainCurrency) ?? 'RUB';
+  const accountViews = useMemo<BalanceAccountView[]>(() => {
+    const real = accounts
+      .filter((account) => account.showInTotalBalance !== false)
+      .map((account) => ({
+        id: account.id,
+        name: account.name,
+        currency: normalizeCurrency(account.currency, mainCurrency),
+        amount: Number(account.balance) || 0,
+        type: account.type,
+        exists: true,
+      }));
 
-    currencies.add(primary);
-    if (secondaryCurrencyEnabled && asCurrency(secondaryCurrency)) currencies.add(secondaryCurrency);
+    const preferredCurrencies = [mainCurrency, secondaryCurrency, 'RUB', 'USD', 'EUR']
+      .map((currency) => normalizeCurrency(currency))
+      .filter((currency, index, arr) => arr.indexOf(currency) === index);
 
-    for (const account of accounts) {
-      const currency = asCurrency(account.currency);
-      if (currency) currencies.add(currency);
+    const withVirtual = [...real];
+    for (const currency of preferredCurrencies) {
+      if (!withVirtual.some((item) => item.currency === currency)) withVirtual.push(fallbackAccountForCurrency(currency));
     }
 
-    const supportedCurrencies: CurrencyCode[] = ['RUB', 'USD', 'EUR'];
-    const ordered = supportedCurrencies.filter((currency) => currencies.has(currency));
-    const sorted = ordered.sort((a, b) => (a === primary ? -1 : b === primary ? 1 : 0));
-
-    return sorted.map((currency) => {
-      const currencyAccounts = accounts.filter((account) => account.currency === currency && account.showInTotalBalance !== false);
-      return {
-        currency,
-        amount: currencyAccounts.reduce((sum, account) => sum + (Number(account.balance) || 0), 0),
-        accountsCount: currencyAccounts.length,
-        accountNames: currencyAccounts.map((account) => account.name).slice(0, 2).join(' · '),
-      };
+    return withVirtual.sort((a, b) => {
+      if (a.currency === mainCurrency && b.currency !== mainCurrency) return -1;
+      if (b.currency === mainCurrency && a.currency !== mainCurrency) return 1;
+      if (a.exists !== b.exists) return a.exists ? -1 : 1;
+      return a.name.localeCompare(b.name, 'ru');
     });
-  }, [accounts, mainCurrency, secondaryCurrency, secondaryCurrencyEnabled]);
+  }, [accounts, mainCurrency, secondaryCurrency]);
 
-  const primaryAccount = useMemo(() => {
-    return accounts.find((account) => account.id === primaryAccountId) ?? null;
-  }, [accounts, primaryAccountId]);
-
-  const safeIndex = Math.min(activeIndex, Math.max(balanceViews.length - 1, 0));
-  const activeView = balanceViews[safeIndex] ?? {
-    currency: (asCurrency(mainCurrency) ?? 'RUB') as CurrencyCode,
-    amount: 0,
-    accountsCount: 0,
-    accountNames: '',
-  };
+  const safeIndex = Math.min(activeIndex, Math.max(accountViews.length - 1, 0));
+  const activeView = accountViews[safeIndex] ?? fallbackAccountForCurrency(mainCurrency);
 
   const secondaryValue = useMemo(() => {
     if (!secondaryCurrencyEnabled) return null;
-    if (activeView.currency !== 'RUB') return null;
-
-    const rate = secondaryCurrency === 'USD' ? rubToUsdRate : rubToEurRate;
-    if (!Number.isFinite(rate) || rate <= 0) return null;
-
-    return activeView.amount / rate;
+    if (activeView.currency === secondaryCurrency) return null;
+    const overrides: Partial<Record<AppCurrencyCode, number>> = {
+      USD: rubToUsdRate,
+      EUR: rubToEurRate,
+    };
+    return convertCurrency(activeView.amount, activeView.currency, secondaryCurrency, overrides);
   }, [activeView.amount, activeView.currency, rubToEurRate, rubToUsdRate, secondaryCurrency, secondaryCurrencyEnabled]);
 
   const changeIndex = (nextIndex: number, direction: 'left' | 'right') => {
-    if (nextIndex < 0 || nextIndex >= balanceViews.length || nextIndex === safeIndex) return;
+    if (nextIndex < 0 || nextIndex >= accountViews.length || nextIndex === safeIndex) return;
     setSwipeDirection(direction);
     setActiveIndex(nextIndex);
-    window.setTimeout(() => setSwipeDirection(null), 260);
+    window.setTimeout(() => setSwipeDirection(null), 220);
   };
 
   const handlePointerDown = (event: React.PointerEvent<HTMLElement>) => {
@@ -102,7 +105,7 @@ export function AICoreBalanceHero() {
   const handlePointerUp = (event: React.PointerEvent<HTMLElement>) => {
     const deltaX = event.clientX - startXRef.current;
     const deltaY = event.clientY - startYRef.current;
-    if (Math.abs(deltaX) < 42 || Math.abs(deltaY) > 56) return;
+    if (Math.abs(deltaX) < 30 || Math.abs(deltaY) > 64) return;
     changeIndex(deltaX < 0 ? safeIndex + 1 : safeIndex - 1, deltaX < 0 ? 'left' : 'right');
   };
 
@@ -114,20 +117,24 @@ export function AICoreBalanceHero() {
       onPointerUp={handlePointerUp}
     >
       <div
-        key={activeView.currency}
+        key={activeView.id}
         className={cn(
-          'min-h-[138px] transition-all duration-300 ease-out',
-          swipeDirection === 'left' && 'animate-[aiPageInLeft_260ms_ease-out]',
-          swipeDirection === 'right' && 'animate-[aiPageInRight_260ms_ease-out]',
+          'min-h-[144px] transition-all duration-300 ease-out',
+          swipeDirection === 'left' && 'animate-[aiPageInLeft_220ms_ease-out]',
+          swipeDirection === 'right' && 'animate-[aiPageInRight_220ms_ease-out]',
         )}
       >
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
             <div className="text-[11px] uppercase tracking-[0.18em] text-white/38">
-              {primaryAccount && primaryAccount.currency === activeView.currency ? 'Основной счёт' : 'Баланс'}
+              {activeView.exists ? getAccountTypeLabel(activeView.type) : 'Будущий счёт'}
             </div>
 
-            <div className="mt-3 text-4xl font-semibold tracking-tight text-white">
+            <div className="mt-2 truncate text-lg font-semibold tracking-[-0.02em] text-white/85">
+              {activeView.name}
+            </div>
+
+            <div className="mt-2 text-4xl font-semibold tracking-tight text-white">
               {formatMoney(activeView.amount, activeView.currency)}
             </div>
 
@@ -139,43 +146,37 @@ export function AICoreBalanceHero() {
 
             <div className="mt-3 flex flex-wrap items-center gap-2 text-sm text-white/62">
               <span className="rounded-full border border-emerald-300/20 bg-emerald-300/12 px-2.5 py-1 text-emerald-100">
-                Фина готова
+                {activeView.currency}
               </span>
-
               <span className="truncate">
-                {getCurrencyLabel(activeView.currency)}
+                {activeView.exists ? 'Свайпни, чтобы перейти к другому счёту' : 'Счёта пока нет, можно создать'}
               </span>
             </div>
           </div>
 
           <div className="flex min-w-[86px] flex-col items-end text-right text-white/60">
             <div className="rounded-2xl border border-white/10 bg-white/[0.045] px-3 py-2 text-xs text-white/65">
-              {activeView.accountsCount} сч.
+              {safeIndex + 1}/{accountViews.length}
             </div>
             <div className="mt-3 text-xs uppercase tracking-[0.16em] text-white/30">
-              {balanceViews.map((view) => view.currency).join(' · ')}
+              {accountViews.map((view) => view.currency).slice(0, 4).join(' · ')}
             </div>
-            {activeView.accountNames ? (
-              <div className="mt-1 max-w-[120px] truncate text-xs text-white/38">
-                {activeView.accountNames}
-              </div>
-            ) : null}
           </div>
         </div>
       </div>
 
-      {balanceViews.length > 1 ? (
-        <div className="mt-1 flex justify-center gap-1.5" aria-label="Свайп балансов">
-          {balanceViews.map((view, index) => (
+      {accountViews.length > 1 ? (
+        <div className="mt-1 flex justify-center gap-1.5" aria-label="Свайп счетов">
+          {accountViews.map((view, index) => (
             <button
-              key={view.currency}
+              key={view.id}
               type="button"
               onClick={() => changeIndex(index, index > safeIndex ? 'left' : 'right')}
               className={cn(
                 'h-2 rounded-full transition-all duration-200',
                 index === safeIndex ? 'w-6 bg-emerald-300 shadow-[0_0_14px_rgba(110,231,183,0.5)]' : 'w-2 bg-white/20',
               )}
-              aria-label={`Показать ${view.currency}`}
+              aria-label={`Показать ${view.name}`}
             />
           ))}
         </div>
