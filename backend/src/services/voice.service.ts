@@ -1,3 +1,11 @@
+import { execFile } from 'node:child_process';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { extname, join } from 'node:path';
+import { promisify } from 'node:util';
+
+const execFileAsync = promisify(execFile);
+
 const DEFAULT_OPENAI_MODEL = 'gpt-4o-mini-transcribe';
 const DEFAULT_GLADIA_MODEL = 'gladia-pre-recorded-v2';
 const DEFAULT_DEEPGRAM_MODEL = 'nova-3';
@@ -16,6 +24,8 @@ const SUPPORTED_MIME_PREFIXES = [
   'audio/aac',
   'audio/ogg',
   'audio/x-m4a',
+  'audio/m4a',
+  'audio/caf',
 ];
 
 const SUPPORTED_AUDIO_EXTENSIONS = [
@@ -27,6 +37,7 @@ const SUPPORTED_AUDIO_EXTENSIONS = [
   '.wav',
   '.aac',
   '.ogg',
+  '.caf',
 ];
 
 type SttProvider = 'openai' | 'gladia' | 'deepgram' | 'assemblyai' | 'mock';
@@ -167,6 +178,118 @@ function inferMimeType(mimeType: string, originalName: string) {
   if (name.endsWith('.ogg')) return 'audio/ogg';
 
   return normalized;
+}
+
+
+function getAudioExtension(mimeType: string, originalName: string) {
+  const fromName = extname(originalName || '').toLowerCase().replace(/[^.a-z0-9]/g, '');
+  if (fromName && SUPPORTED_AUDIO_EXTENSIONS.includes(fromName)) return fromName.slice(1);
+
+  const normalized = normalizeMimeType(mimeType);
+  if (normalized.includes('mp4') || normalized.includes('m4a')) return 'm4a';
+  if (normalized.includes('mpeg') || normalized.includes('mp3')) return 'mp3';
+  if (normalized.includes('wav')) return 'wav';
+  if (normalized.includes('aac')) return 'aac';
+  if (normalized.includes('ogg')) return 'ogg';
+  if (normalized.includes('caf')) return 'caf';
+  return 'webm';
+}
+
+function shouldNormalizeAudio(provider: SttProvider, mimeType: string, originalName: string) {
+  if (process.env.VOICE_AUDIO_NORMALIZE === '0') return false;
+
+  const normalized = normalizeMimeType(mimeType);
+  const name = originalName.toLowerCase();
+
+  if (provider !== 'openai') return process.env.VOICE_AUDIO_NORMALIZE_ALL_PROVIDERS === '1';
+  if (normalized === 'audio/wav' || normalized === 'audio/x-wav' || normalized === 'audio/wave') return false;
+  if (name.endsWith('.wav')) return false;
+
+  return true;
+}
+
+type NormalizedAudio = {
+  buffer: Buffer;
+  mimeType: string;
+  originalName: string;
+  normalized: boolean;
+};
+
+async function normalizeAudioForStt(buffer: Buffer, mimeType: string, originalName: string, provider: SttProvider): Promise<NormalizedAudio> {
+  if (!shouldNormalizeAudio(provider, mimeType, originalName)) {
+    return { buffer, mimeType, originalName, normalized: false };
+  }
+
+  const startedAt = Date.now();
+  const tempDir = await mkdtemp(join(tmpdir(), 'ai-financer-voice-'));
+  const inputExtension = getAudioExtension(mimeType, originalName);
+  const inputPath = join(tempDir, `input.${inputExtension}`);
+  const outputPath = join(tempDir, 'normalized.wav');
+
+  try {
+    await writeFile(inputPath, buffer);
+    await execFileAsync('ffmpeg', [
+      '-y',
+      '-hide_banner',
+      '-loglevel',
+      'error',
+      '-i',
+      inputPath,
+      '-vn',
+      '-ac',
+      '1',
+      '-ar',
+      '16000',
+      '-f',
+      'wav',
+      outputPath,
+    ], {
+      timeout: Number(process.env.VOICE_AUDIO_NORMALIZE_TIMEOUT_MS || 12_000),
+      maxBuffer: 1024 * 1024,
+    });
+
+    const normalizedBuffer = await readFile(outputPath);
+    if (process.env.VOICE_DEBUG_LOGS !== '0') {
+      console.info('[voice-transcribe]', JSON.stringify({
+        at: new Date().toISOString(),
+        event: 'audio_normalized',
+        details: {
+          provider,
+          fromMimeType: normalizeMimeType(mimeType),
+          fromName: originalName,
+          fromBytes: buffer.length,
+          toMimeType: 'audio/wav',
+          toName: 'voice-normalized.wav',
+          toBytes: normalizedBuffer.length,
+          elapsedMs: Date.now() - startedAt,
+        },
+      }));
+    }
+
+    return {
+      buffer: normalizedBuffer,
+      mimeType: 'audio/wav',
+      originalName: 'voice-normalized.wav',
+      normalized: true,
+    };
+  } catch (error) {
+    if (process.env.VOICE_DEBUG_LOGS !== '0') {
+      console.info('[voice-transcribe]', JSON.stringify({
+        at: new Date().toISOString(),
+        event: 'audio_normalize_failed',
+        details: {
+          provider,
+          mimeType: normalizeMimeType(mimeType),
+          originalName,
+          error: error instanceof Error ? error.message.slice(0, 240) : 'unknown',
+        },
+      }));
+    }
+
+    return { buffer, mimeType, originalName, normalized: false };
+  } finally {
+    await rm(tempDir, { recursive: true, force: true }).catch(() => undefined);
+  }
 }
 
 function assertSupportedAudio(buffer: Buffer, mimeType: string, originalName = '') {
@@ -626,10 +749,13 @@ class VoiceService {
       throw new VoiceTranscriptionNotConfiguredError(provider);
     }
 
-    if (provider === 'openai') return this.transcribeWithOpenAI(buffer, normalizedMimeType, originalName, language);
-    if (provider === 'gladia') return this.transcribeWithGladia(buffer, normalizedMimeType, originalName, language);
-    if (provider === 'deepgram') return this.transcribeWithDeepgram(buffer, normalizedMimeType, language);
-    return this.transcribeWithAssemblyAI(buffer, normalizedMimeType, language);
+    const audio = await normalizeAudioForStt(buffer, normalizedMimeType, originalName, provider);
+    assertSupportedAudio(audio.buffer, audio.mimeType, audio.originalName);
+
+    if (provider === 'openai') return this.transcribeWithOpenAI(audio.buffer, audio.mimeType, audio.originalName, language);
+    if (provider === 'gladia') return this.transcribeWithGladia(audio.buffer, audio.mimeType, audio.originalName, language);
+    if (provider === 'deepgram') return this.transcribeWithDeepgram(audio.buffer, audio.mimeType, language);
+    return this.transcribeWithAssemblyAI(audio.buffer, audio.mimeType, language);
   }
 }
 

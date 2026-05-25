@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { logVoiceDebugEvent, transcribeVoice } from '@/features/voice/api/voice.api';
+import { getVoiceRecorderPlatformConfig, type RecorderFormat } from './voiceRecorderPlatform';
 
 type VoiceRecorderState = 'idle' | 'recording' | 'uploading' | 'error';
 
@@ -9,10 +10,6 @@ type UseVoiceRecorderParams = {
   chunkMs?: number;
 };
 
-type RecorderFormat = {
-  mimeType: string;
-  extension: string;
-};
 
 const DEFAULT_SESSION_MS = 3800;
 const MIN_SESSION_MS = 1800;
@@ -21,30 +18,21 @@ const MIN_AUDIO_BYTES = 1200;
 const TRANSCRIBE_CLIENT_TIMEOUT_MS = 45_000;
 const MICROPHONE_GAIN = 7.5;
 const VAD_CHECK_INTERVAL_MS = 60;
-const VAD_MIN_RECORDING_MS = 620;
-const VAD_GRACE_AFTER_VOICE_MS = 1050;
-const VAD_GRACE_AFTER_STRONG_VOICE_MS = 900;
-const VAD_NO_VOICE_AUTO_STOP_MS = 2100;
-const VAD_VOICE_RMS = 0.015;
-const VAD_CONTINUE_RMS = 0.010;
-const VAD_STRONG_VOICE_RMS = 0.035;
 
-function getBestRecorderFormat(): RecorderFormat | null {
+function getBestRecorderFormat(formats: RecorderFormat[], platform: string): RecorderFormat | null {
   if (typeof MediaRecorder === 'undefined') {
-    logVoiceDebugEvent('mediarecorder_unavailable');
+    logVoiceDebugEvent('mediarecorder_unavailable', { platform });
     return null;
   }
 
-  const formats: RecorderFormat[] = [
-    { mimeType: 'audio/webm;codecs=opus', extension: 'webm' },
-    { mimeType: 'audio/webm', extension: 'webm' },
-    { mimeType: 'audio/mp4', extension: 'mp4' },
-    { mimeType: 'audio/aac', extension: 'aac' },
-    { mimeType: 'audio/ogg;codecs=opus', extension: 'ogg' },
-    { mimeType: 'audio/ogg', extension: 'ogg' },
-  ];
-
-  return formats.find((format) => MediaRecorder.isTypeSupported(format.mimeType)) ?? null;
+  const selected = formats.find((format) => MediaRecorder.isTypeSupported(format.mimeType)) ?? null;
+  logVoiceDebugEvent('recorder_format_selected', {
+    platform,
+    mimeType: selected?.mimeType,
+    extension: selected?.extension,
+    candidates: formats.map((format) => format.mimeType).join(',').slice(0, 220),
+  });
+  return selected;
 }
 
 function toSttLanguage(lang: string) {
@@ -87,7 +75,8 @@ export function useVoiceRecorder({ onText, lang = 'ru-RU', chunkMs = DEFAULT_SES
 
   onTextRef.current = onText;
 
-  const recorderFormat = useMemo(() => getBestRecorderFormat(), []);
+  const platformConfig = useMemo(() => getVoiceRecorderPlatformConfig(), []);
+  const recorderFormat = useMemo(() => getBestRecorderFormat(platformConfig.formats, platformConfig.platform), [platformConfig]);
   const isSupported = Boolean(
     typeof window !== 'undefined' &&
       typeof navigator !== 'undefined' &&
@@ -190,6 +179,7 @@ export function useVoiceRecorder({ onText, lang = 'ru-RU', chunkMs = DEFAULT_SES
   const ensureStream = useCallback(async (format: RecorderFormat) => {
     if (hasActiveTracks(rawStreamRef.current) && hasActiveTracks(streamRef.current) && analyserRef.current && vadBufferRef.current) {
       logVoiceDebugEvent('microphone_stream_reused', {
+        platform: platformConfig.platform,
         mimeType: format.mimeType,
         extension: format.extension,
         audioTracks: rawStreamRef.current?.getAudioTracks().length ?? 0,
@@ -199,16 +189,9 @@ export function useVoiceRecorder({ onText, lang = 'ru-RU', chunkMs = DEFAULT_SES
 
     stopAllStreams();
 
-    logVoiceDebugEvent('permission_requested', { mimeType: format.mimeType, extension: format.extension });
+    logVoiceDebugEvent('permission_requested', { platform: platformConfig.platform, mimeType: format.mimeType, extension: format.extension });
     const rawStream = await navigator.mediaDevices.getUserMedia({
-      audio: {
-        echoCancellation: true,
-        noiseSuppression: false,
-        autoGainControl: true,
-        channelCount: { ideal: 1 },
-        sampleRate: { ideal: 48000 },
-        sampleSize: { ideal: 16 },
-      },
+      audio: platformConfig.audioConstraints,
     });
 
     rawStreamRef.current = rawStream;
@@ -234,7 +217,7 @@ export function useVoiceRecorder({ onText, lang = 'ru-RU', chunkMs = DEFAULT_SES
     });
 
     return stream;
-  }, [createAmplifiedStream, stopAllStreams]);
+  }, [createAmplifiedStream, platformConfig, stopAllStreams]);
 
   const hardCleanup = useCallback(() => {
     clearFinalizeTimer();
@@ -369,6 +352,8 @@ export function useVoiceRecorder({ onText, lang = 'ru-RU', chunkMs = DEFAULT_SES
       return;
     }
 
+    const vadProfile = platformConfig.vad;
+
     vadStartedAtRef.current = Date.now();
     recordingStartedAtRef.current = Date.now();
     lastVoiceAtRef.current = 0;
@@ -391,7 +376,7 @@ export function useVoiceRecorder({ onText, lang = 'ru-RU', chunkMs = DEFAULT_SES
 
       const now = Date.now();
       const elapsedMs = now - recordingStartedAtRef.current;
-      const isVoiceNow = rms >= VAD_VOICE_RMS || (voiceDetectedRef.current && rms >= VAD_CONTINUE_RMS);
+      const isVoiceNow = rms >= vadProfile.voiceRms || (voiceDetectedRef.current && rms >= vadProfile.continueRms);
 
       if (isVoiceNow) {
         if (!voiceDetectedRef.current) {
@@ -410,7 +395,7 @@ export function useVoiceRecorder({ onText, lang = 'ru-RU', chunkMs = DEFAULT_SES
       }
 
       if (!voiceDetectedRef.current) {
-        if (elapsedMs >= VAD_NO_VOICE_AUTO_STOP_MS) {
+        if (elapsedMs >= vadProfile.noVoiceAutoStopMs) {
           logVoiceDebugEvent('vad_stop_no_speech', {
             elapsedMs,
             peakRms: Number(vadPeakRmsRef.current.toFixed(4)),
@@ -422,11 +407,11 @@ export function useVoiceRecorder({ onText, lang = 'ru-RU', chunkMs = DEFAULT_SES
         return;
       }
 
-      if (elapsedMs < VAD_MIN_RECORDING_MS) return;
+      if (elapsedMs < vadProfile.minRecordingMs) return;
 
       const silenceMs = now - lastVoiceAtRef.current;
-      const hadStrongVoice = vadPeakRmsRef.current >= VAD_STRONG_VOICE_RMS;
-      const requiredSilenceMs = hadStrongVoice ? VAD_GRACE_AFTER_STRONG_VOICE_MS : VAD_GRACE_AFTER_VOICE_MS;
+      const hadStrongVoice = vadPeakRmsRef.current >= vadProfile.strongVoiceRms;
+      const requiredSilenceMs = hadStrongVoice ? vadProfile.graceAfterStrongVoiceMs : vadProfile.graceAfterVoiceMs;
 
       if (silenceMs >= requiredSilenceMs) {
         logVoiceDebugEvent('vad_stop_triggered', {
@@ -441,7 +426,7 @@ export function useVoiceRecorder({ onText, lang = 'ru-RU', chunkMs = DEFAULT_SES
         finalizeRecording(false);
       }
     }, VAD_CHECK_INTERVAL_MS);
-  }, [finalizeRecording, stopVoiceActivityWatcher]);
+  }, [finalizeRecording, platformConfig, stopVoiceActivityWatcher]);
 
   const startRecording = useCallback(async () => {
     if (startInProgressRef.current) {
@@ -455,7 +440,7 @@ export function useVoiceRecorder({ onText, lang = 'ru-RU', chunkMs = DEFAULT_SES
     }
 
     if (!isSupported || !recorderFormat) {
-      logVoiceDebugEvent('recorder_unsupported', { isSupported, mimeType: recorderFormat?.mimeType, extension: recorderFormat?.extension });
+      logVoiceDebugEvent('recorder_unsupported', { platform: platformConfig.platform, isSupported, mimeType: recorderFormat?.mimeType, extension: recorderFormat?.extension });
       setError('unsupported');
       setState('error');
       return;
@@ -486,6 +471,7 @@ export function useVoiceRecorder({ onText, lang = 'ru-RU', chunkMs = DEFAULT_SES
         startInProgressRef.current = false;
         recordingStartedAtRef.current = Date.now();
         logVoiceDebugEvent('recorder_started', {
+          platform: platformConfig.platform,
           mimeType: recorder.mimeType || recorderFormat.mimeType,
           extension: recorderFormat.extension,
           recordingState: recorder.state,
@@ -553,7 +539,7 @@ export function useVoiceRecorder({ onText, lang = 'ru-RU', chunkMs = DEFAULT_SES
       };
 
       mediaRecorderRef.current = recorder;
-      logVoiceDebugEvent('recorder_start_call', { mimeType: recorderFormat.mimeType, extension: recorderFormat.extension, sessionMs: clampSessionMs(chunkMs) });
+      logVoiceDebugEvent('recorder_start_call', { platform: platformConfig.platform, mimeType: recorderFormat.mimeType, extension: recorderFormat.extension, sessionMs: clampSessionMs(chunkMs) });
       recorder.start(250);
     } catch (err) {
       startInProgressRef.current = false;
@@ -563,7 +549,7 @@ export function useVoiceRecorder({ onText, lang = 'ru-RU', chunkMs = DEFAULT_SES
       setState('error');
       hardCleanup();
     }
-  }, [chunkMs, ensureStream, finalizeRecording, hardCleanup, isSupported, recorderFormat, startVoiceActivityWatcher, state, uploadFinalBlob, clearFinalizeTimer, stopVoiceActivityWatcher]);
+  }, [chunkMs, ensureStream, finalizeRecording, hardCleanup, isSupported, platformConfig, recorderFormat, startVoiceActivityWatcher, state, uploadFinalBlob, clearFinalizeTimer, stopVoiceActivityWatcher]);
 
   const stopRecording = useCallback(() => {
     logVoiceDebugEvent('voice_session_stop_and_send', { state });

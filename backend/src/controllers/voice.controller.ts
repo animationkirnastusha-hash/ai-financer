@@ -38,6 +38,15 @@ function sanitizeVoiceDebugDetails(details: unknown) {
     'model',
     'language',
     'originalName',
+    'platform',
+    'peakRms',
+    'rms',
+    'silenceMs',
+    'graceMs',
+    'sessionMs',
+    'audioTracks',
+    'persistentStream',
+    'candidates',
   ]);
 
   const source = details as Record<string, unknown>;
