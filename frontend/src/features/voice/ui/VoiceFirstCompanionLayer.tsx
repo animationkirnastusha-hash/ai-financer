@@ -21,8 +21,8 @@ type Thought = {
 const BUBBLE_TIMEOUT_MS = 2800;
 const DUPLICATE_WINDOW_MS = 1000;
 const DEFAULT_VOICE_SESSION_MS = 4200;
-const AUTO_LISTENER_RESTART_MS = 650;
-const WAKE_COMMAND_WINDOW_MS = 18000;
+const AUTO_LISTENER_RESTART_MS = 180;
+const STRICT_WAKE_WORD_ONLY = true;
 const TTS_MIN_GAP_MS = 1800;
 
 function compactBubble(text: string) {
@@ -74,7 +74,7 @@ function stripWakeWord(rawText: string) {
   const source = rawText.trim();
   const normalized = normalizeForWake(source);
   const words = normalized.split(' ').filter(Boolean);
-  const aliases = ['фина', 'финна', 'fina', 'фину', 'фине', 'фины', 'финой', 'фино', 'фена', 'финов', 'финав', 'финок', 'финокв', 'фиаков', 'фиа', 'финак'];
+  const aliases = ['фина', 'финна', 'fina', 'фину', 'фине', 'фины', 'финой', 'фино', 'фена'];
 
   const exactIndex = words.findIndex((word) => aliases.includes(word));
   const fuzzyIndex = exactIndex >= 0
@@ -141,7 +141,6 @@ export function VoiceFirstCompanionLayer() {
   const lastThoughtRef = useRef<{ text: string; tone: BubbleTone; at: number }>({ text: '', tone: 'neutral', at: 0 });
   const isProcessingVoiceRef = useRef(false);
   const voiceCancelRef = useRef<() => void>(() => undefined);
-  const wakeCommandUntilRef = useRef(0);
   const lastTtsCueRef = useRef<{ cue: VoiceCue | null; at: number }>({ cue: null, at: 0 });
 
   const showThought = useCallback((text: string, tone: BubbleTone = 'neutral', timeoutMs = BUBBLE_TIMEOUT_MS) => {
@@ -192,38 +191,28 @@ export function VoiceFirstCompanionLayer() {
 
     const now = Date.now();
     const wake = stripWakeWord(originalText);
-    const acceptsFollowUpCommand = !wake.hasWakeWord && wakeCommandUntilRef.current > now;
 
-    if (!wake.hasWakeWord && !acceptsFollowUpCommand) {
+    if (!wake.hasWakeWord) {
       logVoiceDebugEvent('wake_word_not_detected', {
         textLength: originalText.length,
         hasText: Boolean(originalText),
+        strictWakeWordOnly: STRICT_WAKE_WORD_ONLY,
       });
       return;
     }
 
-    if (wake.hasWakeWord) {
-      logVoiceDebugEvent('wake_word_detected', {
-        textLength: originalText.length,
-        hasText: Boolean(originalText),
-        commandLength: wake.command.length,
-      });
-    } else {
-      logVoiceDebugEvent('wake_followup_command_detected', {
-        textLength: originalText.length,
-        hasText: Boolean(originalText),
-        windowLeftMs: Math.max(0, wakeCommandUntilRef.current - now),
-      });
-    }
+    logVoiceDebugEvent('wake_word_detected', {
+      textLength: originalText.length,
+      hasText: Boolean(originalText),
+      commandLength: wake.command.length,
+      strictWakeWordOnly: STRICT_WAKE_WORD_ONLY,
+    });
 
-    const text = cleanVoiceText(wake.hasWakeWord ? wake.command : originalText);
+    const text = cleanVoiceText(wake.command);
     if (!text) {
-      wakeCommandUntilRef.current = Date.now() + WAKE_COMMAND_WINDOW_MS;
-      speakThought('Я здесь.', 'listening', 'here', 2200);
+      speakThought('Слушаю. Скажи команду вместе с именем.', 'listening', 'here', 2600);
       return;
     }
-
-    wakeCommandUntilRef.current = Date.now() + 2500;
 
     const last = lastHandledRef.current;
     if (last.text === text && now - last.at < DUPLICATE_WINDOW_MS) return;
@@ -261,20 +250,6 @@ export function VoiceFirstCompanionLayer() {
   useEffect(() => {
     handleTextRef.current = handleText;
   }, [handleText]);
-
-
-  useEffect(() => {
-    if (!canUseVoice || !voiceAlwaysOnEnabled || !voicePermissionPrompted) return;
-
-    if (voice.state === 'recording') {
-      showThought('Слушаю...', 'listening', 1200);
-      return;
-    }
-
-    if (voice.state === 'uploading') {
-      showThought('Распознаю...', 'thinking', 1400);
-    }
-  }, [canUseVoice, showThought, voice.state, voiceAlwaysOnEnabled, voicePermissionPrompted]);
 
   const primeVoicePermission = useCallback(async () => {
     setIsPriming(true);
@@ -323,7 +298,7 @@ export function VoiceFirstCompanionLayer() {
       return;
     }
 
-    if (voiceAlwaysOnEnabled && (voice.error === 'no-speech' || voice.error === 'rate-limited' || voice.error === 'transcription-timeout' || voice.error === 'transcription-error')) {
+    if (voiceAlwaysOnEnabled && (voice.error === 'no-speech' || voice.error === 'transcription-timeout' || voice.error === 'transcription-error')) {
       return;
     }
 
@@ -461,15 +436,13 @@ export function VoiceFirstCompanionLayer() {
             <div className="voice-first-companion__voice-panel">
               <div className={canUseVoice ? 'voice-first-status voice-first-status--on' : 'voice-first-status'}>
                 {canUseVoice
-                  ? voice.state === 'recording'
-                    ? 'Слушаю'
+                  ? chat.isSending || isProcessingVoice
+                    ? 'Думаю'
                     : voice.state === 'uploading'
-                      ? 'Распознаю'
-                      : chat.isSending || isProcessingVoice
-                        ? 'Думаю'
-                        : voiceAlwaysOnEnabled
-                          ? 'Жду «Фина»'
-                          : 'Голос выключен'
+                      ? 'Проверяю имя'
+                      : voiceAlwaysOnEnabled
+                        ? 'Жду «Фина»'
+                        : 'Голос выключен'
                   : 'Голос выключен'}
               </div>
             </div>
