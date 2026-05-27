@@ -13,7 +13,7 @@ type UseVoiceRecorderParams = {
 
 const DEFAULT_SESSION_MS = 5200;
 const MIN_SESSION_MS = 2500;
-const MAX_SESSION_MS = 9500;
+const MAX_SESSION_MS = 12_000;
 const MIN_AUDIO_BYTES = 1200;
 const TRANSCRIBE_CLIENT_TIMEOUT_MS = 45_000;
 const MICROPHONE_GAIN = Number(import.meta.env.VITE_VOICE_MIC_GAIN || 3.0);

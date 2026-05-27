@@ -45,10 +45,10 @@ const DESKTOP_AUDIO_CONSTRAINTS: MediaTrackConstraints = {
 };
 
 const DESKTOP_VAD_PROFILE: VoiceVadProfile = {
-  minRecordingMs: 3200,
-  noVoiceAutoStopMs: 3000,
-  graceAfterVoiceMs: 1500,
-  graceAfterStrongVoiceMs: 1250,
+  minRecordingMs: 900,
+  noVoiceAutoStopMs: 2200,
+  graceAfterVoiceMs: 1000,
+  graceAfterStrongVoiceMs: 900,
   voiceRms: 0.009,
   continueRms: 0.005,
   strongVoiceRms: 0.024,
