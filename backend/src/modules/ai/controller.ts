@@ -35,6 +35,37 @@ function readPendingActionId(req: Request) {
   return '';
 }
 
+
+function readCommandSource(value: unknown) {
+  return value === 'voice' || value === 'voice_session' ? value : 'text';
+}
+
+function readVoiceSession(value: unknown) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+  const record = value as Record<string, unknown>;
+  const segmentsRaw = Array.isArray(record.segments) ? record.segments : [];
+  const segments = segmentsRaw
+    .map((item): { text: string; role: 'initial' | 'continuation' | 'correction'; at?: number } | null => {
+      if (!item || typeof item !== 'object' || Array.isArray(item)) return null;
+      const segment = item as Record<string, unknown>;
+      const text = typeof segment.text === 'string' ? segment.text.trim().slice(0, 500) : '';
+      const roleRaw = typeof segment.role === 'string' ? segment.role : 'continuation';
+      const role = roleRaw === 'initial' || roleRaw === 'correction' || roleRaw === 'continuation' ? roleRaw : 'continuation';
+      const at = Number(segment.at);
+      if (!text) return null;
+      return { text, role, at: Number.isFinite(at) ? at : undefined };
+    })
+    .filter((segment): segment is { text: string; role: 'initial' | 'continuation' | 'correction'; at?: number } => Boolean(segment))
+    .slice(0, 8);
+
+  return {
+    id: typeof record.id === 'string' ? record.id.slice(0, 80) : undefined,
+    finalText: typeof record.finalText === 'string' ? record.finalText.trim().slice(0, 1500) : undefined,
+    correctionCount: Number.isFinite(Number(record.correctionCount)) ? Number(record.correctionCount) : undefined,
+    segments,
+  };
+}
+
 function readIdempotencyKey(req: Request) {
   const header = req.header('x-idempotency-key');
   const body = typeof req.body?.idempotencyKey === 'string' ? req.body.idempotencyKey : '';
@@ -78,10 +109,12 @@ export const parseCommand = asyncHandler(async (req: Request, res: Response) => 
   const execute = req.body.execute === undefined ? true : Boolean(req.body.execute);
   if (!command.trim()) throw new BadRequestError('command is required');
 
+  const source = readCommandSource(req.body?.source);
+  const voiceSession = readVoiceSession(req.body?.voiceSession);
   const key = readIdempotencyKey(req);
 
-  const result = await withIdempotency(userId, 'ai_parse', key, { command, execute }, async () => {
-    const raw = await aiService.handleCommand(userId, command, { execute });
+  const result = await withIdempotency(userId, 'ai_parse', key, { command, execute, source, voiceSession }, async () => {
+    const raw = await aiService.handleCommand(userId, command, { execute, source, voiceSession });
     return aiResponseNormalizer.normalize(raw);
   });
 
@@ -95,6 +128,9 @@ export const parseCommand = asyncHandler(async (req: Request, res: Response) => 
       executed: result.executed,
       requiresConfirmation: result.requiresConfirmation,
       riskLevel: result.riskLevel,
+      source,
+      voiceSessionId: voiceSession?.id,
+      voiceSegmentCount: voiceSession?.segments?.length ?? 0,
     },
   });
 

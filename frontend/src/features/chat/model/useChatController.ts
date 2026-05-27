@@ -5,7 +5,7 @@ import { auditLogApi } from '@/features/audit-log/api/auditLog.api';
 import { chatApi } from '@/features/chat/api/chat.api';
 import { useAccountsStore } from '@/features/accounts/model/accounts.store';
 import { useTransactionsStore } from '@/features/transactions/model/transactions.store';
-import type { ChatMessage } from '@/features/chat/model/chat.types';
+import type { ChatMessage, SendChatMessageOptions, SendChatMessagePayload } from '@/features/chat/model/chat.types';
 
 const MAX_LOCAL_MESSAGES = 50;
 
@@ -53,6 +53,8 @@ export function useChatController() {
   const [isSending, setIsSending] = useState(false);
   const refreshInFlightRef = useRef(false);
   const refreshQueuedRef = useRef(false);
+  const requestAbortRef = useRef<AbortController | null>(null);
+  const requestSeqRef = useRef(0);
 
   const loadAccounts = useAccountsStore((state) => state.loadAccounts);
   const refreshTransactions = useTransactionsStore((state) => state.refreshAll);
@@ -121,9 +123,20 @@ export function useChatController() {
   }, [refreshFinanceState]);
 
   const sendMessage = useCallback(
-    async (text: string) => {
-      if (!text.trim() || isSending) return;
+    async (input: string | SendChatMessagePayload, options: SendChatMessageOptions = {}) => {
+      const payload: SendChatMessagePayload = typeof input === 'string' ? { text: input, source: 'text' } : input;
+      const text = payload.text.trim();
+      if (!text) return;
 
+      if (isSending && !options.supersedeInFlight) return;
+      if (options.supersedeInFlight && requestAbortRef.current) {
+        requestAbortRef.current.abort();
+      }
+
+      const requestSeq = requestSeqRef.current + 1;
+      requestSeqRef.current = requestSeq;
+      const controller = new AbortController();
+      requestAbortRef.current = controller;
       setIsSending(true);
 
       const userMessage: ChatMessage = {
@@ -140,12 +153,17 @@ export function useChatController() {
       try {
         let response;
         try {
-          response = await chatApi.sendMessage({ text });
+          response = await chatApi.sendMessage({ ...payload, text }, controller.signal);
         } catch (error) {
+          if (controller.signal.aborted) return;
           if (!isTransientNetworkError(error)) throw error;
           await sleep(navigator.onLine ? 1400 : 2400);
-          response = await chatApi.sendMessage({ text });
+          if (controller.signal.aborted) return;
+          response = await chatApi.sendMessage({ ...payload, text }, controller.signal);
         }
+
+        if (requestSeqRef.current !== requestSeq || controller.signal.aborted) return;
+
         const assistantText = response.message || 'Готово';
 
         const assistantMessage: ChatMessage = {
@@ -172,6 +190,7 @@ export function useChatController() {
           emitPendingSync();
         }
       } catch (error) {
+        if (controller.signal.aborted) return;
         console.error('Send message failed', error);
 
         setMessages((prev) => appendLocalMessages(prev, {
@@ -183,7 +202,8 @@ export function useChatController() {
           kind: 'error',
         }));
       } finally {
-        setIsSending(false);
+        if (requestAbortRef.current === controller) requestAbortRef.current = null;
+        if (requestSeqRef.current === requestSeq) setIsSending(false);
       }
     },
     [isSending, refreshFinanceState],

@@ -47,6 +47,12 @@ function sanitizeVoiceDebugDetails(details: unknown) {
     'audioTracks',
     'persistentStream',
     'candidates',
+    'role',
+    'segmentCount',
+    'correctionCount',
+    'target',
+    'kind',
+    'reason',
   ]);
 
   const source = details as Record<string, unknown>;

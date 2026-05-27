@@ -22,21 +22,23 @@ export class AIOrchestratorService {
   private readonly answer = new AIAnswerService();
   private readonly memory = new AIMemoryService();
 
-  async handleCommand(userId: string, command: string, _options: AIHandleOptions = {}): Promise<AIResult> {
+  async handleCommand(userId: string, command: string, options: AIHandleOptions = {}): Promise<AIResult> {
     const trimmed = command.trim();
     if (!trimmed) throw new BadRequestError('command is required');
 
+    const plannerCommand = this.buildPlannerCommand(trimmed, options);
+
     try {
-      const clarificationResult = await this.tryAnswerPendingClarification(userId, trimmed);
+      const clarificationResult = await this.tryAnswerPendingClarification(userId, plannerCommand);
       if (clarificationResult) return clarificationResult;
 
       const context = await this.context.buildUserContext(userId);
-      const plan = await this.planner.plan(trimmed, context);
+      const plan = await this.planner.plan(plannerCommand, context);
 
       if (plan.actions.length > 3) {
         const audit = await this.audit.create({
           userId,
-          command: trimmed,
+          command: plannerCommand,
           intent: 'premium_action_limit',
           riskLevel: 'low',
           requiresConfirmation: false,
@@ -61,7 +63,7 @@ export class AIOrchestratorService {
         const companionAnswer = await this.answer.answer(trimmed, context, 'fast', plan.summary);
         const audit = await this.audit.create({
           userId,
-          command: trimmed,
+          command: plannerCommand,
           intent: 'companion_reply',
           riskLevel: 'low',
           requiresConfirmation: false,
@@ -91,16 +93,16 @@ export class AIOrchestratorService {
           const parsedWithClarification = { ...parsed, clarification };
           const pending = await this.pending.create({
             userId,
-            command: trimmed,
+            command: plannerCommand,
             parsed: parsedWithClarification,
             riskLevel: validated.riskLevel,
           });
 
-          await aiSessionService.rememberClarification(userId, { command: trimmed, intent: parsed.intent, tool: parsed.actions[clarification.actionIndex]?.tool, payload: parsedWithClarification, clarification });
+          await aiSessionService.rememberClarification(userId, { command: plannerCommand, intent: parsed.intent, tool: parsed.actions[clarification.actionIndex]?.tool, payload: parsedWithClarification, clarification });
 
           const audit = await this.audit.create({
             userId,
-            command: trimmed,
+            command: plannerCommand,
             intent: parsed.intent,
             riskLevel: validated.riskLevel,
             requiresConfirmation: false,
@@ -125,7 +127,7 @@ export class AIOrchestratorService {
         const message = validated.issues.map((issue) => issue.message).join('\n') || 'Не удалось безопасно подготовить действие.';
         const audit = await this.audit.create({
           userId,
-          command: trimmed,
+          command: plannerCommand,
           intent: 'validation_failed',
           riskLevel: validated.riskLevel,
           requiresConfirmation: false,
@@ -150,12 +152,12 @@ export class AIOrchestratorService {
       if (!validated.requiresConfirmation) {
         const result = await this.executor.execute(userId, parsed);
         await aiSessionService.clear(userId);
-        await aiSessionService.rememberResult(userId, { command: trimmed, intent: parsed.intent, tool: parsed.actions[0]?.tool, result });
-        await this.memory.rememberFinancialResult(userId, { command: trimmed, intent: parsed.intent, tools: parsed.actions.map((action) => action.tool), result });
+        await aiSessionService.rememberResult(userId, { command: plannerCommand, intent: parsed.intent, tool: parsed.actions[0]?.tool, result });
+        await this.memory.rememberFinancialResult(userId, { command: plannerCommand, intent: parsed.intent, tools: parsed.actions.map((action) => action.tool), result });
 
         const audit = await this.audit.create({
           userId,
-          command: trimmed,
+          command: plannerCommand,
           intent: parsed.intent,
           riskLevel: validated.riskLevel,
           requiresConfirmation: false,
@@ -178,11 +180,11 @@ export class AIOrchestratorService {
         };
       }
 
-      const pending = await this.pending.create({ userId, command: trimmed, parsed, riskLevel: validated.riskLevel });
+      const pending = await this.pending.create({ userId, command: plannerCommand, parsed, riskLevel: validated.riskLevel });
 
       const audit = await this.audit.create({
         userId,
-        command: trimmed,
+        command: plannerCommand,
         intent: parsed.intent,
         riskLevel: validated.riskLevel,
         requiresConfirmation: true,
@@ -203,10 +205,10 @@ export class AIOrchestratorService {
       };
     } catch (error) {
       const message = error instanceof Error ? error.message : 'AI Core failed';
-      console.error('[AI] handleCommand failed', { message, command: trimmed });
+      console.error('[AI] handleCommand failed', { message, command: plannerCommand });
       const audit = await this.audit.create({
         userId,
-        command: trimmed,
+        command: plannerCommand,
         intent: 'error',
         riskLevel: 'low',
         requiresConfirmation: false,
@@ -226,6 +228,32 @@ export class AIOrchestratorService {
         meta: { auditLogId: audit.id },
       };
     }
+  }
+
+
+  private buildPlannerCommand(command: string, options: AIHandleOptions) {
+    const voiceSession = options.voiceSession;
+    if (options.source !== 'voice_session' || !voiceSession || !Array.isArray(voiceSession.segments) || !voiceSession.segments.length) {
+      return command;
+    }
+
+    const segments = voiceSession.segments
+      .map((segment, index) => {
+        const role = segment.role === 'correction' ? 'correction' : segment.role === 'initial' ? 'initial' : 'continuation';
+        return `${index + 1}. [${role}] ${String(segment.text || '').trim()}`;
+      })
+      .filter((line) => line.trim())
+      .join('\n');
+
+    if (!segments) return command;
+
+    return [
+      'VOICE_SESSION_COMMAND.',
+      'The user dictated one command in several speech segments. Later correction segments override earlier conflicting details. Preserve earlier details that were not explicitly cancelled or replaced. Do not create two competing plans. Resolve one final intended financial action. If uncertain, ask one clarification.',
+      'Segments:',
+      segments,
+      `Final transcript: ${voiceSession.finalText || command}`,
+    ].join('\n');
   }
 
   async confirmCommand(userId: string, pendingActionId: string): Promise<AIResult> {

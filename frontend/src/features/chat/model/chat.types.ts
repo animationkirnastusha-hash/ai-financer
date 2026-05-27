@@ -1,7 +1,29 @@
 import type { MessageKind, MessageRole } from '@/entities/message/model/message.types';
 
+export type ChatCommandSource = 'text' | 'voice' | 'voice_session';
+
+export type ChatVoiceSessionSegment = {
+  text: string;
+  role: 'initial' | 'continuation' | 'correction';
+  at: number;
+};
+
+export type ChatVoiceSessionPayload = {
+  id: string;
+  finalText: string;
+  segments: ChatVoiceSessionSegment[];
+  correctionCount: number;
+};
+
 export type SendChatMessagePayload = {
   text: string;
+  source?: ChatCommandSource;
+  voiceSession?: ChatVoiceSessionPayload;
+  execute?: boolean;
+};
+
+export type SendChatMessageOptions = {
+  supersedeInFlight?: boolean;
 };
 
 export type AIParseResult = {

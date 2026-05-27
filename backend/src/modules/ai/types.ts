@@ -89,8 +89,25 @@ export interface AIParsedCommand {
   clarification?: AIClarificationRequest | null;
 }
 
+export type AICommandSource = 'text' | 'voice' | 'voice_session';
+
+export interface AIVoiceSessionSegment {
+  text: string;
+  role: 'initial' | 'continuation' | 'correction';
+  at?: number;
+}
+
+export interface AIVoiceSessionPayload {
+  id?: string;
+  finalText?: string;
+  correctionCount?: number;
+  segments?: AIVoiceSessionSegment[];
+}
+
 export interface AIHandleOptions {
   execute?: boolean;
+  source?: AICommandSource;
+  voiceSession?: AIVoiceSessionPayload | null;
 }
 
 export interface AIResult {
