@@ -68,7 +68,7 @@ export function useChatController() {
 
     try {
       const items = await pendingActionsApi.list();
-      setPendingActions(Array.isArray(items) ? items.filter(isConfirmationPending) : []);
+      setPendingActions(Array.isArray(items) ? items : []);
     } catch (error) {
       console.error('Failed to load pending actions', error);
       setPendingActions([]);
@@ -339,9 +339,14 @@ export function useChatController() {
   const openAudit = useCallback(() => setIsAuditOpen(true), []);
   const closeAudit = useCallback(() => setIsAuditOpen(false), []);
 
+  const clarificationActions = useMemo(() => pendingActions.filter(isClarificationPending), [pendingActions]);
+  const confirmationActions = useMemo(() => pendingActions.filter(isConfirmationPending), [pendingActions]);
+
   return {
     messages,
     pendingActions,
+    clarificationActions,
+    confirmationActions,
     auditLogs,
     isPendingOpen,
     isAuditOpen,

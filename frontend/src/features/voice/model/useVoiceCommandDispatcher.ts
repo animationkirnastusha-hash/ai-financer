@@ -56,12 +56,15 @@ export function useVoiceCommandDispatcher({ chat, navigateTo, goBack, showThough
       return;
     }
 
-    if (chat.isSending || chat.pendingActions.length > 0) {
+    if (chat.isSending || chat.confirmationActions.length > 0) {
       logVoiceDebugEvent('voice_session_ignored_busy_chat', {
         textLength: text.length,
         isSending: chat.isSending,
         pendingActions: chat.pendingActions.length,
+        confirmationActions: chat.confirmationActions.length,
+        clarificationActions: chat.clarificationActions.length,
       });
+      if (chat.confirmationActions.length > 0) showThought('Сначала подтверди или отмени действие.', 'warning', 2600);
       return;
     }
 

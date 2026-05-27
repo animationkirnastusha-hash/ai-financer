@@ -7,8 +7,28 @@ type VoicePendingConfirmModalProps = {
   onUpdate: (id: string, parsed: Record<string, unknown>, command?: string) => Promise<void> | void;
 };
 
+function getParsed(item: any): Record<string, unknown> | null {
+  const parsed = item?.parsed;
+  return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : null;
+}
+
+function getClarification(item: any): Record<string, unknown> | null {
+  const clarification = getParsed(item)?.clarification;
+  return clarification && typeof clarification === 'object' && !Array.isArray(clarification)
+    ? clarification as Record<string, unknown>
+    : null;
+}
+
+function getClarificationQuestion(item: any) {
+  const question = getClarification(item)?.question;
+  return typeof question === 'string' && question.trim() ? question.trim() : 'Нужно уточнение.';
+}
+
 export function VoicePendingConfirmModal({ pendingActions, onConfirm, onCancel, onUpdate }: VoicePendingConfirmModalProps) {
   if (pendingActions.length === 0) return null;
+
+  const item = pendingActions[0];
+  const clarification = getClarification(item);
 
   return (
     <div className="app-modal-backdrop app-pending-confirm-backdrop" data-no-swipe="true">
@@ -17,13 +37,26 @@ export function VoicePendingConfirmModal({ pendingActions, onConfirm, onCancel, 
         <div className="app-modal-body">
           <div className="app-pending-confirm-head">
             <div>
-              <div className="app-eyebrow">Проверка</div>
-              <h2>Подтверди действие</h2>
-              <p>Фина выполнит его после подтверждения.</p>
+              <div className="app-eyebrow">{clarification ? 'Уточнение' : 'Проверка'}</div>
+              <h2>{clarification ? 'Фине нужно уточнение' : 'Подтверди действие'}</h2>
+              <p>
+                {clarification
+                  ? 'Ответь голосом после имени Фина или напиши в чате. Новая команда заменит это уточнение.'
+                  : 'Фина выполнит действие после подтверждения.'}
+              </p>
             </div>
           </div>
-          <div className="grid gap-3">
-            {pendingActions.slice(0, 1).map((item) => (
+
+          {clarification ? (
+            <div className="voice-clarification-card">
+              <div className="voice-clarification-card__question">{getClarificationQuestion(item)}</div>
+              <div className="voice-clarification-card__hint">Например: «Фина, с налички» или «Фина, с карты».</div>
+              <button className="app-secondary-button" type="button" onClick={() => onCancel(item.id)}>
+                Отменить
+              </button>
+            </div>
+          ) : (
+            <div className="grid gap-3">
               <PendingActionCard
                 key={item.id}
                 item={item}
@@ -31,8 +64,8 @@ export function VoicePendingConfirmModal({ pendingActions, onConfirm, onCancel, 
                 onCancel={onCancel}
                 onUpdate={onUpdate}
               />
-            ))}
-          </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

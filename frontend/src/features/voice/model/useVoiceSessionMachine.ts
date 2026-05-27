@@ -251,6 +251,7 @@ export function useVoiceSessionMachine({ companionName, showThought, dispatchCom
     recordSessionMs: captureMode === 'command' ? VOICE_COMMAND_SESSION_MS : VOICE_WAKE_SESSION_MS,
     handleTranscript,
     reset,
+    pause: startCooldown,
     startCommandCapture,
   };
 }

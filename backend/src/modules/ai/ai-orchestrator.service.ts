@@ -367,6 +367,15 @@ export class AIOrchestratorService {
   }
 
 
+  private looksLikeNewCommand(answer: string): boolean {
+    const text = answer.toLowerCase().replace(/ё/g, 'е');
+    const hasAmount = /\b\d+[\d\s.,]*(к|k|тыс|руб|₽|доллар|евро)?\b/.test(text);
+    const hasActionVerb = /\b(созда[йть]|добав[ьить]|запиши|спиши|потрат|расход|доход|положи|переведи|перенеси|удали|измени|переименуй|сделай|отмени|покажи|открой|закрой|купи|оплатил|получил|заработал)\b/.test(text);
+    const hasFinancialObject = /\b(счет|сч[её]т|карта|налич|категор|раздел|цель|операци|расход|доход|перевод|валют)\b/.test(text);
+    return hasActionVerb || (hasAmount && hasFinancialObject);
+  }
+
+
   private async tryAnswerPendingClarification(userId: string, answer: string): Promise<AIResult | null> {
     const pending = await this.pending.getLatestClarification(userId);
     if (!pending) return null;
@@ -380,6 +389,12 @@ export class AIOrchestratorService {
 
     const candidate = answer.trim();
     if (!candidate) return null;
+
+    if (this.looksLikeNewCommand(candidate)) {
+      await this.pending.markFailed(userId, pending.id, 'superseded_by_new_command').catch(() => null);
+      await aiSessionService.clear(userId).catch(() => null);
+      return null;
+    }
 
     const nextActions = parsed.actions.map((item, index) => {
       if (index !== clarification.actionIndex) return item;
@@ -437,6 +452,7 @@ export class AIOrchestratorService {
 
     if (!validated.requiresConfirmation) {
       const result = await this.executor.execute(userId, nextParsed, { pendingActionId: pending.id });
+      await this.pending.markConfirmed(userId, pending.id).catch(() => null);
       await aiSessionService.clear(userId);
       await aiSessionService.rememberResult(userId, { command: `${pending.command} / ${candidate}`, intent: nextParsed.intent, tool: nextParsed.actions[0]?.tool, result });
       await this.memory.rememberFinancialResult(userId, { command: `${pending.command} / ${candidate}`, intent: nextParsed.intent, tools: nextParsed.actions.map((action) => action.tool), result });
