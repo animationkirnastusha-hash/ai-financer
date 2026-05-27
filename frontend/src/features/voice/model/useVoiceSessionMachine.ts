@@ -5,6 +5,8 @@ import {
   VOICE_COMMAND_CAPTURE_TIMEOUT_MS,
   VOICE_COMMAND_SESSION_MS,
   VOICE_WAKE_SESSION_MS,
+  VOICE_WAKE_MISS_BASE_COOLDOWN_MS,
+  VOICE_WAKE_MISS_MAX_COOLDOWN_MS,
 } from '@/features/voice/model/voiceConstants';
 import type {
   VoiceBubbleTone,
@@ -42,6 +44,7 @@ export function useVoiceSessionMachine({ companionName, showThought, dispatchCom
   const sessionIdRef = useRef('');
   const commandTimeoutRef = useRef<number | null>(null);
   const dispatchingRef = useRef(false);
+  const wakeMissCountRef = useRef(0);
 
   const setMachinePhase = useCallback((nextPhase: VoiceSessionPhase, nextMode: VoiceCaptureMode) => {
     phaseRef.current = nextPhase;
@@ -62,6 +65,7 @@ export function useVoiceSessionMachine({ companionName, showThought, dispatchCom
     clearCommandTimeout();
     segmentsRef.current = [];
     sessionIdRef.current = '';
+    wakeMissCountRef.current = 0;
     setMachinePhase('idle', 'wake');
   }, [clearCommandTimeout, setMachinePhase]);
 
@@ -160,14 +164,24 @@ export function useVoiceSessionMachine({ companionName, showThought, dispatchCom
 
     const wake = stripWakeWord(originalText, companionName);
     if (!wake.hasWakeWord) {
+      wakeMissCountRef.current = Math.min(6, wakeMissCountRef.current + 1);
+      const cooldownMs = Math.min(
+        VOICE_WAKE_MISS_MAX_COOLDOWN_MS,
+        VOICE_WAKE_MISS_BASE_COOLDOWN_MS * wakeMissCountRef.current,
+      );
+      setCooldownUntil(Date.now() + cooldownMs);
       logVoiceDebugEvent('wake_word_not_detected', {
         textLength: originalText.length,
         hasText: Boolean(originalText),
         transcriptPreview: originalText.slice(0, 90),
         visualOnly: true,
+        cooldownMs,
+        missCount: wakeMissCountRef.current,
       });
       return;
     }
+
+    wakeMissCountRef.current = 0;
 
     const command = normalizeVoiceText(wake.command);
     logVoiceDebugEvent('wake_word_detected', {
