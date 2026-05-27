@@ -45,13 +45,13 @@ const DESKTOP_AUDIO_CONSTRAINTS: MediaTrackConstraints = {
 };
 
 const DESKTOP_VAD_PROFILE: VoiceVadProfile = {
-  minRecordingMs: 2300,
-  noVoiceAutoStopMs: 2400,
-  graceAfterVoiceMs: 1100,
-  graceAfterStrongVoiceMs: 950,
-  voiceRms: 0.015,
-  continueRms: 0.010,
-  strongVoiceRms: 0.035,
+  minRecordingMs: 3200,
+  noVoiceAutoStopMs: 3000,
+  graceAfterVoiceMs: 1500,
+  graceAfterStrongVoiceMs: 1250,
+  voiceRms: 0.009,
+  continueRms: 0.005,
+  strongVoiceRms: 0.024,
 };
 
 function getUserAgent() {

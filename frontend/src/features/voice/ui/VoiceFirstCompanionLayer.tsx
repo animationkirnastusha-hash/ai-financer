@@ -3,14 +3,16 @@ import { useChatController } from '@/features/chat/model/useChatController';
 import { parseNavigationIntent } from '@/features/navigation/lib/parseNavigationIntent';
 import { useNavigationStore } from '@/features/navigation/model/navigation.store';
 import { useSettingsStore } from '@/features/settings/model/settings.store';
-import { logVoiceDebugEvent, type VoiceCue } from '@/features/voice/api/voice.api';
+import { logVoiceDebugEvent } from '@/features/voice/api/voice.api';
 import { useVoiceInput } from '@/features/voice/model/useVoiceInput';
+import { normalizeVoiceTranscriptForStt } from '@/features/voice/model/voiceSttLexicon';
 import { PendingActionCard } from '@/features/pending-actions/ui/PendingActionCard';
 import { CompanionButton } from '@/shared/ui/CompanionButton';
 import { telegramHaptic } from '@/shared/lib/telegram';
 
 type CompanionMood = 'idle' | 'listening' | 'thinking' | 'confirm' | 'success' | 'warning';
 type BubbleTone = 'neutral' | 'listening' | 'thinking' | 'success' | 'warning';
+type CaptureMode = 'wake' | 'command';
 
 type Thought = {
   id: string;
@@ -19,11 +21,11 @@ type Thought = {
 };
 
 const BUBBLE_TIMEOUT_MS = 2800;
-const DUPLICATE_WINDOW_MS = 1000;
-const DEFAULT_VOICE_SESSION_MS = 4200;
-const AUTO_LISTENER_RESTART_MS = 180;
-const STRICT_WAKE_WORD_ONLY = true;
-const TTS_MIN_GAP_MS = 1800;
+const DUPLICATE_WINDOW_MS = 1200;
+const WAKE_SESSION_MS = 3800;
+const COMMAND_SESSION_MS = 8500;
+const AUTO_LISTENER_RESTART_MS = 220;
+const COMMAND_CAPTURE_TIMEOUT_MS = 11_000;
 
 function compactBubble(text: string) {
   return text
@@ -45,7 +47,7 @@ function normalizeForWake(text: string) {
 }
 
 function cleanVoiceText(text: string) {
-  return text
+  return normalizeVoiceTranscriptForStt(text)
     .replace(/[\u00A0\t\r\n]+/g, ' ')
     .replace(/\s+([,.;:!?])/g, '$1')
     .replace(/([,.;:!?]){2,}/g, '$1')
@@ -90,10 +92,7 @@ function stripWakeWord(rawText: string) {
   const sourceWords = source.split(/\s+/).filter(Boolean);
   const command = sourceWords.slice(wakeIndex + 1).join(' ').replace(/^[,.:;!\-—\s]+/, '').trim();
 
-  return {
-    hasWakeWord: true,
-    command,
-  };
+  return { hasWakeWord: true, command };
 }
 
 function getScreenVoiceLabel(screen: string) {
@@ -125,7 +124,6 @@ export function VoiceFirstCompanionLayer() {
   const voiceEnabled = useSettingsStore((state) => state.voiceEnabled);
   const voiceBetaEnabled = useSettingsStore((state) => state.voiceBetaEnabled);
   const voicePermissionPrompted = useSettingsStore((state) => state.voicePermissionPrompted);
-  const voiceRepliesEnabled = useSettingsStore((state) => state.voiceRepliesEnabled);
   const voiceAlwaysOnEnabled = useSettingsStore((state) => state.voiceAlwaysOnEnabled);
   const appLanguage = useSettingsStore((state) => state.appLanguage);
   const setVoicePermissionPrompted = useSettingsStore((state) => state.setVoicePermissionPrompted);
@@ -133,15 +131,17 @@ export function VoiceFirstCompanionLayer() {
   const [thought, setThought] = useState<Thought | null>(null);
   const [isProcessingVoice, setIsProcessingVoice] = useState(false);
   const [isPriming, setIsPriming] = useState(false);
+  const [captureMode, setCaptureMode] = useState<CaptureMode>('wake');
 
   const bubbleTimerRef = useRef<number | null>(null);
+  const commandCaptureTimerRef = useRef<number | null>(null);
   const lastHandledRef = useRef<{ text: string; at: number }>({ text: '', at: 0 });
   const handleTextRef = useRef<(text: string) => Promise<void> | void>(() => undefined);
   const lastAssistantMessageKeyRef = useRef('');
   const lastThoughtRef = useRef<{ text: string; tone: BubbleTone; at: number }>({ text: '', tone: 'neutral', at: 0 });
   const isProcessingVoiceRef = useRef(false);
+  const captureModeRef = useRef<CaptureMode>('wake');
   const voiceCancelRef = useRef<() => void>(() => undefined);
-  const lastTtsCueRef = useRef<{ cue: VoiceCue | null; at: number }>({ cue: null, at: 0 });
 
   const showThought = useCallback((text: string, tone: BubbleTone = 'neutral', timeoutMs = BUBBLE_TIMEOUT_MS) => {
     const cleanText = compactBubble(text);
@@ -153,7 +153,6 @@ export function VoiceFirstCompanionLayer() {
     lastThoughtRef.current = { text: cleanText, tone, at: now };
 
     if (bubbleTimerRef.current !== null) window.clearTimeout(bubbleTimerRef.current);
-
     setThought({ id: `${tone}-${now}`, text: cleanText, tone });
 
     bubbleTimerRef.current = window.setTimeout(() => {
@@ -164,62 +163,49 @@ export function VoiceFirstCompanionLayer() {
 
   const voice = useVoiceInput({
     lang: appLanguage === 'en' ? 'en-US' : 'ru-RU',
-    sessionMs: DEFAULT_VOICE_SESSION_MS,
+    sessionMs: captureMode === 'command' ? COMMAND_SESSION_MS : WAKE_SESSION_MS,
     onText: (text) => handleTextRef.current(text),
   });
 
   const canUseVoice = voiceEnabled && voiceBetaEnabled && voice.isSupported;
 
-  const speakThought = useCallback((text: string, tone: BubbleTone = 'neutral', cue?: VoiceCue, timeoutMs = BUBBLE_TIMEOUT_MS) => {
-    showThought(text, tone, timeoutMs);
-    if (!voiceRepliesEnabled || !cue) return;
+  const setMode = useCallback((mode: CaptureMode) => {
+    captureModeRef.current = mode;
+    setCaptureMode(mode);
+  }, []);
+
+  const clearCommandCaptureTimer = useCallback(() => {
+    if (commandCaptureTimerRef.current !== null) {
+      window.clearTimeout(commandCaptureTimerRef.current);
+      commandCaptureTimerRef.current = null;
+    }
+  }, []);
+
+  const armCommandCapture = useCallback(() => {
+    clearCommandCaptureTimer();
+    setMode('command');
+    showThought('Слушаю команду.', 'listening', 3600);
+    commandCaptureTimerRef.current = window.setTimeout(() => {
+      if (captureModeRef.current !== 'command') return;
+      logVoiceDebugEvent('command_capture_timeout');
+      setMode('wake');
+      showThought('Скажи «Фина» и команду ещё раз.', 'warning', 3200);
+    }, COMMAND_CAPTURE_TIMEOUT_MS);
+  }, [clearCommandCaptureTimer, setMode, showThought]);
+
+  const dispatchCommand = useCallback(async (rawCommand: string) => {
+    const text = cleanVoiceText(rawCommand);
+    if (!text) return;
 
     const now = Date.now();
-    const lastCue = lastTtsCueRef.current;
-    if (lastCue.cue === cue && now - lastCue.at < TTS_MIN_GAP_MS) {
-      logVoiceDebugEvent('tts_cue_skipped_duplicate', { cue, textLength: text.length });
-      return;
-    }
-
-    lastTtsCueRef.current = { cue, at: now };
-    voice.speak(text, { cue, maxDurationMs: Math.min(2600, timeoutMs + 350) });
-  }, [showThought, voice, voiceRepliesEnabled]);
-
-  const handleText = useCallback(async (rawText: string) => {
-    const originalText = cleanVoiceText(rawText);
-    if (!originalText || isProcessingVoiceRef.current) return;
-
-    const now = Date.now();
-    const wake = stripWakeWord(originalText);
-
-    if (!wake.hasWakeWord) {
-      logVoiceDebugEvent('wake_word_not_detected', {
-        textLength: originalText.length,
-        hasText: Boolean(originalText),
-        strictWakeWordOnly: STRICT_WAKE_WORD_ONLY,
-      });
-      return;
-    }
-
-    logVoiceDebugEvent('wake_word_detected', {
-      textLength: originalText.length,
-      hasText: Boolean(originalText),
-      commandLength: wake.command.length,
-      strictWakeWordOnly: STRICT_WAKE_WORD_ONLY,
-    });
-
-    const text = cleanVoiceText(wake.command);
-    if (!text) {
-      speakThought('Слушаю. Скажи команду вместе с именем.', 'listening', 'here', 2600);
-      return;
-    }
-
     const last = lastHandledRef.current;
     if (last.text === text && now - last.at < DUPLICATE_WINDOW_MS) return;
     lastHandledRef.current = { text, at: now };
 
+    clearCommandCaptureTimer();
+    setMode('wake');
     setIsProcessingVoice(true);
-    showThought('Думаю...', 'thinking', 1800);
+    showThought('Выполняю...', 'thinking', 2400);
 
     try {
       const navigationIntent = parseNavigationIntent(text);
@@ -228,7 +214,7 @@ export function VoiceFirstCompanionLayer() {
         telegramHaptic('light');
         logVoiceDebugEvent('command_dispatched', { kind: 'navigation', target: navigationIntent.screen, textLength: text.length });
         navigateTo(navigationIntent.screen);
-        speakThought(`Открываю ${getScreenVoiceLabel(navigationIntent.screen)}.`, 'success', 'done');
+        showThought(`Открываю ${getScreenVoiceLabel(navigationIntent.screen)}.`, 'success', 2400);
         return;
       }
 
@@ -236,7 +222,7 @@ export function VoiceFirstCompanionLayer() {
         telegramHaptic('light');
         logVoiceDebugEvent('command_dispatched', { kind: 'navigation', target: 'back', textLength: text.length });
         goBack();
-        speakThought('Вернулся назад.', 'success', 'done');
+        showThought('Вернулся назад.', 'success', 2200);
         return;
       }
 
@@ -245,7 +231,52 @@ export function VoiceFirstCompanionLayer() {
     } finally {
       setIsProcessingVoice(false);
     }
-  }, [chat, goBack, navigateTo, showThought, speakThought, telegramHaptic]);
+  }, [chat, clearCommandCaptureTimer, goBack, navigateTo, setMode, showThought]);
+
+  const handleText = useCallback(async (rawText: string) => {
+    const originalText = cleanVoiceText(rawText);
+    if (!originalText || isProcessingVoiceRef.current) return;
+
+    const mode = captureModeRef.current;
+
+    if (mode === 'command') {
+      const wake = stripWakeWord(originalText);
+      const command = cleanVoiceText(wake.hasWakeWord ? wake.command : originalText);
+      logVoiceDebugEvent('command_capture_text_received', {
+        textLength: command.length,
+        hadWakeWord: wake.hasWakeWord,
+        hasText: Boolean(command),
+      });
+
+      if (!command) return;
+      await dispatchCommand(command);
+      return;
+    }
+
+    const wake = stripWakeWord(originalText);
+    if (!wake.hasWakeWord) {
+      logVoiceDebugEvent('wake_word_not_detected', {
+        textLength: originalText.length,
+        hasText: Boolean(originalText),
+        visualOnly: true,
+      });
+      return;
+    }
+
+    const command = cleanVoiceText(wake.command);
+    logVoiceDebugEvent('wake_word_detected', {
+      textLength: originalText.length,
+      hasText: Boolean(originalText),
+      commandLength: command.length,
+    });
+
+    if (!command) {
+      armCommandCapture();
+      return;
+    }
+
+    await dispatchCommand(command);
+  }, [armCommandCapture, dispatchCommand]);
 
   useEffect(() => {
     handleTextRef.current = handleText;
@@ -256,18 +287,22 @@ export function VoiceFirstCompanionLayer() {
     try {
       const ready = await voice.primePermission();
       setVoicePermissionPrompted(true);
-      if (ready) showThought('Готово. Скажи «Фина», затем команду.', 'success', 3200);
+      if (ready) showThought('Готово. Скажи «Фина» и команду.', 'success', 3200);
       else showThought('Скажи «Фина», когда будешь готов.', 'neutral', 3200);
     } catch {
-      speakThought('Нужен доступ к микрофону.', 'warning', 'not-heard', 3600);
+      showThought('Нужен доступ к микрофону.', 'warning', 3600);
     } finally {
       setIsPriming(false);
     }
-  }, [setVoicePermissionPrompted, showThought, speakThought, voice]);
+  }, [setVoicePermissionPrompted, showThought, voice]);
 
   useEffect(() => {
     isProcessingVoiceRef.current = isProcessingVoice;
   }, [isProcessingVoice]);
+
+  useEffect(() => {
+    captureModeRef.current = captureMode;
+  }, [captureMode]);
 
   useEffect(() => {
     if (!canUseVoice || !voiceAlwaysOnEnabled || !voicePermissionPrompted) return undefined;
@@ -278,12 +313,14 @@ export function VoiceFirstCompanionLayer() {
     const timer = window.setTimeout(() => {
       if (voice.state !== 'idle' || isProcessingVoiceRef.current) return;
       void voice.start().then((result) => {
-        if (result === 'started') logVoiceDebugEvent('wake_listener_auto_start');
+        if (result === 'started') {
+          logVoiceDebugEvent(captureModeRef.current === 'command' ? 'command_listener_auto_start' : 'wake_listener_auto_start');
+        }
       });
-    }, AUTO_LISTENER_RESTART_MS);
+    }, captureModeRef.current === 'command' ? 80 : AUTO_LISTENER_RESTART_MS);
 
     return () => window.clearTimeout(timer);
-  }, [canUseVoice, chat.isSending, chat.pendingActions.length, isProcessingVoice, voice, voice.state, voiceAlwaysOnEnabled, voicePermissionPrompted]);
+  }, [canUseVoice, chat.isSending, chat.pendingActions.length, isProcessingVoice, voice, voice.state, voiceAlwaysOnEnabled, voicePermissionPrompted, captureMode]);
 
   useEffect(() => {
     if (!voice.error) return;
@@ -294,28 +331,18 @@ export function VoiceFirstCompanionLayer() {
     }
 
     if (voice.error === 'microphone-denied' || voice.error === 'not-allowed' || voice.error === 'service-not-allowed') {
-      speakThought('Нужен доступ к микрофону.', 'warning', 'not-heard', 3600);
+      showThought('Нужен доступ к микрофону.', 'warning', 3600);
       return;
     }
 
-    if (voiceAlwaysOnEnabled && (voice.error === 'no-speech' || voice.error === 'transcription-timeout' || voice.error === 'transcription-error')) {
-      return;
-    }
+    if (captureModeRef.current === 'wake') return;
 
-    if (voice.error === 'no-speech') {
-      speakThought('Не расслышала.', 'warning', 'not-heard', 2400);
-      return;
+    if (voice.error === 'no-speech' || voice.error === 'transcription-timeout' || voice.error === 'transcription-error') {
+      showThought('Не расслышала команду.', 'warning', 2600);
+      setMode('wake');
+      clearCommandCaptureTimer();
     }
-
-    if (voice.error === 'transcription-timeout') {
-      speakThought('Не расслышала.', 'warning', 'not-heard', 2600);
-      return;
-    }
-
-    if (voice.error === 'transcription-error') {
-      speakThought('Не расслышала.', 'warning', 'not-heard', 2600);
-    }
-  }, [showThought, speakThought, voice.error, voiceAlwaysOnEnabled]);
+  }, [clearCommandCaptureTimer, setMode, showThought, voice.error]);
 
   useEffect(() => {
     const lastMessage = chat.messages.filter((message) => message.role === 'assistant').at(-1);
@@ -325,21 +352,22 @@ export function VoiceFirstCompanionLayer() {
     if (lastAssistantMessageKeyRef.current === messageKey) return;
     lastAssistantMessageKeyRef.current = messageKey;
 
+    voice.stopSpeaking();
+    setMode('wake');
+    clearCommandCaptureTimer();
+
     if (lastMessage.kind === 'preview') {
-      voice.stopSpeaking();
-      speakThought('Проверь действие.', 'warning', 'confirm', 3600);
+      showThought('Проверь действие.', 'warning', 3600);
       return;
     }
 
     if (lastMessage.kind === 'error') {
-      voice.stopSpeaking();
       showThought(lastMessage.text || 'Нужно уточнение.', 'warning', 5000);
       return;
     }
 
-    voice.stopSpeaking();
-    showThought(lastMessage.text || 'Готово.', 'success', 2200);
-  }, [chat.messages, showThought, speakThought, voice]);
+    showThought(lastMessage.text || 'Готово.', 'success', 2600);
+  }, [chat.messages, clearCommandCaptureTimer, setMode, showThought, voice]);
 
   useEffect(() => {
     voiceCancelRef.current = voice.cancel;
@@ -347,17 +375,18 @@ export function VoiceFirstCompanionLayer() {
 
   useEffect(() => () => {
     if (bubbleTimerRef.current !== null) window.clearTimeout(bubbleTimerRef.current);
+    clearCommandCaptureTimer();
     voiceCancelRef.current();
-  }, []);
+  }, [clearCommandCaptureTimer]);
 
   const mood = useMemo<CompanionMood>(() => {
     if (chat.pendingActions.length > 0) return 'confirm';
-    if (voice.state === 'recording') return 'listening';
-    if (voice.state === 'uploading' || voice.state === 'speaking' || chat.isSending || isProcessingVoice) return 'thinking';
+    if (voice.state === 'recording' || captureMode === 'command') return 'listening';
+    if (voice.state === 'uploading' || chat.isSending || isProcessingVoice) return 'thinking';
     if (thought?.tone === 'warning') return 'warning';
     if (thought?.tone === 'success') return 'success';
     return 'idle';
-  }, [chat.isSending, chat.pendingActions.length, isProcessingVoice, thought?.tone, voice.state]);
+  }, [captureMode, chat.isSending, chat.pendingActions.length, isProcessingVoice, thought?.tone, voice.state]);
 
   const needsIntro = canUseVoice && !voicePermissionPrompted;
   const showFloatingCompanion = currentScreen !== 'ai-core';
@@ -372,11 +401,9 @@ export function VoiceFirstCompanionLayer() {
             <div className="voice-first-intro__avatar" aria-hidden="true">
               <CompanionButton mood="idle" size="md" label="Фина" />
             </div>
-            <div className="voice-first-intro__eyebrow">Знакомься</div>
+            <div className="voice-first-intro__eyebrow">Голосовой помощник</div>
             <div className="voice-first-intro__title">Это Фина</div>
-            <p>
-              Разреши микрофон один раз. Дальше просто скажи «Фина» и команду — нажимать на персонажа не нужно.
-            </p>
+            <p>Разреши микрофон один раз. Дальше говори имя помощника и команду обычными словами.</p>
 
             <div className="voice-first-intro__steps">
               <div><b>1</b><span>Разреши микрофон</span></div>
@@ -385,7 +412,7 @@ export function VoiceFirstCompanionLayer() {
             </div>
 
             <div className="voice-first-intro__hint">
-              Примеры: “Фина, кофе 300”, “Фина, создай цель отпуск 120000”, “Фина, сделай наличку основной”.
+              Например: “Фина, кофе 300” или “Фина, положи 10 тысяч на карту Т-Банк”.
             </div>
 
             <div className="voice-first-intro__actions">
@@ -404,8 +431,8 @@ export function VoiceFirstCompanionLayer() {
               <div className="app-pending-confirm-head">
                 <div>
                   <div className="app-eyebrow">Проверка</div>
-                  <h2>Фина ждёт подтверждения</h2>
-                  <p>Проверь действие перед выполнением.</p>
+                  <h2>Подтверди действие</h2>
+                  <p>Фина выполнит его после подтверждения.</p>
                 </div>
               </div>
               <div className="grid gap-3">
@@ -437,12 +464,14 @@ export function VoiceFirstCompanionLayer() {
               <div className={canUseVoice ? 'voice-first-status voice-first-status--on' : 'voice-first-status'}>
                 {canUseVoice
                   ? chat.isSending || isProcessingVoice
-                    ? 'Думаю'
+                    ? 'Выполняю'
                     : voice.state === 'uploading'
-                      ? 'Проверяю имя'
-                      : voiceAlwaysOnEnabled
-                        ? 'Жду «Фина»'
-                        : 'Голос выключен'
+                      ? captureMode === 'command' ? 'Распознаю команду' : 'Проверяю имя'
+                      : captureMode === 'command'
+                        ? 'Слушаю команду'
+                        : voiceAlwaysOnEnabled
+                          ? 'Жду «Фина»'
+                          : 'Голос выключен'
                   : 'Голос выключен'}
               </div>
             </div>

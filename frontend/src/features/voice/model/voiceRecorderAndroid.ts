@@ -20,11 +20,11 @@ export const ANDROID_AUDIO_CONSTRAINTS: MediaTrackConstraints = {
 };
 
 export const ANDROID_VAD_PROFILE: VoiceVadProfile = {
-  minRecordingMs: 2350,
-  noVoiceAutoStopMs: 2400,
-  graceAfterVoiceMs: 1150,
-  graceAfterStrongVoiceMs: 950,
-  voiceRms: 0.014,
-  continueRms: 0.009,
-  strongVoiceRms: 0.034,
+  minRecordingMs: 3400,
+  noVoiceAutoStopMs: 3100,
+  graceAfterVoiceMs: 1550,
+  graceAfterStrongVoiceMs: 1300,
+  voiceRms: 0.008,
+  continueRms: 0.005,
+  strongVoiceRms: 0.022,
 };

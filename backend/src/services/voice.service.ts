@@ -7,40 +7,10 @@ import { promisify } from 'node:util';
 const execFileAsync = promisify(execFile);
 
 const DEFAULT_OPENAI_MODEL = 'gpt-4o-mini-transcribe';
-const DEFAULT_GLADIA_MODEL = 'gladia-pre-recorded-v2';
-const DEFAULT_DEEPGRAM_MODEL = 'nova-3';
-const DEFAULT_ASSEMBLYAI_MODEL = 'universal-3-pro,universal-2';
 const DEFAULT_LANGUAGE = 'ru';
 const DEFAULT_MAX_AUDIO_MB = 8;
 
-const SUPPORTED_MIME_PREFIXES = [
-  'audio/webm',
-  'audio/mp4',
-  'audio/mpeg',
-  'audio/mp3',
-  'audio/wav',
-  'audio/x-wav',
-  'audio/wave',
-  'audio/aac',
-  'audio/ogg',
-  'audio/x-m4a',
-  'audio/m4a',
-  'audio/caf',
-];
-
-const SUPPORTED_AUDIO_EXTENSIONS = [
-  '.webm',
-  '.mp4',
-  '.m4a',
-  '.mp3',
-  '.mpeg',
-  '.wav',
-  '.aac',
-  '.ogg',
-  '.caf',
-];
-
-type SttProvider = 'openai' | 'gladia' | 'deepgram' | 'assemblyai' | 'mock';
+type SttProvider = 'openai';
 
 type TranscribeParams = {
   buffer: Buffer;
@@ -57,9 +27,7 @@ type VoiceStatus = {
   language: string;
   supportedProviders: SttProvider[];
   openaiConfigured: boolean;
-  gladiaConfigured: boolean;
-  deepgramConfigured: boolean;
-  assemblyaiConfigured: boolean;
+  audioNormalize: boolean;
 };
 
 type TranscribeResult = {
@@ -67,11 +35,28 @@ type TranscribeResult = {
   provider: SttProvider;
   model: string;
   language: string;
+  normalized: boolean;
 };
 
+const SUPPORTED_AUDIO_EXTENSIONS = ['.webm', '.mp4', '.m4a', '.mp3', '.mpeg', '.wav', '.aac', '.ogg', '.caf'];
+const SUPPORTED_MIME_PREFIXES = [
+  'audio/webm',
+  'audio/mp4',
+  'audio/mpeg',
+  'audio/mp3',
+  'audio/wav',
+  'audio/x-wav',
+  'audio/wave',
+  'audio/aac',
+  'audio/ogg',
+  'audio/x-m4a',
+  'audio/m4a',
+  'audio/caf',
+];
+
 export class VoiceTranscriptionNotConfiguredError extends Error {
-  constructor(provider?: string) {
-    super(provider ? `VOICE_TRANSCRIPTION_NOT_CONFIGURED:${provider}` : 'VOICE_TRANSCRIPTION_NOT_CONFIGURED');
+  constructor() {
+    super('VOICE_TRANSCRIPTION_NOT_CONFIGURED');
     this.name = 'VoiceTranscriptionNotConfiguredError';
   }
 }
@@ -106,33 +91,16 @@ export class VoiceProviderRequestError extends Error {
   }
 }
 
-function getMaxAudioMb() {
-  const value = Number(process.env.VOICE_MAX_AUDIO_MB || DEFAULT_MAX_AUDIO_MB);
-  if (!Number.isFinite(value) || value <= 0) return DEFAULT_MAX_AUDIO_MB;
-  return Math.min(25, Math.max(1, value));
-}
-
-function normalizeProvider(value?: string): SttProvider {
-  const provider = (value || process.env.VOICE_STT_PROVIDER || 'gladia').trim().toLowerCase();
-  if (provider === 'openai' || provider === 'gladia' || provider === 'deepgram' || provider === 'assemblyai' || provider === 'mock') {
-    return provider;
+function getProvider(): SttProvider {
+  const provider = (process.env.VOICE_STT_PROVIDER || 'openai').trim().toLowerCase();
+  if (provider && provider !== 'openai') {
+    console.warn(`[voice] Unsupported VOICE_STT_PROVIDER=${provider}; only openai is enabled in the production STT layer.`);
   }
   return 'openai';
 }
 
-function getProvider(): SttProvider {
-  return normalizeProvider();
-}
-
-function getModel(provider = getProvider()) {
-  const explicitModel = process.env.VOICE_STT_MODEL?.trim();
-  if (explicitModel) return explicitModel;
-
-  if (provider === 'openai') return process.env.OPENAI_TRANSCRIBE_MODEL?.trim() || DEFAULT_OPENAI_MODEL;
-  if (provider === 'gladia') return process.env.GLADIA_STT_MODEL?.trim() || DEFAULT_GLADIA_MODEL;
-  if (provider === 'deepgram') return process.env.DEEPGRAM_STT_MODEL?.trim() || DEFAULT_DEEPGRAM_MODEL;
-  if (provider === 'assemblyai') return process.env.ASSEMBLYAI_STT_MODEL?.trim() || DEFAULT_ASSEMBLYAI_MODEL;
-  return 'mock';
+function getModel() {
+  return process.env.VOICE_STT_MODEL?.trim() || process.env.OPENAI_TRANSCRIBE_MODEL?.trim() || DEFAULT_OPENAI_MODEL;
 }
 
 function getLanguage(language?: string) {
@@ -142,16 +110,10 @@ function getLanguage(language?: string) {
   return raw || DEFAULT_LANGUAGE;
 }
 
-function sanitizeFilename(originalName: string, mimeType: string) {
-  const safeName = originalName.replace(/[\\/\0\r\n]/g, '').trim();
-  if (safeName) return safeName;
-
-  if (mimeType.includes('mp4')) return 'voice.mp4';
-  if (mimeType.includes('mpeg') || mimeType.includes('mp3')) return 'voice.mp3';
-  if (mimeType.includes('wav')) return 'voice.wav';
-  if (mimeType.includes('aac')) return 'voice.aac';
-  if (mimeType.includes('ogg')) return 'voice.ogg';
-  return 'voice.webm';
+function getMaxAudioMb() {
+  const value = Number(process.env.VOICE_MAX_AUDIO_MB || DEFAULT_MAX_AUDIO_MB);
+  if (!Number.isFinite(value) || value <= 0) return DEFAULT_MAX_AUDIO_MB;
+  return Math.min(25, Math.max(1, value));
 }
 
 function normalizeMimeType(mimeType: string) {
@@ -169,22 +131,31 @@ function inferMimeType(mimeType: string, originalName: string) {
   const name = originalName.toLowerCase().trim();
 
   if (normalized !== 'application/octet-stream' && normalized !== 'binary/octet-stream') return normalized;
-
   if (name.endsWith('.webm')) return 'audio/webm';
   if (name.endsWith('.mp4') || name.endsWith('.m4a')) return 'audio/mp4';
   if (name.endsWith('.mp3') || name.endsWith('.mpeg')) return 'audio/mpeg';
   if (name.endsWith('.wav')) return 'audio/wav';
   if (name.endsWith('.aac')) return 'audio/aac';
   if (name.endsWith('.ogg')) return 'audio/ogg';
-
+  if (name.endsWith('.caf')) return 'audio/caf';
   return normalized;
 }
 
+function sanitizeFilename(originalName: string, mimeType: string) {
+  const safeName = originalName.replace(/[\\/\0\r\n]/g, '').trim();
+  if (safeName) return safeName;
+  if (mimeType.includes('mp4')) return 'voice.m4a';
+  if (mimeType.includes('mpeg') || mimeType.includes('mp3')) return 'voice.mp3';
+  if (mimeType.includes('wav')) return 'voice.wav';
+  if (mimeType.includes('aac')) return 'voice.aac';
+  if (mimeType.includes('ogg')) return 'voice.ogg';
+  if (mimeType.includes('caf')) return 'voice.caf';
+  return 'voice.webm';
+}
 
 function getAudioExtension(mimeType: string, originalName: string) {
   const fromName = extname(originalName || '').toLowerCase().replace(/[^.a-z0-9]/g, '');
   if (fromName && SUPPORTED_AUDIO_EXTENSIONS.includes(fromName)) return fromName.slice(1);
-
   const normalized = normalizeMimeType(mimeType);
   if (normalized.includes('mp4') || normalized.includes('m4a')) return 'm4a';
   if (normalized.includes('mpeg') || normalized.includes('mp3')) return 'mp3';
@@ -195,17 +166,49 @@ function getAudioExtension(mimeType: string, originalName: string) {
   return 'webm';
 }
 
-function shouldNormalizeAudio(provider: SttProvider, mimeType: string, originalName: string) {
+function shouldNormalizeAudio(mimeType: string, originalName: string) {
   if (process.env.VOICE_AUDIO_NORMALIZE === '0') return false;
-
   const normalized = normalizeMimeType(mimeType);
   const name = originalName.toLowerCase();
-
-  if (provider !== 'openai') return process.env.VOICE_AUDIO_NORMALIZE_ALL_PROVIDERS === '1';
   if (normalized === 'audio/wav' || normalized === 'audio/x-wav' || normalized === 'audio/wave') return false;
   if (name.endsWith('.wav')) return false;
-
   return true;
+}
+
+function sniffAudioSignature(buffer: Buffer, mimeType: string, originalName: string) {
+  if (buffer.length < 12) return false;
+  const header4 = buffer.subarray(0, 4).toString('ascii');
+  const header3 = buffer.subarray(0, 3).toString('ascii');
+  const ftyp = buffer.subarray(4, 8).toString('ascii');
+
+  if (header4 === 'RIFF' && buffer.subarray(8, 12).toString('ascii') === 'WAVE') return true;
+  if (ftyp === 'ftyp') return true;
+  if (header3 === 'ID3') return true;
+  if (buffer[0] === 0xff && (buffer[1] & 0xe0) === 0xe0) return true;
+  if (header4 === 'OggS') return true;
+  if (buffer[0] === 0x1a && buffer[1] === 0x45 && buffer[2] === 0xdf && buffer[3] === 0xa3) return true;
+
+  const normalized = normalizeMimeType(mimeType);
+  if (normalized.startsWith('audio/') && hasSupportedAudioExtension(originalName)) return true;
+  return false;
+}
+
+function assertSupportedAudio(buffer: Buffer, mimeType: string, originalName = '') {
+  if (!buffer.length) throw new VoiceAudioUnsupportedError();
+  const maxBytes = getMaxAudioMb() * 1024 * 1024;
+  if (buffer.length > maxBytes) throw new VoiceAudioTooLargeError();
+
+  const normalized = normalizeMimeType(mimeType);
+  const hasSupportedMime = SUPPORTED_MIME_PREFIXES.some((prefix) => normalized.startsWith(prefix));
+  const isGenericBinary = normalized === 'application/octet-stream' || normalized === 'binary/octet-stream';
+
+  if (!hasSupportedMime && !(isGenericBinary && hasSupportedAudioExtension(originalName))) {
+    throw new VoiceAudioUnsupportedError();
+  }
+
+  if (!sniffAudioSignature(buffer, mimeType, originalName)) {
+    throw new VoiceAudioUnsupportedError();
+  }
 }
 
 type NormalizedAudio = {
@@ -215,15 +218,12 @@ type NormalizedAudio = {
   normalized: boolean;
 };
 
-async function normalizeAudioForStt(buffer: Buffer, mimeType: string, originalName: string, provider: SttProvider): Promise<NormalizedAudio> {
-  if (!shouldNormalizeAudio(provider, mimeType, originalName)) {
-    return { buffer, mimeType, originalName, normalized: false };
-  }
+async function normalizeAudioForStt(buffer: Buffer, mimeType: string, originalName: string): Promise<NormalizedAudio> {
+  if (!shouldNormalizeAudio(mimeType, originalName)) return { buffer, mimeType, originalName, normalized: false };
 
   const startedAt = Date.now();
   const tempDir = await mkdtemp(join(tmpdir(), 'ai-financer-voice-'));
-  const inputExtension = getAudioExtension(mimeType, originalName);
-  const inputPath = join(tempDir, `input.${inputExtension}`);
+  const inputPath = join(tempDir, `input.${getAudioExtension(mimeType, originalName)}`);
   const outputPath = join(tempDir, 'normalized.wav');
 
   try {
@@ -254,82 +254,34 @@ async function normalizeAudioForStt(buffer: Buffer, mimeType: string, originalNa
         at: new Date().toISOString(),
         event: 'audio_normalized',
         details: {
-          provider,
+          provider: 'openai',
           fromMimeType: normalizeMimeType(mimeType),
-          fromName: originalName,
           fromBytes: buffer.length,
           toMimeType: 'audio/wav',
-          toName: 'voice-normalized.wav',
           toBytes: normalizedBuffer.length,
           elapsedMs: Date.now() - startedAt,
         },
       }));
     }
 
-    return {
-      buffer: normalizedBuffer,
-      mimeType: 'audio/wav',
-      originalName: 'voice-normalized.wav',
-      normalized: true,
-    };
+    return { buffer: normalizedBuffer, mimeType: 'audio/wav', originalName: 'voice-normalized.wav', normalized: true };
   } catch (error) {
     if (process.env.VOICE_DEBUG_LOGS !== '0') {
       console.info('[voice-transcribe]', JSON.stringify({
         at: new Date().toISOString(),
         event: 'audio_normalize_failed',
         details: {
-          provider,
+          provider: 'openai',
           mimeType: normalizeMimeType(mimeType),
           originalName,
           error: error instanceof Error ? error.message.slice(0, 240) : 'unknown',
         },
       }));
     }
-
     return { buffer, mimeType, originalName, normalized: false };
   } finally {
     await rm(tempDir, { recursive: true, force: true }).catch(() => undefined);
   }
-}
-
-function assertSupportedAudio(buffer: Buffer, mimeType: string, originalName = '') {
-  if (!buffer.length) throw new VoiceAudioUnsupportedError();
-
-  const maxBytes = getMaxAudioMb() * 1024 * 1024;
-  if (buffer.length > maxBytes) throw new VoiceAudioTooLargeError();
-
-  const normalized = normalizeMimeType(mimeType);
-  const hasSupportedMime = SUPPORTED_MIME_PREFIXES.some((prefix) => normalized.startsWith(prefix));
-  const isGenericBinary = normalized === 'application/octet-stream' || normalized === 'binary/octet-stream';
-
-  if (!hasSupportedMime && !(isGenericBinary && hasSupportedAudioExtension(originalName))) {
-    throw new VoiceAudioUnsupportedError();
-  }
-}
-
-function hasOpenAIConfig() {
-  return Boolean(process.env.OPENAI_API_KEY?.trim());
-}
-
-function hasGladiaConfig() {
-  return Boolean(process.env.GLADIA_API_KEY?.trim());
-}
-
-function hasDeepgramConfig() {
-  return Boolean(process.env.DEEPGRAM_API_KEY?.trim());
-}
-
-function hasAssemblyAIConfig() {
-  return Boolean(process.env.ASSEMBLYAI_API_KEY?.trim());
-}
-
-function isConfigured(provider: SttProvider) {
-  if (provider === 'mock') return true;
-  if (provider === 'openai') return hasOpenAIConfig();
-  if (provider === 'gladia') return hasGladiaConfig();
-  if (provider === 'deepgram') return hasDeepgramConfig();
-  if (provider === 'assemblyai') return hasAssemblyAIConfig();
-  return false;
 }
 
 async function readJsonSafely(response: Response) {
@@ -352,82 +304,23 @@ function extractOpenAITranscript(payload: unknown) {
   return typeof text === 'string' ? text.trim() : '';
 }
 
-function getProviderErrorCode(provider: SttProvider, payload: unknown, fallbackCode: string) {
+function getProviderErrorCode(payload: unknown, fallbackCode: string) {
   const error = getObjectValue(payload, 'error');
   const nestedCode = getObjectValue(error, 'code');
   const topLevelCode = getObjectValue(payload, 'code');
   const code = typeof nestedCode === 'string' ? nestedCode : typeof topLevelCode === 'string' ? topLevelCode : '';
-
-  if (provider === 'openai' && code === 'unsupported_country_region_territory') {
-    return 'VOICE_PROVIDER_REGION_UNSUPPORTED';
-  }
-
+  if (code === 'unsupported_country_region_territory') return 'VOICE_PROVIDER_REGION_UNSUPPORTED';
   return fallbackCode;
 }
 
-function extractDeepgramTranscript(payload: unknown) {
-  const results = getObjectValue(payload, 'results');
-  const channels = getObjectValue(results, 'channels');
-  if (!Array.isArray(channels)) return '';
-  const firstChannel = channels[0];
-  const alternatives = getObjectValue(firstChannel, 'alternatives');
-  if (!Array.isArray(alternatives)) return '';
-  const transcript = getObjectValue(alternatives[0], 'transcript');
-  return typeof transcript === 'string' ? transcript.trim() : '';
-}
-
-function extractAssemblyTranscript(payload: unknown) {
-  const text = getObjectValue(payload, 'text');
-  return typeof text === 'string' ? text.trim() : '';
-}
-
-function extractGladiaTranscript(payload: unknown) {
-  const result = getObjectValue(payload, 'result');
-  const transcription = getObjectValue(result, 'transcription');
-
-  const fullTranscript = getObjectValue(transcription, 'full_transcript');
-  if (typeof fullTranscript === 'string' && fullTranscript.trim()) return fullTranscript.trim();
-
-  const transcript = getObjectValue(transcription, 'transcript');
-  if (typeof transcript === 'string' && transcript.trim()) return transcript.trim();
-
-  const utterances = getObjectValue(transcription, 'utterances');
-  if (Array.isArray(utterances)) {
-    return utterances
-      .map((utterance) => getObjectValue(utterance, 'text'))
-      .filter((text): text is string => typeof text === 'string' && Boolean(text.trim()))
-      .join(' ')
-      .trim();
-  }
-
-  const sentences = getObjectValue(transcription, 'sentences');
-  if (Array.isArray(sentences)) {
-    return sentences
-      .map((sentence) => getObjectValue(sentence, 'text'))
-      .filter((text): text is string => typeof text === 'string' && Boolean(text.trim()))
-      .join(' ')
-      .trim();
-  }
-
-  return '';
-}
-
-function delay(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-async function fetchWithTimeout(url: string, init: RequestInit = {}, timeoutMs = 30_000) {
+async function fetchWithTimeout(url: string, init: RequestInit = {}, timeoutMs = 45_000) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), Math.max(1500, timeoutMs));
-
   try {
-    return await fetch(url, {
-      ...init,
-      signal: controller.signal,
-    });
+    return await fetch(url, { ...init, signal: controller.signal });
   } catch (error) {
     if (typeof error === 'object' && error !== null && 'name' in error && String((error as { name?: unknown }).name) === 'AbortError') {
-      throw new VoiceProviderRequestError(getProvider(), 504, 'VOICE_PROVIDER_FETCH_TIMEOUT');
+      throw new VoiceProviderRequestError('openai', 504, 'VOICE_PROVIDER_FETCH_TIMEOUT');
     }
     throw error;
   } finally {
@@ -437,53 +330,46 @@ async function fetchWithTimeout(url: string, init: RequestInit = {}, timeoutMs =
 
 class VoiceService {
   getStatus(): VoiceStatus {
-    const provider = getProvider();
     return {
-      configured: isConfigured(provider),
-      provider,
-      model: getModel(provider),
+      configured: Boolean(process.env.OPENAI_API_KEY?.trim()),
+      provider: getProvider(),
+      model: getModel(),
       maxAudioMb: getMaxAudioMb(),
       language: getLanguage(),
-      supportedProviders: ['openai', 'gladia', 'deepgram', 'assemblyai', 'mock'],
-      openaiConfigured: hasOpenAIConfig(),
-      gladiaConfigured: hasGladiaConfig(),
-      deepgramConfigured: hasDeepgramConfig(),
-      assemblyaiConfigured: hasAssemblyAIConfig(),
+      supportedProviders: ['openai'],
+      openaiConfigured: Boolean(process.env.OPENAI_API_KEY?.trim()),
+      audioNormalize: process.env.VOICE_AUDIO_NORMALIZE !== '0',
     };
   }
 
-  private async transcribeWithOpenAI(buffer: Buffer, mimeType: string, originalName: string, language?: string): Promise<TranscribeResult> {
-    const provider: SttProvider = 'openai';
+  async transcribe({ buffer, mimeType, originalName, language }: TranscribeParams): Promise<TranscribeResult> {
+    const provider = getProvider();
     const apiKey = process.env.OPENAI_API_KEY?.trim();
-    if (!apiKey) throw new VoiceTranscriptionNotConfiguredError(provider);
+    if (!apiKey) throw new VoiceTranscriptionNotConfiguredError();
 
-    const model = getModel(provider);
+    const inferredMimeType = inferMimeType(mimeType, originalName);
+    assertSupportedAudio(buffer, inferredMimeType, originalName);
+
+    const audio = await normalizeAudioForStt(buffer, inferredMimeType, originalName);
+    const model = getModel();
     const normalizedLanguage = getLanguage(language);
-    const filename = sanitizeFilename(originalName, mimeType);
+    const filename = sanitizeFilename(audio.originalName, audio.mimeType);
 
     const formData = new FormData();
-    formData.append('file', new Blob([buffer], { type: mimeType }), filename);
+    formData.append('file', new Blob([audio.buffer], { type: audio.mimeType }), filename);
     formData.append('model', model);
     formData.append('language', normalizedLanguage);
     formData.append('response_format', 'json');
 
     const response = await fetchWithTimeout('https://api.openai.com/v1/audio/transcriptions', {
       method: 'POST',
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-      },
+      headers: { Authorization: `Bearer ${apiKey}` },
       body: formData,
     }, Number(process.env.OPENAI_TRANSCRIBE_TIMEOUT_MS || process.env.VOICE_PROVIDER_TIMEOUT_MS || 45_000));
 
     const payload = await readJsonSafely(response);
-
     if (!response.ok) {
-      throw new VoiceProviderRequestError(
-        provider,
-        response.status,
-        getProviderErrorCode(provider, payload, 'VOICE_OPENAI_REQUEST_FAILED'),
-        payload,
-      );
+      throw new VoiceProviderRequestError('openai', response.status, getProviderErrorCode(payload, 'VOICE_OPENAI_REQUEST_FAILED'), payload);
     }
 
     return {
@@ -491,271 +377,8 @@ class VoiceService {
       provider,
       model,
       language: normalizedLanguage,
+      normalized: audio.normalized,
     };
-  }
-
-  private async transcribeWithGladia(buffer: Buffer, mimeType: string, originalName: string, language?: string): Promise<TranscribeResult> {
-    const provider: SttProvider = 'gladia';
-    const apiKey = process.env.GLADIA_API_KEY?.trim();
-    if (!apiKey) throw new VoiceTranscriptionNotConfiguredError(provider);
-
-    const model = getModel(provider);
-    const normalizedLanguage = getLanguage(language);
-    const filename = sanitizeFilename(originalName, mimeType);
-
-    const formData = new FormData();
-    formData.append('audio', new Blob([buffer], { type: mimeType }), filename);
-
-    const uploadResponse = await fetchWithTimeout('https://api.gladia.io/v2/upload', {
-      method: 'POST',
-      headers: {
-        'x-gladia-key': apiKey,
-      },
-      body: formData,
-    }, Number(process.env.GLADIA_UPLOAD_TIMEOUT_MS || 30_000));
-    const uploadPayload = await readJsonSafely(uploadResponse);
-
-    if (!uploadResponse.ok) {
-      throw new VoiceProviderRequestError(provider, uploadResponse.status, 'VOICE_GLADIA_UPLOAD_FAILED', uploadPayload);
-    }
-
-    const audioUrl = getObjectValue(uploadPayload, 'audio_url');
-    if (typeof audioUrl !== 'string' || !audioUrl) {
-      throw new VoiceProviderRequestError(provider, 502, 'VOICE_GLADIA_AUDIO_URL_MISSING', uploadPayload);
-    }
-
-    const requestBody: Record<string, unknown> = {
-      audio_url: audioUrl,
-      custom_vocabulary: false,
-      callback: false,
-      subtitles: false,
-      diarization: false,
-      translation: false,
-      summarization: false,
-      named_entity_recognition: false,
-      language_config: {
-        languages: [normalizedLanguage],
-        code_switching: false,
-      },
-      punctuation_enhanced: true,
-      sentences: false,
-    };
-
-    const createResponse = await fetchWithTimeout('https://api.gladia.io/v2/pre-recorded', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-gladia-key': apiKey,
-      },
-      body: JSON.stringify(requestBody),
-    }, Number(process.env.GLADIA_CREATE_TIMEOUT_MS || 30_000));
-    const createPayload = await readJsonSafely(createResponse);
-
-    if (!createResponse.ok) {
-      throw new VoiceProviderRequestError(provider, createResponse.status, 'VOICE_GLADIA_CREATE_FAILED', createPayload);
-    }
-
-    const id = getObjectValue(createPayload, 'id');
-    if (typeof id !== 'string' || !id) {
-      throw new VoiceProviderRequestError(provider, 502, 'VOICE_GLADIA_TRANSCRIPTION_ID_MISSING', createPayload);
-    }
-
-    const timeoutMs = Number(process.env.GLADIA_POLL_TIMEOUT_MS || 60_000);
-    const intervalMs = Number(process.env.GLADIA_POLL_INTERVAL_MS || 900);
-    const startedAt = Date.now();
-
-    while (Date.now() - startedAt < timeoutMs) {
-      await delay(Math.max(350, Math.min(3000, intervalMs)));
-
-      const pollResponse = await fetchWithTimeout(`https://api.gladia.io/v2/pre-recorded/${id}`, {
-        headers: {
-          'x-gladia-key': apiKey,
-        },
-      }, Number(process.env.GLADIA_POLL_REQUEST_TIMEOUT_MS || 15_000));
-      const pollPayload = await readJsonSafely(pollResponse);
-
-      if (!pollResponse.ok) {
-        throw new VoiceProviderRequestError(provider, pollResponse.status, 'VOICE_GLADIA_POLL_FAILED', pollPayload);
-      }
-
-      const status = getObjectValue(pollPayload, 'status');
-      if (status === 'done') {
-        return {
-          text: extractGladiaTranscript(pollPayload),
-          provider,
-          model,
-          language: normalizedLanguage,
-        };
-      }
-
-      if (status === 'error') {
-        throw new VoiceProviderRequestError(provider, 502, 'VOICE_GLADIA_TRANSCRIPTION_ERROR', pollPayload);
-      }
-    }
-
-    throw new VoiceProviderRequestError(provider, 504, 'VOICE_GLADIA_TIMEOUT');
-  }
-
-  private async transcribeWithDeepgram(buffer: Buffer, mimeType: string, language?: string): Promise<TranscribeResult> {
-    const provider: SttProvider = 'deepgram';
-    const apiKey = process.env.DEEPGRAM_API_KEY?.trim();
-    if (!apiKey) throw new VoiceTranscriptionNotConfiguredError(provider);
-
-    const model = getModel(provider);
-    const normalizedLanguage = getLanguage(language);
-    const url = new URL('https://api.deepgram.com/v1/listen');
-    url.searchParams.set('model', model);
-    url.searchParams.set('language', normalizedLanguage);
-    url.searchParams.set('smart_format', 'true');
-    url.searchParams.set('punctuate', 'true');
-    url.searchParams.set('numerals', 'true');
-
-    const keyterms = (process.env.DEEPGRAM_KEYTERMS || 'Фина,Fina,фина').split(',').map((item) => item.trim()).filter(Boolean);
-    for (const keyterm of keyterms) {
-      url.searchParams.append('keyterm', keyterm);
-    }
-
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        Authorization: `Token ${apiKey}`,
-        'Content-Type': mimeType,
-      },
-      body: buffer,
-    });
-
-    const payload = await readJsonSafely(response);
-
-    if (!response.ok) {
-      throw new VoiceProviderRequestError(provider, response.status, 'VOICE_DEEPGRAM_REQUEST_FAILED', payload);
-    }
-
-    return {
-      text: extractDeepgramTranscript(payload),
-      provider,
-      model,
-      language: normalizedLanguage,
-    };
-  }
-
-  private async transcribeWithAssemblyAI(buffer: Buffer, mimeType: string, language?: string): Promise<TranscribeResult> {
-    const provider: SttProvider = 'assemblyai';
-    const apiKey = process.env.ASSEMBLYAI_API_KEY?.trim();
-    if (!apiKey) throw new VoiceTranscriptionNotConfiguredError(provider);
-
-    const model = getModel(provider);
-    const normalizedLanguage = getLanguage(language);
-
-    const uploadResponse = await fetch('https://api.assemblyai.com/v2/upload', {
-      method: 'POST',
-      headers: {
-        Authorization: apiKey,
-        'Content-Type': mimeType,
-      },
-      body: buffer,
-    });
-    const uploadPayload = await readJsonSafely(uploadResponse);
-
-    if (!uploadResponse.ok) {
-      throw new VoiceProviderRequestError(provider, uploadResponse.status, 'VOICE_ASSEMBLYAI_UPLOAD_FAILED', uploadPayload);
-    }
-
-    const uploadUrl = getObjectValue(uploadPayload, 'upload_url');
-    if (typeof uploadUrl !== 'string' || !uploadUrl) {
-      throw new VoiceProviderRequestError(provider, 502, 'VOICE_ASSEMBLYAI_UPLOAD_URL_MISSING', uploadPayload);
-    }
-
-    const speechModels = model
-      .split(',')
-      .map((item) => item.trim())
-      .filter(Boolean);
-
-    const transcriptBody: Record<string, unknown> = {
-      audio_url: uploadUrl,
-      language_code: normalizedLanguage,
-      speech_models: speechModels.length ? speechModels : ['universal-3-pro', 'universal-2'],
-      punctuate: true,
-      format_text: true,
-      keyterms_prompt: ['Фина', 'Fina', 'счёт', 'наличные', 'карта'],
-    };
-
-    const createResponse = await fetch('https://api.assemblyai.com/v2/transcript', {
-      method: 'POST',
-      headers: {
-        Authorization: apiKey,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(transcriptBody),
-    });
-    const createPayload = await readJsonSafely(createResponse);
-
-    if (!createResponse.ok) {
-      throw new VoiceProviderRequestError(provider, createResponse.status, 'VOICE_ASSEMBLYAI_CREATE_FAILED', createPayload);
-    }
-
-    const id = getObjectValue(createPayload, 'id');
-    if (typeof id !== 'string' || !id) {
-      throw new VoiceProviderRequestError(provider, 502, 'VOICE_ASSEMBLYAI_TRANSCRIPT_ID_MISSING', createPayload);
-    }
-
-    const timeoutMs = Number(process.env.ASSEMBLYAI_POLL_TIMEOUT_MS || 25_000);
-    const startedAt = Date.now();
-
-    while (Date.now() - startedAt < timeoutMs) {
-      await delay(1200);
-
-      const pollResponse = await fetch(`https://api.assemblyai.com/v2/transcript/${id}`, {
-        headers: { Authorization: apiKey },
-      });
-      const pollPayload = await readJsonSafely(pollResponse);
-
-      if (!pollResponse.ok) {
-        throw new VoiceProviderRequestError(provider, pollResponse.status, 'VOICE_ASSEMBLYAI_POLL_FAILED', pollPayload);
-      }
-
-      const status = getObjectValue(pollPayload, 'status');
-      if (status === 'completed') {
-        return {
-          text: extractAssemblyTranscript(pollPayload),
-          provider,
-          model,
-          language: normalizedLanguage,
-        };
-      }
-
-      if (status === 'error') {
-        throw new VoiceProviderRequestError(provider, 502, 'VOICE_ASSEMBLYAI_TRANSCRIPTION_ERROR', pollPayload);
-      }
-    }
-
-    throw new VoiceProviderRequestError(provider, 504, 'VOICE_ASSEMBLYAI_TIMEOUT');
-  }
-
-  async transcribe({ buffer, mimeType, originalName, language }: TranscribeParams): Promise<TranscribeResult> {
-    const provider = getProvider();
-    const normalizedMimeType = inferMimeType(mimeType, originalName);
-    assertSupportedAudio(buffer, normalizedMimeType, originalName);
-
-    if (provider === 'mock') {
-      return {
-        text: '',
-        provider,
-        model: 'mock',
-        language: getLanguage(language),
-      };
-    }
-
-    if (!isConfigured(provider)) {
-      throw new VoiceTranscriptionNotConfiguredError(provider);
-    }
-
-    const audio = await normalizeAudioForStt(buffer, normalizedMimeType, originalName, provider);
-    assertSupportedAudio(audio.buffer, audio.mimeType, audio.originalName);
-
-    if (provider === 'openai') return this.transcribeWithOpenAI(audio.buffer, audio.mimeType, audio.originalName, language);
-    if (provider === 'gladia') return this.transcribeWithGladia(audio.buffer, audio.mimeType, audio.originalName, language);
-    if (provider === 'deepgram') return this.transcribeWithDeepgram(audio.buffer, audio.mimeType, language);
-    return this.transcribeWithAssemblyAI(audio.buffer, audio.mimeType, language);
   }
 }
 
