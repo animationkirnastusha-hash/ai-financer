@@ -121,13 +121,13 @@ export function VoiceFirstCompanionLayer() {
     if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return undefined;
     if (chat.pendingActions.length > 0 || chat.isSending || isProcessingVoice || isDispatching) return undefined;
     if (voice.state !== 'idle') return undefined;
-    if (phase === 'cooldown' || Date.now() < cooldownUntil) return undefined;
+    if (String(phase) === 'cooldown' || Date.now() < cooldownUntil) return undefined;
 
     const delay = captureMode === 'command' ? 80 : VOICE_AUTO_LISTENER_RESTART_MS;
     const timer = window.setTimeout(() => {
       if (voice.state !== 'idle') return;
       if (chat.pendingActions.length > 0 || chat.isSending || isDispatching) return;
-      if (phase === 'cooldown' || Date.now() < cooldownUntil) return;
+      if (String(phase) === 'cooldown' || Date.now() < cooldownUntil) return;
 
       void voiceStartRef.current().then((result) => {
         if (result === 'started') {
