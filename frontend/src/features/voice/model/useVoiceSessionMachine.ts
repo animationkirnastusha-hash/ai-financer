@@ -61,11 +61,23 @@ export function useVoiceSessionMachine({ companionName, showThought, dispatchCom
     }
   }, []);
 
+  const startCooldown = useCallback((durationMs: number, reason: string) => {
+    clearCommandTimeout();
+    segmentsRef.current = [];
+    sessionIdRef.current = '';
+    const safeDurationMs = Math.max(0, Math.round(durationMs));
+    const until = Date.now() + safeDurationMs;
+    setCooldownUntil(until);
+    setMachinePhase('cooldown', 'wake');
+    logVoiceDebugEvent('voice_cooldown_started', { reason, durationMs: safeDurationMs, until });
+  }, [clearCommandTimeout, setMachinePhase]);
+
   const reset = useCallback(() => {
     clearCommandTimeout();
     segmentsRef.current = [];
     sessionIdRef.current = '';
     wakeMissCountRef.current = 0;
+    setCooldownUntil(0);
     setMachinePhase('idle', 'wake');
   }, [clearCommandTimeout, setMachinePhase]);
 
@@ -87,6 +99,7 @@ export function useVoiceSessionMachine({ companionName, showThought, dispatchCom
       role,
       textLength: text.length,
       segmentCount: segmentsRef.current.length,
+      transcriptPreview: text.slice(0, 90),
     });
 
     return true;
@@ -111,6 +124,7 @@ export function useVoiceSessionMachine({ companionName, showThought, dispatchCom
       textLength: finalText.length,
       segmentCount: segments.length,
       correctionCount: segments.filter((segment) => segment.role === 'correction').length,
+      transcriptPreview: finalText.slice(0, 120),
     });
     showThought('Выполняю...', 'thinking', 2400);
 
@@ -121,15 +135,16 @@ export function useVoiceSessionMachine({ companionName, showThought, dispatchCom
       setIsDispatching(false);
       segmentsRef.current = [];
       sessionIdRef.current = '';
-      const nextCooldownUntil = Date.now() + VOICE_AFTER_DISPATCH_COOLDOWN_MS;
-      setCooldownUntil(nextCooldownUntil);
-      setMachinePhase('cooldown', 'wake');
+      wakeMissCountRef.current = 0;
+      startCooldown(VOICE_AFTER_DISPATCH_COOLDOWN_MS, 'after_dispatch');
     }
-  }, [clearCommandTimeout, dispatchCommand, reset, setMachinePhase, showThought]);
+  }, [clearCommandTimeout, dispatchCommand, reset, setMachinePhase, showThought, startCooldown]);
 
   const startCommandCapture = useCallback(() => {
     ensureSession();
     clearCommandTimeout();
+    wakeMissCountRef.current = 0;
+    setCooldownUntil(0);
     setMachinePhase('command', 'command');
     showThought('Слушаю команду.', 'listening', 3600);
 
@@ -155,6 +170,7 @@ export function useVoiceSessionMachine({ companionName, showThought, dispatchCom
         textLength: command.length,
         hadWakeWord: wake.hasWakeWord,
         hasText: Boolean(command),
+        transcriptPreview: command.slice(0, 90),
       });
 
       if (!appendSegment(command)) return;
@@ -164,12 +180,12 @@ export function useVoiceSessionMachine({ companionName, showThought, dispatchCom
 
     const wake = stripWakeWord(originalText, companionName);
     if (!wake.hasWakeWord) {
-      wakeMissCountRef.current = Math.min(6, wakeMissCountRef.current + 1);
+      wakeMissCountRef.current = Math.min(4, wakeMissCountRef.current + 1);
       const cooldownMs = Math.min(
         VOICE_WAKE_MISS_MAX_COOLDOWN_MS,
         VOICE_WAKE_MISS_BASE_COOLDOWN_MS * wakeMissCountRef.current,
       );
-      setCooldownUntil(Date.now() + cooldownMs);
+
       logVoiceDebugEvent('wake_word_not_detected', {
         textLength: originalText.length,
         hasText: Boolean(originalText),
@@ -178,10 +194,13 @@ export function useVoiceSessionMachine({ companionName, showThought, dispatchCom
         cooldownMs,
         missCount: wakeMissCountRef.current,
       });
+
+      startCooldown(cooldownMs, 'wake_miss');
       return;
     }
 
     wakeMissCountRef.current = 0;
+    setCooldownUntil(0);
 
     const command = normalizeVoiceText(wake.command);
     logVoiceDebugEvent('wake_word_detected', {
@@ -189,6 +208,8 @@ export function useVoiceSessionMachine({ companionName, showThought, dispatchCom
       hasText: Boolean(originalText),
       commandLength: command.length,
       matchType: wake.matchType,
+      transcriptPreview: originalText.slice(0, 120),
+      commandPreview: command.slice(0, 120),
     });
 
     if (!command) {
@@ -202,14 +223,17 @@ export function useVoiceSessionMachine({ companionName, showThought, dispatchCom
     }
 
     await finalizeAndDispatch();
-  }, [appendSegment, companionName, finalizeAndDispatch, startCommandCapture]);
+  }, [appendSegment, companionName, finalizeAndDispatch, startCommandCapture, startCooldown]);
 
   useEffect(() => {
     if (phase !== 'cooldown') return undefined;
 
     const delay = Math.max(0, cooldownUntil - Date.now());
     const timer = window.setTimeout(() => {
-      if (phaseRef.current === 'cooldown') setMachinePhase('idle', 'wake');
+      if (phaseRef.current === 'cooldown') {
+        setCooldownUntil(0);
+        setMachinePhase('idle', 'wake');
+      }
     }, delay);
 
     return () => window.clearTimeout(timer);
