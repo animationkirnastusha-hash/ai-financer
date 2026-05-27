@@ -21,10 +21,10 @@ export const IOS_AUDIO_CONSTRAINTS: MediaTrackConstraints = {
 
 export const IOS_VAD_PROFILE: VoiceVadProfile = {
   minRecordingMs: 900,
-  noVoiceAutoStopMs: 2200,
-  graceAfterVoiceMs: 1000,
-  graceAfterStrongVoiceMs: 900,
-  voiceRms: 0.007,
-  continueRms: 0.004,
-  strongVoiceRms: 0.020,
+  noVoiceAutoStopMs: 1400,
+  graceAfterVoiceMs: 850,
+  graceAfterStrongVoiceMs: 800,
+  voiceRms: 0.018,
+  continueRms: 0.012,
+  strongVoiceRms: 0.050,
 };

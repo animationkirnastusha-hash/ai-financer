@@ -35,9 +35,9 @@ type VoiceSessionSegment = {
 
 const BUBBLE_TIMEOUT_MS = 2800;
 const DUPLICATE_WINDOW_MS = 1200;
-const WAKE_SESSION_MS = 12_000;
-const COMMAND_SESSION_MS = 12_000;
-const COMMAND_TAIL_SESSION_MS = 12_000;
+const WAKE_SESSION_MS = 4_800;
+const COMMAND_SESSION_MS = 7_200;
+const COMMAND_TAIL_SESSION_MS = 7_200;
 const AUTO_LISTENER_RESTART_MS = 220;
 const COMMAND_CAPTURE_TIMEOUT_MS = 13_500;
 const VOICE_COMMIT_WINDOW_MS = 520;
@@ -190,6 +190,7 @@ export function VoiceFirstCompanionLayer() {
   const voiceSessionIdRef = useRef<string>('');
   const voiceSegmentsRef = useRef<VoiceSessionSegment[]>([]);
   const finalizeVoiceSessionRef = useRef<() => void>(() => undefined);
+  const voiceSessionCommitPendingRef = useRef(false);
 
   const showThought = useCallback((text: string, tone: BubbleTone = 'neutral', timeoutMs = BUBBLE_TIMEOUT_MS) => {
     const cleanText = compactBubble(text);
@@ -239,6 +240,7 @@ export function VoiceFirstCompanionLayer() {
   const resetVoiceSession = useCallback(() => {
     clearVoiceCommitTimer();
     clearCommandCaptureTimer();
+    voiceSessionCommitPendingRef.current = false;
     voiceSessionIdRef.current = '';
     voiceSegmentsRef.current = [];
     setCommandSessionMs(COMMAND_SESSION_MS);
@@ -247,6 +249,7 @@ export function VoiceFirstCompanionLayer() {
 
   const scheduleVoiceCommit = useCallback(() => {
     clearVoiceCommitTimer();
+    voiceSessionCommitPendingRef.current = true;
 
     voiceCommitTimerRef.current = window.setTimeout(() => {
       const state = voiceStateRef.current;
@@ -254,6 +257,7 @@ export function VoiceFirstCompanionLayer() {
         scheduleVoiceCommit();
         return;
       }
+      voiceSessionCommitPendingRef.current = false;
       finalizeVoiceSessionRef.current();
     }, VOICE_COMMIT_WINDOW_MS);
   }, [clearVoiceCommitTimer]);
@@ -469,9 +473,11 @@ export function VoiceFirstCompanionLayer() {
     if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return undefined;
     if (chat.pendingActions.length > 0 || chat.isSending || isProcessingVoice) return undefined;
     if (voice.state !== 'idle') return undefined;
+    if (voiceSegmentsRef.current.length > 0 || voiceSessionCommitPendingRef.current) return undefined;
 
     const timer = window.setTimeout(() => {
       if (voice.state !== 'idle' || isProcessingVoiceRef.current) return;
+      if (voiceSegmentsRef.current.length > 0 || voiceSessionCommitPendingRef.current) return;
       void voice.start().then((result) => {
         if (result === 'started') {
           logVoiceDebugEvent(captureModeRef.current === 'command' ? 'command_listener_auto_start' : 'wake_listener_auto_start');
