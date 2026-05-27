@@ -10,16 +10,10 @@ import { PendingActionCard } from '@/features/pending-actions/ui/PendingActionCa
 import { CompanionButton } from '@/shared/ui/CompanionButton';
 import { telegramHaptic } from '@/shared/lib/telegram';
 
-// Голосовой слой здесь не парсит финансы. Он только:
-// 1) ищет имя помощника как wake word;
-// 2) собирает одну голосовую сессию из STT-сегментов;
-// 3) помечает технические correction-сегменты;
-// 4) отправляет итоговый текст в общий AI endpoint.
-
 type CompanionMood = 'idle' | 'listening' | 'thinking' | 'confirm' | 'success' | 'warning';
 type BubbleTone = 'neutral' | 'listening' | 'thinking' | 'success' | 'warning';
 type CaptureMode = 'wake' | 'command';
-type VoiceSegmentRole = 'initial' | 'continuation' | 'correction';
+type VoiceSessionSegmentRole = 'initial' | 'continuation' | 'correction';
 
 type Thought = {
   id: string;
@@ -27,20 +21,19 @@ type Thought = {
   tone: BubbleTone;
 };
 
-type VoiceSessionSegment = {
+type LocalVoiceSessionSegment = {
   text: string;
-  role: VoiceSegmentRole;
+  role: VoiceSessionSegmentRole;
   at: number;
 };
 
 const BUBBLE_TIMEOUT_MS = 2800;
 const DUPLICATE_WINDOW_MS = 1200;
-const WAKE_SESSION_MS = 3800;
-const COMMAND_SESSION_MS = 8500;
+const WAKE_SESSION_MS = 2600;
+const COMMAND_SESSION_MS = 4200;
 const AUTO_LISTENER_RESTART_MS = 220;
-const COMMAND_CAPTURE_TIMEOUT_MS = 13_000;
-const VOICE_COMMIT_WINDOW_MS = 1650;
-const MIN_COMMAND_TEXT_LENGTH = 3;
+const COMMAND_CAPTURE_TIMEOUT_MS = 6200;
+const VOICE_SESSION_COMMIT_MS = 720;
 
 function compactBubble(text: string) {
   return text
@@ -87,31 +80,18 @@ function levenshteinDistance(a: string, b: string) {
   return rows[a.length][b.length];
 }
 
-function buildWakeAliases(companionName: string) {
-  const baseName = normalizeForWake(companionName || 'Фина').split(' ')[0] || 'фина';
-  const aliases = new Set(['фина', 'финна', 'fina', 'фину', 'фине', 'фины', 'финой', 'фино', 'фена', baseName]);
-
-  if (baseName.endsWith('а')) {
-    aliases.add(`${baseName.slice(0, -1)}у`);
-    aliases.add(`${baseName.slice(0, -1)}е`);
-    aliases.add(`${baseName.slice(0, -1)}ы`);
-  }
-
-  return [...aliases].filter(Boolean);
-}
-
-function stripWakeWord(rawText: string, companionName: string) {
+function stripWakeWord(rawText: string) {
   const source = rawText.trim();
   const normalized = normalizeForWake(source);
   const words = normalized.split(' ').filter(Boolean);
-  const aliases = buildWakeAliases(companionName);
+  const aliases = ['фина', 'финна', 'fina', 'фину', 'фине', 'фины', 'финой', 'фино', 'фена'];
 
   const exactIndex = words.findIndex((word) => aliases.includes(word));
   const fuzzyIndex = exactIndex >= 0
     ? exactIndex
     : words.findIndex((word) => {
-        if (word.length < 3 || word.length > 8) return false;
-        return aliases.some((alias) => alias.length >= 3 && alias.length <= 8 && levenshteinDistance(word, alias) <= 1);
+        if (word.length < 3 || word.length > 7) return false;
+        return levenshteinDistance(word, 'фина') <= 1 || levenshteinDistance(word, 'финна') <= 1;
       });
 
   const wakeIndex = exactIndex >= 0 ? exactIndex : fuzzyIndex;
@@ -123,20 +103,18 @@ function stripWakeWord(rawText: string, companionName: string) {
   return { hasWakeWord: true, command };
 }
 
-function looksLikeCorrection(text: string) {
+function isCorrectionSegment(text: string) {
   const normalized = normalizeForWake(text);
-  return /(^|\s)(нет|не|стой|стоп|подожди|погоди|лучше|замени|исправь|передумал|передумала|не так|а нет|отмена)(\s|$)/.test(normalized);
+  return /(^|\s)(нет|не|стой|стоп|подожди|погоди|лучше|замени|исправь|исправить|передумал|передумала|не так|отмена|отмени|вместо)(\s|$)/.test(normalized);
 }
 
-function shouldIgnoreCommandText(text: string) {
-  const normalized = normalizeForWake(text);
-  if (!normalized) return true;
-  if (normalized.length < MIN_COMMAND_TEXT_LENGTH) return true;
-  return ['фина', 'финна', 'fina', 'а', 'и', 'ну', 'ээ', 'эм'].includes(normalized);
+function classifySegment(text: string, hasPrevious: boolean): VoiceSessionSegmentRole {
+  if (!hasPrevious) return 'initial';
+  return isCorrectionSegment(text) ? 'correction' : 'continuation';
 }
 
-function buildVoiceSessionFinalText(segments: VoiceSessionSegment[]) {
-  return segments.map((segment) => segment.text).join(' ').replace(/\s+/g, ' ').trim();
+function buildVoiceSessionText(segments: LocalVoiceSessionSegment[]) {
+  return cleanVoiceText(segments.map((segment) => segment.text).join('. '));
 }
 
 function getScreenVoiceLabel(screen: string) {
@@ -169,29 +147,28 @@ export function VoiceFirstCompanionLayer() {
   const voiceBetaEnabled = useSettingsStore((state) => state.voiceBetaEnabled);
   const voicePermissionPrompted = useSettingsStore((state) => state.voicePermissionPrompted);
   const voiceAlwaysOnEnabled = useSettingsStore((state) => state.voiceAlwaysOnEnabled);
-  const companionName = useSettingsStore((state) => state.companionName || 'Фина');
   const appLanguage = useSettingsStore((state) => state.appLanguage);
   const setVoicePermissionPrompted = useSettingsStore((state) => state.setVoicePermissionPrompted);
 
   const [thought, setThought] = useState<Thought | null>(null);
   const [isProcessingVoice, setIsProcessingVoice] = useState(false);
+  const [isFinalizingVoiceSession, setIsFinalizingVoiceSession] = useState(false);
   const [isPriming, setIsPriming] = useState(false);
   const [captureMode, setCaptureMode] = useState<CaptureMode>('wake');
 
   const bubbleTimerRef = useRef<number | null>(null);
   const commandCaptureTimerRef = useRef<number | null>(null);
-  const voiceCommitTimerRef = useRef<number | null>(null);
+  const voiceSessionCommitTimerRef = useRef<number | null>(null);
   const lastHandledRef = useRef<{ text: string; at: number }>({ text: '', at: 0 });
   const handleTextRef = useRef<(text: string) => Promise<void> | void>(() => undefined);
   const lastAssistantMessageKeyRef = useRef('');
   const lastThoughtRef = useRef<{ text: string; tone: BubbleTone; at: number }>({ text: '', tone: 'neutral', at: 0 });
   const isProcessingVoiceRef = useRef(false);
+  const isFinalizingVoiceSessionRef = useRef(false);
   const captureModeRef = useRef<CaptureMode>('wake');
-  const voiceStateRef = useRef<string>('idle');
   const voiceCancelRef = useRef<() => void>(() => undefined);
-  const voiceSessionIdRef = useRef<string>('');
-  const voiceSegmentsRef = useRef<VoiceSessionSegment[]>([]);
-  const finalizeVoiceSessionRef = useRef<() => void>(() => undefined);
+  const voiceSessionIdRef = useRef('');
+  const voiceSessionSegmentsRef = useRef<LocalVoiceSessionSegment[]>([]);
 
   const showThought = useCallback((text: string, tone: BubbleTone = 'neutral', timeoutMs = BUBBLE_TIMEOUT_MS) => {
     const cleanText = compactBubble(text);
@@ -224,6 +201,11 @@ export function VoiceFirstCompanionLayer() {
     setCaptureMode(mode);
   }, []);
 
+  const setFinalizingVoiceSession = useCallback((value: boolean) => {
+    isFinalizingVoiceSessionRef.current = value;
+    setIsFinalizingVoiceSession(value);
+  }, []);
+
   const clearCommandCaptureTimer = useCallback(() => {
     if (commandCaptureTimerRef.current !== null) {
       window.clearTimeout(commandCaptureTimerRef.current);
@@ -231,166 +213,142 @@ export function VoiceFirstCompanionLayer() {
     }
   }, []);
 
-  const clearVoiceCommitTimer = useCallback(() => {
-    if (voiceCommitTimerRef.current !== null) {
-      window.clearTimeout(voiceCommitTimerRef.current);
-      voiceCommitTimerRef.current = null;
+  const clearVoiceSessionCommitTimer = useCallback(() => {
+    if (voiceSessionCommitTimerRef.current !== null) {
+      window.clearTimeout(voiceSessionCommitTimerRef.current);
+      voiceSessionCommitTimerRef.current = null;
     }
   }, []);
 
   const resetVoiceSession = useCallback(() => {
-    clearVoiceCommitTimer();
-    clearCommandCaptureTimer();
     voiceSessionIdRef.current = '';
-    voiceSegmentsRef.current = [];
-    setMode('wake');
-  }, [clearCommandCaptureTimer, clearVoiceCommitTimer, setMode]);
+    voiceSessionSegmentsRef.current = [];
+    clearVoiceSessionCommitTimer();
+    setFinalizingVoiceSession(false);
+  }, [clearVoiceSessionCommitTimer, setFinalizingVoiceSession]);
 
-  const scheduleVoiceCommit = useCallback(() => {
-    clearVoiceCommitTimer();
-
-    voiceCommitTimerRef.current = window.setTimeout(() => {
-      const state = voiceStateRef.current;
-      if (state !== 'idle') {
-        scheduleVoiceCommit();
-        return;
-      }
-      finalizeVoiceSessionRef.current();
-    }, VOICE_COMMIT_WINDOW_MS);
-  }, [clearVoiceCommitTimer]);
-
-  const armCommandCapture = useCallback(() => {
-    clearCommandCaptureTimer();
-    setMode('command');
-    showThought('Слушаю команду.', 'listening', 3600);
-    commandCaptureTimerRef.current = window.setTimeout(() => {
-      if (captureModeRef.current !== 'command') return;
-      logVoiceDebugEvent('command_capture_timeout', { segmentCount: voiceSegmentsRef.current.length });
-      if (voiceSegmentsRef.current.length > 0) {
-        finalizeVoiceSessionRef.current();
-        return;
-      }
-      resetVoiceSession();
-      showThought(`Скажи «${companionName || 'Фина'}» и команду ещё раз.`, 'warning', 3200);
-    }, COMMAND_CAPTURE_TIMEOUT_MS);
-  }, [clearCommandCaptureTimer, companionName, resetVoiceSession, setMode, showThought]);
-
-  const ensureVoiceSession = useCallback(() => {
-    if (!voiceSessionIdRef.current) voiceSessionIdRef.current = crypto.randomUUID();
-    return voiceSessionIdRef.current;
-  }, []);
-
-  const appendVoiceSegment = useCallback((rawText: string) => {
+  const addVoiceSessionSegment = useCallback((rawText: string) => {
     const text = cleanVoiceText(rawText);
-    if (shouldIgnoreCommandText(text)) return false;
+    if (!text) return null;
 
-    ensureVoiceSession();
-    const hasPrevious = voiceSegmentsRef.current.length > 0;
-    const role: VoiceSegmentRole = !hasPrevious ? 'initial' : looksLikeCorrection(text) ? 'correction' : 'continuation';
-    const segment: VoiceSessionSegment = { text, role, at: Date.now() };
+    if (!voiceSessionIdRef.current) voiceSessionIdRef.current = crypto.randomUUID();
 
-    voiceSegmentsRef.current = [...voiceSegmentsRef.current, segment].slice(-8);
+    const role = classifySegment(text, voiceSessionSegmentsRef.current.length > 0);
+    const segment: LocalVoiceSessionSegment = { text, role, at: Date.now() };
+    voiceSessionSegmentsRef.current = [...voiceSessionSegmentsRef.current, segment].slice(-4);
+
     logVoiceDebugEvent('voice_session_segment_added', {
       role,
       textLength: text.length,
-      segmentCount: voiceSegmentsRef.current.length,
-      correctionCount: voiceSegmentsRef.current.filter((item) => item.role === 'correction').length,
+      segmentsCount: voiceSessionSegmentsRef.current.length,
     });
 
-    if (role === 'correction') showThought('Поняла правку.', 'listening', 2200);
-    else showThought('Слушаю дальше.', 'listening', 1800);
+    return segment;
+  }, []);
 
-    armCommandCapture();
-    scheduleVoiceCommit();
-    return true;
-  }, [armCommandCapture, ensureVoiceSession, scheduleVoiceCommit, showThought]);
+  const armCommandCapture = useCallback(() => {
+    clearCommandCaptureTimer();
+    clearVoiceSessionCommitTimer();
+    setFinalizingVoiceSession(false);
+    setMode('command');
+    showThought('Слушаю команду.', 'listening', 3000);
+    commandCaptureTimerRef.current = window.setTimeout(() => {
+      if (captureModeRef.current !== 'command') return;
+      logVoiceDebugEvent('command_capture_timeout');
+      setMode('wake');
+      resetVoiceSession();
+      showThought('Скажи «Фина» и команду ещё раз.', 'warning', 2600);
+    }, COMMAND_CAPTURE_TIMEOUT_MS);
+  }, [clearCommandCaptureTimer, clearVoiceSessionCommitTimer, resetVoiceSession, setFinalizingVoiceSession, setMode, showThought]);
 
-  const dispatchFinalCommand = useCallback(async (finalText: string, segments: VoiceSessionSegment[]) => {
-    const text = cleanVoiceText(finalText);
-    if (!text || shouldIgnoreCommandText(text)) return;
+  const dispatchVoiceSession = useCallback(async () => {
+    const segments = voiceSessionSegmentsRef.current;
+    const text = buildVoiceSessionText(segments);
+
+    if (!text) {
+      resetVoiceSession();
+      return;
+    }
 
     const now = Date.now();
     const last = lastHandledRef.current;
-    if (last.text === text && now - last.at < DUPLICATE_WINDOW_MS) return;
+    if (last.text === text && now - last.at < DUPLICATE_WINDOW_MS) {
+      resetVoiceSession();
+      return;
+    }
     lastHandledRef.current = { text, at: now };
 
-    const sessionId = voiceSessionIdRef.current || crypto.randomUUID();
-    resetVoiceSession();
+    clearCommandCaptureTimer();
+    clearVoiceSessionCommitTimer();
+    setMode('wake');
     setIsProcessingVoice(true);
-    showThought('Выполняю...', 'thinking', 2400);
+    setFinalizingVoiceSession(true);
+    showThought('Выполняю...', 'thinking', 2200);
 
     try {
-      const hasCorrections = segments.some((segment) => segment.role === 'correction');
-      const navigationIntent = hasCorrections ? { type: 'none' as const } : parseNavigationIntent(text);
+      const navigationIntent = parseNavigationIntent(text);
 
       if (navigationIntent.type === 'open_screen') {
         telegramHaptic('light');
-        logVoiceDebugEvent('voice_session_dispatched', { kind: 'navigation', target: navigationIntent.screen, textLength: text.length, segmentCount: segments.length });
+        logVoiceDebugEvent('command_dispatched', { kind: 'navigation', target: navigationIntent.screen, textLength: text.length });
         navigateTo(navigationIntent.screen);
-        showThought(`Открываю ${getScreenVoiceLabel(navigationIntent.screen)}.`, 'success', 2400);
+        showThought(`Открываю ${getScreenVoiceLabel(navigationIntent.screen)}.`, 'success', 2200);
         return;
       }
 
       if (navigationIntent.type === 'go_back') {
         telegramHaptic('light');
-        logVoiceDebugEvent('voice_session_dispatched', { kind: 'navigation', target: 'back', textLength: text.length, segmentCount: segments.length });
+        logVoiceDebugEvent('command_dispatched', { kind: 'navigation', target: 'back', textLength: text.length });
         goBack();
-        showThought('Вернулся назад.', 'success', 2200);
+        showThought('Вернулся назад.', 'success', 2000);
         return;
       }
 
-      logVoiceDebugEvent('voice_session_dispatched', {
+      const correctionCount = segments.filter((segment) => segment.role === 'correction').length;
+      logVoiceDebugEvent('command_dispatched', {
         kind: 'ai',
+        source: 'voice_session',
         textLength: text.length,
-        segmentCount: segments.length,
-        correctionCount: segments.filter((segment) => segment.role === 'correction').length,
+        segmentsCount: segments.length,
+        correctionCount,
       });
 
       await chat.sendMessage({
         text,
-        source: segments.length > 1 || hasCorrections ? 'voice_session' : 'voice',
+        source: 'voice_session',
+        execute: true,
         voiceSession: {
-          id: sessionId,
+          id: voiceSessionIdRef.current || crypto.randomUUID(),
           finalText: text,
           segments,
-          correctionCount: segments.filter((segment) => segment.role === 'correction').length,
+          correctionCount,
         },
       }, { supersedeInFlight: true });
     } finally {
+      resetVoiceSession();
       setIsProcessingVoice(false);
     }
-  }, [chat, goBack, navigateTo, resetVoiceSession, showThought]);
+  }, [chat, clearCommandCaptureTimer, clearVoiceSessionCommitTimer, goBack, navigateTo, resetVoiceSession, setFinalizingVoiceSession, setMode, showThought]);
 
-  const finalizeVoiceSession = useCallback(() => {
-    const segments = voiceSegmentsRef.current;
-    const finalText = buildVoiceSessionFinalText(segments);
+  const scheduleVoiceSessionCommit = useCallback(() => {
+    clearCommandCaptureTimer();
+    clearVoiceSessionCommitTimer();
+    setMode('wake');
+    setFinalizingVoiceSession(true);
 
-    if (!segments.length || !finalText) {
-      resetVoiceSession();
-      return;
-    }
-
-    logVoiceDebugEvent('voice_session_finalized', {
-      textLength: finalText.length,
-      segmentCount: segments.length,
-      correctionCount: segments.filter((segment) => segment.role === 'correction').length,
-    });
-
-    void dispatchFinalCommand(finalText, segments);
-  }, [dispatchFinalCommand, resetVoiceSession]);
-
-  useEffect(() => {
-    finalizeVoiceSessionRef.current = finalizeVoiceSession;
-  }, [finalizeVoiceSession]);
+    voiceSessionCommitTimerRef.current = window.setTimeout(() => {
+      void dispatchVoiceSession();
+    }, VOICE_SESSION_COMMIT_MS);
+  }, [clearCommandCaptureTimer, clearVoiceSessionCommitTimer, dispatchVoiceSession, setFinalizingVoiceSession, setMode]);
 
   const handleText = useCallback(async (rawText: string) => {
     const originalText = cleanVoiceText(rawText);
-    if (!originalText || isProcessingVoiceRef.current) return;
+    if (!originalText || isProcessingVoiceRef.current || isFinalizingVoiceSessionRef.current) return;
 
     const mode = captureModeRef.current;
 
     if (mode === 'command') {
-      const wake = stripWakeWord(originalText, companionName);
+      const wake = stripWakeWord(originalText);
       const command = cleanVoiceText(wake.hasWakeWord ? wake.command : originalText);
       logVoiceDebugEvent('command_capture_text_received', {
         textLength: command.length,
@@ -398,12 +356,18 @@ export function VoiceFirstCompanionLayer() {
         hasText: Boolean(command),
       });
 
-      if (!command) return;
-      appendVoiceSegment(command);
+      if (!command) {
+        setMode('wake');
+        resetVoiceSession();
+        return;
+      }
+
+      addVoiceSessionSegment(command);
+      scheduleVoiceSessionCommit();
       return;
     }
 
-    const wake = stripWakeWord(originalText, companionName);
+    const wake = stripWakeWord(originalText);
     if (!wake.hasWakeWord) {
       logVoiceDebugEvent('wake_word_not_detected', {
         textLength: originalText.length,
@@ -420,14 +384,16 @@ export function VoiceFirstCompanionLayer() {
       commandLength: command.length,
     });
 
+    resetVoiceSession();
+
     if (!command) {
-      ensureVoiceSession();
       armCommandCapture();
       return;
     }
 
-    appendVoiceSegment(command);
-  }, [appendVoiceSegment, armCommandCapture, companionName, ensureVoiceSession]);
+    addVoiceSessionSegment(command);
+    scheduleVoiceSessionCommit();
+  }, [addVoiceSessionSegment, armCommandCapture, resetVoiceSession, scheduleVoiceSessionCommit, setMode]);
 
   useEffect(() => {
     handleTextRef.current = handleText;
@@ -438,35 +404,35 @@ export function VoiceFirstCompanionLayer() {
     try {
       const ready = await voice.primePermission();
       setVoicePermissionPrompted(true);
-      if (ready) showThought(`Готово. Скажи «${companionName || 'Фина'}» и команду.`, 'success', 3200);
-      else showThought(`Скажи «${companionName || 'Фина'}», когда будешь готов.`, 'neutral', 3200);
+      if (ready) showThought('Готово. Скажи «Фина» и команду.', 'success', 3200);
+      else showThought('Скажи «Фина», когда будешь готов.', 'neutral', 3200);
     } catch {
       showThought('Нужен доступ к микрофону.', 'warning', 3600);
     } finally {
       setIsPriming(false);
     }
-  }, [companionName, setVoicePermissionPrompted, showThought, voice]);
+  }, [setVoicePermissionPrompted, showThought, voice]);
 
   useEffect(() => {
     isProcessingVoiceRef.current = isProcessingVoice;
   }, [isProcessingVoice]);
 
   useEffect(() => {
+    isFinalizingVoiceSessionRef.current = isFinalizingVoiceSession;
+  }, [isFinalizingVoiceSession]);
+
+  useEffect(() => {
     captureModeRef.current = captureMode;
   }, [captureMode]);
 
   useEffect(() => {
-    voiceStateRef.current = voice.state;
-  }, [voice.state]);
-
-  useEffect(() => {
     if (!canUseVoice || !voiceAlwaysOnEnabled || !voicePermissionPrompted) return undefined;
     if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return undefined;
-    if (chat.pendingActions.length > 0 || chat.isSending || isProcessingVoice) return undefined;
+    if (chat.pendingActions.length > 0 || chat.isSending || isProcessingVoice || isFinalizingVoiceSession) return undefined;
     if (voice.state !== 'idle') return undefined;
 
     const timer = window.setTimeout(() => {
-      if (voice.state !== 'idle' || isProcessingVoiceRef.current) return;
+      if (voice.state !== 'idle' || isProcessingVoiceRef.current || isFinalizingVoiceSessionRef.current) return;
       void voice.start().then((result) => {
         if (result === 'started') {
           logVoiceDebugEvent(captureModeRef.current === 'command' ? 'command_listener_auto_start' : 'wake_listener_auto_start');
@@ -475,7 +441,7 @@ export function VoiceFirstCompanionLayer() {
     }, captureModeRef.current === 'command' ? 80 : AUTO_LISTENER_RESTART_MS);
 
     return () => window.clearTimeout(timer);
-  }, [canUseVoice, chat.isSending, chat.pendingActions.length, isProcessingVoice, voice, voice.state, voiceAlwaysOnEnabled, voicePermissionPrompted, captureMode]);
+  }, [canUseVoice, chat.isSending, chat.pendingActions.length, isFinalizingVoiceSession, isProcessingVoice, voice, voice.state, voiceAlwaysOnEnabled, voicePermissionPrompted, captureMode]);
 
   useEffect(() => {
     if (!voice.error) return;
@@ -493,14 +459,12 @@ export function VoiceFirstCompanionLayer() {
     if (captureModeRef.current === 'wake') return;
 
     if (voice.error === 'no-speech' || voice.error === 'transcription-timeout' || voice.error === 'transcription-error') {
-      if (voiceSegmentsRef.current.length > 0) {
-        scheduleVoiceCommit();
-        return;
-      }
-      showThought('Не расслышала команду.', 'warning', 2600);
+      showThought('Не расслышала команду.', 'warning', 2400);
+      setMode('wake');
       resetVoiceSession();
+      clearCommandCaptureTimer();
     }
-  }, [resetVoiceSession, scheduleVoiceCommit, showThought, voice.error]);
+  }, [clearCommandCaptureTimer, resetVoiceSession, setMode, showThought, voice.error]);
 
   useEffect(() => {
     const lastMessage = chat.messages.filter((message) => message.role === 'assistant').at(-1);
@@ -511,7 +475,9 @@ export function VoiceFirstCompanionLayer() {
     lastAssistantMessageKeyRef.current = messageKey;
 
     voice.stopSpeaking();
+    setMode('wake');
     resetVoiceSession();
+    clearCommandCaptureTimer();
 
     if (lastMessage.kind === 'preview') {
       showThought('Проверь действие.', 'warning', 3600);
@@ -524,7 +490,7 @@ export function VoiceFirstCompanionLayer() {
     }
 
     showThought(lastMessage.text || 'Готово.', 'success', 2600);
-  }, [chat.messages, resetVoiceSession, showThought, voice]);
+  }, [chat.messages, clearCommandCaptureTimer, resetVoiceSession, setMode, showThought, voice]);
 
   useEffect(() => {
     voiceCancelRef.current = voice.cancel;
@@ -532,22 +498,22 @@ export function VoiceFirstCompanionLayer() {
 
   useEffect(() => () => {
     if (bubbleTimerRef.current !== null) window.clearTimeout(bubbleTimerRef.current);
-    resetVoiceSession();
+    clearCommandCaptureTimer();
+    clearVoiceSessionCommitTimer();
     voiceCancelRef.current();
-  }, [resetVoiceSession]);
+  }, [clearCommandCaptureTimer, clearVoiceSessionCommitTimer]);
 
   const mood = useMemo<CompanionMood>(() => {
     if (chat.pendingActions.length > 0) return 'confirm';
     if (voice.state === 'recording' || captureMode === 'command') return 'listening';
-    if (voice.state === 'uploading' || chat.isSending || isProcessingVoice) return 'thinking';
+    if (voice.state === 'uploading' || chat.isSending || isProcessingVoice || isFinalizingVoiceSession) return 'thinking';
     if (thought?.tone === 'warning') return 'warning';
     if (thought?.tone === 'success') return 'success';
     return 'idle';
-  }, [captureMode, chat.isSending, chat.pendingActions.length, isProcessingVoice, thought?.tone, voice.state]);
+  }, [captureMode, chat.isSending, chat.pendingActions.length, isFinalizingVoiceSession, isProcessingVoice, thought?.tone, voice.state]);
 
   const needsIntro = canUseVoice && !voicePermissionPrompted;
   const showFloatingCompanion = currentScreen !== 'ai-core';
-  const wakeName = companionName || 'Фина';
 
   if (!showFloatingCompanion && !needsIntro && chat.pendingActions.length === 0) return null;
 
@@ -557,20 +523,20 @@ export function VoiceFirstCompanionLayer() {
         <div className="voice-first-intro" data-no-swipe="true">
           <div className="voice-first-intro__card voice-first-intro__card--polished">
             <div className="voice-first-intro__avatar" aria-hidden="true">
-              <CompanionButton mood="idle" size="md" label={wakeName} />
+              <CompanionButton mood="idle" size="md" label="Фина" />
             </div>
             <div className="voice-first-intro__eyebrow">Голосовой помощник</div>
-            <div className="voice-first-intro__title">Это {wakeName}</div>
+            <div className="voice-first-intro__title">Это Фина</div>
             <p>Разреши микрофон один раз. Дальше говори имя помощника и команду обычными словами.</p>
 
             <div className="voice-first-intro__steps">
               <div><b>1</b><span>Разреши микрофон</span></div>
-              <div><b>2</b><span>Скажи «{wakeName}»</span></div>
+              <div><b>2</b><span>Скажи «Фина»</span></div>
               <div><b>3</b><span>Продиктуй команду</span></div>
             </div>
 
             <div className="voice-first-intro__hint">
-              Например: “{wakeName}, кофе 300” или “{wakeName}, положи 10 тысяч на карту Т-Банк”.
+              Например: “Фина, кофе 300” или “Фина, положи 10 тысяч на карту Т-Банк”.
             </div>
 
             <div className="voice-first-intro__actions">
@@ -621,14 +587,14 @@ export function VoiceFirstCompanionLayer() {
             <div className="voice-first-companion__voice-panel">
               <div className={canUseVoice ? 'voice-first-status voice-first-status--on' : 'voice-first-status'}>
                 {canUseVoice
-                  ? chat.isSending || isProcessingVoice
+                  ? chat.isSending || isProcessingVoice || isFinalizingVoiceSession
                     ? 'Выполняю'
                     : voice.state === 'uploading'
                       ? captureMode === 'command' ? 'Распознаю команду' : 'Проверяю имя'
                       : captureMode === 'command'
-                        ? voiceSegmentsRef.current.length > 0 ? 'Жду правку' : 'Слушаю команду'
+                        ? 'Слушаю команду'
                         : voiceAlwaysOnEnabled
-                          ? `Жду «${wakeName}»`
+                          ? 'Жду «Фина»'
                           : 'Голос выключен'
                   : 'Голос выключен'}
               </div>
@@ -637,7 +603,7 @@ export function VoiceFirstCompanionLayer() {
             <CompanionButton
               mood={mood}
               size="md"
-              label={`${wakeName} слушает голос`}
+              label="Фина слушает голос"
               className="pointer-events-none select-none"
               tabIndex={-1}
               aria-hidden="true"
