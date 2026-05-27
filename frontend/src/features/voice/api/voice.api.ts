@@ -43,7 +43,11 @@ const VOICE_DEBUG_IMPORTANT_EVENTS = new Set([
   'transcribe_request_failed',
   'wake_word_detected',
   'wake_word_not_detected',
-  'command_dispatched',
+  'voice_session_segment_added',
+  'voice_session_finalized',
+  'voice_session_dispatched',
+  'voice_state_changed',
+  'command_capture_text_received',
 ]);
 
 const VOICE_DEBUG_NOISY_EVENTS = new Set([
