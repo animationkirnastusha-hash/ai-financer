@@ -163,6 +163,7 @@ export function useVoiceSessionMachine({ companionName, showThought, dispatchCom
       logVoiceDebugEvent('wake_word_not_detected', {
         textLength: originalText.length,
         hasText: Boolean(originalText),
+        transcriptPreview: originalText.slice(0, 90),
         visualOnly: true,
       });
       return;
@@ -173,6 +174,7 @@ export function useVoiceSessionMachine({ companionName, showThought, dispatchCom
       textLength: originalText.length,
       hasText: Boolean(originalText),
       commandLength: command.length,
+      matchType: wake.matchType,
     });
 
     if (!command) {

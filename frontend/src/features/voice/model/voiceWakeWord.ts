@@ -17,9 +17,35 @@ function levenshteinDistance(a: string, b: string) {
   return rows[a.length][b.length];
 }
 
+function isWakeIndexSafe(index: number, words: string[]) {
+  if (index <= 1) return true;
+  const before = words.slice(0, index).join(' ');
+  return /^(эй|окей|ну|слушай|алло|привет)\s+/i.test(before);
+}
+
 export function buildWakeAliases(companionName: string) {
   const baseName = normalizeForWake(companionName || 'Фина').split(' ')[0] || 'фина';
-  const aliases = new Set(['фина', 'финна', 'fina', 'фину', 'фине', 'фины', 'финой', 'фино', 'фена', baseName]);
+  const aliases = new Set([
+    'фина',
+    'финна',
+    'fina',
+    'фину',
+    'фине',
+    'фины',
+    'финой',
+    'фино',
+    'фена',
+    'финаа',
+    'фин',
+    'финн',
+    'финка',
+    'финак',
+    'финок',
+    'фирна',
+    'финам',
+    'финаю',
+    baseName,
+  ]);
 
   if (baseName.endsWith('а')) {
     aliases.add(`${baseName.slice(0, -1)}у`);
@@ -30,25 +56,58 @@ export function buildWakeAliases(companionName: string) {
   return [...aliases].filter(Boolean);
 }
 
+type WakeMatch = {
+  index: number;
+  consumedWords: number;
+  matchType: 'exact' | 'split' | 'fuzzy' | 'prefix';
+};
+
+function findWakeMatch(words: string[], aliases: string[]): WakeMatch | null {
+  const exactIndex = words.findIndex((word) => aliases.includes(word));
+  if (exactIndex >= 0) return { index: exactIndex, consumedWords: 1, matchType: 'exact' };
+
+  // iOS/OpenAI may split the wake word into two tiny tokens, for example "фи на".
+  for (let index = 0; index < Math.min(words.length - 1, 4); index += 1) {
+    const joined = `${words[index]}${words[index + 1]}`;
+    if (aliases.includes(joined) || levenshteinDistance(joined, 'фина') <= 1) {
+      return { index, consumedWords: 2, matchType: 'split' };
+    }
+  }
+
+  for (let index = 0; index < words.length; index += 1) {
+    const word = words[index];
+    if (word.length < 3 || word.length > 10) continue;
+
+    const exactDistance = Math.min(...aliases.filter((alias) => alias.length >= 3 && alias.length <= 10).map((alias) => levenshteinDistance(word, alias)));
+    if (exactDistance <= 1) return { index, consumedWords: 1, matchType: 'fuzzy' };
+
+    // Stronger fuzzy matching is allowed only near the beginning of the phrase.
+    // This is still only a wake-word filter, not a financial command parser.
+    if (isWakeIndexSafe(index, words)) {
+      if ((word.startsWith('фи') || word.startsWith('фе') || word.startsWith('fin')) && exactDistance <= 2) {
+        return { index, consumedWords: 1, matchType: 'prefix' };
+      }
+    }
+  }
+
+  return null;
+}
+
 export function stripWakeWord(rawText: string, companionName: string) {
   const source = rawText.trim();
   const normalized = normalizeForWake(source);
   const words = normalized.split(' ').filter(Boolean);
   const aliases = buildWakeAliases(companionName);
+  const match = findWakeMatch(words, aliases);
 
-  const exactIndex = words.findIndex((word) => aliases.includes(word));
-  const fuzzyIndex = exactIndex >= 0
-    ? exactIndex
-    : words.findIndex((word) => {
-        if (word.length < 3 || word.length > 8) return false;
-        return aliases.some((alias) => alias.length >= 3 && alias.length <= 8 && levenshteinDistance(word, alias) <= 1);
-      });
-
-  const wakeIndex = exactIndex >= 0 ? exactIndex : fuzzyIndex;
-  if (wakeIndex < 0) return { hasWakeWord: false, command: source };
+  if (!match) return { hasWakeWord: false, command: source, matchType: 'none' as const };
 
   const sourceWords = source.split(/\s+/).filter(Boolean);
-  const command = sourceWords.slice(wakeIndex + 1).join(' ').replace(/^[,.:;!\-—\s]+/, '').trim();
+  const command = sourceWords
+    .slice(match.index + match.consumedWords)
+    .join(' ')
+    .replace(/^[,.:;!\-—\s]+/, '')
+    .trim();
 
-  return { hasWakeWord: true, command };
+  return { hasWakeWord: true, command, matchType: match.matchType };
 }

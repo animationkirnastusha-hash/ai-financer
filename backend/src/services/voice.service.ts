@@ -103,6 +103,12 @@ function getModel() {
   return process.env.VOICE_STT_MODEL?.trim() || process.env.OPENAI_TRANSCRIBE_MODEL?.trim() || DEFAULT_OPENAI_MODEL;
 }
 
+
+function getSttPrompt() {
+  return process.env.VOICE_STT_PROMPT?.trim()
+    || 'Русская речь в финансовом приложении. Пользователь часто начинает команду с имени помощника: Фина. Если в начале фразы звучит имя Фина, сохрани его в тексте именно как Фина. Примеры: Фина кофе 300 рублей; Фина я потратил на кофе 300 рублей спиши с налички; Фина создай счет Т-Банк и положи туда десять тысяч.';
+}
+
 function getLanguage(language?: string) {
   const raw = (language || process.env.VOICE_LANGUAGE || DEFAULT_LANGUAGE).trim().toLowerCase();
   if (raw.startsWith('en')) return 'en';
@@ -360,6 +366,7 @@ class VoiceService {
     formData.append('model', model);
     formData.append('language', normalizedLanguage);
     formData.append('response_format', 'json');
+    formData.append('prompt', getSttPrompt());
 
     const response = await fetchWithTimeout('https://api.openai.com/v1/audio/transcriptions', {
       method: 'POST',
