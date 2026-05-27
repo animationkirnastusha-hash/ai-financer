@@ -39,6 +39,7 @@ export function VoiceFirstCompanionLayer() {
   const lastAssistantMessageKeyRef = useRef('');
   const handleTextRef = useRef<(text: string) => Promise<void> | void>(() => undefined);
   const voiceCancelRef = useRef<() => void>(() => undefined);
+  const resetVoiceMachineRef = useRef<() => void>(() => undefined);
   const voiceStartRef = useRef<() => Promise<'started' | 'permission-ready' | 'busy' | 'error'>>(async () => 'busy');
 
   const wakeName = companionName || 'Фина';
@@ -91,6 +92,10 @@ export function VoiceFirstCompanionLayer() {
   useEffect(() => {
     handleTextRef.current = handleTranscript;
   }, [handleTranscript]);
+
+  useEffect(() => {
+    resetVoiceMachineRef.current = resetVoiceMachine;
+  }, [resetVoiceMachine]);
 
   useEffect(() => {
     voiceCancelRef.current = voice.cancel;
@@ -187,9 +192,9 @@ export function VoiceFirstCompanionLayer() {
 
   useEffect(() => () => {
     if (bubbleTimerRef.current !== null) window.clearTimeout(bubbleTimerRef.current);
-    resetVoiceMachine();
+    resetVoiceMachineRef.current();
     voiceCancelRef.current();
-  }, [machine]);
+  }, []);
 
   const mood = useMemo<VoiceCompanionMood>(() => {
     if (chat.pendingActions.length > 0) return 'confirm';
