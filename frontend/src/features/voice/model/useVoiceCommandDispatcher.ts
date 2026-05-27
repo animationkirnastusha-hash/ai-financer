@@ -37,7 +37,7 @@ function getScreenVoiceLabel(screen: string) {
 }
 
 export function useVoiceCommandDispatcher({ chat, navigateTo, goBack, showThought }: UseVoiceCommandDispatcherParams) {
-  const lastHandledRef = useRef<{ text: string; at: number }>({ text: '', at: 0 });
+  const lastHandledRef = useRef<{ text: string; at: number; sessionId: string }>({ text: '', at: 0, sessionId: '' });
 
   return useCallback(async (params: { sessionId: string; finalText: string; segments: VoiceSessionSegment[] }) => {
     const text = normalizeVoiceText(params.finalText);
@@ -46,11 +46,26 @@ export function useVoiceCommandDispatcher({ chat, navigateTo, goBack, showThough
     const now = Date.now();
     const last = lastHandledRef.current;
     if (last.text === text && now - last.at < VOICE_DUPLICATE_WINDOW_MS) {
-      logVoiceDebugEvent('voice_session_duplicate_ignored', { textLength: text.length });
+      logVoiceDebugEvent('voice_session_duplicate_ignored', {
+        textLength: text.length,
+        ageMs: now - last.at,
+        previousSessionId: last.sessionId,
+        sessionId: params.sessionId,
+      });
+      showThought('Похоже, это уже выполнено.', 'neutral', 2200);
       return;
     }
 
-    lastHandledRef.current = { text, at: now };
+    if (chat.isSending || chat.pendingActions.length > 0) {
+      logVoiceDebugEvent('voice_session_ignored_busy_chat', {
+        textLength: text.length,
+        isSending: chat.isSending,
+        pendingActions: chat.pendingActions.length,
+      });
+      return;
+    }
+
+    lastHandledRef.current = { text, at: now, sessionId: params.sessionId };
 
     const hasCorrections = params.segments.some((segment) => segment.role === 'correction');
     const navigationIntent = hasCorrections ? { type: 'none' as const } : parseNavigationIntent(text);

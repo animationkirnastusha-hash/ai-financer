@@ -6,10 +6,10 @@ type VoiceStatusPillProps = {
   isBusy: boolean;
   voiceState: VoiceInputState;
   captureMode: VoiceCaptureMode;
-  phase: VoiceSessionPhase;
-  cooldownUntil: number;
   voiceAlwaysOnEnabled: boolean;
   wakeName: string;
+  phase?: VoiceSessionPhase;
+  cooldownUntil?: number;
 };
 
 export function VoiceStatusPill({
@@ -17,21 +17,20 @@ export function VoiceStatusPill({
   isBusy,
   voiceState,
   captureMode,
-  phase,
-  cooldownUntil,
   voiceAlwaysOnEnabled,
   wakeName,
+  phase = 'idle',
+  cooldownUntil = 0,
 }: VoiceStatusPillProps) {
   let label = 'Голос выключен';
+  const isCooldown = phase === 'cooldown' || Date.now() < cooldownUntil;
 
   if (canUseVoice) {
-    const cooldownLeftMs = Math.max(0, cooldownUntil - Date.now());
-
-    if (phase === 'dispatching' || isBusy) label = 'Выполняю';
+    if (isBusy) label = 'Выполняю';
+    else if (isCooldown) label = `Жду «${wakeName}»`;
     else if (voiceState === 'uploading') label = captureMode === 'command' ? 'Распознаю команду' : 'Проверяю имя';
     else if (voiceState === 'recording') label = captureMode === 'command' ? 'Слушаю команду' : `Жду «${wakeName}»`;
-    else if (phase === 'command' || captureMode === 'command') label = 'Слушаю команду';
-    else if (phase === 'cooldown' && cooldownLeftMs > 0) label = `Жду «${wakeName}»`;
+    else if (captureMode === 'command') label = 'Слушаю команду';
     else label = voiceAlwaysOnEnabled ? `Жду «${wakeName}»` : 'Голос выключен';
   }
 

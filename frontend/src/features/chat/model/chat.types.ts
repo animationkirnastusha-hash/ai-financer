@@ -20,6 +20,7 @@ export type SendChatMessagePayload = {
   source?: ChatCommandSource;
   voiceSession?: ChatVoiceSessionPayload;
   execute?: boolean;
+  idempotencyKey?: string;
 };
 
 export type SendChatMessageOptions = {

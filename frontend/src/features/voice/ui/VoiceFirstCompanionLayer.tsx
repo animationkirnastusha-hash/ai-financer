@@ -120,14 +120,16 @@ export function VoiceFirstCompanionLayer() {
     if (!canUseVoice || !voiceAlwaysOnEnabled || !voicePermissionPrompted) return undefined;
     if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return undefined;
     if (chat.pendingActions.length > 0 || chat.isSending || isProcessingVoice || isDispatching) return undefined;
+    if (String(phase) !== 'idle') return undefined;
     if (voice.state !== 'idle') return undefined;
-    if (String(phase) === 'cooldown' || Date.now() < cooldownUntil) return undefined;
+    if (Date.now() < cooldownUntil) return undefined;
 
     const delay = captureMode === 'command' ? 80 : VOICE_AUTO_LISTENER_RESTART_MS;
     const timer = window.setTimeout(() => {
       if (voice.state !== 'idle') return;
+      if (String(phase) !== 'idle') return;
       if (chat.pendingActions.length > 0 || chat.isSending || isDispatching) return;
-      if (String(phase) === 'cooldown' || Date.now() < cooldownUntil) return;
+      if (Date.now() < cooldownUntil) return;
 
       void voiceStartRef.current().then((result) => {
         if (result === 'started') {
@@ -171,6 +173,7 @@ export function VoiceFirstCompanionLayer() {
     lastAssistantMessageKeyRef.current = messageKey;
 
     voice.stopSpeaking();
+    voice.cancel();
     resetVoiceMachine();
 
     if (lastMessage.kind === 'preview') {
@@ -186,6 +189,16 @@ export function VoiceFirstCompanionLayer() {
     showThought(lastMessage.text || 'Готово.', 'success', 2600);
   }, [chat.messages, resetVoiceMachine, showThought, voice]);
 
+
+  useEffect(() => {
+    if (chat.pendingActions.length <= 0) return;
+    if (voice.state === 'recording' || voice.state === 'uploading') {
+      logVoiceDebugEvent('voice_cancelled_pending_action_opened', { pendingActions: chat.pendingActions.length, voiceState: voice.state });
+      voice.cancel();
+    }
+    resetVoiceMachine();
+  }, [chat.pendingActions.length, resetVoiceMachine, voice]);
+
   useEffect(() => {
     setIsProcessingVoice(isDispatching);
   }, [isDispatching]);
@@ -198,12 +211,12 @@ export function VoiceFirstCompanionLayer() {
 
   const mood = useMemo<VoiceCompanionMood>(() => {
     if (chat.pendingActions.length > 0) return 'confirm';
-    if (phase === 'command' || voice.state === 'recording' || captureMode === 'command') return 'listening';
-    if (phase === 'dispatching' || voice.state === 'uploading' || chat.isSending || isProcessingVoice || isDispatching) return 'thinking';
+    if (voice.state === 'recording' || captureMode === 'command') return 'listening';
+    if (voice.state === 'uploading' || chat.isSending || isProcessingVoice || isDispatching) return 'thinking';
     if (thought?.tone === 'warning') return 'warning';
     if (thought?.tone === 'success') return 'success';
     return 'idle';
-  }, [captureMode, chat.isSending, chat.pendingActions.length, isDispatching, isProcessingVoice, phase, thought?.tone, voice.state]);
+  }, [captureMode, chat.isSending, chat.pendingActions.length, isDispatching, isProcessingVoice, thought?.tone, voice.state]);
 
   const needsIntro = canUseVoice && !voicePermissionPrompted;
   const showFloatingCompanion = currentScreen !== 'ai-core';
@@ -239,10 +252,10 @@ export function VoiceFirstCompanionLayer() {
                 isBusy={isBusy}
                 voiceState={voice.state}
                 captureMode={captureMode}
-                phase={phase}
-                cooldownUntil={cooldownUntil}
                 voiceAlwaysOnEnabled={voiceAlwaysOnEnabled}
                 wakeName={wakeName}
+                phase={phase}
+                cooldownUntil={cooldownUntil}
               />
             </div>
 

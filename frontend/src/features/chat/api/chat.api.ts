@@ -11,6 +11,7 @@ export const chatApi = {
       execute: payload.execute ?? true,
       source: payload.source ?? 'text',
       voiceSession: payload.voiceSession,
+      idempotencyKey: payload.idempotencyKey ?? payload.voiceSession?.id,
     }, signal),
 
   undoByAuditLog: (auditLogId: string) =>
