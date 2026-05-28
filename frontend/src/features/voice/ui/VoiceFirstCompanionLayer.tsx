@@ -498,13 +498,14 @@ export function VoiceFirstCompanionLayer() {
             </div>
           </div>
 
-          {isLocked ? (
-            <div className="voice-first-lock-actions voice-first-lock-actions--cancel-only" aria-label="Управление записью">
-              <button type="button" className="voice-first-lock-action voice-first-lock-action--cancel" onClick={() => cancelManualRecording('locked_cancel_button')} aria-label="Отменить запись">
-                <CancelIcon />
-              </button>
-            </div>
-          ) : null}
+        </div>
+      ) : null}
+
+      {showFloatingCompanion && isLocked ? (
+        <div className="voice-first-lock-actions voice-first-lock-actions--cancel-only voice-first-lock-actions--detached" aria-label="Управление записью" data-no-swipe="true">
+          <button type="button" className="voice-first-lock-action voice-first-lock-action--cancel" onClick={() => cancelManualRecording('locked_cancel_button')} aria-label="Отменить запись">
+            <CancelIcon />
+          </button>
         </div>
       ) : null}
     </>
