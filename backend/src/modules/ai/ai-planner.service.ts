@@ -113,7 +113,7 @@ export class AIPlannerService {
       'If the user asks to change, edit, fix, correct, rename or update an existing operation/transaction, use update_transaction. Do not create a new transaction for corrections to existing records.',
       'For every transaction, provide category and section when the meaning is clear from the whole request; leave them absent only when genuinely unclear.',
       'If several actions are needed to satisfy one user request, return several tool calls in the correct order.',
-      'If user command refers to previous command/result with pronouns or continuation words, use CTX.aiSessionState.lastCommand and CTX.aiSessionState.lastResult only as supporting context.',
+      'Do not use previous commands as source data for names, accounts, amounts, or intent. Current USER message wins. Pending clarification is handled outside planner.',
       'If essential entity remains ambiguous after context, leave the ambiguous field missing/null so validator can ask clarification rather than inventing.',
       'Preserve user-provided amounts and names in tool inputs without manual conversion rules.',
       'Use account/category/section/goal names from CTX when the user clearly refers to existing entities.',
@@ -192,9 +192,6 @@ export class AIPlannerService {
         ? value.sections.slice(0, 12).map((section) => section.name).filter(Boolean)
         : [],
       preferences: Array.isArray(memory.preferences) ? memory.preferences.slice(0, 6) : [],
-      recentSuccessfulCommands: Array.isArray(memory.recentSuccessfulCommands)
-        ? memory.recentSuccessfulCommands.slice(0, 5)
-        : [],
       aiSettings: value.aiSettings
         ? {
           preset: value.aiSettings.preset,
@@ -234,14 +231,6 @@ export class AIPlannerService {
           createdAt: item.createdAt,
         }))
         : [],
-      aiSessionState: value.aiSessionState
-        ? {
-          pendingIntent: value.aiSessionState.pendingIntent,
-          pendingTool: value.aiSessionState.pendingTool,
-          lastCommand: value.aiSessionState.lastCommand,
-          lastResult: value.aiSessionState.lastResult,
-        }
-        : null,
     };
   }
 

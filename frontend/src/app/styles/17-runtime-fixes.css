@@ -201,68 +201,135 @@ body:has([data-drawer-panel="true"]) .voice-first-layer {
   pointer-events: none;
 }
 
-/* Patch 124: visible voice lifecycle indicator */
+/* Patch 125: manual press-to-talk runtime. No background STT. */
+.voice-first-companion {
+  touch-action: none !important;
+  user-select: none !important;
+  -webkit-user-select: none !important;
+  -webkit-touch-callout: none !important;
+}
+
+.voice-first-companion__press-target {
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  background: transparent;
+  outline: none;
+  cursor: pointer;
+  border-radius: 999px;
+}
+
+.voice-first-companion__press-target:active .ai-companion-control,
+.voice-first-companion--locked .ai-companion-control {
+  transform: scale(1.06) !important;
+  filter: saturate(1.12) brightness(1.08);
+}
+
+.voice-first-companion--locked .ai-companion-control {
+  box-shadow: 0 0 0 8px rgba(139, 199, 255, .10), 0 18px 52px rgba(60, 120, 255, .32) !important;
+}
+
+.voice-first-lock-actions {
+  position: absolute;
+  right: 2px;
+  bottom: 72px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 7px;
+  border-radius: 999px;
+  background: rgba(8, 12, 22, .82);
+  border: 1px solid rgba(255, 255, 255, .12);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, .34);
+  backdrop-filter: blur(18px);
+  z-index: 4;
+}
+
+.voice-first-lock-action {
+  width: 42px;
+  height: 42px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, .14);
+  display: grid;
+  place-items: center;
+  color: rgba(255, 255, 255, .94);
+  background: rgba(255, 255, 255, .08);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.08);
+}
+
+.voice-first-lock-action svg {
+  width: 23px;
+  height: 23px;
+  fill: currentColor;
+}
+
+.voice-first-lock-action--cancel {
+  background: rgba(255, 111, 111, .15);
+  color: rgb(255, 188, 188);
+}
+
+.voice-first-lock-action--send {
+  background: rgba(109, 236, 190, .18);
+  color: rgb(178, 255, 226);
+}
+
+.voice-first-lock-action:active {
+  transform: scale(.94);
+}
+
 .voice-first-status {
   display: inline-flex !important;
-  align-items: center;
-  gap: 7px;
-  min-height: 30px;
-  max-width: min(245px, calc(100vw - 104px));
-  padding: 8px 11px !important;
-  font-size: 11px !important;
-  font-weight: 750;
-  letter-spacing: -.01em;
-  backdrop-filter: blur(14px);
+  max-width: 180px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
-.voice-first-status__dot {
-  width: 7px;
-  height: 7px;
+
+@media (max-width: 390px) {
+  .voice-first-lock-actions {
+    bottom: 66px;
+    right: 0;
+  }
+  .voice-first-lock-action {
+    width: 40px;
+    height: 40px;
+  }
+}
+
+/* Patch 127: locked voice input sends by tapping Fina again; only cancel remains as a separate action. */
+.voice-first-lock-actions--cancel-only {
+  right: 10px;
+  bottom: 76px;
+  padding: 6px;
+  gap: 0;
+}
+
+.voice-first-companion--locked .voice-first-companion__press-target {
+  cursor: pointer;
+}
+
+.voice-first-companion--locked .voice-first-companion__press-target::after {
+  content: '';
+  position: absolute;
+  inset: -8px;
   border-radius: 999px;
-  background: currentColor;
-  box-shadow: 0 0 0 4px rgba(255,255,255,.06);
-  flex: 0 0 auto;
+  border: 1px solid rgba(139, 199, 255, .28);
+  pointer-events: none;
+  animation: voiceLockedTapPulse 1.55s ease-in-out infinite;
 }
-.voice-first-status--recording .voice-first-status__dot,
-.voice-first-status--thinking .voice-first-status__dot,
-.voice-first-status--attention .voice-first-status__dot {
-  animation: voiceStatusPulse124 1s ease-in-out infinite;
+
+@keyframes voiceLockedTapPulse {
+  0%, 100% { opacity: .38; transform: scale(.98); }
+  50% { opacity: .78; transform: scale(1.06); }
 }
-.voice-first-status--thinking {
-  border-color: rgba(183,159,255,.34) !important;
-  background: rgba(27,22,45,.90) !important;
-  color: rgba(236,229,255,.96) !important;
-}
-.voice-first-status--attention {
-  border-color: rgba(255,207,115,.36) !important;
-  background: rgba(45,32,13,.91) !important;
-  color: rgba(255,239,196,.98) !important;
-}
-.voice-clarification-card {
-  display: grid;
-  gap: 10px;
-  padding: 14px;
-  border: 1px solid rgba(255,255,255,.10);
-  border-radius: 22px;
-  background: rgba(255,255,255,.055);
-}
-.voice-clarification-card__question {
-  color: rgba(255,255,255,.94);
-  font-size: 16px;
-  font-weight: 780;
-  line-height: 1.25;
-}
-.voice-clarification-card__hint {
-  color: rgba(255,255,255,.58);
-  font-size: 12px;
-  line-height: 1.4;
-}
-@keyframes voiceStatusPulse124 {
-  0%, 100% { opacity: .55; transform: scale(.9); }
-  50% { opacity: 1; transform: scale(1.18); }
-}
-@media (max-width: 380px) {
-  .voice-first-status {
-    max-width: min(210px, calc(100vw - 92px));
-    font-size: 10px !important;
+
+@media (max-width: 390px) {
+  .voice-first-lock-actions--cancel-only {
+    right: 7px;
+    bottom: 70px;
   }
 }

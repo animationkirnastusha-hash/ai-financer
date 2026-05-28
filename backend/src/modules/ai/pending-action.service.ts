@@ -29,6 +29,7 @@ export class AIPendingActionService {
     riskLevel: AIRiskLevel;
   }): Promise<AIPendingActionView> {
     await this.expireOld(params.userId);
+    await this.supersedeOpen(params.userId);
 
     const pending = await prisma.aIPendingAction.create({
       data: {
@@ -148,6 +149,19 @@ export class AIPendingActionService {
     });
 
     return rows.map((row) => this.serialize(row as PrismaPendingActionRow));
+  }
+
+  async supersedeOpen(userId: string): Promise<number> {
+    const result = await prisma.aIPendingAction.updateMany({
+      where: {
+        userId,
+        status: 'pending',
+        expiresAt: { gt: new Date() },
+      },
+      data: { status: 'superseded' },
+    });
+
+    return result.count;
   }
 
   async expireOld(userId?: string): Promise<number> {

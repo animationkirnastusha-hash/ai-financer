@@ -14,18 +14,18 @@ export function VoicePermissionIntro({ wakeName, isPriming, onPrime, onSkip }: V
         <div className="voice-first-intro__avatar" aria-hidden="true">
           <CompanionButton mood="idle" size="md" label={wakeName} />
         </div>
-        <div className="voice-first-intro__eyebrow">Голосовой помощник</div>
-        <div className="voice-first-intro__title">Это {wakeName}</div>
-        <p>Разреши микрофон один раз. Дальше говори имя помощника и команду обычными словами.</p>
+        <div className="voice-first-intro__eyebrow">Голосовой ввод</div>
+        <div className="voice-first-intro__title">Разреши микрофон</div>
+        <p>Микрофон нужен для голосовых команд. Запись начинается только когда ты зажимаешь Фину.</p>
 
         <div className="voice-first-intro__steps">
-          <div><b>1</b><span>Разреши микрофон</span></div>
-          <div><b>2</b><span>Скажи «{wakeName}»</span></div>
-          <div><b>3</b><span>Продиктуй команду</span></div>
+          <div><b>1</b><span>Разреши доступ один раз</span></div>
+          <div><b>2</b><span>Зажми Фину и говори</span></div>
+          <div><b>3</b><span>Отпусти, чтобы отправить</span></div>
         </div>
 
         <div className="voice-first-intro__hint">
-          Например: “{wakeName}, кофе 300” или “{wakeName}, положи 10 тысяч на карту Т-Банк”.
+          Можно потянуть вверх, чтобы закрепить запись, или влево, чтобы отменить.
         </div>
 
         <div className="voice-first-intro__actions">

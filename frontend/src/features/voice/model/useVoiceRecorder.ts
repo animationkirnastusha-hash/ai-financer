@@ -11,11 +11,12 @@ type UseVoiceRecorderParams = {
 };
 
 
-const DEFAULT_SESSION_MS = 5200;
+const DEFAULT_SESSION_MS = 9000;
 const MIN_SESSION_MS = 2500;
-const MAX_SESSION_MS = 12_000;
+const MAX_SESSION_MS = 16_000;
 const MIN_AUDIO_BYTES = 1200;
 const NO_VOICE_MAX_PEAK_RMS = 0.018;
+const MANUAL_MIN_RECORDING_MS = 700;
 const TRANSCRIBE_CLIENT_TIMEOUT_MS = 45_000;
 const MICROPHONE_GAIN = Number(import.meta.env.VITE_VOICE_MIC_GAIN || 3.0);
 const VAD_CHECK_INTERVAL_MS = 60;
@@ -179,16 +180,10 @@ export function useVoiceRecorder({ onText, lang = 'ru-RU', chunkMs = DEFAULT_SES
   }, []);
 
   const ensureStream = useCallback(async (format: RecorderFormat) => {
-    if (hasActiveTracks(rawStreamRef.current) && hasActiveTracks(streamRef.current) && analyserRef.current && vadBufferRef.current) {
-      logVoiceDebugEvent('microphone_stream_reused', {
-        platform: platformConfig.platform,
-        mimeType: format.mimeType,
-        extension: format.extension,
-        audioTracks: rawStreamRef.current?.getAudioTracks().length ?? 0,
-      });
-      return streamRef.current as MediaStream;
-    }
-
+    // Manual press-to-talk must not keep a hot microphone stream between commands.
+    // Requesting a fresh stream after the permission was granted does not duplicate
+    // the browser permission prompt, but it does turn off the device mic indicator
+    // immediately after each recording.
     stopAllStreams();
 
     logVoiceDebugEvent('permission_requested', { platform: platformConfig.platform, mimeType: format.mimeType, extension: format.extension });
@@ -248,6 +243,21 @@ export function useVoiceRecorder({ onText, lang = 'ru-RU', chunkMs = DEFAULT_SES
       return;
     }
 
+    const elapsedMs = recordingStartedAtRef.current ? Date.now() - recordingStartedAtRef.current : 0;
+    if (elapsedMs < MANUAL_MIN_RECORDING_MS) {
+      logVoiceDebugEvent('audio_blob_skipped_too_short', {
+        elapsedMs,
+        blobSize: blob.size,
+        peakRms: Number(peakRms.toFixed(4)),
+        mimeType: format.mimeType,
+        extension: format.extension,
+      });
+      recordingStartedAtRef.current = 0;
+      lifecycleBusyRef.current = false;
+      setState('idle');
+      return;
+    }
+
     if (!hadVoice || peakRms < NO_VOICE_MAX_PEAK_RMS) {
       logVoiceDebugEvent('audio_blob_skipped_no_voice', {
         reason: !hadVoice ? 'vad_no_voice' : 'low_peak_rms',
@@ -256,6 +266,7 @@ export function useVoiceRecorder({ onText, lang = 'ru-RU', chunkMs = DEFAULT_SES
         mimeType: format.mimeType,
         extension: format.extension,
       });
+      recordingStartedAtRef.current = 0;
       lifecycleBusyRef.current = false;
       setState('idle');
       return;
@@ -269,6 +280,7 @@ export function useVoiceRecorder({ onText, lang = 'ru-RU', chunkMs = DEFAULT_SES
         extension: format.extension,
       });
       setError('no-speech');
+      recordingStartedAtRef.current = 0;
       lifecycleBusyRef.current = false;
       setState('idle');
       return;
@@ -302,6 +314,7 @@ export function useVoiceRecorder({ onText, lang = 'ru-RU', chunkMs = DEFAULT_SES
         setError('no-speech');
       }
 
+      recordingStartedAtRef.current = 0;
       lifecycleBusyRef.current = false;
       setState('idle');
     } catch (err) {
@@ -324,6 +337,7 @@ export function useVoiceRecorder({ onText, lang = 'ru-RU', chunkMs = DEFAULT_SES
       }
 
       setError(status === 429 ? 'rate-limited' : code === 'VOICE_TRANSCRIPTION_CLIENT_TIMEOUT' || status === 504 ? 'transcription-timeout' : 'transcription-error');
+      recordingStartedAtRef.current = 0;
       lifecycleBusyRef.current = false;
       setState('idle');
     }
@@ -406,15 +420,6 @@ export function useVoiceRecorder({ onText, lang = 'ru-RU', chunkMs = DEFAULT_SES
       }
 
       if (!voiceDetectedRef.current) {
-        if (elapsedMs >= vadProfile.noVoiceAutoStopMs) {
-          logVoiceDebugEvent('vad_stop_no_speech', {
-            elapsedMs,
-            peakRms: Number(vadPeakRmsRef.current.toFixed(4)),
-            mimeType: format.mimeType,
-            extension: format.extension,
-          });
-          finalizeRecording(false);
-        }
         return;
       }
 
@@ -536,7 +541,6 @@ export function useVoiceRecorder({ onText, lang = 'ru-RU', chunkMs = DEFAULT_SES
         mediaRecorderRef.current = null;
         chunksRef.current = [];
         activeFormatRef.current = null;
-        recordingStartedAtRef.current = 0;
         startInProgressRef.current = false;
 
         if (cancelledRef.current) {
@@ -546,6 +550,7 @@ export function useVoiceRecorder({ onText, lang = 'ru-RU', chunkMs = DEFAULT_SES
         }
 
         logVoiceDebugEvent('audio_blob_ready', { mimeType: format.mimeType, extension: format.extension, blobSize: blob.size, hadVoice });
+        stopAllStreams();
         void uploadFinalBlob(blob, format, hadVoice, peakRms).finally(() => {
           cancelledRef.current = false;
         });

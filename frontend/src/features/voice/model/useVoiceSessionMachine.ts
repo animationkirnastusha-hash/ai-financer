@@ -2,11 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { logVoiceDebugEvent } from '@/features/voice/api/voice.api';
 import {
   VOICE_AFTER_DISPATCH_COOLDOWN_MS,
-  VOICE_COMMAND_CAPTURE_TIMEOUT_MS,
-  VOICE_COMMAND_SESSION_MS,
-  VOICE_WAKE_SESSION_MS,
-  VOICE_WAKE_MISS_BASE_COOLDOWN_MS,
-  VOICE_WAKE_MISS_MAX_COOLDOWN_MS,
+  VOICE_MANUAL_SESSION_MS,
 } from '@/features/voice/model/voiceConstants';
 import type {
   VoiceBubbleTone,
@@ -14,8 +10,7 @@ import type {
   VoiceSessionPhase,
   VoiceSessionSegment,
 } from '@/features/voice/model/voiceSession.types';
-import { normalizeVoiceText, shouldIgnoreVoiceCommand } from '@/features/voice/model/voiceText';
-import { stripWakeWord } from '@/features/voice/model/voiceWakeWord';
+import { normalizeForWake, normalizeVoiceText, shouldIgnoreVoiceCommand } from '@/features/voice/model/voiceText';
 
 type UseVoiceSessionMachineParams = {
   companionName: string;
@@ -23,30 +18,57 @@ type UseVoiceSessionMachineParams = {
   dispatchCommand: (params: { sessionId: string; finalText: string; segments: VoiceSessionSegment[] }) => Promise<void>;
 };
 
-function buildFinalText(segments: VoiceSessionSegment[]) {
-  return segments.map((segment) => segment.text).join(' ').replace(/\s+/g, ' ').trim();
-}
-
 function makeSessionId() {
   if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) return crypto.randomUUID();
   return `voice-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
+function escapeRegExp(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function stripOptionalCompanionName(text: string, companionName: string) {
+  const cleanText = normalizeVoiceText(text);
+  const cleanName = normalizeForWake(companionName || 'Фина');
+  const aliases = Array.from(new Set([
+    cleanName,
+    'фина',
+    'финна',
+    'фину',
+    'фине',
+    'финой',
+    'fina',
+  ].filter(Boolean)));
+
+  let result = cleanText;
+  for (const alias of aliases) {
+    const pattern = new RegExp(`^\\s*${escapeRegExp(alias)}[\\s,.:;!—-]*`, 'i');
+    const normalizedPattern = new RegExp(`^\\s*${escapeRegExp(alias)}[\\s,.:;!—-]*`, 'i');
+    if (pattern.test(result)) {
+      result = result.replace(pattern, '').trim();
+      break;
+    }
+    const normalized = normalizeForWake(result);
+    if (normalizedPattern.test(normalized)) {
+      result = result.replace(/^\S+[\s,.:;!—-]*/i, '').trim();
+      break;
+    }
+  }
+  return normalizeVoiceText(result);
+}
+
 export function useVoiceSessionMachine({ companionName, showThought, dispatchCommand }: UseVoiceSessionMachineParams) {
-  const [captureMode, setCaptureMode] = useState<VoiceCaptureMode>('wake');
+  const [captureMode, setCaptureMode] = useState<VoiceCaptureMode>('manual');
   const [phase, setPhase] = useState<VoiceSessionPhase>('idle');
   const [isDispatching, setIsDispatching] = useState(false);
   const [cooldownUntil, setCooldownUntil] = useState(0);
 
-  const captureModeRef = useRef<VoiceCaptureMode>('wake');
   const phaseRef = useRef<VoiceSessionPhase>('idle');
-  const segmentsRef = useRef<VoiceSessionSegment[]>([]);
-  const sessionIdRef = useRef('');
-  const commandTimeoutRef = useRef<number | null>(null);
+  const captureModeRef = useRef<VoiceCaptureMode>('manual');
   const dispatchingRef = useRef(false);
-  const wakeMissCountRef = useRef(0);
+  const cooldownTimerRef = useRef<number | null>(null);
 
-  const setMachinePhase = useCallback((nextPhase: VoiceSessionPhase, nextMode: VoiceCaptureMode) => {
+  const setMachinePhase = useCallback((nextPhase: VoiceSessionPhase, nextMode: VoiceCaptureMode = 'manual') => {
     phaseRef.current = nextPhase;
     captureModeRef.current = nextMode;
     setPhase(nextPhase);
@@ -54,204 +76,115 @@ export function useVoiceSessionMachine({ companionName, showThought, dispatchCom
     logVoiceDebugEvent('voice_state_changed', { phase: nextPhase, captureMode: nextMode });
   }, []);
 
-  const clearCommandTimeout = useCallback(() => {
-    if (commandTimeoutRef.current !== null) {
-      window.clearTimeout(commandTimeoutRef.current);
-      commandTimeoutRef.current = null;
+  const clearCooldownTimer = useCallback(() => {
+    if (cooldownTimerRef.current !== null) {
+      window.clearTimeout(cooldownTimerRef.current);
+      cooldownTimerRef.current = null;
     }
   }, []);
 
   const startCooldown = useCallback((durationMs: number, reason: string) => {
-    clearCommandTimeout();
-    segmentsRef.current = [];
-    sessionIdRef.current = '';
+    clearCooldownTimer();
     const safeDurationMs = Math.max(0, Math.round(durationMs));
+    if (safeDurationMs <= 0) {
+      setCooldownUntil(0);
+      setMachinePhase('idle', 'manual');
+      return;
+    }
+
     const until = Date.now() + safeDurationMs;
     setCooldownUntil(until);
-    setMachinePhase('cooldown', 'wake');
+    setMachinePhase('cooldown', 'manual');
     logVoiceDebugEvent('voice_cooldown_started', { reason, durationMs: safeDurationMs, until });
-  }, [clearCommandTimeout, setMachinePhase]);
+
+    cooldownTimerRef.current = window.setTimeout(() => {
+      if (phaseRef.current === 'cooldown') {
+        setCooldownUntil(0);
+        setMachinePhase('idle', 'manual');
+      }
+    }, safeDurationMs);
+  }, [clearCooldownTimer, setMachinePhase]);
 
   const reset = useCallback(() => {
-    clearCommandTimeout();
-    segmentsRef.current = [];
-    sessionIdRef.current = '';
-    wakeMissCountRef.current = 0;
+    clearCooldownTimer();
     setCooldownUntil(0);
-    setMachinePhase('idle', 'wake');
-  }, [clearCommandTimeout, setMachinePhase]);
+    dispatchingRef.current = false;
+    setIsDispatching(false);
+    setMachinePhase('idle', 'manual');
+  }, [clearCooldownTimer, setMachinePhase]);
 
-  const ensureSession = useCallback(() => {
-    if (!sessionIdRef.current) sessionIdRef.current = makeSessionId();
-    return sessionIdRef.current;
-  }, []);
+  const markHolding = useCallback(() => {
+    clearCooldownTimer();
+    setCooldownUntil(0);
+    setMachinePhase('holding', 'manual');
+  }, [clearCooldownTimer, setMachinePhase]);
 
-  const appendSegment = useCallback((rawText: string) => {
-    const text = normalizeVoiceText(rawText);
-    if (shouldIgnoreVoiceCommand(text)) return false;
+  const markLocked = useCallback(() => {
+    clearCooldownTimer();
+    setCooldownUntil(0);
+    setMachinePhase('locked', 'locked');
+  }, [clearCooldownTimer, setMachinePhase]);
 
-    ensureSession();
-    const role = segmentsRef.current.length === 0 ? 'initial' : 'continuation';
-    const segment: VoiceSessionSegment = { text, role, at: Date.now() };
-    segmentsRef.current = [...segmentsRef.current, segment].slice(-6);
+  const markUploading = useCallback(() => {
+    setMachinePhase('uploading', captureModeRef.current);
+  }, [setMachinePhase]);
 
-    logVoiceDebugEvent('voice_session_segment_added', {
-      role,
-      textLength: text.length,
-      segmentCount: segmentsRef.current.length,
-      transcriptPreview: text.slice(0, 90),
-    });
-
-    return true;
-  }, [ensureSession]);
-
-  const finalizeAndDispatch = useCallback(async () => {
+  const handleTranscript = useCallback(async (rawText: string) => {
     if (dispatchingRef.current) return;
 
-    clearCommandTimeout();
-    const segments = segmentsRef.current;
-    const finalText = buildFinalText(segments);
-
-    if (!segments.length || !finalText) {
+    const normalized = normalizeVoiceText(rawText);
+    if (!normalized || shouldIgnoreVoiceCommand(normalized)) {
+      logVoiceDebugEvent('manual_voice_text_ignored', { textLength: normalized.length });
       reset();
       return;
     }
+
+    const finalText = stripOptionalCompanionName(normalized, companionName);
+
+    if (!finalText || shouldIgnoreVoiceCommand(finalText)) {
+      logVoiceDebugEvent('manual_voice_command_empty', {
+        textLength: normalized.length,
+      });
+      reset();
+      showThought('Не расслышала команду.', 'warning', 2400);
+      return;
+    }
+
+    const sessionId = makeSessionId();
+    const segments: VoiceSessionSegment[] = [{ text: finalText, role: 'initial', at: Date.now() }];
 
     dispatchingRef.current = true;
     setIsDispatching(true);
-    setMachinePhase('dispatching', 'wake');
-    logVoiceDebugEvent('voice_session_finalized', {
+    setMachinePhase('dispatching', 'manual');
+    logVoiceDebugEvent('manual_voice_session_dispatched', {
       textLength: finalText.length,
-      segmentCount: segments.length,
-      correctionCount: segments.filter((segment) => segment.role === 'correction').length,
       transcriptPreview: finalText.slice(0, 120),
     });
-    showThought('Выполняю...', 'thinking', 2400);
+    showThought('Выполняю...', 'thinking', 2200);
 
     try {
-      await dispatchCommand({ sessionId: sessionIdRef.current || makeSessionId(), finalText, segments });
+      await dispatchCommand({ sessionId, finalText, segments });
     } finally {
       dispatchingRef.current = false;
       setIsDispatching(false);
-      segmentsRef.current = [];
-      sessionIdRef.current = '';
-      wakeMissCountRef.current = 0;
-      startCooldown(VOICE_AFTER_DISPATCH_COOLDOWN_MS, 'after_dispatch');
+      startCooldown(VOICE_AFTER_DISPATCH_COOLDOWN_MS, 'after_manual_dispatch');
     }
-  }, [clearCommandTimeout, dispatchCommand, reset, setMachinePhase, showThought, startCooldown]);
-
-  const startCommandCapture = useCallback(() => {
-    ensureSession();
-    clearCommandTimeout();
-    wakeMissCountRef.current = 0;
-    setCooldownUntil(0);
-    setMachinePhase('command', 'command');
-    showThought('Слушаю команду.', 'listening', 3600);
-
-    commandTimeoutRef.current = window.setTimeout(() => {
-      if (segmentsRef.current.length > 0) {
-        void finalizeAndDispatch();
-        return;
-      }
-      logVoiceDebugEvent('command_capture_timeout');
-      reset();
-      showThought(`Скажи «${companionName || 'Фина'}» и команду ещё раз.`, 'warning', 3200);
-    }, VOICE_COMMAND_CAPTURE_TIMEOUT_MS);
-  }, [clearCommandTimeout, companionName, ensureSession, finalizeAndDispatch, reset, setMachinePhase, showThought]);
-
-  const handleTranscript = useCallback(async (rawText: string) => {
-    const originalText = normalizeVoiceText(rawText);
-    if (!originalText || dispatchingRef.current) return;
-
-    if (captureModeRef.current === 'command') {
-      const wake = stripWakeWord(originalText, companionName);
-      const command = normalizeVoiceText(wake.hasWakeWord ? wake.command : originalText);
-      logVoiceDebugEvent('command_capture_text_received', {
-        textLength: command.length,
-        hadWakeWord: wake.hasWakeWord,
-        hasText: Boolean(command),
-        transcriptPreview: command.slice(0, 90),
-      });
-
-      if (!appendSegment(command)) return;
-      await finalizeAndDispatch();
-      return;
-    }
-
-    const wake = stripWakeWord(originalText, companionName);
-    if (!wake.hasWakeWord) {
-      wakeMissCountRef.current = Math.min(4, wakeMissCountRef.current + 1);
-      const cooldownMs = Math.min(
-        VOICE_WAKE_MISS_MAX_COOLDOWN_MS,
-        VOICE_WAKE_MISS_BASE_COOLDOWN_MS * wakeMissCountRef.current,
-      );
-
-      logVoiceDebugEvent('wake_word_not_detected', {
-        textLength: originalText.length,
-        hasText: Boolean(originalText),
-        transcriptPreview: originalText.slice(0, 90),
-        visualOnly: true,
-        cooldownMs,
-        missCount: wakeMissCountRef.current,
-      });
-
-      startCooldown(cooldownMs, 'wake_miss');
-      return;
-    }
-
-    wakeMissCountRef.current = 0;
-    setCooldownUntil(0);
-
-    const command = normalizeVoiceText(wake.command);
-    logVoiceDebugEvent('wake_word_detected', {
-      textLength: originalText.length,
-      hasText: Boolean(originalText),
-      commandLength: command.length,
-      matchType: wake.matchType,
-      transcriptPreview: originalText.slice(0, 120),
-      commandPreview: command.slice(0, 120),
-    });
-
-    if (!command) {
-      startCommandCapture();
-      return;
-    }
-
-    if (!appendSegment(command)) {
-      startCommandCapture();
-      return;
-    }
-
-    await finalizeAndDispatch();
-  }, [appendSegment, companionName, finalizeAndDispatch, startCommandCapture, startCooldown]);
-
-  useEffect(() => {
-    if (phase !== 'cooldown') return undefined;
-
-    const delay = Math.max(0, cooldownUntil - Date.now());
-    const timer = window.setTimeout(() => {
-      if (phaseRef.current === 'cooldown') {
-        setCooldownUntil(0);
-        setMachinePhase('idle', 'wake');
-      }
-    }, delay);
-
-    return () => window.clearTimeout(timer);
-  }, [cooldownUntil, phase, setMachinePhase]);
+  }, [companionName, dispatchCommand, reset, setMachinePhase, showThought, startCooldown]);
 
   useEffect(() => () => {
-    clearCommandTimeout();
-  }, [clearCommandTimeout]);
+    clearCooldownTimer();
+  }, [clearCooldownTimer]);
 
   return {
     captureMode,
     phase,
     isDispatching,
     cooldownUntil,
-    recordSessionMs: captureMode === 'command' ? VOICE_COMMAND_SESSION_MS : VOICE_WAKE_SESSION_MS,
+    recordSessionMs: VOICE_MANUAL_SESSION_MS,
     handleTranscript,
     reset,
-    pause: startCooldown,
-    startCommandCapture,
+    markHolding,
+    markLocked,
+    markUploading,
   };
 }

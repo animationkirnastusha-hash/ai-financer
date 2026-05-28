@@ -41,8 +41,6 @@ const VOICE_DEBUG_IMPORTANT_EVENTS = new Set([
   'transcribe_request_sent',
   'transcribe_request_success',
   'transcribe_request_failed',
-  'wake_word_detected',
-  'wake_word_not_detected',
   'voice_session_segment_added',
   'voice_session_finalized',
   'voice_session_dispatched',
@@ -52,9 +50,7 @@ const VOICE_DEBUG_IMPORTANT_EVENTS = new Set([
 
 const VOICE_DEBUG_NOISY_EVENTS = new Set([
   'tts_audio_unlock_ready',
-  'microphone_stream_reused',
   'recorder_start_call',
-  'wake_listener_auto_start',
   'audio_blob_skipped_no_voice',
   'vad_stop_no_speech',
 ]);

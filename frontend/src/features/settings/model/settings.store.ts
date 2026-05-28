@@ -10,13 +10,10 @@ type SettingsState = AppSettings & {
   setAppLanguage: (language: AppLanguage) => void;
 
   setCompanionName: (name: string) => void;
-  setVoiceWakeWordEnabled: (value: boolean) => void;
-  setVoiceActiveWindowSeconds: (seconds: number) => void;
 
   setVoiceEnabled: (value: boolean) => void;
   setVoiceBetaEnabled: (value: boolean) => void;
   setVoiceRepliesEnabled: (value: boolean) => void;
-  setVoiceAlwaysOnEnabled: (value: boolean) => void;
   setVoicePermissionPrompted: (value: boolean) => void;
   setTextInputEnabled: (value: boolean) => void;
   setAIInsightsEnabled: (value: boolean) => void;
@@ -39,13 +36,10 @@ const defaultSettings: AppSettings = {
   appLanguage: 'ru',
 
   companionName: FIXED_COMPANION_NAME,
-  voiceWakeWordEnabled: true,
-  voiceActiveWindowSeconds: 7,
 
   voiceEnabled: true,
   voiceBetaEnabled: true,
   voiceRepliesEnabled: true,
-  voiceAlwaysOnEnabled: true,
   voicePermissionPrompted: false,
   textInputEnabled: true,
   aiInsightsEnabled: true,
@@ -61,10 +55,6 @@ const defaultSettings: AppSettings = {
   rubToEurRate: 100,
 };
 
-function normalizeActiveWindow(value: unknown) {
-  if (typeof value !== 'number' || Number.isNaN(value)) return defaultSettings.voiceActiveWindowSeconds;
-  return Math.min(120, Math.max(2, Math.round(value)));
-}
 
 function loadSettings(): AppSettings {
   try {
@@ -78,10 +68,7 @@ function loadSettings(): AppSettings {
       ...parsed,
       appLanguage: parsed.appLanguage === 'en' ? 'en' : 'ru',
       companionName: FIXED_COMPANION_NAME,
-      voiceWakeWordEnabled: true,
-      voiceActiveWindowSeconds: normalizeActiveWindow(parsed.voiceActiveWindowSeconds),
       voiceRepliesEnabled: parsed.voiceRepliesEnabled === false ? false : true,
-      voiceAlwaysOnEnabled: parsed.voiceAlwaysOnEnabled === false ? false : true,
       voicePermissionPrompted: Boolean(parsed.voicePermissionPrompted),
       textInputEnabled: parsed.textInputEnabled === false ? false : true,
     };
@@ -96,12 +83,9 @@ function saveSettings(state: AppSettings) {
     JSON.stringify({
       appLanguage: state.appLanguage,
       companionName: FIXED_COMPANION_NAME,
-      voiceWakeWordEnabled: state.voiceWakeWordEnabled,
-      voiceActiveWindowSeconds: normalizeActiveWindow(state.voiceActiveWindowSeconds),
       voiceEnabled: state.voiceEnabled,
       voiceBetaEnabled: state.voiceBetaEnabled,
       voiceRepliesEnabled: state.voiceRepliesEnabled,
-      voiceAlwaysOnEnabled: state.voiceAlwaysOnEnabled,
       voicePermissionPrompted: state.voicePermissionPrompted,
       textInputEnabled: state.textInputEnabled,
       aiInsightsEnabled: state.aiInsightsEnabled,
@@ -131,16 +115,6 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
     saveSettings(get());
   },
 
-  setVoiceWakeWordEnabled: () => {
-    set({ voiceWakeWordEnabled: true });
-    saveSettings(get());
-  },
-
-  setVoiceActiveWindowSeconds: (voiceActiveWindowSeconds) => {
-    set({ voiceActiveWindowSeconds: normalizeActiveWindow(voiceActiveWindowSeconds) });
-    saveSettings(get());
-  },
-
   setVoiceEnabled: (value) => {
     set({ voiceEnabled: value });
     saveSettings(get());
@@ -153,11 +127,6 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
 
   setVoiceRepliesEnabled: (value) => {
     set({ voiceRepliesEnabled: value });
-    saveSettings(get());
-  },
-
-  setVoiceAlwaysOnEnabled: (value) => {
-    set({ voiceAlwaysOnEnabled: value });
     saveSettings(get());
   },
 

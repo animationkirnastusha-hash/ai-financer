@@ -1,7 +1,7 @@
 export type VoiceCompanionMood = 'idle' | 'listening' | 'thinking' | 'confirm' | 'success' | 'warning';
 export type VoiceBubbleTone = 'neutral' | 'listening' | 'thinking' | 'success' | 'warning';
-export type VoiceCaptureMode = 'wake' | 'command';
-export type VoiceSessionPhase = 'idle' | 'wake' | 'command' | 'transcribing' | 'dispatching' | 'clarification' | 'confirm' | 'success' | 'cooldown' | 'error';
+export type VoiceCaptureMode = 'manual' | 'locked';
+export type VoiceSessionPhase = 'idle' | 'holding' | 'locked' | 'uploading' | 'dispatching' | 'cooldown';
 export type VoiceSegmentRole = 'initial' | 'continuation' | 'correction';
 
 export type VoiceThought = {

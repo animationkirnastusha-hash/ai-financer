@@ -60,7 +60,6 @@ export default function SettingsPage() {
   const voiceEnabled = useSettingsStore((state) => state.voiceEnabled);
   const voiceBetaEnabled = useSettingsStore((state) => state.voiceBetaEnabled);
   const voiceRepliesEnabled = useSettingsStore((state) => state.voiceRepliesEnabled);
-  const voiceAlwaysOnEnabled = useSettingsStore((state) => state.voiceAlwaysOnEnabled);
   const textInputEnabled = useSettingsStore((state) => state.textInputEnabled);
   const aiInsightsEnabled = useSettingsStore((state) => state.aiInsightsEnabled);
   const mainCurrency = useSettingsStore((state) => state.mainCurrency);
@@ -72,7 +71,6 @@ export default function SettingsPage() {
   const setVoiceEnabled = useSettingsStore((state) => state.setVoiceEnabled);
   const setVoiceBetaEnabled = useSettingsStore((state) => state.setVoiceBetaEnabled);
   const setVoiceRepliesEnabled = useSettingsStore((state) => state.setVoiceRepliesEnabled);
-  const setVoiceAlwaysOnEnabled = useSettingsStore((state) => state.setVoiceAlwaysOnEnabled);
   const setTextInputEnabled = useSettingsStore((state) => state.setTextInputEnabled);
   const setAIInsightsEnabled = useSettingsStore((state) => state.setAIInsightsEnabled);
   const setMainCurrency = useSettingsStore((state) => state.setMainCurrency);
@@ -149,8 +147,8 @@ export default function SettingsPage() {
         </section>
 
         <section className="app-settings-grid">
-          <SettingsCard title="Голос" caption="Фина ждёт имя и отвечает коротко" value={voiceEnabled ? 'включён' : 'выключен'} onClick={() => setModal('voice')} />
-          <SettingsCard title="Фина" caption="Как помощник принимает голос" value="по имени" onClick={() => setModal('fina')} />
+          <SettingsCard title="Голос" caption="Голосовой ввод по нажатию" value={voiceEnabled ? 'включён' : 'выключен'} onClick={() => setModal('voice')} />
+          <SettingsCard title="Фина" caption="Как работает голосовой ввод" value="по имени" onClick={() => setModal('fina')} />
           <SettingsCard title="Валюты" caption="Главная валюта и курсы" value={`${mainCurrency}${secondaryCurrencyEnabled ? ` + ${secondaryCurrency}` : ''}`} onClick={() => setModal('currency')} />
           <SettingsCard title="Подсказки" caption="Текстовый ввод и наблюдения" value={textInputEnabled ? 'текст есть' : 'только голос'} onClick={() => setModal('ai')} />
           <SettingsCard title="Данные" caption="Очистка финансов или полный сброс" value="тесты" onClick={() => setModal('data')} />
@@ -178,25 +176,24 @@ export default function SettingsPage() {
       </div>
 
       {modal === 'voice' ? (
-        <ModalShell title="Голос" caption="Фина ждёт своё имя, коротко отвечает голосом и передаёт команды в основной AI-flow." onClose={() => setModal(null)}>
+        <ModalShell title="Голос" caption="Запись начинается только когда ты зажимаешь Фину. Фон не отправляется в распознавание." onClose={() => setModal(null)}>
           <div className="grid gap-3">
-            <ToggleLine title="Голосовой ввод" caption="Микрофон слушает короткими сессиями и реагирует только на имя Фина." checked={voiceEnabled} onChange={setVoiceEnabled} />
-            <ToggleLine title="Автоожидание имени" caption="Без нажатия: фразы без имени игнорируются, команда после имени обрабатывается." checked={voiceAlwaysOnEnabled} onChange={setVoiceAlwaysOnEnabled} />
+            <ToggleLine title="Голосовой ввод" caption="Микрофон включается только на время удержания кнопки Фины." checked={voiceEnabled} onChange={setVoiceEnabled} />
             <ToggleLine title="Голос Фины" caption="Короткие ответы голосом Nova: «Я здесь», «Слушаю», «Готово»." checked={voiceRepliesEnabled} onChange={setVoiceRepliesEnabled} />
             <ToggleLine title="Серверное распознавание" caption="Единый STT через backend для iPhone и Android." checked={voiceBetaEnabled} onChange={setVoiceBetaEnabled} />
           </div>
-          <p className="app-settings-note mt-4">Подтверждения остаются в обычных модалках. Голосовые фразы Фины короткие и не блокируют действие.</p>
+          <p className="app-settings-note mt-4">Подтверждения остаются в обычных модалках. После отпускания запись отправляется в распознавание один раз.</p>
         </ModalShell>
       ) : null}
 
       {modal === 'fina' ? (
-        <ModalShell title="Фина" caption="Помощник реагирует на имя и не трогает лишние разговоры." onClose={() => setModal(null)}>
+        <ModalShell title="Фина" caption="Фина работает как голосовая кнопка и не слушает фон." onClose={() => setModal(null)}>
           <div className="app-fina-rules">
-            <div><b>1</b><span>Скажи: «Фина»</span></div>
-            <div><b>2</b><span>Фина ответит: «Я здесь» или «Слушаю»</span></div>
-            <div><b>3</b><span>Скажи финансовую команду обычным языком</span></div>
+            <div><b>1</b><span>Зажми Фину</span></div>
+            <div><b>2</b><span>Скажи финансовую команду</span></div>
+            <div><b>3</b><span>Отпусти, чтобы отправить</span></div>
           </div>
-          <p className="app-settings-note">Фразы без имени игнорируются. Все проверки, отмены и изменения остаются в обычных модалках приложения.</p>
+          <p className="app-settings-note">Фон не распознаётся. Все проверки, отмены и изменения остаются в обычных модалках приложения.</p>
         </ModalShell>
       ) : null}
 

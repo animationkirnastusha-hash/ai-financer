@@ -8,13 +8,10 @@ export type AppSettings = {
   appLanguage: AppLanguage;
 
   companionName: string;
-  voiceWakeWordEnabled: boolean;
-  voiceActiveWindowSeconds: number;
 
   voiceEnabled: boolean;
   voiceBetaEnabled: boolean;
   voiceRepliesEnabled: boolean;
-  voiceAlwaysOnEnabled: boolean;
   voicePermissionPrompted: boolean;
   textInputEnabled: boolean;
   aiInsightsEnabled: boolean;
