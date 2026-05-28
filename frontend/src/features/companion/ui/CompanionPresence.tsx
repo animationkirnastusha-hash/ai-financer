@@ -30,14 +30,14 @@ export function CompanionPresence({ compact = false }: Props) {
   const currentLevelBase = Math.max(0, (level - 1) * 100);
   const nextLevelBase = level * 100;
   const progress = clampPercent(((xp - currentLevelBase) / Math.max(1, nextLevelBase - currentLevelBase)) * 100);
-  const message = state?.message || 'Готов помогать с расходами, счетами, целями и привычками.';
+  const message = state?.message || 'Готова помогать с расходами, счетами, целями и привычками.';
 
   const status = useMemo(() => {
     const streak = Number(state?.streakDays ?? 0);
-    if (streak >= 7) return `Серия ${streak} дней. Хороший темп.`;
-    if (xp > 0) return `Опыт ${xp}. До следующего уровня осталось немного.`;
-    return 'Начни с первой операции или цели.';
-  }, [state?.streakDays, xp]);
+    if (streak >= 7) return `Серия ${streak} дней. XP копится быстрее.`;
+    if (xp > 0) return `До следующего уровня: ${Math.max(0, nextLevelBase - xp)} XP.`;
+    return 'XP появится после первых действий.';
+  }, [nextLevelBase, state?.streakDays, xp]);
 
   if (compact) {
     return <CompanionButton mood={state?.mood ?? 'idle'} onClick={() => navigateTo('companion')} label="Помощник" />;
@@ -62,12 +62,13 @@ export function CompanionPresence({ compact = false }: Props) {
             </div>
             <div className="app-xp-panel__track"><i style={{ width: `${progress}%` }} /></div>
             <div className="app-xp-panel__caption">{status}</div>
+            <div className="app-xp-panel__future">Скоро XP станет ресурсом</div>
           </div>
         </div>
       </div>
 
       <div className="app-companion-presence__actions">
-        <button type="button" onClick={() => openAIWithCommand()} className="app-secondary-button">Спросить AI</button>
+        <button type="button" onClick={() => openAIWithCommand()} className="app-secondary-button">Написать Фине</button>
         <button type="button" onClick={() => navigateTo('companion')} className="app-secondary-button">Прогресс</button>
       </div>
     </section>

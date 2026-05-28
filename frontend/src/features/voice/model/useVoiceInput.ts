@@ -46,7 +46,20 @@ export function useVoiceInput({ onText, lang = 'ru-RU', sessionMs = 5200 }: UseV
       return false;
     }
 
-    await getMicrophonePermissionState();
+    const permissionState = await getMicrophonePermissionState();
+    if (permissionState === 'granted') {
+      setPermissionPrimed(true);
+      logVoiceDebugEvent('permission_prime_already_granted');
+      return true;
+    }
+
+    if (permissionState === 'denied') {
+      setPermissionPrimed(false);
+      setPermissionError('microphone-denied');
+      logVoiceDebugEvent('permission_prime_denied_prechecked');
+      return false;
+    }
+
     if (permissionRequestInFlightRef.current) return false;
 
     permissionRequestInFlightRef.current = true;
@@ -82,15 +95,27 @@ export function useVoiceInput({ onText, lang = 'ru-RU', sessionMs = 5200 }: UseV
     if (recorder.state === 'recording' || recorder.state === 'uploading') return 'busy';
 
     try {
-      const permissionReady = await primePermission();
-      if (!permissionReady) return 'permission-ready';
+      const permissionState = await getMicrophonePermissionState();
+
+      if (permissionState === 'granted') {
+        setPermissionPrimed(true);
+      } else if (!permissionPrimed) {
+        // Важно: удержание Фины не должно открывать системный permission popup.
+        // Если браузер ещё в состоянии prompt/unknown, запись не стартует.
+        // Доступ выдаётся только отдельной кнопкой в intro/onboarding.
+        setPermissionError(permissionState === 'denied' ? 'microphone-denied' : 'permission-ready');
+        logVoiceDebugEvent('voice_start_blocked_until_permission_prime', { permissionState: permissionState ?? 'unknown' });
+        return 'permission-ready';
+      }
+
       await recorder.startRecording();
       return 'started';
     } catch (error) {
       console.error(error);
+      setPermissionError('recording-error');
       return 'error';
     }
-  }, [primePermission, recorder]);
+  }, [permissionPrimed, recorder]);
 
   const stop = useCallback(() => {
     recorder.stopRecording();

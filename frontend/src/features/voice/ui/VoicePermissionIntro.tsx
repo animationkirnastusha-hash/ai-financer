@@ -15,17 +15,19 @@ export function VoicePermissionIntro({ wakeName, isPriming, onPrime, onSkip }: V
           <CompanionButton mood="idle" size="md" label={wakeName} />
         </div>
         <div className="voice-first-intro__eyebrow">Голосовой ввод</div>
-        <div className="voice-first-intro__title">Разреши микрофон</div>
-        <p>Микрофон нужен для голосовых команд. Запись начинается только когда ты зажимаешь Фину.</p>
+        <div className="voice-first-intro__title">Разреши микрофон заранее</div>
+        <p>
+          Так запись не сломается при первом удержании. После разрешения запись стартует только от твоего действия.
+        </p>
 
         <div className="voice-first-intro__steps">
-          <div><b>1</b><span>Разреши доступ один раз</span></div>
+          <div><b>1</b><span>Нажми «Разрешить»</span></div>
           <div><b>2</b><span>Зажми Фину и говори</span></div>
-          <div><b>3</b><span>Отпусти, чтобы отправить</span></div>
+          <div><b>3</b><span>Отпусти или закрепи запись</span></div>
         </div>
 
         <div className="voice-first-intro__hint">
-          Можно потянуть вверх, чтобы закрепить запись, или влево, чтобы отменить.
+          В закреплённой записи нажми на Фину, чтобы отправить. Кнопка отмены остаётся отдельно снизу.
         </div>
 
         <div className="voice-first-intro__actions">
