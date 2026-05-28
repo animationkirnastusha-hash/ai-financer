@@ -96,6 +96,10 @@ export function useVoiceInput({ onText, lang = 'ru-RU', sessionMs = 5200 }: UseV
     recorder.stopRecording();
   }, [recorder]);
 
+  const setManualStopOnly = useCallback((value: boolean) => {
+    recorder.setManualStopOnly?.(value);
+  }, [recorder]);
+
   const cancel = useCallback(() => {
     window.speechSynthesis?.cancel();
     setPermissionError(null);
@@ -130,6 +134,7 @@ export function useVoiceInput({ onText, lang = 'ru-RU', sessionMs = 5200 }: UseV
     stop,
     cancel,
     reset,
+    setManualStopOnly,
     primePermission,
     speak,
     stopSpeaking,

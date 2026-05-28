@@ -333,3 +333,53 @@ body:has([data-drawer-panel="true"]) .voice-first-layer {
     bottom: 70px;
   }
 }
+
+/* Patch 128: explicit-send voice UX. During manual recording, no legacy thought/status overlays. */
+.voice-first-companion--locked .voice-first-companion__voice-panel {
+  pointer-events: none;
+}
+
+.voice-first-locked-hint {
+  display: grid;
+  gap: 2px;
+  min-width: 178px;
+  max-width: min(230px, calc(100vw - 112px));
+  padding: 10px 12px;
+  border-radius: 18px;
+  border: 1px solid rgba(139, 199, 255, .22);
+  background: rgba(8, 13, 24, .88);
+  box-shadow: 0 16px 44px rgba(0, 0, 0, .32), inset 0 1px 0 rgba(255,255,255,.08);
+  -webkit-backdrop-filter: blur(18px);
+  backdrop-filter: blur(18px);
+  color: rgba(255,255,255,.92);
+}
+
+.voice-first-locked-hint b {
+  font-size: 12px;
+  line-height: 1.1;
+  letter-spacing: .02em;
+  font-weight: 750;
+}
+
+.voice-first-locked-hint span {
+  font-size: 11px;
+  line-height: 1.25;
+  color: rgba(255,255,255,.62);
+  white-space: normal;
+}
+
+.voice-first-companion--locked .voice-first-status {
+  display: none !important;
+}
+
+.voice-first-companion--locked .voice-first-bubble {
+  display: none !important;
+}
+
+@media (max-width: 390px) {
+  .voice-first-locked-hint {
+    min-width: 154px;
+    max-width: calc(100vw - 100px);
+    padding: 9px 10px;
+  }
+}

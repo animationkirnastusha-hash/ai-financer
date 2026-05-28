@@ -72,6 +72,7 @@ export function useVoiceRecorder({ onText, lang = 'ru-RU', chunkMs = DEFAULT_SES
   const finalizeTimerRef = useRef<number | null>(null);
   const cancelledRef = useRef(false);
   const lifecycleBusyRef = useRef(false);
+  const manualStopOnlyRef = useRef(false);
 
   const [state, setState] = useState<VoiceRecorderState>('idle');
   const [error, setError] = useState<string | null>(null);
@@ -226,6 +227,7 @@ export function useVoiceRecorder({ onText, lang = 'ru-RU', chunkMs = DEFAULT_SES
     recordingStartedAtRef.current = 0;
     startInProgressRef.current = false;
     lifecycleBusyRef.current = false;
+    manualStopOnlyRef.current = false;
     cancelledRef.current = false;
     finalHadVoiceRef.current = false;
     finalPeakRmsRef.current = 0;
@@ -430,16 +432,19 @@ export function useVoiceRecorder({ onText, lang = 'ru-RU', chunkMs = DEFAULT_SES
       const requiredSilenceMs = hadStrongVoice ? vadProfile.graceAfterStrongVoiceMs : vadProfile.graceAfterVoiceMs;
 
       if (silenceMs >= requiredSilenceMs) {
-        logVoiceDebugEvent('vad_stop_triggered', {
+        logVoiceDebugEvent('vad_silence_detected_manual_hold', {
           elapsedMs,
           silenceMs,
           graceMs: requiredSilenceMs,
           peakRms: Number(vadPeakRmsRef.current.toFixed(4)),
           mimeType: format.mimeType,
           extension: format.extension,
+          manualStopOnly: manualStopOnlyRef.current,
         });
-        logVoiceDebugEvent('speech_ended', { elapsedMs, silenceMs });
-        finalizeRecording(false);
+        // In manual press-to-talk mode VAD is diagnostic only. It may mark
+        // that speech ended, but it must never send audio to STT by itself.
+        // Sending is allowed only from explicit user intent: release button,
+        // tap Fina in locked mode, or explicit cancel.
       }
     }, VAD_CHECK_INTERVAL_MS);
   }, [finalizeRecording, platformConfig, stopVoiceActivityWatcher]);
@@ -465,6 +470,7 @@ export function useVoiceRecorder({ onText, lang = 'ru-RU', chunkMs = DEFAULT_SES
 
     startInProgressRef.current = true;
     lifecycleBusyRef.current = true;
+    manualStopOnlyRef.current = true;
     cancelledRef.current = false;
 
     try {
@@ -501,15 +507,16 @@ export function useVoiceRecorder({ onText, lang = 'ru-RU', chunkMs = DEFAULT_SES
         startVoiceActivityWatcher(recorderFormat);
 
         finalizeTimerRef.current = window.setTimeout(() => {
-          logVoiceDebugEvent('voice_max_session_reached', {
+          logVoiceDebugEvent('voice_max_session_reached_manual_hold', {
             elapsedMs: Date.now() - recordingStartedAtRef.current,
             peakRms: Number(vadPeakRmsRef.current.toFixed(4)),
             hadVoice: voiceDetectedRef.current,
             sessionMs: clampSessionMs(chunkMs),
             mimeType: recorderFormat.mimeType,
             extension: recorderFormat.extension,
+            manualStopOnly: manualStopOnlyRef.current,
           });
-          finalizeRecording(false);
+          // Do not finalize here. The user controls when the voice note is sent.
         }, clampSessionMs(chunkMs));
       };
 
@@ -586,7 +593,13 @@ export function useVoiceRecorder({ onText, lang = 'ru-RU', chunkMs = DEFAULT_SES
     setState('idle');
     startInProgressRef.current = false;
     lifecycleBusyRef.current = false;
+    manualStopOnlyRef.current = false;
   }, [hardCleanup]);
+
+  const setManualStopOnly = useCallback((value: boolean) => {
+    manualStopOnlyRef.current = value;
+    logVoiceDebugEvent('voice_manual_stop_only_changed', { value, state });
+  }, [state]);
 
   return {
     state,
@@ -596,5 +609,6 @@ export function useVoiceRecorder({ onText, lang = 'ru-RU', chunkMs = DEFAULT_SES
     stopRecording,
     cancelRecording,
     reset,
+    setManualStopOnly,
   };
 }
