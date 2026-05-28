@@ -52,10 +52,11 @@ export function VoiceFirstCompanionLayer() {
   const companionName = useSettingsStore((state) => state.companionName || 'Фина');
   const appLanguage = useSettingsStore((state) => state.appLanguage);
   const setVoicePermissionPrompted = useSettingsStore((state) => state.setVoicePermissionPrompted);
-  const setVoiceEnabled = useSettingsStore((state) => state.setVoiceEnabled);
 
   const [thought, setThought] = useState<VoiceThought | null>(null);
   const [isPriming, setIsPriming] = useState(false);
+  const [permissionIntroOpen, setPermissionIntroOpen] = useState(false);
+  const [permissionIntroDismissed, setPermissionIntroDismissed] = useState(false);
   const [gestureMode, setGestureMode] = useState<GestureMode>('idle');
 
   const bubbleTimerRef = useRef<number | null>(null);
@@ -119,13 +120,35 @@ export function VoiceFirstCompanionLayer() {
   const voice = useVoiceInput({
     lang: appLanguage === 'en' ? 'en-US' : 'ru-RU',
     sessionMs: recordSessionMs,
+    permissionWasPrompted: voicePermissionPrompted,
     onText: (text) => handleTextRef.current(text),
   });
 
   const canUseVoice = voiceEnabled && voiceBetaEnabled && voice.isSupported;
   const hasPending = chat.pendingActions.length > 0;
   const isBusy = chat.isSending || isDispatching || voice.state === 'uploading';
-  const canStartManualRecording = canUseVoice && voicePermissionPrompted && !hasPending && !chat.isSending && !isDispatching && voice.state === 'idle';
+  const microphoneNeedsAction = canUseVoice && (!voicePermissionPrompted || voice.permissionState === 'prompt' || voice.permissionState === 'denied' || voice.permissionState === 'unsupported');
+  const voicePermissionReady = canUseVoice && voicePermissionPrompted && voice.permissionState !== 'prompt' && voice.permissionState !== 'denied' && voice.permissionState !== 'unsupported';
+  const canStartManualRecording = voicePermissionReady && !hasPending && !chat.isSending && !isDispatching && voice.state === 'idle';
+
+  useEffect(() => {
+    void voice.refreshPermissionState?.();
+  }, [voice.refreshPermissionState]);
+
+  useEffect(() => {
+    if (!canUseVoice) return;
+
+    if (voice.permissionState === 'granted' && !voicePermissionPrompted) {
+      setVoicePermissionPrompted(true);
+      setPermissionIntroOpen(false);
+      setPermissionIntroDismissed(false);
+      return;
+    }
+
+    if (voice.permissionState === 'prompt' || voice.permissionState === 'denied') {
+      if (voicePermissionPrompted) setVoicePermissionPrompted(false);
+    }
+  }, [canUseVoice, setVoicePermissionPrompted, voice.permissionState, voicePermissionPrompted]);
 
   useEffect(() => {
     handleTextRef.current = async (text: string) => {
@@ -179,18 +202,25 @@ export function VoiceFirstCompanionLayer() {
     setIsPriming(true);
     try {
       const ready = await voice.primePermission();
-      setVoicePermissionPrompted(true);
-      if (ready) showThought('Готово. Зажми Фину и говори.', 'success', 3200);
-      else {
+      if (ready) {
+        setVoicePermissionPrompted(true);
+        setPermissionIntroOpen(false);
+        setPermissionIntroDismissed(false);
+        showThought('Готово. Зажми Фину и говори.', 'success', 3200);
+      } else {
         setVoicePermissionPrompted(false);
-        showThought('Разреши микрофон перед записью.', 'warning', 3200);
+        setPermissionIntroOpen(true);
+        showThought('Микрофон будет доступен после разрешения.', 'neutral', 3200);
       }
     } catch {
+      setVoicePermissionPrompted(false);
+      setPermissionIntroOpen(true);
+      setPermissionIntroDismissed(false);
       showThought('Нужен доступ к микрофону.', 'warning', 3600);
     } finally {
       setIsPriming(false);
     }
-  }, [setVoicePermissionPrompted, showThought, voice]);
+  }, [setVoicePermissionPrompted, showThought, voice.primePermission]);
 
   const handlePointerDown = useCallback((event: PointerEvent<HTMLDivElement>) => {
     const lockedGesture = gestureRef.current;
@@ -202,9 +232,15 @@ export function VoiceFirstCompanionLayer() {
     }
 
     if (!canStartManualRecording) {
-      if (!canUseVoice) showThought('Голос недоступен.', 'warning', 2400);
-      else if (!voicePermissionPrompted) showThought('Сначала разреши микрофон.', 'warning', 2400);
-      else if (hasPending) showThought('Сначала закрой действие.', 'warning', 2400);
+      if (!canUseVoice) {
+        showThought('Голос недоступен.', 'warning', 2400);
+      } else if (!voicePermissionReady) {
+        setPermissionIntroOpen(true);
+        setPermissionIntroDismissed(false);
+        showThought('Сначала разреши микрофон.', 'warning', 2400);
+      } else if (hasPending) {
+        showThought('Сначала закрой действие.', 'warning', 2400);
+      }
       return;
     }
 
@@ -254,7 +290,7 @@ export function VoiceFirstCompanionLayer() {
         sendManualRecording('release_after_async_start');
       }
     });
-  }, [canStartManualRecording, canUseVoice, hasPending, markHolding, resetGesture, resetVoiceMachine, sendManualRecording, showThought, voice, voicePermissionPrompted]);
+  }, [canStartManualRecording, canUseVoice, hasPending, markHolding, resetGesture, resetVoiceMachine, sendManualRecording, showThought, voice.start, voicePermissionReady]);
 
   const handlePointerMove = useCallback((event: PointerEvent<HTMLDivElement>) => {
     const gesture = gestureRef.current;
@@ -330,15 +366,10 @@ export function VoiceFirstCompanionLayer() {
       return;
     }
 
-    if (voice.error === 'permission-ready') {
-      showThought('Сначала разреши микрофон.', 'warning', 3600);
-      resetGesture();
-      resetVoiceMachine();
-      return;
-    }
-
     if (voice.error === 'microphone-denied' || voice.error === 'not-allowed' || voice.error === 'service-not-allowed') {
       setVoicePermissionPrompted(false);
+      setPermissionIntroOpen(true);
+      setPermissionIntroDismissed(false);
       showThought('Нужен доступ к микрофону.', 'warning', 3600);
       resetGesture();
       resetVoiceMachine();
@@ -350,7 +381,7 @@ export function VoiceFirstCompanionLayer() {
       resetGesture();
       resetVoiceMachine();
     }
-  }, [resetGesture, resetVoiceMachine, setVoicePermissionPrompted, showThought, voice.error]);
+  }, [resetGesture, resetVoiceMachine, showThought, voice.error]);
 
   useEffect(() => {
     const lastMessage = chat.messages.filter((message) => message.role === 'assistant').at(-1);
@@ -400,7 +431,7 @@ export function VoiceFirstCompanionLayer() {
     return 'idle';
   }, [chat.isSending, chat.pendingActions.length, gestureMode, isDispatching, thought?.tone, voice.state]);
 
-  const needsIntro = canUseVoice && !voicePermissionPrompted;
+  const needsIntro = microphoneNeedsAction && (!permissionIntroDismissed || permissionIntroOpen);
   const showFloatingCompanion = currentScreen !== 'ai-core';
   const isLocked = gestureMode === 'locked';
 
@@ -412,11 +443,11 @@ export function VoiceFirstCompanionLayer() {
         <VoicePermissionIntro
           wakeName={wakeName}
           isPriming={isPriming}
+          permissionState={voice.permissionState}
           onPrime={primeVoicePermission}
           onSkip={() => {
-            setVoiceEnabled(false);
-            setVoicePermissionPrompted(false);
-            showThought('Голос можно включить позже в настройках.', 'neutral', 3200);
+            setPermissionIntroOpen(false);
+            setPermissionIntroDismissed(true);
           }}
         />
       ) : null}
@@ -443,12 +474,6 @@ export function VoiceFirstCompanionLayer() {
                 cooldownUntil={cooldownUntil}
                 isLocked={isLocked}
               />
-              {isLocked ? (
-                <div className="voice-first-locked-hint" aria-live="polite">
-                  <b>Запись закреплена</b>
-                  <span>Нажми Фину, чтобы отправить. Отмена — снизу.</span>
-                </div>
-              ) : null}
             </div>
 
             <div

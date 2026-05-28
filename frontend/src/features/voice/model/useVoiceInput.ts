@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { logVoiceDebugEvent, type VoiceCue } from '@/features/voice/api/voice.api';
 import { useVoiceRecorder } from '@/features/voice/model/useVoiceRecorder';
 import type { VoiceInputMode, VoiceInputState } from '@/features/voice/model/voice.types';
@@ -7,11 +7,13 @@ type UseVoiceInputParams = {
   onText: (text: string) => Promise<void> | void;
   lang?: string;
   sessionMs?: number;
+  permissionWasPrompted?: boolean;
 };
 
 type VoiceStartResult = 'started' | 'permission-ready' | 'busy' | 'error';
+type MicrophonePermissionState = PermissionState | 'unsupported' | 'unknown';
 
-async function getMicrophonePermissionState(): Promise<PermissionState | null> {
+async function queryMicrophonePermissionState(): Promise<PermissionState | null> {
   if (typeof navigator === 'undefined') return null;
   if (!('permissions' in navigator)) return null;
 
@@ -24,8 +26,9 @@ async function getMicrophonePermissionState(): Promise<PermissionState | null> {
   }
 }
 
-export function useVoiceInput({ onText, lang = 'ru-RU', sessionMs = 5200 }: UseVoiceInputParams) {
+export function useVoiceInput({ onText, lang = 'ru-RU', sessionMs = 5200, permissionWasPrompted = false }: UseVoiceInputParams) {
   const [permissionPrimed, setPermissionPrimed] = useState(false);
+  const [permissionState, setPermissionState] = useState<MicrophonePermissionState>('unknown');
   const [permissionError, setPermissionError] = useState<string | null>(null);
   const permissionRequestInFlightRef = useRef(false);
 
@@ -36,28 +39,58 @@ export function useVoiceInput({ onText, lang = 'ru-RU', sessionMs = 5200 }: UseV
     window.speechSynthesis?.cancel();
   }, []);
 
+  const refreshPermissionState = useCallback(async (): Promise<MicrophonePermissionState> => {
+    if (typeof navigator === 'undefined' || typeof navigator.mediaDevices?.getUserMedia !== 'function') {
+      setPermissionState('unsupported');
+      setPermissionPrimed(false);
+      return 'unsupported';
+    }
+
+    const queried = await queryMicrophonePermissionState();
+    if (queried) {
+      setPermissionState(queried);
+      if (queried === 'granted') {
+        setPermissionPrimed(true);
+        setPermissionError(null);
+      }
+      if (queried === 'denied') {
+        setPermissionPrimed(false);
+        setPermissionError('microphone-denied');
+      }
+      return queried;
+    }
+
+    setPermissionState('unknown');
+    return 'unknown';
+  }, []);
+
+  useEffect(() => {
+    void refreshPermissionState();
+
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') void refreshPermissionState();
+    };
+
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
+  }, [refreshPermissionState]);
+
   const primePermission = useCallback(async (): Promise<boolean> => {
     setPermissionError(null);
+
     if (permissionPrimed) return true;
 
     if (typeof navigator === 'undefined' || typeof navigator.mediaDevices?.getUserMedia !== 'function') {
       setPermissionPrimed(false);
+      setPermissionState('unsupported');
       setPermissionError('unsupported');
       return false;
     }
 
-    const permissionState = await getMicrophonePermissionState();
-    if (permissionState === 'granted') {
+    const currentPermission = await refreshPermissionState();
+    if (currentPermission === 'granted') {
       setPermissionPrimed(true);
-      logVoiceDebugEvent('permission_prime_already_granted');
       return true;
-    }
-
-    if (permissionState === 'denied') {
-      setPermissionPrimed(false);
-      setPermissionError('microphone-denied');
-      logVoiceDebugEvent('permission_prime_denied_prechecked');
-      return false;
     }
 
     if (permissionRequestInFlightRef.current) return false;
@@ -76,17 +109,20 @@ export function useVoiceInput({ onText, lang = 'ru-RU', sessionMs = 5200 }: UseV
       });
       stream.getTracks().forEach((track) => track.stop());
       setPermissionPrimed(true);
+      setPermissionState('granted');
+      setPermissionError(null);
       logVoiceDebugEvent('permission_prime_granted');
       return true;
     } catch (error) {
       setPermissionPrimed(false);
+      setPermissionState('denied');
       setPermissionError('microphone-denied');
       logVoiceDebugEvent('permission_prime_denied', { error: error instanceof Error ? error.name || error.message : 'unknown' });
       throw error;
     } finally {
       permissionRequestInFlightRef.current = false;
     }
-  }, [permissionPrimed]);
+  }, [permissionPrimed, refreshPermissionState]);
 
   const start = useCallback(async (): Promise<VoiceStartResult> => {
     window.speechSynthesis?.cancel();
@@ -95,16 +131,12 @@ export function useVoiceInput({ onText, lang = 'ru-RU', sessionMs = 5200 }: UseV
     if (recorder.state === 'recording' || recorder.state === 'uploading') return 'busy';
 
     try {
-      const permissionState = await getMicrophonePermissionState();
+      const currentPermission = await refreshPermissionState();
 
-      if (permissionState === 'granted') {
-        setPermissionPrimed(true);
-      } else if (!permissionPrimed) {
-        // Важно: удержание Фины не должно открывать системный permission popup.
-        // Если браузер ещё в состоянии prompt/unknown, запись не стартует.
-        // Доступ выдаётся только отдельной кнопкой в intro/onboarding.
-        setPermissionError(permissionState === 'denied' ? 'microphone-denied' : 'permission-ready');
-        logVoiceDebugEvent('voice_start_blocked_until_permission_prime', { permissionState: permissionState ?? 'unknown' });
+      // Важно: удержание Фины больше НЕ вызывает системный popup.
+      // Если разрешения ещё нет, пользователь должен нажать отдельную кнопку “Разрешить микрофон”.
+      if (!permissionPrimed && currentPermission !== 'granted' && !(permissionWasPrompted && currentPermission === 'unknown')) {
+        logVoiceDebugEvent('manual_voice_start_blocked_permission', { permissionState: currentPermission });
         return 'permission-ready';
       }
 
@@ -112,10 +144,9 @@ export function useVoiceInput({ onText, lang = 'ru-RU', sessionMs = 5200 }: UseV
       return 'started';
     } catch (error) {
       console.error(error);
-      setPermissionError('recording-error');
       return 'error';
     }
-  }, [permissionPrimed, recorder]);
+  }, [permissionPrimed, permissionWasPrompted, recorder, refreshPermissionState]);
 
   const stop = useCallback(() => {
     recorder.stopRecording();
@@ -155,12 +186,14 @@ export function useVoiceInput({ onText, lang = 'ru-RU', sessionMs = 5200 }: UseV
     transcript: '',
     isSupported: recorder.isSupported,
     permissionPrimed,
+    permissionState,
     start,
     stop,
     cancel,
     reset,
     setManualStopOnly,
     primePermission,
+    refreshPermissionState,
     speak,
     stopSpeaking,
   };
