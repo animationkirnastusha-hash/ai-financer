@@ -413,3 +413,135 @@
     min-width: 0;
   }
 }
+
+/* Pack 3c: onboarding teaches the real press-to-talk flow and allows creating the first accounts by voice. */
+.onboarding-fina-hero--clear {
+  align-items: center;
+}
+
+.onboarding-roadmap,
+.onboarding-rule-list {
+  display: grid;
+  gap: 10px;
+}
+
+.onboarding-roadmap div,
+.onboarding-rule-list div,
+.onboarding-live-voice-guide {
+  border: 1px solid rgba(255,255,255,.085);
+  border-radius: 22px;
+  background: rgba(0,0,0,.16);
+  padding: 13px 14px;
+}
+
+.onboarding-roadmap div {
+  display: grid;
+  grid-template-columns: 34px 1fr;
+  align-items: center;
+  gap: 12px;
+}
+
+.onboarding-roadmap strong {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border-radius: 50%;
+  background: rgba(52,211,153,.14);
+  color: rgba(167,243,208,.96);
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.onboarding-roadmap span,
+.onboarding-rule-list span,
+.onboarding-live-voice-guide span,
+.onboarding-live-voice-guide em {
+  color: rgba(255,255,255,.54);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.onboarding-rule-list strong,
+.onboarding-live-voice-guide strong {
+  display: block;
+  margin-bottom: 5px;
+  color: rgba(255,255,255,.92);
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.onboarding-voice-card--manual {
+  background: linear-gradient(135deg, rgba(52,211,153,.1), rgba(125,211,252,.055)), rgba(255,255,255,.045);
+}
+
+.onboarding-live-voice-guide {
+  display: grid;
+  gap: 8px;
+  border-color: rgba(52,211,153,.22);
+  background: rgba(52,211,153,.085);
+}
+
+.onboarding-live-voice-guide em {
+  font-style: normal;
+  color: rgba(167,243,208,.72);
+}
+
+.onboarding-account-voice-examples {
+  gap: 12px;
+}
+
+.onboarding-example-item--voice-create {
+  border-color: rgba(52,211,153,.18);
+  background: rgba(52,211,153,.06);
+}
+
+.onboarding-example-item--voice-create span {
+  margin-top: 6px;
+  font-size: 16px;
+  line-height: 1.25;
+}
+
+.onboarding-account-mode-row {
+  border: 1px solid rgba(255,255,255,.07);
+  border-radius: 22px;
+  background: rgba(0,0,0,.14);
+  padding: 10px;
+}
+
+.onboarding-tip-card--voice-note {
+  border-color: rgba(52,211,153,.16);
+}
+
+body.ai-onboarding-account-voice-step .voice-first-companion,
+html.ai-onboarding-account-voice-step .voice-first-companion {
+  display: grid !important;
+  z-index: 220 !important;
+  right: 18px !important;
+  bottom: calc(108px + env(safe-area-inset-bottom)) !important;
+  opacity: 1 !important;
+  pointer-events: none !important;
+}
+
+body.ai-onboarding-account-voice-step .voice-first-companion__controls,
+html.ai-onboarding-account-voice-step .voice-first-companion__controls,
+body.ai-onboarding-account-voice-step .voice-first-companion__press-target,
+html.ai-onboarding-account-voice-step .voice-first-companion__press-target {
+  pointer-events: auto !important;
+}
+
+body.ai-onboarding-account-voice-step .onboarding-setup-sheet {
+  padding-bottom: 72px;
+}
+
+@media (max-width: 480px) {
+  body.ai-onboarding-account-voice-step .voice-first-companion,
+  html.ai-onboarding-account-voice-step .voice-first-companion {
+    right: 12px !important;
+    bottom: calc(126px + env(safe-area-inset-bottom)) !important;
+  }
+
+  body.ai-onboarding-account-voice-step .onboarding-setup-sheet {
+    padding-bottom: 96px;
+  }
+}

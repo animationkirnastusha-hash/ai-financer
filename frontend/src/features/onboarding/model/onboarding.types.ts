@@ -6,6 +6,8 @@ export type OnboardingReminderTiming = 'same_day' | 'one_day' | 'three_days' | '
 
 export type OnboardingLoanKind = 'credit' | 'mortgage' | 'installment' | 'loan';
 
+export type OnboardingAccountsSetupMode = 'voice' | 'manual' | 'skip';
+
 export type OnboardingAccountDraft = {
   id: 'cash' | 'card';
   enabled: boolean;
@@ -47,6 +49,7 @@ export type OnboardingVoiceDraft = {
 
 export type OnboardingDraft = {
   currency: AppCurrency;
+  accountsSetupMode: OnboardingAccountsSetupMode;
   accounts: OnboardingAccountDraft[];
   loan: OnboardingLoanDraft;
   goal: OnboardingGoalDraft;

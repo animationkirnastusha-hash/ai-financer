@@ -13,7 +13,6 @@ import { LoansStep } from '@/features/onboarding/ui/steps/LoansStep';
 import { PremiumTrialStep } from '@/features/onboarding/ui/steps/PremiumTrialStep';
 import { RemindersStep } from '@/features/onboarding/ui/steps/RemindersStep';
 import { VoiceIntroStep } from '@/features/onboarding/ui/steps/VoiceIntroStep';
-import { VoiceSandboxStep } from '@/features/onboarding/ui/steps/VoiceSandboxStep';
 import { WelcomeStep } from '@/features/onboarding/ui/steps/WelcomeStep';
 import { useSettingsStore } from '@/features/settings/model/settings.store';
 
@@ -25,7 +24,6 @@ type StepId =
   | 'loans'
   | 'goals'
   | 'reminders'
-  | 'voice_sandbox'
   | 'premium'
   | 'finish';
 
@@ -37,7 +35,6 @@ const steps: Array<{ id: StepId; title: string }> = [
   { id: 'loans', title: 'Кредиты' },
   { id: 'goals', title: 'Цели' },
   { id: 'reminders', title: 'Напоминания' },
-  { id: 'voice_sandbox', title: 'Голос' },
   { id: 'premium', title: 'Premium' },
   { id: 'finish', title: 'Готово' },
 ];
@@ -89,6 +86,23 @@ export function LaunchOnboardingSheet() {
     if (isOpen) setStepIndex(0);
   }, [isOpen]);
 
+  useEffect(() => {
+    const isAccountVoiceStep = isOpen && currentStep.id === 'accounts' && (draft.accountsSetupMode ?? 'voice') === 'voice';
+    if (!isAccountVoiceStep) {
+      document.body.classList.remove('ai-onboarding-account-voice-step');
+      document.documentElement.classList.remove('ai-onboarding-account-voice-step');
+      return;
+    }
+
+    document.body.classList.add('ai-onboarding-account-voice-step');
+    document.documentElement.classList.add('ai-onboarding-account-voice-step');
+
+    return () => {
+      document.body.classList.remove('ai-onboarding-account-voice-step');
+      document.documentElement.classList.remove('ai-onboarding-account-voice-step');
+    };
+  }, [currentStep.id, draft.accountsSetupMode, isOpen]);
+
   if (!isOpen) return null;
 
   const updateDraft = (nextDraft: OnboardingDraft) => {
@@ -120,14 +134,16 @@ export function LaunchOnboardingSheet() {
       setTextInputEnabled(draft.voice.textFallbackEnabled);
 
       const accountCurrency = normalizeAccountCurrency(draft.currency);
-      for (const account of draft.accounts) {
-        if (!account.enabled || !account.name.trim()) continue;
-        await createAccount({
-          name: account.name.trim(),
-          type: account.type,
-          currency: accountCurrency,
-          initialBalance: Number(account.balance) || 0,
-        });
+      if (draft.accountsSetupMode === 'manual') {
+        for (const account of draft.accounts) {
+          if (!account.enabled || !account.name.trim()) continue;
+          await createAccount({
+            name: account.name.trim(),
+            type: account.type,
+            currency: accountCurrency,
+            initialBalance: Number(account.balance) || 0,
+          });
+        }
       }
 
       if (draft.goal.enabled && draft.goal.title.trim() && Number(draft.goal.targetAmount) > 0) {
@@ -188,7 +204,6 @@ export function LaunchOnboardingSheet() {
           {currentStep.id === 'loans' ? <LoansStep draft={draft} onChange={updateDraft} /> : null}
           {currentStep.id === 'goals' ? <GoalsStep draft={draft} onChange={updateDraft} /> : null}
           {currentStep.id === 'reminders' ? <RemindersStep draft={draft} onChange={updateDraft} /> : null}
-          {currentStep.id === 'voice_sandbox' ? <VoiceSandboxStep draft={draft} onChange={updateDraft} /> : null}
           {currentStep.id === 'premium' ? <PremiumTrialStep isAdmin={isAdmin} /> : null}
           {currentStep.id === 'finish' ? <FinishStep draft={draft} /> : null}
 

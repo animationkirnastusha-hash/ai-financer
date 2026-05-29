@@ -1,11 +1,9 @@
 import { CompanionButton } from '@/shared/ui/CompanionButton';
-import { OnboardingStepShell, OnboardingChoice } from '@/features/onboarding/ui/OnboardingStepShell';
+import { OnboardingStepShell } from '@/features/onboarding/ui/OnboardingStepShell';
 import type { OnboardingDraft } from '@/features/onboarding/model/onboarding.types';
 
 export function WelcomeStep({
   name,
-  draft,
-  onChange,
 }: {
   name: string;
   draft: OnboardingDraft;
@@ -15,41 +13,33 @@ export function WelcomeStep({
     <OnboardingStepShell
       eyebrow="Первый запуск"
       title={`Привет, ${name}`}
-      description="Я Фина — персональный финансовый ассистент. Давай быстро настроим приложение, чтобы оно сразу работало под твои деньги."
+      description="Я Фина — твой финансовый ассистент. Сейчас настроим приложение через реальные действия: создадим наличку и карту, выберем валюту, добавим цели, напоминания и покажем, как пользоваться голосом."
     >
-      <div className="onboarding-fina-hero">
+      <div className="onboarding-fina-hero onboarding-fina-hero--clear">
         <CompanionButton mood="success" size="lg" label="Фина" />
         <div>
-          <strong>Настройка займёт пару минут</strong>
-          <span>Счета, валюта, цели, напоминания и голосовой ввод. Всё можно пропустить и изменить позже.</span>
+          <strong>Главное — сразу попробовать голос</strong>
+          <span>На следующем шаге ты увидишь механику, а на шаге “Счета” зажмёшь Фину и создашь два первых счёта голосом.</span>
         </div>
       </div>
 
-      <div className="onboarding-choice-grid">
-        <OnboardingChoice
-          active={draft.focus === 'personal'}
-          title="Личные финансы"
-          caption="Расходы, доходы, счета и цели"
-          onClick={() => onChange({ ...draft, focus: 'personal' })}
-        />
-        <OnboardingChoice
-          active={draft.focus === 'saving'}
-          title="Накопления"
-          caption="Цели, подушка и контроль лишних трат"
-          onClick={() => onChange({ ...draft, focus: 'saving' })}
-        />
-        <OnboardingChoice
-          active={draft.focus === 'debt'}
-          title="Кредиты"
-          caption="Платежи, напоминания и снижение нагрузки"
-          onClick={() => onChange({ ...draft, focus: 'debt' })}
-        />
-        <OnboardingChoice
-          active={draft.focus === 'business'}
-          title="Самозанятый / ИП"
-          caption="Позже подключим Фину Бухгалтер"
-          onClick={() => onChange({ ...draft, focus: 'business' })}
-        />
+      <div className="onboarding-roadmap" aria-label="Что будет настроено">
+        <div>
+          <strong>1</strong>
+          <span>Научимся зажимать Фину и говорить команду</span>
+        </div>
+        <div>
+          <strong>2</strong>
+          <span>Создадим Наличку и Карту голосом</span>
+        </div>
+        <div>
+          <strong>3</strong>
+          <span>Выберем валюту, цели и напоминания</span>
+        </div>
+        <div>
+          <strong>4</strong>
+          <span>Покажем Premium и будущего ИИ-бухгалтера</span>
+        </div>
       </div>
     </OnboardingStepShell>
   );

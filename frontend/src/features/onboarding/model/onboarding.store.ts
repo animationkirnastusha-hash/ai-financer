@@ -6,6 +6,7 @@ const DRAFT_KEY = 'ai-financer-onboarding-draft:v1';
 
 const defaultDraft: OnboardingDraft = {
   currency: 'RUB',
+  accountsSetupMode: 'voice',
   accounts: [
     { id: 'cash', enabled: true, name: 'Наличка', type: 'cash', balance: 0 },
     { id: 'card', enabled: true, name: 'Карта', type: 'card', balance: 0 },
@@ -64,6 +65,7 @@ function readDraft(): OnboardingDraft {
     return {
       ...defaultDraft,
       ...parsed,
+      accountsSetupMode: parsed.accountsSetupMode ?? defaultDraft.accountsSetupMode,
       accounts: Array.isArray(parsed.accounts) && parsed.accounts.length ? parsed.accounts as OnboardingDraft['accounts'] : defaultDraft.accounts,
       loan: { ...defaultDraft.loan, ...(parsed.loan ?? {}) },
       goal: { ...defaultDraft.goal, ...(parsed.goal ?? {}) },
