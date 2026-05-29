@@ -10,6 +10,7 @@ import { CurrencyStep } from '@/features/onboarding/ui/steps/CurrencyStep';
 import { FinishStep } from '@/features/onboarding/ui/steps/FinishStep';
 import { GoalsStep } from '@/features/onboarding/ui/steps/GoalsStep';
 import { LoansStep } from '@/features/onboarding/ui/steps/LoansStep';
+import { MicrophonePermissionStep } from '@/features/onboarding/ui/steps/MicrophonePermissionStep';
 import { PremiumTrialStep } from '@/features/onboarding/ui/steps/PremiumTrialStep';
 import { RemindersStep } from '@/features/onboarding/ui/steps/RemindersStep';
 import { VoiceIntroStep } from '@/features/onboarding/ui/steps/VoiceIntroStep';
@@ -18,6 +19,7 @@ import { useSettingsStore } from '@/features/settings/model/settings.store';
 
 type StepId =
   | 'welcome'
+  | 'microphone'
   | 'voice_intro'
   | 'currency'
   | 'accounts'
@@ -29,6 +31,7 @@ type StepId =
 
 const steps: Array<{ id: StepId; title: string }> = [
   { id: 'welcome', title: 'Старт' },
+  { id: 'microphone', title: 'Микрофон' },
   { id: 'voice_intro', title: 'Фина' },
   { id: 'currency', title: 'Валюта' },
   { id: 'accounts', title: 'Счета' },
@@ -76,9 +79,13 @@ export function LaunchOnboardingSheet() {
     if (!isOpen) return;
     document.body.classList.add('ai-any-modal-open');
     document.documentElement.classList.add('ai-any-modal-open');
+    document.body.classList.add('ai-onboarding-active');
+    document.documentElement.classList.add('ai-onboarding-active');
     return () => {
       document.body.classList.remove('ai-any-modal-open');
       document.documentElement.classList.remove('ai-any-modal-open');
+      document.body.classList.remove('ai-onboarding-active');
+      document.documentElement.classList.remove('ai-onboarding-active');
     };
   }, [isOpen]);
 
@@ -198,6 +205,7 @@ export function LaunchOnboardingSheet() {
 
         <div className="app-modal-body onboarding-setup-body">
           {currentStep.id === 'welcome' ? <WelcomeStep name={getFirstName(user)} draft={draft} onChange={updateDraft} /> : null}
+          {currentStep.id === 'microphone' ? <MicrophonePermissionStep /> : null}
           {currentStep.id === 'voice_intro' ? <VoiceIntroStep /> : null}
           {currentStep.id === 'currency' ? <CurrencyStep value={draft.currency} onChange={(currency) => updateDraft({ ...draft, currency })} /> : null}
           {currentStep.id === 'accounts' ? <AccountsStep draft={draft} onChange={updateDraft} /> : null}

@@ -545,3 +545,61 @@ body.ai-onboarding-account-voice-step .onboarding-setup-sheet {
     padding-bottom: 96px;
   }
 }
+
+/* Pack 3d: microphone permission is requested inside onboarding before any press-to-talk training. */
+.onboarding-permission-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  border: 1px solid rgba(255,255,255,.09);
+  border-radius: 26px;
+  background: rgba(255,255,255,.052);
+  padding: 14px;
+}
+
+.onboarding-permission-card.is-ready {
+  border-color: rgba(52,211,153,.24);
+  background: linear-gradient(135deg, rgba(52,211,153,.12), rgba(125,211,252,.055)), rgba(255,255,255,.045);
+}
+
+.onboarding-permission-card__icon {
+  display: grid;
+  flex-shrink: 0;
+  width: 46px;
+  height: 46px;
+  place-items: center;
+  border-radius: 50%;
+  background: rgba(52,211,153,.13);
+  box-shadow: 0 0 24px rgba(52,211,153,.16);
+  font-size: 20px;
+}
+
+.onboarding-permission-card strong {
+  display: block;
+  color: rgba(255,255,255,.94);
+  font-size: 14px;
+  font-weight: 850;
+}
+
+.onboarding-permission-card span {
+  display: block;
+  margin-top: 4px;
+  color: rgba(255,255,255,.54);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.onboarding-wide-action {
+  width: 100%;
+  justify-content: center;
+}
+
+.onboarding-tip-card--success {
+  border-color: rgba(52,211,153,.22);
+  background: rgba(52,211,153,.08);
+}
+
+.onboarding-tip-card--warning {
+  border-color: rgba(251,191,36,.2);
+  background: rgba(251,191,36,.08);
+}

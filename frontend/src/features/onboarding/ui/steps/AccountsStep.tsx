@@ -1,4 +1,5 @@
 import type { OnboardingAccountDraft, OnboardingDraft } from '@/features/onboarding/model/onboarding.types';
+import { useSettingsStore } from '@/features/settings/model/settings.store';
 import { OnboardingStepShell } from '@/features/onboarding/ui/OnboardingStepShell';
 
 function updateAccount(accounts: OnboardingAccountDraft[], id: OnboardingAccountDraft['id'], patch: Partial<OnboardingAccountDraft>) {
@@ -20,6 +21,7 @@ const voiceExamples = [
 
 export function AccountsStep({ draft, onChange }: { draft: OnboardingDraft; onChange: (draft: OnboardingDraft) => void }) {
   const setupMode = draft.accountsSetupMode ?? 'voice';
+  const voicePermissionReady = useSettingsStore((state) => state.voicePermissionPrompted);
 
   const setSetupMode = (accountsSetupMode: OnboardingDraft['accountsSetupMode']) => {
     onChange({ ...draft, accountsSetupMode });
@@ -35,6 +37,13 @@ export function AccountsStep({ draft, onChange }: { draft: OnboardingDraft; onCh
       title="Создай наличку и карту голосом"
       description="У почти каждого есть наличные и карта. Сейчас ты зажмёшь Фину, скажешь две команды и сразу создашь первые счета в приложении."
     >
+      {setupMode === 'voice' && !voicePermissionReady ? (
+        <div className="onboarding-tip-card onboarding-tip-card--warning">
+          <strong>Сначала разреши микрофон</strong>
+          <span>Вернись на шаг “Микрофон” и нажми “Разрешить микрофон”. Иначе Фина не сможет начать запись по удержанию.</span>
+        </div>
+      ) : null}
+
       <div className="onboarding-live-voice-guide">
         <div>
           <strong>Как выполнить этот шаг</strong>
