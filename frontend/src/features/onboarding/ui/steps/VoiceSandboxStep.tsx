@@ -8,8 +8,8 @@ export function VoiceSandboxStep({ draft, onChange }: { draft: OnboardingDraft; 
   return (
     <OnboardingStepShell
       eyebrow="Проверка"
-      title="Проверь голос без реальных операций"
-      description="Этот шаг ничего не создаёт. Он нужен, чтобы понять механику: Фина слушает команду, показывает текст и только потом готовит действие."
+      title="Проверь, как работает голос"
+      description="Здесь ты спокойно потренируешься: зажми Фину, скажи короткую фразу и отпусти. Финансовые действия появятся только после подтверждения."
     >
       <div className="onboarding-form-card">
         <label className="onboarding-check-row wide">
@@ -24,8 +24,8 @@ export function VoiceSandboxStep({ draft, onChange }: { draft: OnboardingDraft; 
 
       <div className="onboarding-test-box">
         <span>Тестовая фраза</span>
-        <strong>Фина, тест</strong>
-        <small>Позже здесь подключим безопасную проверку микрофона без записи финансового действия.</small>
+        <strong>создай счёт Наличка</strong>
+        <small>Это тренировочный пример. На следующем шаге создадим настоящие счета.</small>
       </div>
     </OnboardingStepShell>
   );

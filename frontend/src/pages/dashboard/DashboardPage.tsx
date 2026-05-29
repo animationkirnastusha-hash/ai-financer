@@ -23,9 +23,9 @@ const baseMenuLinks = [
 ];
 
 const adminMenuLinks = [
-  { label: 'ИИ-бухгалтер', caption: 'Business-модуль для ИП и самозанятых', screen: 'business-accountant' as const },
-  { label: 'Рефералы', caption: 'Admin-only прототип приглашений', screen: 'referral' as const },
-  { label: 'Премиум', caption: 'Admin-only прототип монетизации', screen: 'premium' as const },
+  { label: 'ИИ-бухгалтер', caption: 'Для ИП, самозанятых и малого бизнеса', screen: 'business-accountant' as const },
+  { label: 'Рефералы', caption: 'Приглашения и бонусы', screen: 'referral' as const },
+  { label: 'Премиум', caption: 'Больше анализа и возможностей', screen: 'premium' as const },
 ];
 
 function isCurrentMonth(dateValue: string) {

@@ -85,7 +85,7 @@ export function MicrophonePermissionStep() {
       <div className="onboarding-rule-list">
         <div>
           <strong>Разрешение — отдельно</strong>
-          <span>Сейчас мы только выдаём доступ к микрофону. Финансовая команда не отправится.</span>
+          <span>Сейчас мы только включаем доступ к микрофону. Команда не отправится сама.</span>
         </div>
         <div>
           <strong>Запись — на следующем шаге</strong>

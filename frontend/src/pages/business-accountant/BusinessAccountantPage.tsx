@@ -11,7 +11,7 @@ type ProfileCard = {
 type WorkZone = {
   title: string;
   caption: string;
-  state: 'ui' | 'backend' | 'risk';
+  state: 'available' | 'soon' | 'careful';
 };
 
 const profileCards: ProfileCard[] = [
@@ -36,48 +36,48 @@ const workZones: WorkZone[] = [
   {
     title: 'Налоги и дедлайны',
     caption: 'Календарь платежей, напоминания и предварительная оценка будущей нагрузки.',
-    state: 'backend',
+    state: 'soon',
   },
   {
     title: 'Доходы бизнеса',
     caption: 'Разделение личных денег и бизнес-доходов, клиенты, источники, повторяемость.',
-    state: 'backend',
+    state: 'soon',
   },
   {
     title: 'Расходы бизнеса',
     caption: 'Категории для бизнеса, чеки, подписки, аренда, связь, реклама и материалы.',
-    state: 'backend',
+    state: 'soon',
   },
   {
     title: 'Документы',
-    caption: 'Место для актов, чеков, счетов и будущего распознавания документов.',
-    state: 'backend',
+    caption: 'Место для актов, чеков, счетов и распознавания документов.',
+    state: 'soon',
   },
   {
     title: 'Отчёты',
     caption: 'Экспорт данных для себя или бухгалтера без ручной сборки таблиц.',
-    state: 'ui',
+    state: 'available',
   },
   {
     title: 'Осторожный режим',
     caption: 'Фина не должна обещать юридическую точность. Она готовит данные и подсвечивает риски.',
-    state: 'risk',
+    state: 'careful',
   },
 ];
 
-const futureBackend = [
-  'BusinessProfile',
-  'TaxRegime',
-  'BusinessIncome',
-  'BusinessExpense',
-  'TaxReminder',
-  'BusinessDocument',
-  'BusinessReport',
-  'BusinessExportJob',
+const upcomingAreas = [
+  'Профиль бизнеса',
+  'Налоговый режим',
+  'Доходы и клиенты',
+  'Расходы бизнеса',
+  'Календарь платежей',
+  'Документы и чеки',
+  'Отчёты',
+  'Экспорт для бухгалтера',
 ];
 
 function StateBadge({ state }: { state: WorkZone['state'] }) {
-  const label = state === 'ui' ? 'UI сейчас' : state === 'risk' ? 'важно' : 'backend позже';
+  const label = state === 'available' ? 'готовится' : state === 'careful' ? 'важно' : 'скоро';
   return <span className={`business-admin-badge business-admin-badge--${state}`}>{label}</span>;
 }
 
@@ -91,7 +91,7 @@ function AdminOnlyFallback() {
         <section className="app-card app-card--hero">
           <div className="app-eyebrow">Скоро</div>
           <h1 className="app-hero-title">Раздел скрыт</h1>
-          <p className="app-hero-caption">Business-модуль пока виден только админу и не мешает тестерам базовой версии.</p>
+          <p className="app-hero-caption">Раздел скоро станет доступен. Пока личные финансы работают как обычно.</p>
           <button type="button" className="app-primary-button mt-4" onClick={goHome}>На главную</button>
         </section>
       </div>
@@ -112,14 +112,14 @@ export default function BusinessAccountantPage() {
 
         <header className="business-admin-hero">
           <div className="business-admin-hero__orb" aria-hidden="true" />
-          <div className="business-admin-kicker">Business · admin-only</div>
+          <div className="business-admin-kicker">Для бизнеса</div>
           <h1>Фина Бухгалтер для ИП, самозанятых и малого бизнеса</h1>
           <p>
-            Это отдельное направление поверх личных финансов. Сейчас только дизайн-прототип: без налоговых расчётов, платежей и backend-моделей.
+            Отдельное пространство для рабочих денег: доходы, расходы, документы, сроки и отчёты — отдельно от личных финансов.
           </p>
           <div className="business-admin-hero__actions">
             <button type="button" className="app-primary-button" onClick={() => navigateTo('premium')}>К Premium</button>
-            <button type="button" className="app-secondary-button" onClick={() => navigateTo('admin')}>Админка</button>
+            <button type="button" className="app-secondary-button" onClick={() => navigateTo('admin')}>Назад</button>
           </div>
         </header>
 
@@ -147,7 +147,7 @@ export default function BusinessAccountantPage() {
               <div className="app-eyebrow">Модули</div>
               <h2>Что будет внутри</h2>
             </div>
-            <span>не для тестеров</span>
+            <span>скоро</span>
           </div>
           <div className="business-admin-zone-list">
             {workZones.map((zone) => (
@@ -179,12 +179,12 @@ export default function BusinessAccountantPage() {
         <section className="app-card business-admin-section">
           <div className="business-admin-section__head">
             <div>
-              <div className="app-eyebrow">Backend позже</div>
-              <h2>Будущие сущности</h2>
+              <div className="app-eyebrow">Дальше</div>
+              <h2>Что появится в разделе</h2>
             </div>
           </div>
           <div className="business-admin-roadmap">
-            {futureBackend.map((item) => <span key={item}>{item}</span>)}
+            {upcomingAreas.map((item) => <span key={item}>{item}</span>)}
           </div>
         </section>
       </div>

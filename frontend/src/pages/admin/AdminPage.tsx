@@ -155,7 +155,7 @@ export default function AdminPage() {
         <header className="app-card app-card--hero">
           <div className="app-eyebrow">Закрытый раздел</div>
           <h1 className="mt-3 text-[32px] font-semibold tracking-[-0.05em]">Админ-панель</h1>
-          <p className="mt-2 text-sm leading-6 text-white/50">Пользователи, события, воронка и состояние API.</p>
+          <p className="mt-2 text-sm leading-6 text-white/50">Пользователи, события, воронка и состояние сервера.</p>
         </header>
 
         <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar" data-no-swipe="true">

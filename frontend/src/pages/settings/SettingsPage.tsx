@@ -126,8 +126,8 @@ export default function SettingsPage() {
     { title: 'Разделы', caption: 'Категории и структура', screen: 'taxonomy-settings' as const },
     ...(isAdmin ? [
       { title: 'ИИ-бухгалтер', caption: 'Business-модуль для ИП и самозанятых', screen: 'business-accountant' as const },
-      { title: 'Рефералы', caption: 'Admin-only прототип приглашений', screen: 'referral' as const },
-      { title: 'Премиум', caption: 'Admin-only прототип монетизации', screen: 'premium' as const },
+      { title: 'Рефералы', caption: 'Приглашения и будущие бонусы', screen: 'referral' as const },
+      { title: 'Премиум', caption: 'Расширенная аналитика и новые возможности', screen: 'premium' as const },
     ] : []),
   ];
 
@@ -184,7 +184,7 @@ export default function SettingsPage() {
           <div className="grid gap-3">
             <ToggleLine title="Голосовой ввод" caption="Микрофон включается только на время удержания кнопки Фины." checked={voiceEnabled} onChange={setVoiceEnabled} />
             <ToggleLine title="Голос Фины" caption="Короткие ответы голосом Nova: «Я здесь», «Слушаю», «Готово»." checked={voiceRepliesEnabled} onChange={setVoiceRepliesEnabled} />
-            <ToggleLine title="Серверное распознавание" caption="Единый STT через backend для iPhone и Android." checked={voiceBetaEnabled} onChange={setVoiceBetaEnabled} />
+            <ToggleLine title="Распознавание голоса" caption="Единая обработка голосовых команд на телефоне." checked={voiceBetaEnabled} onChange={setVoiceBetaEnabled} />
           </div>
           <p className="app-settings-note mt-4">Подтверждения остаются в обычных модалках. После отпускания запись отправляется в распознавание один раз.</p>
         </ModalShell>

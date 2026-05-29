@@ -13,7 +13,7 @@ export function FinishStep({ draft }: { draft: OnboardingDraft }) {
     <OnboardingStepShell
       eyebrow="Готово"
       title="Можно начинать"
-      description="Фина настроит окружение по выбранным пунктам. Всё можно изменить позже в настройках и на отдельных страницах."
+      description="Фина подготовит приложение по выбранным пунктам. Всё можно изменить позже в настройках и на отдельных страницах."
     >
       <div className="onboarding-summary-grid">
         <div><span>Валюта</span><strong>{draft.currency}</strong></div>

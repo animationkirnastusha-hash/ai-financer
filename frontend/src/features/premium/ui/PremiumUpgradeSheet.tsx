@@ -29,7 +29,7 @@ export function PremiumUpgradeSheet() {
           <div className="rounded-[30px] border border-amber-300/15 bg-[radial-gradient(circle_at_top,rgba(251,191,36,0.16),transparent_45%),rgba(255,255,255,0.04)] p-5">
             <div className="flex items-center justify-between gap-3">
               <div className="text-[11px] uppercase tracking-[0.2em] text-amber-200/70">
-                AI-financer Premium
+                Premium
               </div>
 
               <div className="rounded-full border border-amber-300/20 bg-amber-300/10 px-3 py-1 text-[11px] text-amber-100">
@@ -38,12 +38,12 @@ export function PremiumUpgradeSheet() {
             </div>
 
             <h2 className="mt-3 text-3xl font-semibold leading-tight">
-              Твой личный AI CFO
+              Фина на уровень выше
             </h2>
 
             <p className="mt-3 text-sm leading-6 text-white/62">
-              Base остаётся полноценным финансовым ядром. Premium добавляет
-              прогнозы, глубокий анализ, цели и более сильного AI-помощника.
+              База остаётся полноценной. Premium добавляет
+              прогнозы, глубокий анализ, цели и более умные подсказки.
             </p>
 
             <div className="mt-5 rounded-2xl border border-white/10 bg-black/22 p-4">
@@ -65,7 +65,7 @@ export function PremiumUpgradeSheet() {
               >
                 <div className="text-sm font-medium text-white">{feature}</div>
                 <div className="mt-1 text-xs leading-5 text-white/45">
-                  Premium-функция поверх базового контроля денег.
+                  Расширяет базовый контроль денег.
                 </div>
               </div>
             ))}
