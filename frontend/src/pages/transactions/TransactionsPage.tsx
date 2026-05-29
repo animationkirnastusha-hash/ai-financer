@@ -83,7 +83,7 @@ export default function TransactionsPage({ onBack }: Props = {}) {
   return (
     <div className="app-page app-operations-page text-white">
       <div className="app-page__inner space-y-4">
-        <ScreenTopBar title="Операции" left={onBack ? 'back' : 'commands'} right={['settings']} />
+        <ScreenTopBar title="Операции" left={onBack ? 'back' : 'menu'} right={['settings']} />
 
         <header className="app-card app-card--hero">
           <div className="app-eyebrow">Лента</div>
