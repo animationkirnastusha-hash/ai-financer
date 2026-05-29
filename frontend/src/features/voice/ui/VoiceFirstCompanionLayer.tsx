@@ -461,6 +461,23 @@ export function VoiceFirstCompanionLayer() {
       />
 
       {showFloatingCompanion ? (
+        <button
+          type="button"
+          className={isLocked ? 'voice-first-keyboard-button voice-first-keyboard-button--floating voice-first-keyboard-button--disabled' : 'voice-first-keyboard-button voice-first-keyboard-button--floating'}
+          aria-label="Открыть текстовый ввод"
+          disabled={isLocked}
+          onClick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            openAIWithCommand();
+          }}
+          data-no-swipe="true"
+        >
+          <span aria-hidden="true">⌨</span>
+        </button>
+      ) : null}
+
+      {showFloatingCompanion ? (
         <div className={isLocked ? 'voice-first-companion voice-first-companion--locked' : 'voice-first-companion'} data-no-swipe="true">
           <VoiceThoughtBubble thought={thought} />
 
@@ -477,18 +494,6 @@ export function VoiceFirstCompanionLayer() {
               />
             </div>
 
-            <button
-              type="button"
-              className="voice-first-keyboard-button"
-              aria-label="Открыть текстовый ввод"
-              onClick={(event) => {
-                event.preventDefault();
-                event.stopPropagation();
-                openAIWithCommand();
-              }}
-            >
-              <span aria-hidden="true">⌨</span>
-            </button>
 
             <div
               className="voice-first-companion__press-target"

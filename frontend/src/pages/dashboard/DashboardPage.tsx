@@ -2,9 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { useAccountsStore } from '@/features/accounts/model/accounts.store';
 import { useNavigationStore } from '@/features/navigation/model/navigation.store';
 import { useSettingsStore } from '@/features/settings/model/settings.store';
-import { useAuthStore } from '@/features/auth/model/auth.store';
 import { useTransactionsStore } from '@/features/transactions/model/transactions.store';
-import { CompanionPresence } from '@/features/companion/ui/CompanionPresence';
+import { useAuthStore } from '@/features/auth/model/auth.store';
 import { ProgressionMiniCard } from '@/features/progression/ui/ProgressionMiniCard';
 import { ScreenTopBar } from '@/shared/ui/ScreenTopBar';
 import { formatMoney, formatTransactionDate } from '@/shared/lib/money';
@@ -12,21 +11,6 @@ import type { AppCurrency } from '@/features/settings/model/settings.types';
 import { APP_CURRENCIES, convertCurrency, getCurrencyProfile } from '@/features/currency/lib/currency';
 
 const currencyLabels: Record<AppCurrency, string> = Object.fromEntries(APP_CURRENCIES.map((item) => [item.code, item.label])) as Record<AppCurrency, string>;
-
-const baseMenuLinks = [
-  { label: 'Операции', caption: 'История и ручное добавление', screen: 'transactions' as const },
-  { label: 'Счета', caption: 'Карты, наличные и накопления', screen: 'accounts' as const },
-  { label: 'Цели', caption: 'Накопления и планы', screen: 'goals' as const },
-  { label: 'Аналитика', caption: 'Расходы, доходы и выводы', screen: 'analytics' as const },
-  { label: 'Категории', caption: 'Разделы и правила порядка', screen: 'sections' as const },
-  { label: 'Чат с Финой', caption: 'Текст, когда говорить неудобно', screen: 'ai-core' as const },
-];
-
-const adminMenuLinks = [
-  { label: 'ИИ-бухгалтер', caption: 'Business-модуль для ИП и самозанятых', screen: 'business-accountant' as const },
-  { label: 'Рефералы', caption: 'Admin-only прототип приглашений', screen: 'referral' as const },
-  { label: 'Премиум', caption: 'Admin-only прототип монетизации', screen: 'premium' as const },
-];
 
 function isCurrentMonth(dateValue: string) {
   const date = new Date(dateValue);
@@ -55,7 +39,6 @@ function exchangeHint(currency: AppCurrency, rates: { usd: number; eur: number }
 }
 
 export default function DashboardPage() {
-  const [menuOpen, setMenuOpen] = useState(false);
   const [currencyIndex, setCurrencyIndex] = useState(0);
   const navigateTo = useNavigationStore((state) => state.navigateTo);
   const isAdmin = Boolean(useAuthStore((state) => state.user?.isAdmin));
@@ -111,7 +94,6 @@ export default function DashboardPage() {
   }, [accounts, activeCurrency, rates, transactions]);
 
   const recent = transactions.slice(0, 3);
-  const menuLinks = useMemo(() => (isAdmin ? [...baseMenuLinks, ...adminMenuLinks] : baseMenuLinks), [isAdmin]);
   const topBarRight = useMemo(() => (isAdmin ? ['referral', 'history', 'settings'] as const : ['history', 'settings'] as const), [isAdmin]);
   const isEmptyState = accounts.length === 0 && transactions.length === 0;
 
@@ -154,16 +136,6 @@ export default function DashboardPage() {
 
         <ProgressionMiniCard />
 
-        <section className="app-card app-fina-primary-card">
-          <div>
-            <div className="app-eyebrow">Фина</div>
-            <h2>Говори или пиши</h2>
-            <p>Зажми Фину внизу экрана и скажи задачу. Если вокруг шумно, нажми кнопку клавиатуры рядом с ней.</p>
-          </div>
-          <div className="app-fina-actions">
-            <button type="button" className="app-primary-button" onClick={() => setMenuOpen(true)}>Открыть меню</button>
-          </div>
-        </section>
 
         {isEmptyState ? (
           <section className="app-card">
@@ -179,7 +151,6 @@ export default function DashboardPage() {
           </section>
         ) : null}
 
-        <CompanionPresence />
 
         <section className="app-card">
           <div className="flex items-center justify-between gap-3">
@@ -208,27 +179,6 @@ export default function DashboardPage() {
         </section>
       </div>
 
-      {menuOpen ? (
-        <div className="app-modal-backdrop" data-no-swipe="true" onClick={() => setMenuOpen(false)}>
-          <div className="app-modal-sheet app-home-menu-sheet" data-no-swipe="true" onClick={(event) => event.stopPropagation()}>
-            <div className="app-modal-handle" />
-            <div className="app-modal-body">
-              <div className="app-home-menu-head">
-                <div><div className="app-eyebrow">Меню</div><h2>Куда перейти</h2></div>
-                <button type="button" className="app-icon-button" onClick={() => setMenuOpen(false)}>×</button>
-              </div>
-              <div className="app-home-menu-grid">
-                {menuLinks.map((item) => (
-                  <button key={item.screen} type="button" className="app-list-button" onClick={() => { setMenuOpen(false); navigateTo(item.screen); }}>
-                    <span>{item.label}</span>
-                    <small>{item.caption}</small>
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      ) : null}
     </div>
   );
 }
