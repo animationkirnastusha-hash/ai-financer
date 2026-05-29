@@ -459,3 +459,48 @@ body:has([data-drawer-panel="true"]) .voice-first-layer {
     height: 44px !important;
   }
 }
+
+
+/* Pack 5: text input sits next to the voice control as a keyboard button. */
+.voice-first-keyboard-button {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  place-items: center;
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 999px;
+  background: linear-gradient(145deg, rgba(255,255,255,.12), rgba(255,255,255,.05));
+  color: rgba(236, 255, 246, .92);
+  box-shadow: 0 14px 34px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.08);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  cursor: pointer;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.voice-first-keyboard-button span {
+  display: block;
+  font-size: 18px;
+  line-height: 1;
+  transform: translateY(-1px);
+}
+
+.voice-first-keyboard-button:active {
+  transform: scale(.96);
+}
+
+.voice-first-companion--locked .voice-first-keyboard-button {
+  opacity: .45;
+  pointer-events: none;
+}
+
+@media (max-width: 380px) {
+  .voice-first-keyboard-button {
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
+  }
+}

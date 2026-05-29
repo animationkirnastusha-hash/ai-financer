@@ -23,9 +23,9 @@ const baseMenuLinks = [
 ];
 
 const adminMenuLinks = [
-  { label: 'ИИ-бухгалтер', caption: 'Для ИП, самозанятых и малого бизнеса', screen: 'business-accountant' as const },
-  { label: 'Рефералы', caption: 'Приглашения и бонусы', screen: 'referral' as const },
-  { label: 'Премиум', caption: 'Больше анализа и возможностей', screen: 'premium' as const },
+  { label: 'ИИ-бухгалтер', caption: 'Business-модуль для ИП и самозанятых', screen: 'business-accountant' as const },
+  { label: 'Рефералы', caption: 'Admin-only прототип приглашений', screen: 'referral' as const },
+  { label: 'Премиум', caption: 'Admin-only прототип монетизации', screen: 'premium' as const },
 ];
 
 function isCurrentMonth(dateValue: string) {
@@ -157,12 +157,11 @@ export default function DashboardPage() {
         <section className="app-card app-fina-primary-card">
           <div>
             <div className="app-eyebrow">Фина</div>
-            <h2>Голос — основной способ</h2>
-            <p>Скажи «Фина», затем задачу. Если вокруг шумно, открой текстовый ввод.</p>
+            <h2>Говори или пиши</h2>
+            <p>Зажми Фину внизу экрана и скажи задачу. Если вокруг шумно, нажми кнопку клавиатуры рядом с ней.</p>
           </div>
           <div className="app-fina-actions">
-            <button type="button" className="app-primary-button" onClick={() => openAIWithCommand()}>Написать Фине</button>
-            <button type="button" className="app-secondary-button" onClick={() => setMenuOpen(true)}>Меню</button>
+            <button type="button" className="app-primary-button" onClick={() => setMenuOpen(true)}>Открыть меню</button>
           </div>
         </section>
 
@@ -173,7 +172,7 @@ export default function DashboardPage() {
               {['Создай первый счёт', 'Добавь первый доход', 'Запиши расход', 'Спроси аналитику'].map((label) => (
                 <button key={label} type="button" onClick={() => openAIWithCommand()} className="app-list-button">
                   <span>{label}</span>
-                  <small>Откроется текстовый ввод к Фине.</small>
+                  <small>Можно сказать голосом или открыть текст рядом с Финой.</small>
                 </button>
               ))}
             </div>

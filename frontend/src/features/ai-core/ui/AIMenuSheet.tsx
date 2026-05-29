@@ -45,9 +45,9 @@ export function AIMenuSheet({
             onClick={onOpenAI}
             className="w-full rounded-[24px] border border-white/8 bg-white/[0.04] p-4 text-left transition hover:bg-white/[0.06]"
           >
-            <div className="text-sm font-medium text-white">Написать Фине</div>
+            <div className="text-sm font-medium text-white">Текстовый ввод</div>
             <div className="mt-1 text-xs text-white/45">
-              Перейти в текстовый ввод и написать сообщение
+              Открыть чат, если сейчас неудобно говорить
             </div>
           </button>
 

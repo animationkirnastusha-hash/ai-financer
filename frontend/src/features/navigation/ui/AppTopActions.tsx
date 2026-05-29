@@ -36,10 +36,10 @@ export function AppTopActions() {
               type="button"
               onClick={openGlobalCommandList}
               className="flex h-10 items-center gap-2 rounded-full border border-white/10 bg-[#050b10]/82 px-3 text-sm text-white/78 shadow-2xl"
-              aria-label="Команды"
+              aria-label="Меню"
             >
               <span className="text-emerald-200">⌘</span>
-              <span>Команды</span>
+              <span>Меню</span>
             </button>
           ) : null}
         </div>

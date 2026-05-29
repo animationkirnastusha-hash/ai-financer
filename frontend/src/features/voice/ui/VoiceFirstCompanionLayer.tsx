@@ -43,6 +43,7 @@ export function VoiceFirstCompanionLayer() {
   const currentScreen = useNavigationStore((state) => state.currentScreen);
   const navigateTo = useNavigationStore((state) => state.navigateTo);
   const goBack = useNavigationStore((state) => state.goBack);
+  const openAIWithCommand = useNavigationStore((state) => state.openAIWithCommand);
 
   const chat = useChatController();
 
@@ -475,6 +476,19 @@ export function VoiceFirstCompanionLayer() {
                 isLocked={isLocked}
               />
             </div>
+
+            <button
+              type="button"
+              className="voice-first-keyboard-button"
+              aria-label="Открыть текстовый ввод"
+              onClick={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                openAIWithCommand();
+              }}
+            >
+              <span aria-hidden="true">⌨</span>
+            </button>
 
             <div
               className="voice-first-companion__press-target"

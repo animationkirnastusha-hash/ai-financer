@@ -1,8 +1,8 @@
 import type { ReactNode } from 'react';
 import { useNavigationStore } from '@/features/navigation/model/navigation.store';
 
-type Action = 'commands' | 'back' | 'history' | 'settings' | 'home' | 'referral';
-type LeftAction = 'commands' | 'back' | 'none' | { label: string; onClick: () => void };
+type Action = 'menu' | 'back' | 'history' | 'settings' | 'home' | 'referral';
+type LeftAction = 'menu' | 'back' | 'none' | { label: string; onClick: () => void };
 
 type Props = {
   title: string;
@@ -12,7 +12,7 @@ type Props = {
 };
 
 const actionIcon: Record<Action, ReactNode> = {
-  commands: '⌘',
+  menu: '☰',
   back: '←',
   history: '◷',
   settings: '⚙',
@@ -21,7 +21,7 @@ const actionIcon: Record<Action, ReactNode> = {
 };
 
 const actionLabel: Record<Action, string> = {
-  commands: 'Команды',
+  menu: 'Меню',
   back: 'Назад',
   history: 'История',
   settings: 'Настройки',
@@ -57,14 +57,14 @@ function TextButton({ children, label, onClick }: { children: ReactNode; label: 
   );
 }
 
-export function ScreenTopBar({ title, left = 'commands', right = ['history', 'settings'], className = '' }: Props) {
+export function ScreenTopBar({ title, left = 'menu', right = ['history', 'settings'], className = '' }: Props) {
   const openGlobalCommandList = useNavigationStore((state) => state.openGlobalCommandList);
   const navigateTo = useNavigationStore((state) => state.navigateTo);
   const goBack = useNavigationStore((state) => state.goBack);
   const goHome = useNavigationStore((state) => state.goHome);
 
   const handleAction = (action: Action) => {
-    if (action === 'commands') openGlobalCommandList();
+    if (action === 'menu') openGlobalCommandList();
     if (action === 'back') goBack();
     if (action === 'history') navigateTo('transactions');
     if (action === 'settings') navigateTo('settings');
@@ -78,10 +78,10 @@ export function ScreenTopBar({ title, left = 'commands', right = ['history', 'se
 
       <div className="screen-top-bar__actions">
         <div className="screen-top-bar__side screen-top-bar__side--left">
-          {left === 'commands' ? (
-            <TextButton label="Команды" onClick={openGlobalCommandList}>
-              <span className="screen-top-bar__command-mark">⌘</span>
-              Команды
+          {left === 'menu' ? (
+            <TextButton label="Меню" onClick={openGlobalCommandList}>
+              <span className="screen-top-bar__command-mark">☰</span>
+              Меню
             </TextButton>
           ) : null}
           {left === 'back' ? <TextButton label="Назад" onClick={goBack}>Назад</TextButton> : null}

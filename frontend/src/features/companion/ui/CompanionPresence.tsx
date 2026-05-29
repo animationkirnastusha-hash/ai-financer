@@ -12,7 +12,6 @@ function clampPercent(value: number) {
 
 export function CompanionPresence({ compact = false }: Props) {
   const navigateTo = useNavigationStore((state) => state.navigateTo);
-  const openAIWithCommand = useNavigationStore((state) => state.openAIWithCommand);
   const [state, setState] = useState<CompanionStateDto | null>(null);
 
   useEffect(() => {
@@ -68,8 +67,7 @@ export function CompanionPresence({ compact = false }: Props) {
       </div>
 
       <div className="app-companion-presence__actions">
-        <button type="button" onClick={() => openAIWithCommand()} className="app-secondary-button">Написать Фине</button>
-        <button type="button" onClick={() => navigateTo('companion')} className="app-secondary-button">Прогресс</button>
+        <button type="button" onClick={() => navigateTo('companion')} className="app-secondary-button">Открыть прогресс</button>
       </div>
     </section>
   );
