@@ -6,10 +6,19 @@ import { ScreenTopBar } from '@/shared/ui/ScreenTopBar';
 const rewardRules = [
   ['Друг зарегистрировался', '+3 дня Premium обоим'],
   ['Друг купил Premium', '+14 дней пригласившему'],
-  ['Защита от накрутки', 'учитывается реальная активность и повторные регистрации'],
+  ['Защита от накруток', 'один Telegram ID, лимиты и реальная активность'],
 ];
 
-function buildReferralCode(userId?: string | null, username?: string | null) {
+const referralControlItems = [
+  'Личный код приглашения',
+  'Кто кого пригласил',
+  'Количество друзей',
+  'Баланс Premium-дней',
+  'Ручное начисление',
+  'Проверка подозрительной активности',
+];
+
+function buildMockCode(userId?: string | null, username?: string | null) {
   const seed = username || userId || 'ADMIN';
   return `FINA-${seed.toString().replace(/[^a-zA-Z0-9]/g, '').slice(-6).toUpperCase() || 'ADMIN'}`;
 }
@@ -23,8 +32,8 @@ function AdminOnlyFallback() {
         <ScreenTopBar title="Рефералы" left="back" right={['home']} />
         <section className="app-card app-card--hero">
           <div className="app-eyebrow">Скоро</div>
-          <h1 className="app-hero-title">Рефералы скрыты</h1>
-          <p className="app-hero-caption">Раздел скоро станет доступен. Сейчас можно продолжать пользоваться приложением как обычно.</p>
+          <h1 className="app-hero-title">Рефералы готовятся</h1>
+          <p className="app-hero-caption">Позже здесь появятся приглашения друзей и Premium-дни за активность.</p>
           <button type="button" className="app-primary-button mt-4" onClick={goHome}>На главную</button>
         </section>
       </div>
@@ -37,7 +46,7 @@ export default function ReferralPage() {
   const isAdmin = Boolean(user?.isAdmin);
   const [copied, setCopied] = useState(false);
 
-  const referralCode = useMemo(() => buildReferralCode(user?.id, user?.username), [user?.id, user?.username]);
+  const referralCode = useMemo(() => buildMockCode(user?.id, user?.username), [user?.id, user?.username]);
   const inviteText = `Попробуй AI-Financer. Мой код: ${referralCode}`;
 
   const copy = async () => {
@@ -64,16 +73,16 @@ export default function ReferralPage() {
         <ScreenTopBar title="Рефералы" left="back" right={['home', 'settings']} />
 
         <header className="referral-admin-hero">
-          <div className="app-eyebrow">Приглашения</div>
-          <h1>Реферальная раздача Premium</h1>
-          <p>Приглашай друзей и получай бонусные дни Premium, когда программа станет доступна.</p>
+          <div className="app-eyebrow">Реферальная программа</div>
+          <h1>Premium-дни за приглашения</h1>
+          <p>Пользователь приглашает друга, друг начинает пользоваться приложением — оба получают бонус.</p>
         </header>
 
         <section className="referral-admin-code-card">
           <div>
             <span>Твой код</span>
             <strong>{referralCode}</strong>
-            <small>{copied ? 'Скопировано' : 'Поделись кодом, когда пригласительная программа будет открыта.'}</small>
+            <small>{copied ? 'Скопировано' : 'Можно проверить копирование и отправку приглашения.'}</small>
           </div>
           <div className="referral-admin-code-card__actions">
             <button type="button" className="app-secondary-button" onClick={copy}>Скопировать</button>
@@ -101,17 +110,12 @@ export default function ReferralPage() {
         <section className="app-card referral-admin-section">
           <div className="referral-admin-section__head">
             <div>
-              <div className="app-eyebrow">Скоро</div>
-              <h2>Что появится в рефералах</h2>
+              <div className="app-eyebrow">Контроль</div>
+              <h2>Что нужно видеть в админке</h2>
             </div>
           </div>
           <div className="referral-admin-roadmap">
-            <span>личная ссылка</span>
-            <span>история приглашений</span>
-            <span>количество друзей</span>
-            <span>бонусные дни Premium</span>
-            <span>ручное начисление</span>
-            <span>защита от накрутки</span>
+            {referralControlItems.map((item) => <span key={item}>{item}</span>)}
           </div>
         </section>
       </div>

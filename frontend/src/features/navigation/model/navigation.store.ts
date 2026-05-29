@@ -22,6 +22,7 @@ type NavigationState = {
 
   isAIMenuOpen: boolean;
   isGlobalCommandListOpen: boolean;
+  isNavigationMenuOpen: boolean;
   hasSystemNotifications: boolean;
   isNotificationsOpen: boolean;
   initialAICommand: string | null;
@@ -38,6 +39,9 @@ type NavigationState = {
   openGlobalCommandList: () => void;
   closeGlobalCommandList: () => void;
 
+  openNavigationMenu: () => void;
+  closeNavigationMenu: () => void;
+
   openNotifications: () => void;
   closeNotifications: () => void;
 };
@@ -52,6 +56,7 @@ export const useNavigationStore = create<NavigationState>((set, get) => ({
 
   isAIMenuOpen: false,
   isGlobalCommandListOpen: false,
+  isNavigationMenuOpen: false,
   hasSystemNotifications: true,
   isNotificationsOpen: false,
   initialAICommand: null,
@@ -63,6 +68,7 @@ export const useNavigationStore = create<NavigationState>((set, get) => ({
       set({
         isAIMenuOpen: false,
         isGlobalCommandListOpen: false,
+        isNavigationMenuOpen: false,
         isNotificationsOpen: false,
       });
       return;
@@ -73,6 +79,7 @@ export const useNavigationStore = create<NavigationState>((set, get) => ({
       history: compactHistory(history, currentScreen, screen),
       isAIMenuOpen: false,
       isGlobalCommandListOpen: false,
+      isNavigationMenuOpen: false,
       isNotificationsOpen: false,
       initialAICommand: screen === 'ai-core' ? get().initialAICommand : null,
     });
@@ -88,6 +95,7 @@ export const useNavigationStore = create<NavigationState>((set, get) => ({
       initialAICommand: trimmedCommand,
       isAIMenuOpen: false,
       isGlobalCommandListOpen: false,
+      isNavigationMenuOpen: false,
       isNotificationsOpen: false,
     });
   },
@@ -106,7 +114,7 @@ export const useNavigationStore = create<NavigationState>((set, get) => ({
     while (previous === currentScreen) previous = nextHistory.pop();
 
     if (!previous) {
-      set({ currentScreen: 'dashboard', history: [] });
+      set({ currentScreen: 'dashboard', history: [], isNavigationMenuOpen: false });
       return;
     }
 
@@ -115,6 +123,7 @@ export const useNavigationStore = create<NavigationState>((set, get) => ({
       history: nextHistory,
       isAIMenuOpen: false,
       isGlobalCommandListOpen: false,
+      isNavigationMenuOpen: false,
       isNotificationsOpen: false,
       initialAICommand: null,
     });
@@ -126,26 +135,38 @@ export const useNavigationStore = create<NavigationState>((set, get) => ({
       history: [],
       isAIMenuOpen: false,
       isGlobalCommandListOpen: false,
+      isNavigationMenuOpen: false,
       isNotificationsOpen: false,
       initialAICommand: null,
     }),
 
-  openAIMenu: () => set({ isAIMenuOpen: true, isNotificationsOpen: false }),
+  openAIMenu: () => set({ isAIMenuOpen: true, isNotificationsOpen: false, isNavigationMenuOpen: false }),
   closeAIMenu: () => set({ isAIMenuOpen: false }),
 
   openGlobalCommandList: () =>
     set({
       isGlobalCommandListOpen: true,
       isAIMenuOpen: false,
+      isNavigationMenuOpen: false,
       isNotificationsOpen: false,
     }),
   closeGlobalCommandList: () => set({ isGlobalCommandListOpen: false }),
+
+  openNavigationMenu: () =>
+    set({
+      isNavigationMenuOpen: true,
+      isAIMenuOpen: false,
+      isGlobalCommandListOpen: false,
+      isNotificationsOpen: false,
+    }),
+  closeNavigationMenu: () => set({ isNavigationMenuOpen: false }),
 
   openNotifications: () =>
     set({
       isNotificationsOpen: true,
       isAIMenuOpen: false,
       isGlobalCommandListOpen: false,
+      isNavigationMenuOpen: false,
     }),
   closeNotifications: () => set({ isNotificationsOpen: false }),
 }));

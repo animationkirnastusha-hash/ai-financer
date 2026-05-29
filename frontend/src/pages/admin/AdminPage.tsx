@@ -58,6 +58,7 @@ export default function AdminPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<LoadError>({});
   const [resettingUserId, setResettingUserId] = useState<string | null>(null);
+  const [premiumPreviewEnabled, setPremiumPreviewEnabled] = useState(() => localStorage.getItem('ai-financer-premium-preview') === '1');
   const replayOnboarding = useOnboardingStore((state) => state.reset);
 
   const isAdmin = Boolean(user?.isAdmin);
@@ -103,6 +104,13 @@ export default function AdminPage() {
   const reloadUsers = async () => {
     const payload = await adminApi.users();
     setUsers(payload.users);
+  };
+
+
+  const togglePremiumPreview = () => {
+    const next = !premiumPreviewEnabled;
+    setPremiumPreviewEnabled(next);
+    localStorage.setItem('ai-financer-premium-preview', next ? '1' : '0');
   };
 
   const handleResetUser = async (userId: string, mode: 'finance' | 'full') => {
@@ -155,7 +163,7 @@ export default function AdminPage() {
         <header className="app-card app-card--hero">
           <div className="app-eyebrow">Закрытый раздел</div>
           <h1 className="mt-3 text-[32px] font-semibold tracking-[-0.05em]">Админ-панель</h1>
-          <p className="mt-2 text-sm leading-6 text-white/50">Пользователи, события, воронка и состояние сервера.</p>
+          <p className="mt-2 text-sm leading-6 text-white/50">Пользователи, события, воронка и состояние сервиса.</p>
         </header>
 
         <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar" data-no-swipe="true">
@@ -306,7 +314,7 @@ export default function AdminPage() {
             <section className="app-card">
               <div className="app-section-title">Онбординг</div>
               <p className="mt-2 text-sm leading-6 text-white/50">
-                Повторно открой первый мастер настройки на этом устройстве. Это удобно для проверки сценария новичка без сброса базы.
+                Открой первый мастер настройки заново, чтобы проверить путь нового пользователя.
               </p>
               <button
                 type="button"
@@ -314,6 +322,20 @@ export default function AdminPage() {
                 onClick={replayOnboarding}
               >
                 Повторить онбординг
+              </button>
+            </section>
+
+            <section className="app-card">
+              <div className="app-section-title">Premium</div>
+              <p className="mt-2 text-sm leading-6 text-white/50">
+                Включи Premium-вид на этом устройстве, чтобы проверить будущий опыт пользователя.
+              </p>
+              <button
+                type="button"
+                className={premiumPreviewEnabled ? 'app-secondary-button mt-4 w-full' : 'app-primary-button mt-4 w-full'}
+                onClick={togglePremiumPreview}
+              >
+                {premiumPreviewEnabled ? 'Выключить Premium-вид' : 'Включить Premium-вид'}
               </button>
             </section>
           </div>

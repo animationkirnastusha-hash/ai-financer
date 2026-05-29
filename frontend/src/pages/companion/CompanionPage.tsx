@@ -65,7 +65,7 @@ export default function CompanionPage() {
           <div className="flex items-start justify-between gap-4">
             <div>
               <div className="app-section-title">Прогресс</div>
-              <div className="mt-1 text-sm text-white/45">XP показывает регулярность и реальные действия. Со временем он станет ресурсом для бонусов и наград.</div>
+              <div className="mt-1 text-sm text-white/45">XP показывает регулярность и реальные действия. Позже его можно будет использовать как отдельный ресурс.</div>
             </div>
             <div className="rounded-2xl border border-emerald-300/18 bg-emerald-300/10 px-3 py-2 text-right">
               <div className="text-lg font-semibold text-emerald-50">{xp}</div>
@@ -95,7 +95,7 @@ export default function CompanionPage() {
               <input type="checkbox" checked={voiceRepliesEnabled} onChange={(event) => setVoiceRepliesEnabled(event.target.checked)} />
             </label>
             <label className="app-toggle-row">
-              <span><span>Текстовое поле</span><small>Оставить запасной способ ввода, если сейчас неудобно говорить.</small></span>
+              <span><span>Текстовое поле</span><small>Оставить запасной способ ввода, если говорить неудобно.</small></span>
               <input type="checkbox" checked={textInputEnabled} onChange={(event) => setTextInputEnabled(event.target.checked)} />
             </label>
           </div>

@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { useNavigationStore } from '@/features/navigation/model/navigation.store';
 
-type Action = 'menu' | 'back' | 'history' | 'settings' | 'home' | 'referral';
+type Action = 'back' | 'history' | 'settings' | 'home' | 'referral';
 type LeftAction = 'menu' | 'back' | 'none' | { label: string; onClick: () => void };
 
 type Props = {
@@ -12,7 +12,6 @@ type Props = {
 };
 
 const actionIcon: Record<Action, ReactNode> = {
-  menu: '☰',
   back: '←',
   history: '◷',
   settings: '⚙',
@@ -21,7 +20,6 @@ const actionIcon: Record<Action, ReactNode> = {
 };
 
 const actionLabel: Record<Action, string> = {
-  menu: 'Меню',
   back: 'Назад',
   history: 'История',
   settings: 'Настройки',
@@ -58,13 +56,12 @@ function TextButton({ children, label, onClick }: { children: ReactNode; label: 
 }
 
 export function ScreenTopBar({ title, left = 'menu', right = ['history', 'settings'], className = '' }: Props) {
-  const openGlobalCommandList = useNavigationStore((state) => state.openGlobalCommandList);
+  const openNavigationMenu = useNavigationStore((state) => state.openNavigationMenu);
   const navigateTo = useNavigationStore((state) => state.navigateTo);
   const goBack = useNavigationStore((state) => state.goBack);
   const goHome = useNavigationStore((state) => state.goHome);
 
   const handleAction = (action: Action) => {
-    if (action === 'menu') openGlobalCommandList();
     if (action === 'back') goBack();
     if (action === 'history') navigateTo('transactions');
     if (action === 'settings') navigateTo('settings');
@@ -78,12 +75,7 @@ export function ScreenTopBar({ title, left = 'menu', right = ['history', 'settin
 
       <div className="screen-top-bar__actions">
         <div className="screen-top-bar__side screen-top-bar__side--left">
-          {left === 'menu' ? (
-            <TextButton label="Меню" onClick={openGlobalCommandList}>
-              <span className="screen-top-bar__command-mark">☰</span>
-              Меню
-            </TextButton>
-          ) : null}
+          {left === 'menu' ? <TextButton label="Меню" onClick={openNavigationMenu}>Меню</TextButton> : null}
           {left === 'back' ? <TextButton label="Назад" onClick={goBack}>Назад</TextButton> : null}
           {typeof left === 'object' ? <TextButton label={left.label} onClick={left.onClick}>{left.label}</TextButton> : null}
         </div>

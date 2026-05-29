@@ -203,24 +203,24 @@
 }
 
 .premium-admin-badge {
-  flex-shrink: 0;
+  shrink: 0;
   white-space: nowrap;
   border-radius: 999px;
   padding: 6px 9px;
   font-size: 11px;
 }
 
-.premium-admin-badge--available {
+.premium-admin-badge--ready-ui {
   background: rgba(110,231,183,0.12);
   color: rgb(187,247,208);
 }
 
-.premium-admin-badge--soon {
+.premium-admin-badge--backend-later {
   background: rgba(251,191,36,0.12);
   color: rgb(253,230,138);
 }
 
-.premium-admin-badge--planned {
+.premium-admin-badge--payments-later {
   background: rgba(96,165,250,0.12);
   color: rgb(191,219,254);
 }
@@ -557,17 +557,17 @@
   font-size: 11px;
 }
 
-.business-admin-badge--available {
+.business-admin-badge--ui {
   background: rgba(110,231,183,0.12);
   color: rgb(187,247,208);
 }
 
-.business-admin-badge--soon {
+.business-admin-badge--backend {
   background: rgba(251,191,36,0.12);
   color: rgb(253,230,138);
 }
 
-.business-admin-badge--careful {
+.business-admin-badge--risk {
   background: rgba(248,113,113,0.13);
   color: rgb(254,202,202);
 }
@@ -623,4 +623,26 @@
   .business-admin-zone-card {
     flex-direction: column;
   }
+}
+
+/* Pack 7: production labels without internal implementation states. */
+.premium-admin-badge--available,
+.business-admin-badge--available {
+  border-color: rgba(110, 231, 183, .32);
+  background: rgba(110, 231, 183, .11);
+  color: rgba(210, 255, 238, .95);
+}
+
+.premium-admin-badge--soon,
+.business-admin-badge--soon,
+.premium-admin-badge--payment {
+  border-color: rgba(147, 197, 253, .24);
+  background: rgba(147, 197, 253, .09);
+  color: rgba(220, 235, 255, .9);
+}
+
+.business-admin-badge--important {
+  border-color: rgba(251, 191, 36, .28);
+  background: rgba(251, 191, 36, .10);
+  color: rgba(255, 241, 190, .95);
 }

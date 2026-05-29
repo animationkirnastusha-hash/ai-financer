@@ -11,7 +11,7 @@ type ProfileCard = {
 type WorkZone = {
   title: string;
   caption: string;
-  state: 'available' | 'soon' | 'careful';
+  state: 'available' | 'soon' | 'important';
 };
 
 const profileCards: ProfileCard[] = [
@@ -50,7 +50,7 @@ const workZones: WorkZone[] = [
   },
   {
     title: 'Документы',
-    caption: 'Место для актов, чеков, счетов и распознавания документов.',
+    caption: 'Место для актов, чеков, счетов и будущего распознавания документов.',
     state: 'soon',
   },
   {
@@ -60,24 +60,24 @@ const workZones: WorkZone[] = [
   },
   {
     title: 'Осторожный режим',
-    caption: 'Фина не должна обещать юридическую точность. Она готовит данные и подсвечивает риски.',
-    state: 'careful',
+    caption: 'Фина готовит данные и подсвечивает риски, но не заменяет юридическую консультацию.',
+    state: 'important',
   },
 ];
 
-const upcomingAreas = [
+const accountingAreas = [
   'Профиль бизнеса',
   'Налоговый режим',
-  'Доходы и клиенты',
+  'Доходы бизнеса',
   'Расходы бизнеса',
-  'Календарь платежей',
-  'Документы и чеки',
+  'Налоговые напоминания',
+  'Документы',
   'Отчёты',
   'Экспорт для бухгалтера',
 ];
 
 function StateBadge({ state }: { state: WorkZone['state'] }) {
-  const label = state === 'available' ? 'готовится' : state === 'careful' ? 'важно' : 'скоро';
+  const label = state === 'available' ? 'готово' : state === 'important' ? 'важно' : 'скоро';
   return <span className={`business-admin-badge business-admin-badge--${state}`}>{label}</span>;
 }
 
@@ -90,8 +90,8 @@ function AdminOnlyFallback() {
         <ScreenTopBar title="ИИ-бухгалтер" left="back" right={['home']} />
         <section className="app-card app-card--hero">
           <div className="app-eyebrow">Скоро</div>
-          <h1 className="app-hero-title">Раздел скрыт</h1>
-          <p className="app-hero-caption">Раздел скоро станет доступен. Пока личные финансы работают как обычно.</p>
+          <h1 className="app-hero-title">Фина Бухгалтер готовится</h1>
+          <p className="app-hero-caption">Раздел для самозанятых, ИП и малого бизнеса появится отдельно от личных финансов.</p>
           <button type="button" className="app-primary-button mt-4" onClick={goHome}>На главную</button>
         </section>
       </div>
@@ -112,14 +112,14 @@ export default function BusinessAccountantPage() {
 
         <header className="business-admin-hero">
           <div className="business-admin-hero__orb" aria-hidden="true" />
-          <div className="business-admin-kicker">Для бизнеса</div>
-          <h1>Фина Бухгалтер для ИП, самозанятых и малого бизнеса</h1>
+          <div className="business-admin-kicker">Фина Бухгалтер</div>
+          <h1>Для ИП, самозанятых и малого бизнеса</h1>
           <p>
-            Отдельное пространство для рабочих денег: доходы, расходы, документы, сроки и отчёты — отдельно от личных финансов.
+            Отдельное направление поверх личных финансов: доходы, расходы бизнеса, документы, сроки и отчёты без смешивания с личными деньгами.
           </p>
           <div className="business-admin-hero__actions">
             <button type="button" className="app-primary-button" onClick={() => navigateTo('premium')}>К Premium</button>
-            <button type="button" className="app-secondary-button" onClick={() => navigateTo('admin')}>Назад</button>
+            <button type="button" className="app-secondary-button" onClick={() => navigateTo('admin')}>Админка</button>
           </div>
         </header>
 
@@ -147,7 +147,7 @@ export default function BusinessAccountantPage() {
               <div className="app-eyebrow">Модули</div>
               <h2>Что будет внутри</h2>
             </div>
-            <span>скоро</span>
+            <span>отдельный режим</span>
           </div>
           <div className="business-admin-zone-list">
             {workZones.map((zone) => (
@@ -179,12 +179,12 @@ export default function BusinessAccountantPage() {
         <section className="app-card business-admin-section">
           <div className="business-admin-section__head">
             <div>
-              <div className="app-eyebrow">Дальше</div>
-              <h2>Что появится в разделе</h2>
+              <div className="app-eyebrow">Учёт</div>
+              <h2>Что Фина будет учитывать</h2>
             </div>
           </div>
           <div className="business-admin-roadmap">
-            {upcomingAreas.map((item) => <span key={item}>{item}</span>)}
+            {accountingAreas.map((item) => <span key={item}>{item}</span>)}
           </div>
         </section>
       </div>

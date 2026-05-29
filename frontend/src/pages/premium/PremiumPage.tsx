@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { useAuthStore } from '@/features/auth/model/auth.store';
 import { useNavigationStore } from '@/features/navigation/model/navigation.store';
 import { ScreenTopBar } from '@/shared/ui/ScreenTopBar';
@@ -5,7 +6,7 @@ import { ScreenTopBar } from '@/shared/ui/ScreenTopBar';
 type PremiumFeature = {
   title: string;
   caption: string;
-  status: 'available' | 'soon' | 'planned';
+  status: 'available' | 'soon' | 'payment';
 };
 
 const heroFeatures: PremiumFeature[] = [
@@ -26,12 +27,12 @@ const heroFeatures: PremiumFeature[] = [
   },
   {
     title: 'Банковские интеграции',
-    caption: 'Подключение карт и автоматическая загрузка операций в режиме read-only.',
+    caption: 'Подключение карт и автоматическая загрузка операций в безопасном режиме чтения.',
     status: 'soon',
   },
   {
     title: 'Фина Бухгалтер',
-    caption: 'Отдельный режим для ИП, самозанятых и малого бизнеса.',
+    caption: 'Отдельный Business-модуль для ИП, самозанятых и малого бизнеса.',
     status: 'available',
   },
 ];
@@ -50,17 +51,26 @@ const premiumItems = [
   'Умные советы по кредитам и досрочному погашению',
   'Фото чеков и красивый разбор покупок',
   'Банковские интеграции',
-  'ИИ-бухгалтер как отдельное бизнес-направление',
+  'Business-модуль как отдельный тариф поверх Premium',
 ];
 
 const trialSteps = [
-  '7 дней бесплатно',
-  'Можно начать без риска и спокойно посмотреть возможности',
-  'Оплата будет доступна удобными способами',
+  '7 дней бесплатно один раз на пользователя',
+  'После пробного периода — мягкое предложение купить месяц',
+  'Оплата: Telegram Stars, крипта, СБП или карта',
+];
+
+const foundationItems = [
+  'Статус подписки',
+  'Пробный период',
+  'Premium-возможности',
+  'Лимиты голосовых команд',
+  'Выдача Premium из админки',
+  'Реферальные награды',
 ];
 
 function StatusBadge({ status }: { status: PremiumFeature['status'] }) {
-  const label = status === 'available' ? 'доступно' : status === 'planned' ? 'планируется' : 'скоро';
+  const label = status === 'available' ? 'готово' : status === 'payment' ? 'оплата' : 'скоро';
   return <span className={`premium-admin-badge premium-admin-badge--${status}`}>{label}</span>;
 }
 
@@ -73,8 +83,8 @@ function AdminOnlyFallback() {
         <ScreenTopBar title="Премиум" left="back" right={['home']} />
         <section className="app-card app-card--hero">
           <div className="app-eyebrow">Скоро</div>
-          <h1 className="app-hero-title">Раздел готовится</h1>
-          <p className="app-hero-caption">Раздел скоро станет доступен. Сейчас можно продолжать пользоваться базовыми финансами.</p>
+          <h1 className="app-hero-title">Premium готовится</h1>
+          <p className="app-hero-caption">Сейчас можно пользоваться базовой версией без ограничений для основных финансовых действий.</p>
           <button type="button" className="app-primary-button mt-4" onClick={goHome}>На главную</button>
         </section>
       </div>
@@ -83,8 +93,11 @@ function AdminOnlyFallback() {
 }
 
 export default function PremiumPage() {
+  const user = useAuthStore((state) => state.user);
   const navigateTo = useNavigationStore((state) => state.navigateTo);
-  const isAdmin = Boolean(useAuthStore((state) => state.user?.isAdmin));
+  const isAdmin = Boolean(user?.isAdmin);
+
+  const adminName = useMemo(() => user?.firstName || user?.username || 'админ', [user?.firstName, user?.username]);
 
   if (!isAdmin) return <AdminOnlyFallback />;
 
@@ -95,14 +108,14 @@ export default function PremiumPage() {
 
         <header className="premium-admin-hero">
           <div className="premium-admin-hero__glow" aria-hidden="true" />
-          <div className="premium-admin-kicker">Предпросмотр</div>
-          <h1>Premium должен ощущаться как Фина на уровень выше</h1>
+          <div className="premium-admin-kicker">Premium</div>
+          <h1>Фина на уровень выше</h1>
           <p>
-            Сейчас раздел доступен для настройки и проверки. Базовая версия остаётся полноценной: без навязчивых ограничений и лишнего шума.
+            {adminName}, здесь собирается будущий Premium-опыт: больше анализа, меньше ручной работы и больше полезных подсказок по деньгам.
           </p>
           <div className="premium-admin-hero__actions">
             <button type="button" className="app-primary-button" onClick={() => navigateTo('business-accountant')}>ИИ-бухгалтер</button>
-            <button type="button" className="app-secondary-button" onClick={() => navigateTo('referral')}>Рефералка</button>
+            <button type="button" className="app-secondary-button" onClick={() => navigateTo('referral')}>Рефералы</button>
             <button type="button" className="app-secondary-button" onClick={() => navigateTo('admin')}>Админка</button>
           </div>
         </header>
@@ -111,7 +124,7 @@ export default function PremiumPage() {
           <article className="premium-admin-plan-card premium-admin-plan-card--free">
             <div className="premium-admin-plan-card__label">Free</div>
             <h2>База остаётся полезной</h2>
-            <p>Нельзя делать Free бесполезным. Пользователь должен вести деньги даже без подписки.</p>
+            <p>Free должен помогать вести деньги каждый день, а не выглядеть искусственно урезанным.</p>
             <ul>
               {freeItems.map((item) => <li key={item}>{item}</li>)}
             </ul>
@@ -120,7 +133,7 @@ export default function PremiumPage() {
           <article className="premium-admin-plan-card premium-admin-plan-card--premium">
             <div className="premium-admin-plan-card__label">Premium</div>
             <h2>Больше глубины и экономии времени</h2>
-            <p>Premium продаёт не блокировки, а более умные выводы, автоматизацию и доверие к картине денег.</p>
+            <p>Premium усиливает пользователя прогнозами, автоматизацией и более точными советами Фины.</p>
             <ul>
               {premiumItems.map((item) => <li key={item}>{item}</li>)}
             </ul>
@@ -130,10 +143,10 @@ export default function PremiumPage() {
         <section className="app-card premium-admin-section">
           <div className="premium-admin-section__head">
             <div>
-              <div className="app-eyebrow">Ключевые фичи</div>
-              <h2>Что показываем в Premium-дизайне</h2>
+              <div className="app-eyebrow">Возможности</div>
+              <h2>Что будет отличать Premium</h2>
             </div>
-            <span>Подборка возможностей</span>
+            <span>приоритет</span>
           </div>
           <div className="premium-admin-feature-list">
             {heroFeatures.map((feature) => (
@@ -152,9 +165,9 @@ export default function PremiumPage() {
           <div className="premium-admin-section__head">
             <div>
               <div className="app-eyebrow">Пробный период</div>
-              <h2>Попробовать 7 дней</h2>
+              <h2>7 дней бесплатно</h2>
             </div>
-            <span>без спешки</span>
+            <span>для первого знакомства</span>
           </div>
           <div className="premium-admin-trial-card">
             {trialSteps.map((item, index) => (
@@ -166,12 +179,11 @@ export default function PremiumPage() {
           </div>
         </section>
 
-
         <section className="premium-business-teaser">
           <div>
-            <div className="app-eyebrow">Для бизнеса</div>
+            <div className="app-eyebrow">Business</div>
             <h2>Фина Бухгалтер</h2>
-            <p>Режим для самозанятых, ИП и малого бизнеса: учёт, сроки, документы и отчёты отдельно от личных финансов.</p>
+            <p>Отдельное направление для самозанятых, ИП и малого бизнеса. Личные и бизнес-деньги не смешиваются.</p>
           </div>
           <button type="button" className="app-primary-button" onClick={() => navigateTo('business-accountant')}>Посмотреть</button>
         </section>
@@ -179,17 +191,12 @@ export default function PremiumPage() {
         <section className="app-card premium-admin-section">
           <div className="premium-admin-section__head">
             <div>
-              <div className="app-eyebrow">Дальше</div>
-              <h2>Что появится в Premium</h2>
+              <div className="app-eyebrow">Основа</div>
+              <h2>Что нужно для полноценного Premium</h2>
             </div>
           </div>
           <div className="premium-admin-roadmap">
-            <span>Подписка и пробный период</span>
-            <span>Расширенные лимиты</span>
-            <span>Фото чеков</span>
-            <span>Глубокие отчёты</span>
-            <span>Реферальные бонусы</span>
-            <span>Банковские интеграции</span>
+            {foundationItems.map((item) => <span key={item}>{item}</span>)}
           </div>
         </section>
       </div>

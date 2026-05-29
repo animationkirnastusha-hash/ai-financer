@@ -10,6 +10,8 @@ import { VOICE_BUBBLE_TIMEOUT_MS } from '@/features/voice/model/voiceConstants';
 import type { VoiceCompanionMood, VoiceThought, VoiceBubbleTone } from '@/features/voice/model/voiceSession.types';
 import { compactVoiceBubble } from '@/features/voice/model/voiceText';
 import { VoicePendingConfirmModal } from '@/features/voice/ui/VoicePendingConfirmModal';
+import { VoiceKeyboardEntry } from '@/features/voice/ui/VoiceKeyboardEntry';
+import { VoiceLockActions } from '@/features/voice/ui/VoiceLockActions';
 import { VoicePermissionIntro } from '@/features/voice/ui/VoicePermissionIntro';
 import { VoiceStatusPill } from '@/features/voice/ui/VoiceStatusPill';
 import { VoiceThoughtBubble } from '@/features/voice/ui/VoiceThoughtBubble';
@@ -31,19 +33,10 @@ const SWIPE_LOCK_PX = 48;
 const SWIPE_CANCEL_PX = 58;
 const TAP_GUARD_MS = 320;
 
-function CancelIcon() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-      <path d="M7.3 5.9 12 10.6l4.7-4.7 1.4 1.4-4.7 4.7 4.7 4.7-1.4 1.4-4.7-4.7-4.7 4.7-1.4-1.4 4.7-4.7-4.7-4.7 1.4-1.4Z" />
-    </svg>
-  );
-}
-
 export function VoiceFirstCompanionLayer() {
   const currentScreen = useNavigationStore((state) => state.currentScreen);
   const navigateTo = useNavigationStore((state) => state.navigateTo);
   const goBack = useNavigationStore((state) => state.goBack);
-  const openAIWithCommand = useNavigationStore((state) => state.openAIWithCommand);
 
   const chat = useChatController();
 
@@ -460,22 +453,7 @@ export function VoiceFirstCompanionLayer() {
         onUpdate={chat.updatePendingAction}
       />
 
-      {showFloatingCompanion ? (
-        <button
-          type="button"
-          className={isLocked ? 'voice-first-keyboard-button voice-first-keyboard-button--floating voice-first-keyboard-button--disabled' : 'voice-first-keyboard-button voice-first-keyboard-button--floating'}
-          aria-label="Открыть текстовый ввод"
-          disabled={isLocked}
-          onClick={(event) => {
-            event.preventDefault();
-            event.stopPropagation();
-            openAIWithCommand();
-          }}
-          data-no-swipe="true"
-        >
-          <span aria-hidden="true">⌨</span>
-        </button>
-      ) : null}
+      {showFloatingCompanion ? <VoiceKeyboardEntry /> : null}
 
       {showFloatingCompanion ? (
         <div className={isLocked ? 'voice-first-companion voice-first-companion--locked' : 'voice-first-companion'} data-no-swipe="true">
@@ -493,7 +471,6 @@ export function VoiceFirstCompanionLayer() {
                 isLocked={isLocked}
               />
             </div>
-
 
             <div
               className="voice-first-companion__press-target"
@@ -520,13 +497,7 @@ export function VoiceFirstCompanionLayer() {
         </div>
       ) : null}
 
-      {showFloatingCompanion && isLocked ? (
-        <div className="voice-first-lock-actions voice-first-lock-actions--cancel-only voice-first-lock-actions--detached" aria-label="Управление записью" data-no-swipe="true">
-          <button type="button" className="voice-first-lock-action voice-first-lock-action--cancel" onClick={() => cancelManualRecording('locked_cancel_button')} aria-label="Отменить запись">
-            <CancelIcon />
-          </button>
-        </div>
-      ) : null}
+      {showFloatingCompanion && isLocked ? <VoiceLockActions onCancel={() => cancelManualRecording('locked_cancel_button')} /> : null}
     </>
   );
 }

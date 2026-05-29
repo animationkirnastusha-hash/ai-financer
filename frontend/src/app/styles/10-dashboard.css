@@ -123,3 +123,199 @@
   .app-currency-card__top { grid-template-columns: 1fr; }
   .app-currency-card__nav { width: fit-content; }
 }
+
+/* Pack 6: production home structure. */
+.app-home-layout {
+  display: grid;
+  gap: 14px;
+  padding-bottom: calc(env(safe-area-inset-bottom) + 148px) !important;
+}
+
+.app-home-section {
+  min-width: 0;
+}
+
+.app-home-balance-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.app-home-balance-card__top {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 14px;
+}
+
+.app-home-balance-card__amount {
+  margin-top: 12px;
+  font-size: clamp(44px, 12vw, 78px);
+  line-height: .92;
+  letter-spacing: -.075em;
+  font-weight: 780;
+  color: rgba(255,255,255,.96);
+  white-space: nowrap;
+}
+
+.app-home-balance-card__top p,
+.app-home-balance-card__rate {
+  color: rgba(255,255,255,.50);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.app-home-balance-card__rate {
+  margin-top: 10px;
+  display: inline-flex;
+  width: fit-content;
+  max-width: 100%;
+  border: 1px solid rgba(110,231,183,.16);
+  background: rgba(110,231,183,.055);
+  border-radius: 999px;
+  padding: 7px 10px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-home-balance-card__nav {
+  min-width: 104px;
+  height: 44px;
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 999px;
+  background: rgba(0,0,0,.18);
+  display: grid;
+  grid-template-columns: 32px 1fr 32px;
+  align-items: center;
+}
+
+.app-home-balance-card__nav button {
+  height: 100%;
+  border: 0;
+  color: rgba(255,255,255,.75);
+  font-size: 24px;
+}
+
+.app-home-balance-card__nav span {
+  text-align: center;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .12em;
+  color: rgba(190,255,230,.86);
+}
+
+.app-home-balance-card__metrics {
+  margin-top: 16px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.app-home-balance-card__footer {
+  margin-top: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.app-home-balance-card__footer button {
+  border: 1px solid rgba(110,231,183,.18);
+  background: rgba(110,231,183,.075);
+  color: rgba(205,255,235,.86);
+  border-radius: 999px;
+  padding: 8px 12px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.app-home-balance-card__dots {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.app-home-balance-card__dots i {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: rgba(255,255,255,.16);
+}
+
+.app-home-balance-card__dots i[data-active="true"] {
+  width: 26px;
+  background: rgba(110,231,183,.86);
+}
+
+.app-home-quick-actions {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.app-home-quick-action {
+  min-width: 0;
+  min-height: 78px;
+  border-radius: 24px;
+  border: 1px solid rgba(255,255,255,.08);
+  background: rgba(255,255,255,.045);
+  padding: 12px 10px;
+  text-align: left;
+  display: grid;
+  align-content: center;
+  gap: 5px;
+}
+
+.app-home-quick-action span,
+.app-home-quick-action small {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-home-quick-action span {
+  font-size: 14px;
+  font-weight: 800;
+  color: rgba(255,255,255,.92);
+}
+
+.app-home-quick-action small {
+  font-size: 11px;
+  color: rgba(255,255,255,.42);
+}
+
+.app-home-insight-card {
+  display: grid;
+  gap: 12px;
+  background: radial-gradient(circle at top right, rgba(129,239,208,.12), transparent 42%), rgba(255,255,255,.045);
+}
+
+.app-home-insight-card p {
+  color: rgba(255,255,255,.62);
+  font-size: 14px;
+  line-height: 1.65;
+}
+
+.app-home-insight-card button {
+  width: fit-content;
+  border-radius: 999px;
+  border: 1px solid rgba(110,231,183,.18);
+  background: rgba(110,231,183,.08);
+  color: rgba(205,255,235,.9);
+  padding: 10px 14px;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.app-home-xp-compact .app-xp-hero,
+.app-home-xp-compact .app-card {
+  margin: 0;
+}
+
+@media (max-width: 390px) {
+  .app-home-balance-card__top { grid-template-columns: 1fr; }
+  .app-home-balance-card__nav { width: fit-content; }
+  .app-home-quick-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}

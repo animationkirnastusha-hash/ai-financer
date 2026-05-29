@@ -4,18 +4,18 @@ export function PremiumTrialStep({ isAdmin }: { isAdmin: boolean }) {
   return (
     <OnboardingStepShell
       eyebrow="Premium"
-      title={isAdmin ? 'Premium и пробный период' : 'Бесплатно достаточно для старта'}
+      title={isAdmin ? 'Premium и trial' : 'Бесплатно достаточно для старта'}
       description={isAdmin
-        ? 'Покажем, как будет выглядеть пробный период и подписка.'
-        : 'Базовые финансы можно вести бесплатно. Premium усилит аналитику, отчёты и работу с чеками.'}
+        ? 'Этот экран пока виден админу как прототип будущей продажи trial и подписки.'
+        : 'Базовые финансы можно вести бесплатно. Premium усилит аналитику, отчёты и разбор чеков.'}
     >
       <div className="onboarding-premium-card">
         <div>
-          <span>7 дней бесплатно</span>
+          <span>7 дней trial</span>
           <strong>Попробовать расширенный режим</strong>
-          <small>Глубокий анализ, красивые отчёты, фото чеков и банковские интеграции.</small>
+          <small>Глубокий анализ, красивые отчёты, фото чеков и будущие банковские интеграции.</small>
         </div>
-        <div className="onboarding-premium-card__badge">Premium</div>
+        <div className="onboarding-premium-card__badge">Скоро</div>
       </div>
 
       <div className="onboarding-feature-list">

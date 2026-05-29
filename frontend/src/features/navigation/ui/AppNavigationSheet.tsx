@@ -1,87 +1,62 @@
-import type { AppScreen } from '@/features/navigation/model/navigation.store';
+import { useAuthStore } from '@/features/auth/model/auth.store';
+import { useNavigationStore, type AppScreen } from '@/features/navigation/model/navigation.store';
 
-type NavigationItem = {
-  screen: AppScreen;
-  title: string;
-  description: string;
-  icon: string;
-  adminOnly?: boolean;
-};
-
-type Props = {
-  open: boolean;
-  isAdmin: boolean;
-  onClose: () => void;
-  onNavigate: (screen: AppScreen) => void;
-};
-
-const mainItems: NavigationItem[] = [
-  { screen: 'dashboard', title: 'Главная', description: 'Баланс, быстрые действия и Фина', icon: '⌂' },
-  { screen: 'transactions', title: 'Операции', description: 'Расходы, доходы и переводы', icon: '◷' },
-  { screen: 'accounts', title: 'Счета', description: 'Карта, наличка и другие кошельки', icon: '◉' },
-  { screen: 'analytics', title: 'Аналитика', description: 'Куда уходят деньги и что меняется', icon: '◇' },
-  { screen: 'goals', title: 'Цели', description: 'Накопления, планы и прогресс', icon: '◎' },
-  { screen: 'sections', title: 'Категории', description: 'Разделы расходов и доходов', icon: '▦' },
-  { screen: 'companion', title: 'Компаньон', description: 'XP, уровень и развитие Фины', icon: '✦' },
-  { screen: 'settings', title: 'Настройки', description: 'Валюта, голос, интерфейс и данные', icon: '⚙' },
+const mainLinks: Array<{ screen: AppScreen; label: string; caption: string }> = [
+  { screen: 'dashboard', label: 'Главная', caption: 'Баланс, действия и последние операции' },
+  { screen: 'transactions', label: 'Операции', caption: 'История доходов, расходов и переводов' },
+  { screen: 'accounts', label: 'Счета', caption: 'Карты, наличные и накопления' },
+  { screen: 'goals', label: 'Цели', caption: 'Накопления и планы' },
+  { screen: 'sections', label: 'Категории', caption: 'Разделы расходов и доходов' },
+  { screen: 'analytics', label: 'Аналитика', caption: 'Итоги, динамика и выводы' },
 ];
 
-const adminItems: NavigationItem[] = [
-  { screen: 'premium', title: 'Premium', description: 'Тарифы, trial и будущие возможности', icon: '★', adminOnly: true },
-  { screen: 'referral', title: 'Рефералы', description: 'Приглашения и будущие бонусы', icon: '↗', adminOnly: true },
-  { screen: 'business-accountant', title: 'ИИ-бухгалтер', description: 'ИП, самозанятые и малый бизнес', icon: '▣', adminOnly: true },
-  { screen: 'admin', title: 'Админка', description: 'Пользователи, тесты и служебные действия', icon: '⌘', adminOnly: true },
+const adminLinks: Array<{ screen: AppScreen; label: string; caption: string }> = [
+  { screen: 'premium', label: 'Premium', caption: 'Тарифы и будущие возможности' },
+  { screen: 'business-accountant', label: 'ИИ-бухгалтер', caption: 'Для ИП, самозанятых и бизнеса' },
+  { screen: 'referral', label: 'Рефералы', caption: 'Приглашения и бонусы' },
+  { screen: 'admin', label: 'Админка', caption: 'Тесты, пользователи и инструменты' },
 ];
 
-export function AppNavigationSheet({ open, isAdmin, onClose, onNavigate }: Props) {
-  if (!open) return null;
+export function AppNavigationSheet() {
+  const currentScreen = useNavigationStore((state) => state.currentScreen);
+  const isOpen = useNavigationStore((state) => state.isNavigationMenuOpen);
+  const close = useNavigationStore((state) => state.closeNavigationMenu);
+  const navigateTo = useNavigationStore((state) => state.navigateTo);
+  const isAdmin = Boolean(useAuthStore((state) => state.user?.isAdmin));
 
-  const items = isAdmin ? [...mainItems, ...adminItems] : mainItems;
+  if (!isOpen) return null;
 
   const handleNavigate = (screen: AppScreen) => {
-    onNavigate(screen);
-    onClose();
+    close();
+    navigateTo(screen);
   };
 
+  const links = isAdmin ? [...mainLinks, ...adminLinks] : mainLinks;
+
   return (
-    <div className="fixed inset-0 z-[90] flex items-end bg-black/60 backdrop-blur-sm" data-no-swipe="true">
-      <div className="max-h-[88dvh] w-full overflow-y-auto rounded-t-[28px] border border-white/10 bg-[#0b1016] px-4 pb-6 pt-4 text-white shadow-2xl">
-        <div className="mx-auto mb-4 h-1.5 w-14 rounded-full bg-white/15" />
-
-        <div className="mx-auto max-w-[560px]">
-          <div className="flex items-center justify-between gap-3">
+    <div className="app-modal-backdrop app-navigation-backdrop" data-no-swipe="true" onClick={close}>
+      <div className="app-modal-sheet app-navigation-sheet" data-no-swipe="true" onClick={(event) => event.stopPropagation()}>
+        <div className="app-modal-handle" />
+        <div className="app-modal-body">
+          <div className="app-navigation-head">
             <div>
-              <div className="text-[11px] uppercase tracking-[0.16em] text-white/35">Меню</div>
-              <div className="mt-1 text-lg font-semibold text-white">Куда перейти?</div>
+              <div className="app-eyebrow">Меню</div>
+              <h2>Разделы</h2>
             </div>
-
-            <button
-              type="button"
-              onClick={onClose}
-              className="rounded-2xl border border-white/10 bg-white/6 px-3 py-2 text-sm text-white"
-            >
-              Закрыть
-            </button>
+            <button type="button" className="app-icon-button" onClick={close} aria-label="Закрыть меню">×</button>
           </div>
 
-          <div className="mt-5 grid gap-2">
-            {items.map((item) => (
+          <div className="app-navigation-grid">
+            {links.map((item) => (
               <button
                 key={item.screen}
                 type="button"
+                className="app-navigation-item"
+                data-active={currentScreen === item.screen}
                 onClick={() => handleNavigate(item.screen)}
-                className="w-full rounded-[22px] border border-white/8 bg-white/[0.045] p-4 text-left transition active:scale-[0.99]"
               >
-                <div className="flex items-center gap-3">
-                  <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-white/[0.06] text-lg text-emerald-100/80">
-                    {item.icon}
-                  </span>
-                  <span className="min-w-0">
-                    <span className="block text-sm font-semibold text-white">{item.title}</span>
-                    <span className="mt-1 block text-xs leading-5 text-white/45">{item.description}</span>
-                  </span>
-                  <span className="ml-auto text-white/25">›</span>
-                </div>
+                <span>{item.label}</span>
+                <small>{item.caption}</small>
               </button>
             ))}
           </div>

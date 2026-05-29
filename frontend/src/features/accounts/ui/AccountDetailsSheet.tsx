@@ -42,7 +42,7 @@ export function AccountDetailsSheet({
 
   const handleDelete = async () => {
     const confirmed = window.confirm(
-      `Удалить счёт «${account.name}»? Если по нему уже есть операции, удалить его не получится — так сохраняется история.`,
+      `Удалить счёт «${account.name}»? Если у счёта есть операции, удаление будет остановлено для безопасности.`,
     );
     if (!confirmed) return;
     await onDelete(account.id);
@@ -56,7 +56,7 @@ export function AccountDetailsSheet({
         <div className="mx-auto max-w-[560px] space-y-4">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <div className="text-[11px] uppercase tracking-[0.16em] text-white/35">Счёт</div>
+              <div className="text-[11px] uppercase tracking-[0.16em] text-white/35">Account details</div>
               <h2 className="mt-1 text-2xl font-semibold">{account.name}</h2>
               <div className="mt-2 text-sm text-white/45">{account.type} · {account.currency}</div>
             </div>
@@ -88,7 +88,7 @@ export function AccountDetailsSheet({
           <div className="grid gap-3">
             <button type="button" onClick={() => onTransfer(account)} className="rounded-2xl border border-emerald-300/20 bg-emerald-300/12 px-4 py-3 text-left text-sm text-white transition active:scale-[0.99]">
               ↔️ Перевести на другой счёт
-              <div className="mt-1 text-xs text-white/45">Переведи деньги между своими счетами.</div>
+              <div className="mt-1 text-xs text-white/45">Ручной перевод сейчас, AI-перевод через подтверждение — тем же принципом.</div>
             </button>
 
             <button type="button" onClick={() => onEdit(account)} className="rounded-2xl border border-white/10 bg-white/6 px-4 py-3 text-left text-sm text-white transition active:scale-[0.99]">

@@ -2,8 +2,8 @@ import { AppShell } from '@/shared/ui/AppShell';
 import { CreateAccountSheet } from '@/features/accounts/ui/CreateAccountSheet';
 import { useAccountFlowStore } from '@/features/accounts/model/accountFlow.store';
 import { useAccountsStore } from '@/features/accounts/model/accounts.store';
-import { AppNavigationSheet } from '@/features/navigation/ui/AppNavigationSheet';
 import { useNavigationStore } from '@/features/navigation/model/navigation.store';
+import { AppNavigationSheet } from '@/features/navigation/ui/AppNavigationSheet';
 import { PremiumUpgradeSheet } from '@/features/premium/ui/PremiumUpgradeSheet';
 import { LaunchOnboardingSheet } from '@/features/onboarding/ui/LaunchOnboardingSheet';
 
@@ -29,8 +29,6 @@ export function AppRouter() {
   const isAdmin = Boolean(useAuthStore((state) => state.user?.isAdmin));
   const goBack = useNavigationStore((state) => state.goBack);
   const navigateTo = useNavigationStore((state) => state.navigateTo);
-  const isGlobalCommandListOpen = useNavigationStore((state) => state.isGlobalCommandListOpen);
-  const closeGlobalCommandList = useNavigationStore((state) => state.closeGlobalCommandList);
 
   const isCreateAccountOpen = useAccountFlowStore((state) => state.isCreateAccountOpen);
   const closeCreateAccount = useAccountFlowStore((state) => state.closeCreateAccount);
@@ -54,7 +52,7 @@ export function AppRouter() {
       {currentScreen === 'admin' && <AdminPage />}
       {currentScreen === 'referral' && (isAdmin ? <ReferralPage /> : <DashboardPage />)}
 
-      <AppNavigationSheet open={isGlobalCommandListOpen} isAdmin={isAdmin} onClose={closeGlobalCommandList} onNavigate={navigateTo} />
+      <AppNavigationSheet />
 
       <CreateAccountSheet
         open={isCreateAccountOpen}
