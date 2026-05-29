@@ -127,20 +127,6 @@ export const navigationCommands: CommandCatalogItem[] = [
     group: 'navigation',
   },
   {
-    id: 'open-premium',
-    label: 'Открыть Премиум',
-    description: 'Переход к расширенным возможностям.',
-    command: 'покажи премиум',
-    group: 'navigation',
-  },
-  {
-    id: 'open-referral',
-    label: 'Открыть рефералы',
-    description: 'Переход к коду приглашения и списку друзей.',
-    command: 'открой рефералы',
-    group: 'navigation',
-  },
-  {
     id: 'open-settings',
     label: 'Открыть настройки',
     description: 'Переход к настройкам AI, голоса и финансов.',

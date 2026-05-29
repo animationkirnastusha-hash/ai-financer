@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useAccountsStore } from '@/features/accounts/model/accounts.store';
 import { useNavigationStore } from '@/features/navigation/model/navigation.store';
 import { useSettingsStore } from '@/features/settings/model/settings.store';
+import { useAuthStore } from '@/features/auth/model/auth.store';
 import { useTransactionsStore } from '@/features/transactions/model/transactions.store';
 import { CompanionPresence } from '@/features/companion/ui/CompanionPresence';
 import { ProgressionMiniCard } from '@/features/progression/ui/ProgressionMiniCard';
@@ -12,15 +13,19 @@ import { APP_CURRENCIES, convertCurrency, getCurrencyProfile } from '@/features/
 
 const currencyLabels: Record<AppCurrency, string> = Object.fromEntries(APP_CURRENCIES.map((item) => [item.code, item.label])) as Record<AppCurrency, string>;
 
-const menuLinks = [
+const baseMenuLinks = [
   { label: 'Операции', caption: 'История и ручное добавление', screen: 'transactions' as const },
   { label: 'Счета', caption: 'Карты, наличные и накопления', screen: 'accounts' as const },
   { label: 'Цели', caption: 'Накопления и планы', screen: 'goals' as const },
   { label: 'Аналитика', caption: 'Расходы, доходы и выводы', screen: 'analytics' as const },
   { label: 'Категории', caption: 'Разделы и правила порядка', screen: 'sections' as const },
   { label: 'Чат с Финой', caption: 'Текст, когда говорить неудобно', screen: 'ai-core' as const },
-  { label: 'Рефералы', caption: 'Код и приглашения', screen: 'referral' as const },
-  { label: 'Премиум', caption: 'Будущие расширенные возможности', screen: 'premium' as const },
+];
+
+const adminMenuLinks = [
+  { label: 'ИИ-бухгалтер', caption: 'Business-модуль для ИП и самозанятых', screen: 'business-accountant' as const },
+  { label: 'Рефералы', caption: 'Admin-only прототип приглашений', screen: 'referral' as const },
+  { label: 'Премиум', caption: 'Admin-only прототип монетизации', screen: 'premium' as const },
 ];
 
 function isCurrentMonth(dateValue: string) {
@@ -53,6 +58,7 @@ export default function DashboardPage() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [currencyIndex, setCurrencyIndex] = useState(0);
   const navigateTo = useNavigationStore((state) => state.navigateTo);
+  const isAdmin = Boolean(useAuthStore((state) => state.user?.isAdmin));
   const openAIWithCommand = useNavigationStore((state) => state.openAIWithCommand);
   const accounts = useAccountsStore((state) => state.items);
   const loadAccounts = useAccountsStore((state) => state.loadAccounts);
@@ -105,6 +111,8 @@ export default function DashboardPage() {
   }, [accounts, activeCurrency, rates, transactions]);
 
   const recent = transactions.slice(0, 3);
+  const menuLinks = useMemo(() => (isAdmin ? [...baseMenuLinks, ...adminMenuLinks] : baseMenuLinks), [isAdmin]);
+  const topBarRight = useMemo(() => (isAdmin ? ['referral', 'history', 'settings'] as const : ['history', 'settings'] as const), [isAdmin]);
   const isEmptyState = accounts.length === 0 && transactions.length === 0;
 
   const nextCurrency = () => setCurrencyIndex((value) => (value + 1) % Math.max(1, currencies.length));
@@ -113,7 +121,7 @@ export default function DashboardPage() {
   return (
     <div className="app-page app-dashboard-page text-white">
       <div className="app-page__inner space-y-4">
-        <ScreenTopBar title="Главная" right={['referral', 'history', 'settings']} />
+        <ScreenTopBar title="Главная" right={[...topBarRight]} />
 
         <header className="app-card app-card--hero app-home-hero app-currency-card" data-no-swipe="true">
           <div className="app-currency-card__top">

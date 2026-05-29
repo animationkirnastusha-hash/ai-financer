@@ -13,6 +13,7 @@ import CompanionPage from '@/pages/companion/CompanionPage';
 import DashboardPage from '@/pages/dashboard/DashboardPage';
 import GoalsPage from '@/pages/goals/GoalsPage';
 import PremiumPage from '@/pages/premium/PremiumPage';
+import BusinessAccountantPage from '@/pages/business-accountant/BusinessAccountantPage';
 import SettingsPage from '@/pages/settings/SettingsPage';
 import TaxonomySettingsPage from '@/pages/settings/TaxonomySettingsPage';
 import TransactionsPage from '@/pages/transactions/TransactionsPage';
@@ -22,9 +23,11 @@ import ReferralPage from '@/pages/referral/ReferralPage';
 import { AICoreScreen } from '@/features/ai-core/ui/AICoreScreen';
 import { parseNavigationIntent } from '@/features/navigation/lib/parseNavigationIntent';
 import { ProductAnalyticsTracker } from '@/features/product-analytics/ui/ProductAnalyticsTracker';
+import { useAuthStore } from '@/features/auth/model/auth.store';
 
 export function AppRouter() {
   const currentScreen = useNavigationStore((state) => state.currentScreen);
+  const isAdmin = Boolean(useAuthStore((state) => state.user?.isAdmin));
   const goBack = useNavigationStore((state) => state.goBack);
   const navigateTo = useNavigationStore((state) => state.navigateTo);
   const openAIWithCommand = useNavigationStore((state) => state.openAIWithCommand);
@@ -39,6 +42,9 @@ export function AppRouter() {
     const navigationIntent = parseNavigationIntent(command);
 
     if (navigationIntent.type === 'open_screen') {
+      if (!isAdmin && (navigationIntent.screen === 'premium' || navigationIntent.screen === 'referral' || navigationIntent.screen === 'business-accountant')) {
+        return;
+      }
       navigateTo(navigationIntent.screen);
       return;
     }
@@ -61,12 +67,13 @@ export function AppRouter() {
       {currentScreen === 'goals' && <GoalsPage />}
       {currentScreen === 'companion' && <CompanionPage />}
       {currentScreen === 'settings' && <SettingsPage />}
-      {currentScreen === 'premium' && <PremiumPage />}
+      {currentScreen === 'premium' && (isAdmin ? <PremiumPage /> : <DashboardPage />)}
+      {currentScreen === 'business-accountant' && (isAdmin ? <BusinessAccountantPage /> : <DashboardPage />)}
       {currentScreen === 'sections' && <SectionsPage onBack={goBack} />}
       {currentScreen === 'taxonomy-settings' && <TaxonomySettingsPage />}
       {currentScreen === 'ai-core' && <AICoreScreen />}
       {currentScreen === 'admin' && <AdminPage />}
-      {currentScreen === 'referral' && <ReferralPage />}
+      {currentScreen === 'referral' && (isAdmin ? <ReferralPage /> : <DashboardPage />)}
 
       <CommandListSheet open={isGlobalCommandListOpen} onClose={closeGlobalCommandList} onRunCommand={runGlobalCommand} />
 
@@ -79,7 +86,7 @@ export function AppRouter() {
         }}
       />
 
-      <PremiumUpgradeSheet />
+      {isAdmin ? <PremiumUpgradeSheet /> : null}
       <LaunchOnboardingSheet />
     </AppShell>
   );

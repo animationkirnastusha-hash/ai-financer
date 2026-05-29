@@ -9,6 +9,7 @@ export type AppScreen =
   | 'companion'
   | 'settings'
   | 'premium'
+  | 'business-accountant'
   | 'sections'
   | 'taxonomy-settings'
   | 'ai-core'

@@ -19,19 +19,6 @@ function normalize(input: string) {
 function detectScreen(input: string): AppScreen | null {
   if (
     includesAny(input, [
-      'рефералы',
-      'реферальная',
-      'приглашения',
-      'пригласить',
-      'referral',
-      'invite',
-    ])
-  ) {
-    return 'referral';
-  }
-
-  if (
-    includesAny(input, [
       'админ',
       'админка',
       'admin',
@@ -63,6 +50,25 @@ function detectScreen(input: string): AppScreen | null {
     return 'ai-core';
   }
 
+
+
+  if (
+    includesAny(input, [
+      'ии бухгалтер',
+      'бухгалтер',
+      'бухгалтерия',
+      'фина бухгалтер',
+      'самозанятый',
+      'самозанятые',
+      'ип',
+      'малый бизнес',
+      'business',
+      'accountant',
+    ])
+  ) {
+    return 'business-accountant';
+  }
+
   if (
     includesAny(input, [
       'аналитика',
@@ -92,20 +98,6 @@ function detectScreen(input: string): AppScreen | null {
     ])
   ) {
     return 'goals';
-  }
-
-  if (
-    includesAny(input, [
-      'premium',
-      'премиум',
-      'подписка',
-      'подписку',
-      'план',
-      'тариф',
-      'возможности premium',
-    ])
-  ) {
-    return 'premium';
   }
 
   if (
@@ -222,9 +214,8 @@ function isBareNavigationTarget(input: string, screen: AppScreen) {
     settings: ['настройки', 'параметры', 'профиль'],
     'taxonomy-settings': ['категории', 'разделы', 'категории и разделы', 'разделы и категории'],
     companion: ['компаньон', 'фина', 'помощник'],
-    premium: ['премиум', 'подписка', 'тариф'],
-    referral: ['рефералы', 'приглашения'],
     admin: ['админка', 'админ'],
+    'business-accountant': ['ии бухгалтер', 'бухгалтер', 'бухгалтерия', 'фина бухгалтер'],
     'ai-core': ['чат', 'текстовый ввод', 'ии чат'],
   };
 

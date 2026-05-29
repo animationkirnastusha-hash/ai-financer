@@ -1,6 +1,7 @@
 import { useEffect, useMemo } from 'react';
 import { useTransactionsStore } from '@/features/transactions/model/transactions.store';
 import { useNavigationStore } from '@/features/navigation/model/navigation.store';
+import { useAuthStore } from '@/features/auth/model/auth.store';
 import { ScreenTopBar } from '@/shared/ui/ScreenTopBar';
 import { formatMoney } from '@/shared/lib/money';
 
@@ -18,6 +19,7 @@ function isCurrentMonth(value: string) {
 
 export default function AnalyticsPage() {
   const navigateTo = useNavigationStore((state) => state.navigateTo);
+  const isAdmin = Boolean(useAuthStore((state) => state.user?.isAdmin));
   const openAIWithCommand = useNavigationStore((state) => state.openAIWithCommand);
   const transactions = useTransactionsStore((state) => state.items);
   const loadTransactions = useTransactionsStore((state) => state.loadTransactions);
@@ -109,15 +111,17 @@ export default function AnalyticsPage() {
           </div>
         </section>
 
-        <section className="app-card">
-          <div className="flex items-center justify-between gap-3">
-            <div className="min-w-0">
-              <div className="app-section-title">Глубже</div>
-              <p className="mt-2 text-sm text-white/46">Прогнозы, месячные отчёты и расширенные выводы подготовим для премиум-режима.</p>
+        {isAdmin ? (
+          <section className="app-card">
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <div className="app-section-title">Глубже</div>
+                <p className="mt-2 text-sm text-white/46">Admin-only прототип: прогнозы, месячные отчёты и расширенные выводы для Premium.</p>
+              </div>
+              <button type="button" onClick={() => navigateTo('premium')} className="app-secondary-button shrink-0">Премиум</button>
             </div>
-            <button type="button" onClick={() => navigateTo('premium')} className="app-secondary-button shrink-0">Премиум</button>
-          </div>
-        </section>
+          </section>
+        ) : null}
       </div>
     </div>
   );

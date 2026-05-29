@@ -56,6 +56,7 @@ export default function SettingsPage() {
   const [modal, setModal] = useState<SettingsModal>(null);
   const navigateTo = useNavigationStore((state) => state.navigateTo);
   const user = useAuthStore((state) => state.user);
+  const isAdmin = Boolean(user?.isAdmin);
 
   const voiceEnabled = useSettingsStore((state) => state.voiceEnabled);
   const voiceBetaEnabled = useSettingsStore((state) => state.voiceBetaEnabled);
@@ -123,8 +124,11 @@ export default function SettingsPage() {
     { title: 'Цели', caption: 'Накопления и планы', screen: 'goals' as const },
     { title: 'Фина', caption: 'Прогресс и привычка', screen: 'companion' as const },
     { title: 'Разделы', caption: 'Категории и структура', screen: 'taxonomy-settings' as const },
-    { title: 'Рефералы', caption: 'Код и приглашения', screen: 'referral' as const },
-    { title: 'Премиум', caption: 'Расширенные возможности', screen: 'premium' as const },
+    ...(isAdmin ? [
+      { title: 'ИИ-бухгалтер', caption: 'Business-модуль для ИП и самозанятых', screen: 'business-accountant' as const },
+      { title: 'Рефералы', caption: 'Admin-only прототип приглашений', screen: 'referral' as const },
+      { title: 'Премиум', caption: 'Admin-only прототип монетизации', screen: 'premium' as const },
+    ] : []),
   ];
 
   return (

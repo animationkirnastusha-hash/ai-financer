@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import { adminApi, type AdminEvent, type AdminOverview, type AdminUser } from '@/features/admin/api/admin.api';
 import { useAuthStore } from '@/features/auth/model/auth.store';
+import { useOnboardingStore } from '@/features/onboarding/model/onboarding.store';
 import { ScreenTopBar } from '@/shared/ui/ScreenTopBar';
 import { HttpError } from '@/shared/api/http';
 
-type Tab = 'overview' | 'users' | 'events' | 'monitoring';
+type Tab = 'overview' | 'users' | 'events' | 'monitoring' | 'tools';
 
 type LoadError = {
   overview?: string;
@@ -57,6 +58,7 @@ export default function AdminPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<LoadError>({});
   const [resettingUserId, setResettingUserId] = useState<string | null>(null);
+  const replayOnboarding = useOnboardingStore((state) => state.reset);
 
   const isAdmin = Boolean(user?.isAdmin);
 
@@ -126,6 +128,7 @@ export default function AdminPage() {
       { id: 'users', title: 'Пользователи' },
       { id: 'events', title: 'События' },
       { id: 'monitoring', title: 'Сервер' },
+      { id: 'tools', title: 'Инструменты' },
     ],
     [],
   );
@@ -294,6 +297,26 @@ export default function AdminPage() {
               </div>
             ))}
           </section>
+        ) : null}
+
+
+
+        {tab === 'tools' ? (
+          <div className="space-y-4">
+            <section className="app-card">
+              <div className="app-section-title">Онбординг</div>
+              <p className="mt-2 text-sm leading-6 text-white/50">
+                Повторно открой первый мастер настройки на этом устройстве. Это удобно для проверки сценария новичка без сброса базы.
+              </p>
+              <button
+                type="button"
+                className="app-primary-button mt-4 w-full"
+                onClick={replayOnboarding}
+              >
+                Повторить онбординг
+              </button>
+            </section>
+          </div>
         ) : null}
 
         {tab === 'monitoring' && monitoring ? (

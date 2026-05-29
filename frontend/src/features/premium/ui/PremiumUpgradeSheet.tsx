@@ -1,18 +1,20 @@
 import { useEffect } from 'react';
 import { PREMIUM_PLAN, PREMIUM_PRICE_NOTE } from '../model/premium.catalog';
 import { usePremiumStore } from '../model/premium.store';
+import { useAuthStore } from '@/features/auth/model/auth.store';
 
 export function PremiumUpgradeSheet() {
   const open = usePremiumStore((state) => state.isPremiumOpen);
   const trigger = usePremiumStore((state) => state.activeTrigger);
   const close = usePremiumStore((state) => state.closePremium);
+  const isAdmin = Boolean(useAuthStore((state) => state.user?.isAdmin));
 
   useEffect(() => {
-    document.body.classList.toggle('ai-modal-open', open);
+    document.body.classList.toggle('ai-modal-open', open && isAdmin);
     return () => document.body.classList.remove('ai-modal-open');
-  }, [open]);
+  }, [open, isAdmin]);
 
-  if (!open || !trigger) return null;
+  if (!isAdmin || !open || !trigger) return null;
 
   const primaryFeatures = PREMIUM_PLAN.featureGroups.flatMap((group) =>
     group.items.slice(0, 2),
