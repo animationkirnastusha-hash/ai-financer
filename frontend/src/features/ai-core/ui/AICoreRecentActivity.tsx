@@ -17,7 +17,7 @@ export function AICoreRecentActivity() {
 
         <button
           type="button"
-          onClick={() => navigateTo('transactions')}
+          onClick={() => navigateTo('analytics')}
           className="text-xs text-emerald-200/80"
         >
           Все ›

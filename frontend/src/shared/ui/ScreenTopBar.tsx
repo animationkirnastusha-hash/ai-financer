@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { useNavigationStore } from '@/features/navigation/model/navigation.store';
 
-type Action = 'back' | 'history' | 'settings' | 'home' | 'referral';
+type Action = 'back' | 'analytics' | 'history' | 'settings' | 'home' | 'referral';
 type LeftAction = 'menu' | 'back' | 'none' | { label: string; onClick: () => void };
 
 type Props = {
@@ -13,6 +13,7 @@ type Props = {
 
 const actionIcon: Record<Action, ReactNode> = {
   back: '←',
+  analytics: '◷',
   history: '◷',
   settings: '⚙',
   home: '⌂',
@@ -21,7 +22,8 @@ const actionIcon: Record<Action, ReactNode> = {
 
 const actionLabel: Record<Action, string> = {
   back: 'Назад',
-  history: 'История',
+  analytics: 'Аналитика',
+  history: 'Аналитика',
   settings: 'Настройки',
   home: 'Домой',
   referral: 'Рефералы',
@@ -55,7 +57,7 @@ function TextButton({ children, label, onClick }: { children: ReactNode; label: 
   );
 }
 
-export function ScreenTopBar({ title, left = 'menu', right = ['history', 'settings'], className = '' }: Props) {
+export function ScreenTopBar({ title, left = 'menu', right = ['analytics', 'settings'], className = '' }: Props) {
   const openNavigationMenu = useNavigationStore((state) => state.openNavigationMenu);
   const navigateTo = useNavigationStore((state) => state.navigateTo);
   const goBack = useNavigationStore((state) => state.goBack);
@@ -63,7 +65,7 @@ export function ScreenTopBar({ title, left = 'menu', right = ['history', 'settin
 
   const handleAction = (action: Action) => {
     if (action === 'back') goBack();
-    if (action === 'history') navigateTo('transactions');
+    if (action === 'analytics' || action === 'history') navigateTo('analytics');
     if (action === 'settings') navigateTo('settings');
     if (action === 'home') goHome();
     if (action === 'referral') navigateTo('referral');

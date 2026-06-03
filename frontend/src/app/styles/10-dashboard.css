@@ -319,3 +319,266 @@
   .app-home-balance-card__nav { width: fit-content; }
   .app-home-quick-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
+
+/* Pack 8: home as financial center, without separate operations page. */
+.app-home-layout {
+  gap: 14px;
+  padding-bottom: calc(env(safe-area-inset-bottom) + 132px) !important;
+}
+
+.app-home-cashflow-card {
+  display: grid;
+  gap: 14px;
+}
+
+.app-home-cashflow-card__head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: start;
+}
+
+.app-home-cashflow-card__head h2,
+.app-home-chart-modal__head h2 {
+  margin-top: 5px;
+  font-size: clamp(28px, 8vw, 44px);
+  line-height: .98;
+  letter-spacing: -.06em;
+  font-weight: 780;
+  color: rgba(255,255,255,.96);
+}
+
+.app-home-period-switch,
+.app-home-mode-switch {
+  display: inline-flex;
+  gap: 6px;
+  border: 1px solid rgba(255,255,255,.08);
+  background: rgba(0,0,0,.18);
+  border-radius: 999px;
+  padding: 4px;
+}
+
+.app-home-period-switch button,
+.app-home-mode-switch button {
+  min-height: 34px;
+  border-radius: 999px;
+  padding: 0 11px;
+  color: rgba(255,255,255,.55);
+  font-size: 12px;
+  font-weight: 780;
+  white-space: nowrap;
+}
+
+.app-home-period-switch button[data-active="true"],
+.app-home-mode-switch button[data-active="true"] {
+  color: rgba(3,21,18,.95);
+  background: linear-gradient(135deg, rgba(110,231,183,.96), rgba(38,196,151,.92));
+}
+
+.app-home-mode-switch {
+  width: fit-content;
+}
+
+.app-home-chart-preview {
+  width: 100%;
+  border-radius: 30px;
+  border: 1px solid rgba(255,255,255,.08);
+  background: rgba(0,0,0,.16);
+  padding: 16px;
+  display: grid;
+  grid-template-columns: 118px minmax(0,1fr);
+  gap: 16px;
+  align-items: center;
+  text-align: left;
+}
+
+.app-home-donut {
+  width: 112px;
+  height: 112px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.08), 0 16px 42px rgba(0,0,0,.26);
+}
+
+.app-home-donut i {
+  width: 54%;
+  height: 54%;
+  border-radius: 999px;
+  background: rgba(8,12,18,.96);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.07);
+}
+
+.app-home-donut--large {
+  width: min(52vw, 220px);
+  height: min(52vw, 220px);
+}
+
+.app-home-donut--outer {
+  position: absolute;
+  width: min(68vw, 292px);
+  height: min(68vw, 292px);
+  opacity: .50;
+}
+
+.app-home-donut--outer i {
+  width: 72%;
+  height: 72%;
+}
+
+.app-home-chart-preview__text {
+  min-width: 0;
+  display: grid;
+  gap: 7px;
+}
+
+.app-home-chart-preview__text b {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 26px;
+  line-height: 1;
+  letter-spacing: -.045em;
+  color: rgba(255,255,255,.96);
+}
+
+.app-home-chart-preview__text small {
+  min-width: 0;
+  color: rgba(255,255,255,.54);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.app-home-cashflow-card__action {
+  width: 100%;
+  min-height: 52px;
+}
+
+.app-home-finance-insight {
+  display: grid;
+  gap: 8px;
+  background: radial-gradient(circle at top right, rgba(129,239,208,.10), transparent 42%), rgba(255,255,255,.04);
+}
+
+.app-home-finance-insight p {
+  color: rgba(255,255,255,.68);
+  font-size: 14px;
+  line-height: 1.65;
+}
+
+.app-home-chart-backdrop {
+  z-index: 130;
+}
+
+.app-home-chart-modal,
+.app-home-category-modal {
+  max-height: 92dvh;
+  overflow: auto;
+}
+
+.app-home-chart-modal__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.app-home-chart-modal__head p {
+  margin-top: 7px;
+  color: rgba(255,255,255,.55);
+  font-size: 14px;
+}
+
+.app-home-chart-modal__visual {
+  position: relative;
+  min-height: 286px;
+  display: grid;
+  place-items: center;
+  margin: 12px 0 2px;
+}
+
+.app-home-chart-modal__actions {
+  display: grid;
+  grid-template-columns: minmax(0,1fr) auto;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.app-home-chart-modal__actions button {
+  min-height: 48px;
+  border-radius: 20px;
+  border: 1px solid rgba(255,255,255,.08);
+  background: rgba(255,255,255,.045);
+  color: rgba(255,255,255,.86);
+  font-size: 13px;
+  font-weight: 800;
+  padding: 0 14px;
+}
+
+.app-home-chart-modal__actions button:first-child {
+  border-color: rgba(110,231,183,.18);
+  background: rgba(110,231,183,.075);
+  color: rgba(205,255,235,.92);
+}
+
+.app-home-chart-groups,
+.app-home-category-operation-list {
+  display: grid;
+  gap: 9px;
+}
+
+.app-home-chart-group {
+  width: 100%;
+  min-width: 0;
+  min-height: 68px;
+  display: grid;
+  grid-template-columns: 12px minmax(0,1fr) auto;
+  gap: 12px;
+  align-items: center;
+  border-radius: 22px;
+  border: 1px solid rgba(255,255,255,.08);
+  background: rgba(255,255,255,.045);
+  padding: 12px;
+  text-align: left;
+}
+
+.app-home-chart-group i {
+  width: 12px;
+  height: 36px;
+  border-radius: 999px;
+}
+
+.app-home-chart-group b,
+.app-home-chart-group small {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-home-chart-group b {
+  font-size: 14px;
+  color: rgba(255,255,255,.92);
+}
+
+.app-home-chart-group small {
+  margin-top: 4px;
+  font-size: 12px;
+  color: rgba(255,255,255,.45);
+}
+
+.app-home-chart-group strong {
+  font-size: 13px;
+  color: rgba(255,255,255,.86);
+  white-space: nowrap;
+}
+
+@media (max-width: 390px) {
+  .app-home-cashflow-card__head { grid-template-columns: 1fr; }
+  .app-home-period-switch { width: 100%; justify-content: space-between; }
+  .app-home-period-switch button { flex: 1; }
+  .app-home-chart-preview { grid-template-columns: 1fr; justify-items: center; text-align: center; }
+  .app-home-chart-modal__actions { grid-template-columns: 1fr; }
+}

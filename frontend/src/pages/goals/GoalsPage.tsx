@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { goalsApi, type GoalDto } from '@/features/goals/api/goals.api';
-import { GoalEditSheet } from '@/features/goals/ui/GoalEditSheet';
+import { useAppModalStore } from '@/features/modals/model/appModal.store';
 import { useNavigationStore } from '@/features/navigation/model/navigation.store';
 import { ScreenTopBar } from '@/shared/ui/ScreenTopBar';
 import { EmptyState } from '@/shared/ui/EmptyState';
@@ -15,9 +15,8 @@ export default function GoalsPage() {
   const openAIWithCommand = useNavigationStore((state) => state.openAIWithCommand);
   const [goals, setGoals] = useState<GoalDto[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [sheet, setSheet] = useState<{ mode: 'create' } | { mode: 'edit'; goal: GoalDto } | null>(null);
+  const openModal = useAppModalStore((state) => state.openModal);
 
   const loadGoals = async () => {
     setIsLoading(true);
@@ -42,28 +41,6 @@ export default function GoalsPage() {
   }, { current: 0, target: 0 }), [activeGoals]);
   const totalProgress = clampProgress((totals.current / Math.max(totals.target, 1)) * 100);
 
-  const saveGoal = async (payload: { title: string; targetAmount: number; currentAmount?: number; currency?: string; note?: string | null }) => {
-    setIsSaving(true);
-    try {
-      if (sheet?.mode === 'edit') await goalsApi.update(sheet.goal.id, payload);
-      else await goalsApi.create(payload);
-      setSheet(null);
-      await loadGoals();
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const deleteGoal = async (goal: GoalDto) => {
-    setIsSaving(true);
-    try {
-      await goalsApi.delete(goal.id);
-      setSheet(null);
-      await loadGoals();
-    } finally {
-      setIsSaving(false);
-    }
-  };
 
   return (
     <div className="app-page app-goals-page text-white">
@@ -77,7 +54,7 @@ export default function GoalsPage() {
               <h1 className="app-hero-title">Цели</h1>
               <p className="app-hero-caption">Накопления, крупные покупки и понятный путь к ним.</p>
             </div>
-            <button type="button" onClick={() => setSheet({ mode: 'create' })} className="app-primary-button shrink-0">+ Цель</button>
+            <button type="button" onClick={() => openModal({ type: 'goal-edit', onAfterSave: loadGoals })} className="app-primary-button shrink-0">+ Цель</button>
           </div>
           <div className="app-goals-summary">
             <div><strong>{activeGoals.length}</strong><small>активных</small></div>
@@ -101,7 +78,7 @@ export default function GoalsPage() {
             title="Целей пока нет"
             description="Создай первую цель вручную или скажи Фине, что хочешь накопить."
             actionLabel="Создать цель"
-            onAction={() => setSheet({ mode: 'create' })}
+            onAction={() => openModal({ type: 'goal-edit', onAfterSave: loadGoals })}
           />
         ) : (
           <div className="space-y-3">
@@ -109,7 +86,7 @@ export default function GoalsPage() {
               const progress = clampProgress(goal.progress ?? (goal.currentAmount / Math.max(goal.targetAmount, 1)) * 100);
               const left = Math.max((Number(goal.targetAmount) || 0) - (Number(goal.currentAmount) || 0), 0);
               return (
-                <button key={goal.id} type="button" onClick={() => setSheet({ mode: 'edit', goal })} className="app-goal-card">
+                <button key={goal.id} type="button" onClick={() => openModal({ type: 'goal-edit', goal, onAfterSave: loadGoals })} className="app-goal-card">
                   <div className="app-goal-card__head">
                     <div className="min-w-0">
                       <div className="app-goal-card__title">{goal.title}</div>
@@ -129,14 +106,6 @@ export default function GoalsPage() {
         )}
       </div>
 
-      <GoalEditSheet
-        open={!!sheet}
-        goal={sheet?.mode === 'edit' ? sheet.goal : null}
-        isSaving={isSaving}
-        onClose={() => setSheet(null)}
-        onSave={saveGoal}
-        onDelete={deleteGoal}
-      />
     </div>
   );
 }

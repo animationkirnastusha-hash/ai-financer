@@ -2,19 +2,18 @@ import { useAuthStore } from '@/features/auth/model/auth.store';
 import { useNavigationStore, type AppScreen } from '@/features/navigation/model/navigation.store';
 
 const mainLinks: Array<{ screen: AppScreen; label: string; caption: string }> = [
-  { screen: 'dashboard', label: 'Главная', caption: 'Баланс, действия и последние операции' },
-  { screen: 'transactions', label: 'Операции', caption: 'История доходов, расходов и переводов' },
+  { screen: 'dashboard', label: 'Главная', caption: 'Баланс, счета и картина денег' },
   { screen: 'accounts', label: 'Счета', caption: 'Карты, наличные и накопления' },
   { screen: 'goals', label: 'Цели', caption: 'Накопления и планы' },
   { screen: 'sections', label: 'Категории', caption: 'Разделы расходов и доходов' },
-  { screen: 'analytics', label: 'Аналитика', caption: 'Итоги, динамика и выводы' },
+  { screen: 'analytics', label: 'Аналитика', caption: 'Подробная статистика' },
 ];
 
 const adminLinks: Array<{ screen: AppScreen; label: string; caption: string }> = [
-  { screen: 'premium', label: 'Premium', caption: 'Тарифы и будущие возможности' },
+  { screen: 'premium', label: 'Premium', caption: 'Тарифы и возможности' },
   { screen: 'business-accountant', label: 'ИИ-бухгалтер', caption: 'Для ИП, самозанятых и бизнеса' },
   { screen: 'referral', label: 'Рефералы', caption: 'Приглашения и бонусы' },
-  { screen: 'admin', label: 'Админка', caption: 'Тесты, пользователи и инструменты' },
+  { screen: 'admin', label: 'Админка', caption: 'Пользователи и инструменты' },
 ];
 
 export function AppNavigationSheet() {
@@ -41,7 +40,7 @@ export function AppNavigationSheet() {
           <div className="app-navigation-head">
             <div>
               <div className="app-eyebrow">Меню</div>
-              <h2>Разделы</h2>
+              <h2>Куда перейти</h2>
             </div>
             <button type="button" className="app-icon-button" onClick={close} aria-label="Закрыть меню">×</button>
           </div>

@@ -2,7 +2,6 @@ import { create } from 'zustand';
 
 export type AppScreen =
   | 'dashboard'
-  | 'transactions'
   | 'accounts'
   | 'analytics'
   | 'goals'
@@ -62,9 +61,10 @@ export const useNavigationStore = create<NavigationState>((set, get) => ({
   initialAICommand: null,
 
   navigateTo: (screen) => {
+    const targetScreen = screen;
     const { currentScreen, history } = get();
 
-    if (screen === currentScreen) {
+    if (targetScreen === currentScreen) {
       set({
         isAIMenuOpen: false,
         isGlobalCommandListOpen: false,
@@ -75,13 +75,13 @@ export const useNavigationStore = create<NavigationState>((set, get) => ({
     }
 
     set({
-      currentScreen: screen,
-      history: compactHistory(history, currentScreen, screen),
+      currentScreen: targetScreen,
+      history: compactHistory(history, currentScreen, targetScreen),
       isAIMenuOpen: false,
       isGlobalCommandListOpen: false,
       isNavigationMenuOpen: false,
       isNotificationsOpen: false,
-      initialAICommand: screen === 'ai-core' ? get().initialAICommand : null,
+      initialAICommand: targetScreen === 'ai-core' ? get().initialAICommand : null,
     });
   },
 

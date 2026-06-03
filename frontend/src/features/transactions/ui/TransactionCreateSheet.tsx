@@ -3,12 +3,14 @@ import { useAccountsStore } from '@/features/accounts/model/accounts.store';
 import { useSectionsStore } from '@/features/sections/model/sections.store';
 import { Drawer } from '@/shared/ui/Drawer';
 import { Button } from '@/shared/ui/Button';
+import { useAppModalStore } from '@/features/modals/model/appModal.store';
 
 type TransactionType = 'income' | 'expense' | 'transfer';
 
 type Props = {
   open: boolean;
   isSaving?: boolean;
+  initialType?: TransactionType;
   onClose: () => void;
   onSave: (payload: {
     accountId: string;
@@ -22,12 +24,12 @@ type Props = {
   }) => Promise<void> | void;
 };
 
-export function TransactionCreateSheet({ open, isSaving = false, onClose, onSave }: Props) {
+export function TransactionCreateSheet({ open, isSaving = false, initialType = 'expense', onClose, onSave }: Props) {
   const accounts = useAccountsStore((state) => state.items);
   const loadAccounts = useAccountsStore((state) => state.loadAccounts);
   const categories = useSectionsStore((state) => state.categories);
   const loadTaxonomy = useSectionsStore((state) => state.loadAll);
-  const createCategory = useSectionsStore((state) => state.createCategory);
+  const openModal = useAppModalStore((state) => state.openModal);
 
   const [type, setType] = useState<TransactionType>('expense');
   const [amount, setAmount] = useState('');
@@ -36,7 +38,6 @@ export function TransactionCreateSheet({ open, isSaving = false, onClose, onSave
   const [toAccountId, setToAccountId] = useState<string | null>(null);
   const [categoryId, setCategoryId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [isCreatingCategory, setIsCreatingCategory] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -46,14 +47,14 @@ export function TransactionCreateSheet({ open, isSaving = false, onClose, onSave
 
   useEffect(() => {
     if (!open) return;
-    setType('expense');
+    setType(initialType);
     setAmount('');
     setDescription('');
     setAccountId(accounts[0]?.id ?? '');
     setToAccountId(null);
     setCategoryId(null);
     setError(null);
-  }, [open, accounts]);
+  }, [open, accounts, initialType]);
 
   const parsedAmount = Number(amount.replace(',', '.'));
   const filteredCategories = useMemo(() => {
@@ -62,24 +63,13 @@ export function TransactionCreateSheet({ open, isSaving = false, onClose, onSave
   }, [categories, type]);
   const canSave = Number.isFinite(parsedAmount) && parsedAmount > 0 && Boolean(accountId) && !isSaving;
 
-  const quickCreateCategory = async () => {
-    const name = description.trim();
+  const openCategoryCreate = () => {
     if (type === 'transfer') return;
-    if (name.length < 2) {
-      setError('Напиши описание, чтобы создать категорию из него.');
-      return;
-    }
-    setIsCreatingCategory(true);
-    setError(null);
-    try {
-      const category = await createCategory({ name, type, sectionId: null });
-      setCategoryId(category.id);
-      await loadTaxonomy(true);
-    } catch (error) {
-      setError(error instanceof Error ? error.message : 'Не удалось создать категорию.');
-    } finally {
-      setIsCreatingCategory(false);
-    }
+    openModal({
+      type: 'category-edit',
+      initialType: type,
+      onSavedCategory: (category) => setCategoryId(category.id),
+    });
   };
 
   const submit = async () => {
@@ -115,7 +105,7 @@ export function TransactionCreateSheet({ open, isSaving = false, onClose, onSave
       open={open}
       onClose={onClose}
       title="Новая операция"
-      subtitle="Минимальная форма. Быстрее можно сказать голосом: “кофе 300”."
+      subtitle="Добавь расход, доход или перевод. Если категории нет — создай её прямо отсюда."
       footer={(
         <div className="grid grid-cols-2 gap-2">
           <Button variant="secondary" onClick={onClose} disabled={isSaving}>Отмена</Button>
@@ -169,8 +159,8 @@ export function TransactionCreateSheet({ open, isSaving = false, onClose, onSave
         )}
 
         {type !== 'transfer' ? (
-          <button type="button" className="app-secondary-button" onClick={quickCreateCategory} disabled={isCreatingCategory || !description.trim()}>
-            {isCreatingCategory ? 'Создаю категорию...' : 'Создать категорию из описания'}
+          <button type="button" className="app-secondary-button" onClick={openCategoryCreate}>
+            Создать категорию
           </button>
         ) : null}
 

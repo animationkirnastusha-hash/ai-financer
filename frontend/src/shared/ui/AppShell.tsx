@@ -7,9 +7,7 @@ import { VoiceFirstCompanionLayer } from '@/features/voice/ui/VoiceFirstCompanio
 export function AppShell({ children }: { children: ReactNode }) {
   const currentScreen = useNavigationStore((state) => state.currentScreen);
   const navigateTo = useNavigationStore((state) => state.navigateTo);
-  const goBack = useNavigationStore((state) => state.goBack);
-
-  useSwipeNavigation({ currentScreen, navigateTo, goBack });
+  useSwipeNavigation();
 
   const showMainDots = MAIN_ITEMS.some((item) => item.screen === currentScreen);
 

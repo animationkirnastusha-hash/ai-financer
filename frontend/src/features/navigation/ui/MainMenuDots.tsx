@@ -14,7 +14,7 @@ type Props = {
 };
 
 export const MAIN_ITEMS: DotItem[] = [
-  { screen: 'transactions', aria: 'Операции' },
+  { screen: 'accounts', aria: 'Счета' },
   { screen: 'dashboard', aria: 'Главная' },
   { screen: 'analytics', aria: 'Аналитика' },
 ];

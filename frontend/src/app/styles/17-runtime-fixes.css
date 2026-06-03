@@ -559,3 +559,15 @@ body:has([data-drawer-panel="true"]) .voice-first-layer {
   .app-navigation-grid { grid-template-columns: 1fr; }
   .voice-keyboard-entry { width: 54px; height: 54px; bottom: calc(env(safe-area-inset-bottom) + 50px); }
 }
+
+/* Pack 8: input layer stays outside home content. */
+.voice-keyboard-entry {
+  left: max(18px, env(safe-area-inset-left));
+  right: auto;
+  bottom: calc(env(safe-area-inset-bottom) + 76px);
+}
+
+.voice-first-companion-layer[data-keyboard-left="true"] .voice-keyboard-entry {
+  left: max(18px, env(safe-area-inset-left));
+  right: auto;
+}

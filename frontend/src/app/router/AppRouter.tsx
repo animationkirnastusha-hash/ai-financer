@@ -1,9 +1,7 @@
 import { AppShell } from '@/shared/ui/AppShell';
-import { CreateAccountSheet } from '@/features/accounts/ui/CreateAccountSheet';
-import { useAccountFlowStore } from '@/features/accounts/model/accountFlow.store';
-import { useAccountsStore } from '@/features/accounts/model/accounts.store';
 import { useNavigationStore } from '@/features/navigation/model/navigation.store';
 import { AppNavigationSheet } from '@/features/navigation/ui/AppNavigationSheet';
+import { AppModalManager } from '@/features/modals/ui/AppModalManager';
 import { PremiumUpgradeSheet } from '@/features/premium/ui/PremiumUpgradeSheet';
 import { LaunchOnboardingSheet } from '@/features/onboarding/ui/LaunchOnboardingSheet';
 
@@ -16,7 +14,6 @@ import PremiumPage from '@/pages/premium/PremiumPage';
 import BusinessAccountantPage from '@/pages/business-accountant/BusinessAccountantPage';
 import SettingsPage from '@/pages/settings/SettingsPage';
 import TaxonomySettingsPage from '@/pages/settings/TaxonomySettingsPage';
-import TransactionsPage from '@/pages/transactions/TransactionsPage';
 import SectionsPage from '@/pages/sections/SectionsPage';
 import AdminPage from '@/pages/admin/AdminPage';
 import ReferralPage from '@/pages/referral/ReferralPage';
@@ -28,17 +25,11 @@ export function AppRouter() {
   const currentScreen = useNavigationStore((state) => state.currentScreen);
   const isAdmin = Boolean(useAuthStore((state) => state.user?.isAdmin));
   const goBack = useNavigationStore((state) => state.goBack);
-  const navigateTo = useNavigationStore((state) => state.navigateTo);
-
-  const isCreateAccountOpen = useAccountFlowStore((state) => state.isCreateAccountOpen);
-  const closeCreateAccount = useAccountFlowStore((state) => state.closeCreateAccount);
-  const createAccount = useAccountsStore((state) => state.createAccount);
 
   return (
     <AppShell>
       <ProductAnalyticsTracker />
       {currentScreen === 'dashboard' && <DashboardPage />}
-      {currentScreen === 'transactions' && <TransactionsPage />}
       {currentScreen === 'accounts' && <AccountsPage />}
       {currentScreen === 'analytics' && <AnalyticsPage />}
       {currentScreen === 'goals' && <GoalsPage />}
@@ -53,16 +44,7 @@ export function AppRouter() {
       {currentScreen === 'referral' && (isAdmin ? <ReferralPage /> : <DashboardPage />)}
 
       <AppNavigationSheet />
-
-      <CreateAccountSheet
-        open={isCreateAccountOpen}
-        onClose={closeCreateAccount}
-        onSubmit={async (payload) => {
-          await createAccount(payload);
-          navigateTo('accounts');
-        }}
-      />
-
+      <AppModalManager />
       {isAdmin ? <PremiumUpgradeSheet /> : null}
       <LaunchOnboardingSheet />
     </AppShell>

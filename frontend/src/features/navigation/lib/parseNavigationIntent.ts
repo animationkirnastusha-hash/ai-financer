@@ -1,7 +1,9 @@
-import type {
-  AppScreen,
-  NavigationIntent,
-} from '@/features/navigation/model/navigation.types';
+import type { AppScreen } from '@/features/navigation/model/navigation.store';
+
+export type NavigationIntent =
+  | { type: 'none' }
+  | { type: 'go_back' }
+  | { type: 'open_screen'; screen: AppScreen };
 
 function includesAny(input: string, variants: string[]) {
   return variants.some((variant) => input.includes(variant));
@@ -17,179 +19,16 @@ function normalize(input: string) {
 }
 
 function detectScreen(input: string): AppScreen | null {
-  if (
-    includesAny(input, [
-      'админ',
-      'админка',
-      'admin',
-      'панель администратора',
-      'статистика приложения',
-      'состояние сервера',
-    ])
-  ) {
-    return 'admin';
-  }
-
-  if (
-    includesAny(input, [
-      'ai core',
-      'ai-core',
-      'ии ядро',
-      'ядро',
-      'ассистент',
-      'чат',
-      'ии',
-      'ai',
-      'помощник',
-      'финансовый помощник',
-      'текстовый ввод',
-      'написать фине',
-      'командный центр',
-    ])
-  ) {
-    return 'ai-core';
-  }
-
-
-
-  if (
-    includesAny(input, [
-      'ии бухгалтер',
-      'бухгалтер',
-      'бухгалтерия',
-      'фина бухгалтер',
-      'самозанятый',
-      'самозанятые',
-      'ип',
-      'малый бизнес',
-      'business',
-      'accountant',
-    ])
-  ) {
-    return 'business-accountant';
-  }
-
-  if (
-    includesAny(input, [
-      'аналитика',
-      'аналитику',
-      'анализ',
-      'analytics',
-      'статистика',
-      'статистику',
-      'отчет',
-      'отчеты',
-      'сравнение',
-      'сравни',
-    ])
-  ) {
-    return 'analytics';
-  }
-
-  if (
-    includesAny(input, [
-      'цели',
-      'цель',
-      'копилка',
-      'копилки',
-      'подушка',
-      'накопительная цель',
-      'goals',
-    ])
-  ) {
-    return 'goals';
-  }
-
-  if (
-    includesAny(input, [
-      'companion',
-      'компаньон',
-      'компаньона',
-      'спутник',
-      'присутствие',
-      'настроение companion',
-    ])
-  ) {
-    return 'companion';
-  }
-
-  if (
-    includesAny(input, [
-      'разделы и категории',
-      'категории и разделы',
-      'категории',
-      'категорию',
-      'разделы',
-      'раздел',
-      'taxonomy',
-      'таксономия',
-      'структура категорий',
-    ])
-  ) {
-    return 'taxonomy-settings';
-  }
-
-  if (
-    includesAny(input, [
-      'настройки',
-      'settings',
-      'параметры',
-      'профиль',
-      'голосовые настройки',
-      'voice settings',
-      'режим ai',
-      'режим ии',
-    ])
-  ) {
-    return 'settings';
-  }
-
-  if (
-    includesAny(input, [
-      'счета',
-      'счет',
-      'счета мои',
-      'мои счета',
-      'аккаунты',
-      'accounts',
-      'кошельки',
-      'карты',
-    ])
-  ) {
-    return 'accounts';
-  }
-
-  if (
-    includesAny(input, [
-      'транзакции',
-      'операции',
-      'история',
-      'историю',
-      'transactions',
-      'платежи',
-      'движения',
-    ])
-  ) {
-    return 'transactions';
-  }
-
-  if (
-    includesAny(input, [
-      'дашборд',
-      'dashboard',
-      'главная',
-      'главный',
-      'домой',
-      'сводка',
-      'обзор',
-      'картина',
-      'финансовая картина',
-      'покажи главную',
-    ])
-  ) {
-    return 'dashboard';
-  }
-
+  if (includesAny(input, ['админ', 'админка', 'admin', 'панель администратора'])) return 'admin';
+  if (includesAny(input, ['чат', 'текстовый ввод', 'написать фине', 'ии чат'])) return 'ai-core';
+  if (includesAny(input, ['ии бухгалтер', 'бухгалтер', 'бухгалтерия', 'фина бухгалтер', 'самозанятый', 'ип', 'малый бизнес'])) return 'business-accountant';
+  if (includesAny(input, ['аналитика', 'аналитику', 'анализ', 'analytics', 'статистика', 'отчет', 'отчеты', 'операции', 'история', 'платежи'])) return 'analytics';
+  if (includesAny(input, ['цели', 'цель', 'копилка', 'копилки', 'goals'])) return 'goals';
+  if (includesAny(input, ['companion', 'компаньон', 'компаньона', 'спутник'])) return 'companion';
+  if (includesAny(input, ['категории', 'категорию', 'разделы', 'раздел', 'taxonomy', 'таксономия'])) return 'taxonomy-settings';
+  if (includesAny(input, ['настройки', 'settings', 'параметры', 'профиль'])) return 'settings';
+  if (includesAny(input, ['счета', 'счет', 'мои счета', 'аккаунты', 'accounts', 'кошельки', 'карты'])) return 'accounts';
+  if (includesAny(input, ['главная', 'главный', 'домой', 'сводка', 'обзор', 'dashboard'])) return 'dashboard';
   return null;
 }
 
@@ -208,8 +47,7 @@ function isBareNavigationTarget(input: string, screen: AppScreen) {
   const bareAliases: Partial<Record<AppScreen, string[]>> = {
     dashboard: ['главная', 'домой', 'главный экран', 'сводка'],
     accounts: ['счета', 'счет', 'мои счета', 'кошельки', 'карты'],
-    transactions: ['операции', 'транзакции', 'история', 'платежи'],
-    analytics: ['аналитика', 'анализ', 'статистика', 'отчеты'],
+    analytics: ['аналитика', 'анализ', 'статистика', 'отчеты', 'операции', 'история'],
     goals: ['цели', 'цель', 'копилки', 'копилка'],
     settings: ['настройки', 'параметры', 'профиль'],
     'taxonomy-settings': ['категории', 'разделы', 'категории и разделы', 'разделы и категории'],
@@ -224,50 +62,19 @@ function isBareNavigationTarget(input: string, screen: AppScreen) {
 
 export function parseNavigationIntent(command: string): NavigationIntent {
   const input = normalize(command);
-
   if (!input) return { type: 'none' };
 
   if ((input.includes('главн') || input.includes('домой')) && (input.includes('верни') || input.includes('открой') || input.includes('покажи') || input === 'домой')) {
     return { type: 'open_screen', screen: 'dashboard' };
   }
 
-  if (
-    includesAny(input, [
-      'назад',
-      'вернись',
-      'верни меня',
-      'предыдущий экран',
-      'go back',
-      'back',
-    ])
-  ) {
-    return { type: 'go_back' };
-  }
+  if (includesAny(input, ['назад', 'вернись', 'верни меня', 'предыдущий экран', 'go back', 'back'])) return { type: 'go_back' };
 
   const screen = detectScreen(input);
-
   if (!screen) return { type: 'none' };
 
-  if (
-    isBareNavigationTarget(input, screen) ||
-    includesAny(input, [
-      'открой',
-      'покажи',
-      'перейди',
-      'зайди',
-      'перемести меня',
-      'перекинь меня',
-      'хочу посмотреть',
-      'дай посмотреть',
-      'open',
-      'show',
-      'go to',
-    ])
-  ) {
-    return {
-      type: 'open_screen',
-      screen,
-    };
+  if (isBareNavigationTarget(input, screen) || includesAny(input, ['открой', 'покажи', 'перейди', 'зайди', 'хочу посмотреть', 'open', 'show', 'go to'])) {
+    return { type: 'open_screen', screen };
   }
 
   return { type: 'none' };

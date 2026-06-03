@@ -1,11 +1,11 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useAccountsStore } from '@/features/accounts/model/accounts.store';
 import { HomeBalanceCarousel } from '@/features/dashboard/ui/HomeBalanceCarousel';
-import { HomeFinaInsight } from '@/features/dashboard/ui/HomeFinaInsight';
-import { HomeQuickActions } from '@/features/dashboard/ui/HomeQuickActions';
-import { HomeRecentTransactions } from '@/features/dashboard/ui/HomeRecentTransactions';
-import { HomeXpCompact } from '@/features/dashboard/ui/HomeXpCompact';
+import { HomeCashflowChart } from '@/features/dashboard/ui/HomeCashflowChart';
+import { HomeFinanceInsight } from '@/features/dashboard/ui/HomeFinanceInsight';
+import type { HomeCashflowMode, HomeCashflowPeriod } from '@/features/dashboard/lib/homeFinanceAnalytics';
 import { useNavigationStore } from '@/features/navigation/model/navigation.store';
+import { useAppModalStore } from '@/features/modals/model/appModal.store';
 import { useSettingsStore } from '@/features/settings/model/settings.store';
 import type { AppCurrency } from '@/features/settings/model/settings.types';
 import { useTransactionsStore } from '@/features/transactions/model/transactions.store';
@@ -28,11 +28,14 @@ function fromRub(amount: number, currency: AppCurrency, rates: { usd: number; eu
 
 export default function DashboardPage() {
   const navigateTo = useNavigationStore((state) => state.navigateTo);
-  const openAIWithCommand = useNavigationStore((state) => state.openAIWithCommand);
+  const openModal = useAppModalStore((state) => state.openModal);
   const accounts = useAccountsStore((state) => state.items);
   const loadAccounts = useAccountsStore((state) => state.loadAccounts);
   const transactions = useTransactionsStore((state) => state.items);
   const loadTransactions = useTransactionsStore((state) => state.loadTransactions);
+
+  const [cashflowMode, setCashflowMode] = useState<HomeCashflowMode>('expense');
+  const [cashflowPeriod, setCashflowPeriod] = useState<HomeCashflowPeriod>('month');
 
   const mainCurrency = useSettingsStore((state) => state.mainCurrency);
   const secondaryCurrencyEnabled = useSettingsStore((state) => state.secondaryCurrencyEnabled);
@@ -55,12 +58,10 @@ export default function DashboardPage() {
     return { income, expenses, delta: income - expenses };
   }, [mainCurrency, rates, transactions]);
 
-  const recent = transactions.slice(0, 3);
-
   return (
     <div className="app-page app-dashboard-page text-white">
       <div className="app-page__inner app-home-layout">
-        <ScreenTopBar title="Главная" right={['history', 'settings']} />
+        <ScreenTopBar title="Главная" right={['analytics', 'settings']} />
 
         <HomeBalanceCarousel
           accounts={accounts}
@@ -74,23 +75,25 @@ export default function DashboardPage() {
           onOpenAccounts={() => navigateTo('accounts')}
         />
 
-        <HomeQuickActions onNavigate={navigateTo} onTextInput={openAIWithCommand} />
-
-        <HomeFinaInsight
-          hasTransactions={transactions.length > 0}
-          income={month.income}
-          expenses={month.expenses}
-          onOpenAnalytics={() => navigateTo('analytics')}
+        <HomeCashflowChart
+          transactions={transactions}
+          mode={cashflowMode}
+          period={cashflowPeriod}
+          rates={rates}
+          onModeChange={setCashflowMode}
+          onPeriodChange={setCashflowPeriod}
+          onOpenDetails={() => openModal({ type: 'home-chart-details', mode: cashflowMode, period: cashflowPeriod })}
+          onCreate={() => openModal({ type: 'transaction-create', initialType: cashflowMode })}
         />
 
-        <HomeRecentTransactions
-          items={recent}
-          onOpenTransactions={() => navigateTo('transactions')}
-          onCreateFirst={() => openAIWithCommand('расход ')}
+        <HomeFinanceInsight
+          transactions={transactions}
+          mode={cashflowMode}
+          period={cashflowPeriod}
+          rates={rates}
         />
-
-        <HomeXpCompact />
       </div>
+
     </div>
   );
 }

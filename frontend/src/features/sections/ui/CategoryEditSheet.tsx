@@ -8,6 +8,8 @@ type Props = {
   category?: CategoryDto | null;
   sections: SectionDto[];
   isSaving?: boolean;
+  initialType?: 'expense' | 'income' | 'both';
+  initialSectionId?: string | null;
   onClose: () => void;
   onSave: (payload: { name: string; type: 'expense' | 'income' | 'both'; sectionId?: string | null; icon?: string | null }) => Promise<void> | void;
   onDelete?: (category: CategoryDto) => Promise<void> | void;
@@ -19,7 +21,7 @@ const typeOptions: Array<{ value: 'expense' | 'income' | 'both'; label: string }
   { value: 'both', label: 'Оба' },
 ];
 
-export function CategoryEditSheet({ open, category, sections, isSaving = false, onClose, onSave, onDelete }: Props) {
+export function CategoryEditSheet({ open, category, sections, isSaving = false, initialType = 'expense', initialSectionId = null, onClose, onSave, onDelete }: Props) {
   const [name, setName] = useState('');
   const [icon, setIcon] = useState('');
   const [type, setType] = useState<'expense' | 'income' | 'both'>('expense');
@@ -30,10 +32,10 @@ export function CategoryEditSheet({ open, category, sections, isSaving = false, 
     if (!open) return;
     setName(category?.name ?? '');
     setIcon(category?.icon ?? '');
-    setType((category?.type === 'income' || category?.type === 'both' ? category.type : 'expense') as 'expense' | 'income' | 'both');
-    setSectionId(category?.sectionId ?? null);
+    setType((category?.type === 'income' || category?.type === 'both' ? category.type : initialType) as 'expense' | 'income' | 'both');
+    setSectionId(category?.sectionId ?? initialSectionId ?? null);
     setError(null);
-  }, [open, category]);
+  }, [open, category, initialType, initialSectionId]);
 
   const canSave = useMemo(() => name.trim().length >= 2 && !isSaving, [name, isSaving]);
 
@@ -58,7 +60,7 @@ export function CategoryEditSheet({ open, category, sections, isSaving = false, 
       open={open}
       onClose={onClose}
       title={category ? 'Категория' : 'Новая категория'}
-      subtitle="Короткая форма. AI может сделать то же голосом."
+      subtitle="Категория нужна для диаграмм, аналитики и быстрых отчётов."
       footer={(
         <div className="grid grid-cols-2 gap-2">
           {category && onDelete ? <Button variant="secondary" onClick={remove} disabled={isSaving}>Удалить</Button> : <Button variant="secondary" onClick={onClose} disabled={isSaving}>Отмена</Button>}
