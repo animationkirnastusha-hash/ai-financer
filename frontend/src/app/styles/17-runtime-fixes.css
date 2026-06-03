@@ -648,45 +648,19 @@ body:has([data-drawer-backdrop="true"]) .voice-keyboard-entry {
     box-shadow .16s ease !important;
 }
 
-/* Pack 12: automatic taxonomy preview cards. */
-.app-auto-taxonomy-preview {
-  display: grid;
-  grid-template-columns: 48px minmax(0,1fr);
-  gap: 12px;
-  align-items: center;
-  border-radius: 22px;
-  border: 1px solid rgba(255,255,255,.08);
-  background: rgba(255,255,255,.045);
-  padding: 12px;
+/* Pack 13: every app modal receives its own inline layer from AppModalManager. */
+.app-modal-backdrop[style] {
+  isolation: isolate;
 }
 
-.app-auto-taxonomy-preview > span {
-  width: 48px;
-  height: 48px;
-  display: grid;
-  place-items: center;
-  border-radius: 18px;
-  color: white;
-  font-size: 24px;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.20), 0 12px 24px rgba(0,0,0,.18);
+.app-transaction-edit-backdrop {
+  align-items: flex-end;
+  background: rgba(0,0,0,.72);
+  backdrop-filter: blur(18px);
 }
 
-.app-auto-taxonomy-preview b,
-.app-auto-taxonomy-preview small {
-  display: block;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.app-auto-taxonomy-preview b {
-  color: rgba(255,255,255,.92);
-  font-size: 14px;
-}
-
-.app-auto-taxonomy-preview small {
-  margin-top: 4px;
-  color: rgba(255,255,255,.45);
-  font-size: 12px;
+.app-list-button--active {
+  border-color: rgba(52, 211, 153, .28) !important;
+  background: rgba(52, 211, 153, .12) !important;
+  color: rgba(236, 253, 245, 1) !important;
 }

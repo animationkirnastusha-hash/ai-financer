@@ -90,6 +90,7 @@ export const createTransaction = asyncHandler(async (req: Request, res: Response
     sectionId: req.body.sectionId,
     amount: Number(req.body.amount),
     type: req.body.type,
+    title: req.body.title,
     description: req.body.description,
     date: req.body.date ? new Date(req.body.date) : undefined,
     isAIGenerated: Boolean(req.body.isAIGenerated),
@@ -111,6 +112,7 @@ export const updateTransaction = asyncHandler(async (req: Request, res: Response
     sectionId: req.body.sectionId,
     amount: req.body.amount !== undefined ? Number(req.body.amount) : undefined,
     type: req.body.type,
+    title: req.body.title,
     description: req.body.description,
     date: req.body.date ? new Date(req.body.date) : undefined,
   });

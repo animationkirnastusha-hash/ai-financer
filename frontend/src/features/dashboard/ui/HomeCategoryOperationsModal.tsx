@@ -3,29 +3,30 @@ import type { HomeFinanceGroup } from '@/features/dashboard/lib/homeFinanceAnaly
 import { formatMoney, formatTransactionDate } from '@/shared/lib/money';
 
 function operationTitle(transaction: TransactionDto) {
-  return transaction.description || transaction.category?.name || 'Операция';
+  return transaction.title || transaction.description || transaction.category?.name || 'Операция';
 }
 
 type Props = {
   group: HomeFinanceGroup | null;
   onClose: () => void;
+  modalLayer?: number;
   onEdit: (transaction: TransactionDto) => void;
 };
 
-export function HomeCategoryOperationsModal({ group, onClose, onEdit }: Props) {
+export function HomeCategoryOperationsModal({ group, onClose, modalLayer, onEdit }: Props) {
   if (!group) return null;
 
   const sorted = [...group.transactions].sort((a, b) => Number(b.amount || 0) - Number(a.amount || 0));
 
   return (
-    <div className="app-modal-backdrop app-home-chart-backdrop" data-no-swipe="true" onClick={onClose}>
+    <div className="app-modal-backdrop app-home-chart-backdrop" style={{ zIndex: modalLayer }} data-no-swipe="true" onClick={onClose}>
       <div className="app-modal-sheet app-home-category-modal" data-no-swipe="true" onClick={(event) => event.stopPropagation()}>
         <div className="app-modal-handle" />
         <div className="app-modal-body">
           <div className="app-home-chart-modal__head">
             <div>
               <div className="app-eyebrow">{group.sectionName}</div>
-              <h2><span className="app-home-category-title-icon" style={{ background: group.color }}>{group.icon}</span>{group.name}</h2>
+              <h2>{group.name}</h2>
               <p>{group.count} опер. · {formatMoney(group.amount, 'RUB')}</p>
             </div>
             <button type="button" className="app-icon-button" onClick={onClose} aria-label="Закрыть">×</button>

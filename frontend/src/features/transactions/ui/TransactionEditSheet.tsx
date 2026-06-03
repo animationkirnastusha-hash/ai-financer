@@ -1,6 +1,7 @@
-import { type ReactNode, useEffect, useState } from 'react';
+import { type ReactNode, useEffect, useMemo, useState } from 'react';
 
 import { useAccountsStore } from '@/features/accounts/model/accounts.store';
+import { useSectionsStore } from '@/features/sections/model/sections.store';
 import type { TransactionDto } from '@/features/transactions/api/transactions.api';
 import { formatMoney } from '@/shared/lib/money';
 
@@ -10,17 +11,19 @@ type Props = {
   open: boolean;
   transaction: TransactionDto | null;
   isSaving?: boolean;
+  modalLayer?: number;
   onClose: () => void;
   onSave: (payload: {
     amount?: number;
+    title?: string | null;
     description?: string | null;
     date?: string;
     accountId?: string;
+    categoryId?: string | null;
     type?: TransactionType;
     toAccountId?: string | null;
   }) => Promise<void> | void;
   onDelete: (transaction: TransactionDto) => Promise<void> | void;
-  onOpenAI?: () => void;
 };
 
 function toDateInput(value?: string | null) {
@@ -32,6 +35,7 @@ function toDateInput(value?: string | null) {
 
 function getTransactionTitle(transaction: TransactionDto | null) {
   if (!transaction) return 'Операция';
+  if (transaction.title?.trim()) return transaction.title.trim();
   if (transaction.description?.trim()) return transaction.description.trim();
   if (transaction.category?.name) return transaction.category.name;
   if (transaction.type === 'income') return 'Доход';
@@ -39,19 +43,34 @@ function getTransactionTitle(transaction: TransactionDto | null) {
   return 'Расход';
 }
 
+function Badge({ children, muted = false, tone }: { children: ReactNode; muted?: boolean; tone?: 'violet' }) {
+  const className = tone === 'violet'
+    ? 'border-violet-300/20 bg-violet-300/10 text-violet-50'
+    : muted
+      ? 'border-white/8 bg-white/[0.04] text-white/42'
+      : 'border-white/10 bg-white/[0.07] text-white/70';
+
+  return <span className={`rounded-full border px-3 py-1 text-xs ${className}`}>{children}</span>;
+}
+
 export function TransactionEditSheet({
   open,
   transaction,
   isSaving = false,
+  modalLayer,
   onClose,
   onSave,
   onDelete,
 }: Props) {
   const accounts = useAccountsStore((state) => state.items);
   const loadAccounts = useAccountsStore((state) => state.loadAccounts);
+  const categories = useSectionsStore((state) => state.categories);
+  const sections = useSectionsStore((state) => state.sections);
+  const loadTaxonomy = useSectionsStore((state) => state.loadAll);
 
   const [type, setType] = useState<TransactionType>('expense');
   const [amount, setAmount] = useState('');
+  const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [date, setDate] = useState(toDateInput(null));
   const [accountId, setAccountId] = useState('');
@@ -61,13 +80,15 @@ export function TransactionEditSheet({
   useEffect(() => {
     if (!open) return;
     void loadAccounts();
-  }, [loadAccounts, open]);
+    void loadTaxonomy();
+  }, [loadAccounts, loadTaxonomy, open]);
 
   useEffect(() => {
     if (!transaction || !open) return;
 
     setType(transaction.type);
     setAmount(String(transaction.amount ?? ''));
+    setTitle(transaction.title ?? '');
     setDescription(transaction.description ?? '');
     setDate(toDateInput(transaction.date));
     setAccountId(transaction.accountId ?? '');
@@ -76,6 +97,13 @@ export function TransactionEditSheet({
   }, [open, transaction]);
 
   const selectedAccount = accounts.find((account) => account.id === accountId) ?? transaction?.account ?? null;
+  const selectedCategory = useMemo(() => {
+    if (!transaction?.categoryId) return transaction?.category ?? null;
+    return categories.find((category) => category.id === transaction.categoryId) ?? transaction.category ?? null;
+  }, [categories, transaction]);
+  const selectedSection = selectedCategory?.sectionId
+    ? sections.find((section) => section.id === selectedCategory.sectionId) ?? selectedCategory.section ?? transaction?.section ?? null
+    : transaction?.section ?? null;
   const parsedAmount = Number(amount.replace(',', '.'));
   const canSave = Number.isFinite(parsedAmount) && parsedAmount > 0 && Boolean(accountId) && !isSaving;
 
@@ -96,6 +124,11 @@ export function TransactionEditSheet({
       return;
     }
 
+    if (type !== 'transfer' && title.trim().length < 2) {
+      setLocalError('Напиши название операции. По нему Фина обновит категорию и иконку.');
+      return;
+    }
+
     if (type === 'transfer' && (!toAccountId || toAccountId === accountId)) {
       setLocalError('Для перевода нужен другой счёт получателя.');
       return;
@@ -103,9 +136,11 @@ export function TransactionEditSheet({
 
     await onSave({
       amount: Math.round(parsedAmount),
+      title: title.trim() || null,
       description: description.trim() || null,
       date: new Date(`${date}T12:00:00`).toISOString(),
       accountId,
+      categoryId: undefined,
       type,
       toAccountId: type === 'transfer' ? toAccountId : null,
     });
@@ -118,26 +153,25 @@ export function TransactionEditSheet({
   }
 
   return (
-    <div className="fixed inset-0 z-[112] flex items-end bg-black/70 backdrop-blur-sm" data-no-swipe="true">
-      <div className="max-h-[92dvh] w-full overflow-y-auto rounded-t-[30px] border border-white/10 bg-[#0b1016] px-4 pb-6 pt-4 text-white shadow-2xl">
-        <div className="mx-auto mb-4 h-1.5 w-14 rounded-full bg-white/15" />
+    <div
+      className="app-modal-backdrop app-transaction-edit-backdrop"
+      style={{ zIndex: modalLayer ?? 420 }}
+      data-no-swipe="true"
+      onClick={onClose}
+    >
+      <div className="app-modal-sheet app-transaction-edit-sheet" data-no-swipe="true" onClick={(event) => event.stopPropagation()}>
+        <div className="app-modal-handle" />
 
-        <div className="mx-auto max-w-[560px] space-y-4">
+        <div className="app-modal-body mx-auto max-w-[560px] space-y-4">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <div className="text-[11px] uppercase tracking-[0.16em] text-white/35">Операция</div>
+              <div className="app-eyebrow">Операция</div>
               <h2 className="mt-1 truncate text-2xl font-semibold">{getTransactionTitle(transaction)}</h2>
               <div className="mt-2 text-sm text-white/45">
                 {selectedAccount ? selectedAccount.name : 'Счёт'} · {selectedAccount?.currency || 'RUB'}
               </div>
             </div>
-            <button
-              type="button"
-              onClick={onClose}
-              className="shrink-0 rounded-2xl border border-white/10 bg-white/6 px-3 py-2 text-sm"
-            >
-              Закрыть
-            </button>
+            <button type="button" onClick={onClose} className="app-icon-button" aria-label="Закрыть">×</button>
           </div>
 
           <section className="rounded-[28px] border border-white/8 bg-[radial-gradient(circle_at_top_right,rgba(52,211,153,0.14),transparent_42%),rgba(255,255,255,0.04)] p-4">
@@ -148,8 +182,8 @@ export function TransactionEditSheet({
               })}
             </div>
             <div className="mt-3 flex flex-wrap gap-2">
-              {transaction.section ? <Badge>{transaction.section.icon ? `${transaction.section.icon} ` : ''}{transaction.section.name}</Badge> : <Badge muted>Авто-раздел</Badge>}
-              {transaction.category ? <Badge>{transaction.category.icon ? `${transaction.category.icon} ` : ''}{transaction.category.name}</Badge> : <Badge muted>Авто-категория</Badge>}
+              {selectedSection ? <Badge>{selectedSection.icon ? `${selectedSection.icon} ` : ''}{selectedSection.name}</Badge> : <Badge muted>Раздел появится автоматически</Badge>}
+              {selectedCategory ? <Badge>{selectedCategory.icon ? `${selectedCategory.icon} ` : ''}{selectedCategory.name}</Badge> : <Badge muted>Категория появится автоматически</Badge>}
               {transaction.isAIGenerated ? <Badge tone="violet">Фина</Badge> : null}
             </div>
           </section>
@@ -161,70 +195,46 @@ export function TransactionEditSheet({
                 type="button"
                 onClick={() => {
                   setType(item);
+                  if (item === 'transfer') setToAccountId(null);
                 }}
-                className={`rounded-2xl border px-3 py-3 text-sm transition active:scale-[0.99] ${
-                  type === item
-                    ? 'border-emerald-300/25 bg-emerald-300/12 text-emerald-50'
-                    : 'border-white/10 bg-white/[0.04] text-white/45'
-                }`}
+                className={type === item ? 'app-choice app-choice--active' : 'app-choice'}
               >
                 {item === 'expense' ? 'Расход' : item === 'income' ? 'Доход' : 'Перевод'}
               </button>
             ))}
           </div>
 
-          <label className="block rounded-[22px] border border-white/8 bg-black/20 px-4 py-3">
-            <div className="mb-2 text-xs text-white/42">Сумма</div>
-            <input
-              inputMode="decimal"
-              value={amount}
-              onChange={(event) => setAmount(event.target.value)}
-              className="w-full bg-transparent text-base outline-none placeholder:text-white/25"
-              placeholder="Например 350"
-            />
+          {type !== 'transfer' ? (
+            <label className="app-field">
+              <span>Название</span>
+              <input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Например: колбаса" />
+            </label>
+          ) : null}
+
+          <label className="app-field">
+            <span>Сумма</span>
+            <input inputMode="decimal" value={amount} onChange={(event) => setAmount(event.target.value)} placeholder="Например 350" />
           </label>
 
-          <label className="block rounded-[22px] border border-white/8 bg-black/20 px-4 py-3">
-            <div className="mb-2 text-xs text-white/42">Описание</div>
-            <input
-              value={description}
-              onChange={(event) => setDescription(event.target.value)}
-              className="w-full bg-transparent text-base outline-none placeholder:text-white/25"
-              placeholder="Например: кофе"
-            />
-          </label>
+          {type !== 'transfer' ? (
+            <label className="app-field">
+              <span>Описание</span>
+              <textarea value={description} onChange={(event) => setDescription(event.target.value)} placeholder="Необязательно: магазин, детали покупки, комментарий" />
+            </label>
+          ) : null}
 
-          <label className="block rounded-[22px] border border-white/8 bg-black/20 px-4 py-3">
-            <div className="mb-2 text-xs text-white/42">Дата</div>
-            <input
-              type="date"
-              value={date}
-              onChange={(event) => setDate(event.target.value)}
-              className="w-full bg-transparent text-base outline-none [color-scheme:dark]"
-            />
+          <label className="app-field">
+            <span>Дата</span>
+            <input type="date" value={date} onChange={(event) => setDate(event.target.value)} className="[color-scheme:dark]" />
           </label>
 
           <section className="rounded-[24px] border border-white/8 bg-white/[0.035] p-3">
             <div className="mb-3 text-xs uppercase tracking-[0.16em] text-white/35">Счёт</div>
             <div className="grid gap-2">
               {accounts.map((account) => (
-                <button
-                  key={account.id}
-                  type="button"
-                  onClick={() => setAccountId(account.id)}
-                  className={`rounded-2xl border px-3 py-3 text-left transition active:scale-[0.99] ${
-                    accountId === account.id
-                      ? 'border-emerald-300/25 bg-emerald-300/12'
-                      : 'border-white/8 bg-black/20'
-                  }`}
-                >
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="min-w-0">
-                      <div className="truncate text-sm text-white">{account.name}</div>
-                      <div className="mt-1 text-xs text-white/42">{account.type} · {account.currency}</div>
-                    </div>
-                    <div className="shrink-0 text-xs text-white/60">{formatMoney(Number(account.balance) || 0, account.currency)}</div>
-                  </div>
+                <button key={account.id} type="button" onClick={() => setAccountId(account.id)} className={accountId === account.id ? 'app-list-button app-list-button--active' : 'app-list-button'}>
+                  <span>{account.name}</span>
+                  <small>{formatMoney(Number(account.balance) || 0, account.currency)}</small>
                 </button>
               ))}
             </div>
@@ -235,79 +245,31 @@ export function TransactionEditSheet({
               <div className="mb-3 text-xs uppercase tracking-[0.16em] text-white/35">Куда</div>
               <div className="grid gap-2">
                 {accounts.filter((account) => account.id !== accountId).map((account) => (
-                  <button
-                    key={account.id}
-                    type="button"
-                    onClick={() => setToAccountId(account.id)}
-                    className={`rounded-2xl border px-3 py-3 text-left transition active:scale-[0.99] ${
-                      toAccountId === account.id
-                        ? 'border-sky-300/25 bg-sky-300/12'
-                        : 'border-white/8 bg-black/20'
-                    }`}
-                  >
-                    <div className="text-sm text-white">{account.name}</div>
-                    <div className="mt-1 text-xs text-white/42">{account.currency}</div>
+                  <button key={account.id} type="button" onClick={() => setToAccountId(account.id)} className={toAccountId === account.id ? 'app-list-button app-list-button--active' : 'app-list-button'}>
+                    <span>{account.name}</span>
+                    <small>{account.currency}</small>
                   </button>
                 ))}
               </div>
             </section>
           ) : (
-            <div className="app-inline-hint">После сохранения Фина заново подберёт категорию, раздел, цвет и иконку по описанию операции.</div>
+            <div className="app-inline-hint">После сохранения Фина пересоберёт категорию, раздел, цвет и иконку по названию и описанию.</div>
           )}
 
-          <section className="app-transaction-ai-advice">
-            <div className="app-eyebrow">Совет Фины</div>
-            <div className="app-transaction-ai-advice__title">Эту операцию можно уточнить голосом</div>
-            <p>
-              Скажи Фине, что именно изменить: описание, сумму, дату, счёт, категорию или раздел.
-              Фина подготовит изменение существующей операции, а не создаст новую.
-            </p>
-          </section>
+          {localError ? <div className="app-error-box">{localError}</div> : null}
+        </div>
 
-          {localError ? (
-            <div className="rounded-2xl border border-red-300/20 bg-red-300/10 px-4 py-3 text-sm text-red-50">
-              {localError}
-            </div>
-          ) : null}
-
+        <footer className="app-modal-footer">
           <div className="grid gap-3 min-[420px]:grid-cols-[1fr_auto]">
-            <button
-              type="button"
-              disabled={!canSave}
-              onClick={() => void submit()}
-              className="rounded-[24px] bg-emerald-400 px-5 py-4 text-base font-semibold text-black transition active:scale-[0.98] disabled:opacity-50"
-            >
+            <button type="button" disabled={!canSave} onClick={() => void submit()} className="app-primary-button">
               {isSaving ? 'Сохраняю…' : 'Сохранить'}
             </button>
-            <button
-              type="button"
-              disabled={isSaving}
-              onClick={() => void remove()}
-              className="rounded-[24px] border border-red-300/15 bg-red-300/10 px-5 py-4 text-base font-semibold text-red-100 transition active:scale-[0.98] disabled:opacity-50"
-            >
+            <button type="button" onClick={() => void remove()} className="app-secondary-button text-red-100">
               Удалить
             </button>
           </div>
-        </div>
+        </footer>
       </div>
     </div>
   );
-}
-
-function Badge({
-  children,
-  muted = false,
-  tone = 'green',
-}: {
-  children: ReactNode;
-  muted?: boolean;
-  tone?: 'green' | 'violet';
-}) {
-  const className = muted
-    ? 'border-white/8 bg-white/[0.04] text-white/42'
-    : tone === 'violet'
-      ? 'border-violet-300/15 bg-violet-300/10 text-violet-100/80'
-      : 'border-emerald-300/15 bg-emerald-300/10 text-emerald-100/85';
-
-  return <span className={`rounded-full border px-3 py-1.5 text-xs ${className}`}>{children}</span>;
 }

@@ -11,6 +11,7 @@ type DrawerProps = PropsWithChildren<{
   footer?: ReactNode;
   className?: string;
   bodyClassName?: string;
+  layer?: number;
 }>;
 
 export function Drawer({
@@ -21,6 +22,7 @@ export function Drawer({
   footer,
   className,
   bodyClassName,
+  layer,
   children,
 }: DrawerProps) {
   useEffect(() => {
@@ -50,6 +52,7 @@ export function Drawer({
   return (
     <div
       className="app-modal-backdrop"
+      style={layer ? { zIndex: layer } : undefined}
       data-no-swipe="true"
       data-ai-core-modal="true"
       data-drawer-backdrop="true"

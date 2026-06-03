@@ -123,7 +123,7 @@ export default function SettingsPage() {
     { title: 'Счета', caption: 'Баланс и основные счета', screen: 'accounts' as const },
     { title: 'Цели', caption: 'Накопления и планы', screen: 'goals' as const },
     { title: 'Фина', caption: 'Прогресс и привычка', screen: 'companion' as const },
-    { title: 'Разделы', caption: 'Категории и структура', screen: 'taxonomy-settings' as const },
+    { title: 'Разделы', caption: 'Категории и структура', screen: 'sections' as const },
     ...(isAdmin ? [
       { title: 'ИИ-бухгалтер', caption: 'Business-модуль для ИП и самозанятых', screen: 'business-accountant' as const },
       { title: 'Рефералы', caption: 'Admin-only прототип приглашений', screen: 'referral' as const },

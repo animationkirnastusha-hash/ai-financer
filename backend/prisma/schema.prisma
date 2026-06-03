@@ -137,6 +137,7 @@ model Transaction {
   sectionId    String?
   amount       Int
   type         String
+  title        String?
   description  String?
   date         DateTime @default(now())
   isAIGenerated Boolean  @default(false)

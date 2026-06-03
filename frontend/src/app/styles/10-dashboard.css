@@ -583,65 +583,41 @@
   .app-home-chart-modal__actions { grid-template-columns: 1fr; }
 }
 
-/* Pack 12: diagrams use colors + category/section icons, not text labels on chart. */
-.app-home-donut--with-icons {
+/* Pack 13: icon-only diagram markers. */
+.app-home-donut {
   position: relative;
-  overflow: visible;
 }
 
-.app-home-donut--with-icons em {
+.app-home-donut-icon {
   position: absolute;
-  z-index: 3;
+  display: grid;
   width: 28px;
   height: 28px;
-  display: grid;
   place-items: center;
+  border: 1px solid rgba(255,255,255,.18);
   border-radius: 999px;
-  border: 1px solid rgba(255,255,255,.28);
-  box-shadow: 0 10px 24px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.20);
-  color: white;
+  background: rgba(5, 10, 18, .74);
+  box-shadow: 0 10px 22px rgba(0,0,0,.32);
   font-size: 15px;
   font-style: normal;
   line-height: 1;
-  translate: -50% -50%;
   pointer-events: none;
 }
 
-.app-home-donut--large.app-home-donut--with-icons em {
-  width: 32px;
-  height: 32px;
-  font-size: 17px;
+.app-home-donut-icon--0 { top: 2%; left: 50%; transform: translateX(-50%); }
+.app-home-donut-icon--1 { top: 24%; right: 4%; }
+.app-home-donut-icon--2 { right: 14%; bottom: 10%; }
+.app-home-donut-icon--3 { bottom: 10%; left: 14%; }
+.app-home-donut-icon--4 { top: 24%; left: 4%; }
+
+.app-home-donut--large .app-home-donut-icon {
+  width: 30px;
+  height: 30px;
+  font-size: 16px;
 }
 
-.app-home-donut--outer.app-home-donut--with-icons em {
-  width: 26px;
-  height: 26px;
-  font-size: 14px;
-}
-
-.app-home-chart-group {
-  grid-template-columns: 42px minmax(0,1fr) auto;
-}
-
-.app-home-chart-group i {
-  width: 42px;
-  height: 42px;
-  display: grid;
-  place-items: center;
-  border-radius: 16px;
-  color: white;
-  font-size: 19px;
-  font-style: normal;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.20);
-}
-
-.app-home-category-title-icon {
-  width: 34px;
-  height: 34px;
-  display: inline-grid;
-  place-items: center;
-  border-radius: 14px;
-  margin-right: 10px;
-  vertical-align: middle;
-  font-size: 18px;
+.app-transaction-edit-sheet {
+  max-height: calc(100dvh - env(safe-area-inset-top, 0px));
+  min-height: min(720px, 100dvh);
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 18px);
 }

@@ -81,7 +81,6 @@ export function HomeFinanceModalManager({
           await deleteItem(transaction);
           closeEdit();
         }}
-        onOpenAI={closeEdit}
       />
     </>
   );

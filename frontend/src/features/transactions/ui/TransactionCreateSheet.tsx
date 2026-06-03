@@ -9,24 +9,28 @@ type Props = {
   open: boolean;
   isSaving?: boolean;
   initialType?: TransactionType;
+  modalLayer?: number;
   onClose: () => void;
   onSave: (payload: {
     accountId: string;
     toAccountId?: string | null;
+    categoryId?: string | null;
     amount: number;
     type: TransactionType;
+    title?: string | null;
     description?: string | null;
     date?: string;
     isAIGenerated?: boolean;
   }) => Promise<void> | void;
 };
 
-export function TransactionCreateSheet({ open, isSaving = false, initialType = 'expense', onClose, onSave }: Props) {
+export function TransactionCreateSheet({ open, isSaving = false, initialType = 'expense', modalLayer, onClose, onSave }: Props) {
   const accounts = useAccountsStore((state) => state.items);
   const loadAccounts = useAccountsStore((state) => state.loadAccounts);
 
   const [type, setType] = useState<TransactionType>('expense');
   const [amount, setAmount] = useState('');
+  const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [accountId, setAccountId] = useState('');
   const [toAccountId, setToAccountId] = useState<string | null>(null);
@@ -41,6 +45,7 @@ export function TransactionCreateSheet({ open, isSaving = false, initialType = '
     if (!open) return;
     setType(initialType);
     setAmount('');
+    setTitle('');
     setDescription('');
     setAccountId(accounts[0]?.id ?? '');
     setToAccountId(null);
@@ -60,6 +65,10 @@ export function TransactionCreateSheet({ open, isSaving = false, initialType = '
       setError('Выбери счёт.');
       return;
     }
+    if (type !== 'transfer' && title.trim().length < 2) {
+      setError('Напиши название операции. По нему Фина подберёт категорию и иконку.');
+      return;
+    }
     if (type === 'transfer' && (!toAccountId || toAccountId === accountId)) {
       setError('Для перевода нужен другой счёт получателя.');
       return;
@@ -68,8 +77,10 @@ export function TransactionCreateSheet({ open, isSaving = false, initialType = '
     const payload = {
       accountId,
       toAccountId: type === 'transfer' ? toAccountId : null,
+      categoryId: null,
       amount: Math.round(parsedAmount),
       type,
+      title: title.trim() || null,
       description: description.trim() || null,
       date: new Date().toISOString(),
       isAIGenerated: false,
@@ -84,7 +95,8 @@ export function TransactionCreateSheet({ open, isSaving = false, initialType = '
       open={open}
       onClose={onClose}
       title="Новая операция"
-      subtitle="Опиши покупку или доход. Фина сама выберет категорию, раздел, цвет и иконку."
+      subtitle="Укажи название и сумму. Категорию, раздел, цвет и иконку Фина подберёт автоматически."
+      layer={modalLayer}
       footer={(
         <div className="grid grid-cols-2 gap-2">
           <Button variant="secondary" onClick={onClose} disabled={isSaving}>Отмена</Button>
@@ -95,21 +107,30 @@ export function TransactionCreateSheet({ open, isSaving = false, initialType = '
       <div className="space-y-3">
         <div className="grid grid-cols-3 gap-2">
           {(['expense', 'income', 'transfer'] as const).map((item) => (
-            <button key={item} type="button" onClick={() => setType(item)} className={type === item ? 'app-choice app-choice--active' : 'app-choice'}>
+            <button key={item} type="button" onClick={() => { setType(item); setToAccountId(null); }} className={type === item ? 'app-choice app-choice--active' : 'app-choice'}>
               {item === 'expense' ? 'Расход' : item === 'income' ? 'Доход' : 'Перевод'}
             </button>
           ))}
         </div>
+
+        {type !== 'transfer' ? (
+          <label className="app-field">
+            <span>Название</span>
+            <input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Например: колбаса" autoFocus />
+          </label>
+        ) : null}
 
         <label className="app-field">
           <span>Сумма</span>
           <input inputMode="decimal" value={amount} onChange={(event) => setAmount(event.target.value)} placeholder="350" />
         </label>
 
-        <label className="app-field">
-          <span>Описание</span>
-          <input value={description} onChange={(event) => setDescription(event.target.value)} placeholder="Например: колбаса, кофе, зарплата" />
-        </label>
+        {type !== 'transfer' ? (
+          <label className="app-field">
+            <span>Описание</span>
+            <textarea value={description} onChange={(event) => setDescription(event.target.value)} placeholder="Необязательно: магазин, детали покупки, комментарий" />
+          </label>
+        ) : null}
 
         <label className="app-field">
           <span>Счёт</span>
@@ -128,7 +149,7 @@ export function TransactionCreateSheet({ open, isSaving = false, initialType = '
             </select>
           </label>
         ) : (
-          <div className="app-inline-hint">Категория и раздел подставятся автоматически после сохранения.</div>
+          <div className="app-inline-hint">Категория и раздел появятся автоматически после сохранения.</div>
         )}
 
         {error ? <div className="app-error-box">{error}</div> : null}

@@ -1,7 +1,7 @@
 import { prisma } from '../../lib/prisma';
 import { BadRequestError, NotFoundError } from '../../shared/core/errors';
 import { progressionActivityBridge } from '../progression/activity-bridge.service';
-import { resolveSectionIcon } from '../taxonomy/taxonomy-icons';
+import { resolveSectionAppearance, shouldReplaceGenericIcon } from '../taxonomy/taxonomy-icons';
 
 export interface CreateSectionInput {
   name: string;
@@ -37,14 +37,13 @@ export class SectionService {
     const existing = await this.findSectionByName(userId, name);
     if (existing) return existing;
 
-    const suggestion = resolveSectionIcon(name);
-
+    const appearance = resolveSectionAppearance(name);
     const section = await prisma.section.create({
       data: {
         userId,
         name,
-        icon: input.icon ?? suggestion.icon,
-        color: input.color ?? suggestion.color,
+        icon: input.icon ?? appearance.icon,
+        color: input.color ?? appearance.color,
       },
     });
 
@@ -62,15 +61,15 @@ export class SectionService {
       throw new NotFoundError('Section not found');
     }
 
-    const nextName = input.name !== undefined ? this.normalizeName(input.name) : existing.name;
-    const suggestion = resolveSectionIcon(nextName);
+    const nextName = input.name !== undefined ? this.normalizeName(input.name) : undefined;
 
+    const appearance = resolveSectionAppearance(nextName || existing.name);
     return prisma.section.update({
       where: { id: existing.id },
       data: {
-        ...(input.name !== undefined ? { name: nextName } : {}),
-        icon: input.icon !== undefined ? input.icon : suggestion.icon,
-        color: input.color !== undefined ? input.color : suggestion.color,
+        ...(nextName ? { name: nextName } : {}),
+        ...(input.icon !== undefined ? { icon: input.icon } : (shouldReplaceGenericIcon(existing.icon) ? { icon: appearance.icon } : {})),
+        ...(input.color !== undefined ? { color: input.color } : (!existing.color ? { color: appearance.color } : {})),
       },
     });
   }

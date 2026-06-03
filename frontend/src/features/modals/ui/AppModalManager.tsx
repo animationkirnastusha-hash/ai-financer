@@ -23,6 +23,11 @@ function pickModal<T extends AppModalDescriptor['type']>(stack: AppModalDescript
   return [...stack].reverse().find((modal): modal is Extract<AppModalDescriptor, { type: T }> => modal.type === type) ?? null;
 }
 
+function modalLayer(stack: AppModalDescriptor[], type: AppModalDescriptor['type']) {
+  const index = stack.map((modal) => modal.type).lastIndexOf(type);
+  return index < 0 ? undefined : 420 + index * 20;
+}
+
 export function AppModalManager() {
   const stack = useAppModalStore((state) => state.stack);
   const openModal = useAppModalStore((state) => state.openModal);
@@ -195,6 +200,7 @@ export function AppModalManager() {
         open={Boolean(transactionCreateModal)}
         initialType={transactionCreateModal?.initialType}
         isSaving={isTransactionSaving}
+        modalLayer={modalLayer(stack, 'transaction-create')}
         onClose={() => closeModal('transaction-create')}
         onSave={async (payload) => {
           closeModal('transaction-create');
@@ -207,6 +213,7 @@ export function AppModalManager() {
         open={Boolean(transactionEditModal)}
         transaction={transactionEditModal?.transaction ?? null}
         isSaving={isTransactionSaving}
+        modalLayer={modalLayer(stack, 'transaction-edit')}
         onClose={() => closeModal('transaction-edit')}
         onSave={async (payload) => {
           if (!transactionEditModal) return;
@@ -229,6 +236,7 @@ export function AppModalManager() {
         initialType={categoryEditModal?.initialType}
         initialSectionId={categoryEditModal?.sectionId ?? null}
         isSaving={isCreatingTaxonomy || isTaxonomySaving}
+        modalLayer={modalLayer(stack, 'category-edit')}
         onClose={() => closeModal('category-edit')}
         onSave={async (payload) => {
           const saved = categoryEditModal?.category
@@ -249,6 +257,7 @@ export function AppModalManager() {
         open={Boolean(sectionEditModal)}
         section={sectionModalSection}
         isSaving={isCreatingTaxonomy || isTaxonomySaving}
+        modalLayer={modalLayer(stack, 'section-edit')}
         onClose={() => closeModal('section-edit')}
         onSave={async (payload) => {
           if (sectionEditModal?.section) await updateSection(sectionEditModal.section.id, payload);
@@ -288,6 +297,7 @@ export function AppModalManager() {
         period={chartDetailsModal?.period ?? 'month'}
         rates={rates}
         onClose={() => closeModal('home-chart-details')}
+        modalLayer={modalLayer(stack, 'home-chart-details')}
         onOpenAnalytics={() => {
           closeAllModals();
           navigateTo('analytics');
@@ -297,12 +307,13 @@ export function AppModalManager() {
 
       <HomeCategoryOperationsModal
         group={categoryOperationsModal?.group ?? null}
+        modalLayer={modalLayer(stack, 'home-category-operations')}
         onClose={() => closeModal('home-category-operations')}
         onEdit={(transaction) => openModal({ type: 'transaction-edit', transaction })}
       />
 
       {accountsToolsModal ? (
-        <div className="app-modal-backdrop" data-no-swipe="true" onClick={() => closeModal('accounts-tools')}>
+        <div className="app-modal-backdrop" style={{ zIndex: modalLayer(stack, 'accounts-tools') }} data-no-swipe="true" onClick={() => closeModal('accounts-tools')}>
           <div className="app-modal-sheet app-accounts-tools" data-no-swipe="true" onClick={(event) => event.stopPropagation()}>
             <div className="app-modal-handle" />
             <div className="app-modal-body space-y-4">
@@ -330,7 +341,7 @@ export function AppModalManager() {
       ) : null}
 
       {taxonomyToolsModal ? (
-        <div className="app-modal-backdrop" data-no-swipe="true" onClick={() => closeModal('taxonomy-tools')}>
+        <div className="app-modal-backdrop" style={{ zIndex: modalLayer(stack, 'taxonomy-tools') }} data-no-swipe="true" onClick={() => closeModal('taxonomy-tools')}>
           <div className="app-modal-sheet app-taxonomy-tools" data-no-swipe="true" onClick={(event) => event.stopPropagation()}>
             <div className="app-modal-handle" />
             <div className="app-modal-body space-y-4">
@@ -351,7 +362,7 @@ export function AppModalManager() {
       ) : null}
 
       {taxonomySectionModal ? (
-        <div className="app-modal-backdrop" data-no-swipe="true" onClick={() => closeModal('taxonomy-section')}>
+        <div className="app-modal-backdrop" style={{ zIndex: modalLayer(stack, 'taxonomy-section') }} data-no-swipe="true" onClick={() => closeModal('taxonomy-section')}>
           <div className="app-modal-sheet app-taxonomy-modal" data-no-swipe="true" onClick={(event) => event.stopPropagation()}>
             <div className="app-modal-handle" />
             <div className="app-modal-body space-y-4">

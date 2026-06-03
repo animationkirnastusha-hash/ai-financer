@@ -10,7 +10,6 @@ export type AppScreen =
   | 'premium'
   | 'business-accountant'
   | 'sections'
-  | 'taxonomy-settings'
   | 'ai-core'
   | 'admin'
   | 'referral';

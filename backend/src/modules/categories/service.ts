@@ -1,6 +1,7 @@
 import { prisma } from '../../lib/prisma';
 import { BadRequestError, NotFoundError } from '../../shared/core/errors';
 import { progressionActivityBridge } from '../progression/activity-bridge.service';
+import { resolveCategoryAppearance, shouldReplaceGenericIcon } from '../taxonomy/taxonomy-icons';
 
 export type CategoryType = 'income' | 'expense';
 
@@ -41,13 +42,15 @@ export class CategoryService {
       throw new BadRequestError('Invalid category type');
     }
 
+    const appearance = resolveCategoryAppearance(name, input.type);
+
     const category = await prisma.category.create({
       data: {
         userId,
         name,
         type: input.type,
-        icon: input.icon ?? '💰',
-        color: input.color ?? '#5B8DEF',
+        icon: input.icon ?? appearance.categoryIcon,
+        color: input.color ?? appearance.categoryColor,
         sectionId: input.sectionId ?? null,
       },
     });
@@ -66,13 +69,16 @@ export class CategoryService {
       throw new NotFoundError('Category not found');
     }
 
+    const nextName = input.name?.trim();
+    const appearance = resolveCategoryAppearance(nextName || existing.name, existing.type === 'income' ? 'income' : 'expense');
+
     const updated = await prisma.category.update({
       where: { id: categoryId },
       data: {
-        name: input.name?.trim(),
-        icon: input.icon,
-        color: input.color,
-        sectionId: input.sectionId,
+        ...(nextName ? { name: nextName } : {}),
+        ...(input.icon !== undefined ? { icon: input.icon } : (shouldReplaceGenericIcon(existing.icon) ? { icon: appearance.categoryIcon } : {})),
+        ...(input.color !== undefined ? { color: input.color } : (!existing.color ? { color: appearance.categoryColor } : {})),
+        ...(input.sectionId !== undefined ? { sectionId: input.sectionId } : {}),
       },
     });
 

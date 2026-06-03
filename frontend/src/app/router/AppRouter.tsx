@@ -13,7 +13,6 @@ import GoalsPage from '@/pages/goals/GoalsPage';
 import PremiumPage from '@/pages/premium/PremiumPage';
 import BusinessAccountantPage from '@/pages/business-accountant/BusinessAccountantPage';
 import SettingsPage from '@/pages/settings/SettingsPage';
-import TaxonomySettingsPage from '@/pages/settings/TaxonomySettingsPage';
 import SectionsPage from '@/pages/sections/SectionsPage';
 import AdminPage from '@/pages/admin/AdminPage';
 import ReferralPage from '@/pages/referral/ReferralPage';
@@ -38,7 +37,6 @@ export function AppRouter() {
       {currentScreen === 'premium' && (isAdmin ? <PremiumPage /> : <DashboardPage />)}
       {currentScreen === 'business-accountant' && (isAdmin ? <BusinessAccountantPage /> : <DashboardPage />)}
       {currentScreen === 'sections' && <SectionsPage onBack={goBack} />}
-      {currentScreen === 'taxonomy-settings' && <TaxonomySettingsPage />}
       {currentScreen === 'ai-core' && <AICoreScreen />}
       {currentScreen === 'admin' && <AdminPage />}
       {currentScreen === 'referral' && (isAdmin ? <ReferralPage /> : <DashboardPage />)}

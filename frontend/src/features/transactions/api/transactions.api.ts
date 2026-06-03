@@ -8,6 +8,7 @@ export type TransactionDto = {
   categoryId?: string | null;
   amount: number;
   type: 'income' | 'expense' | 'transfer';
+  title?: string | null;
   description?: string | null;
   date: string;
   isAIGenerated?: boolean;
@@ -33,6 +34,8 @@ export type TransactionDto = {
     icon?: string | null;
     color?: string | null;
     type?: string;
+    sectionId?: string | null;
+    section?: { id: string; name: string; icon?: string | null; color?: string | null } | null;
   } | null;
   section?: {
     id: string;
@@ -66,6 +69,7 @@ export type CreateTransactionPayload = {
   categoryId?: string | null;
   amount: number;
   type: 'income' | 'expense' | 'transfer';
+  title?: string | null;
   description?: string | null;
   date?: string;
   isAIGenerated?: boolean;
@@ -137,7 +141,7 @@ export async function createTransaction(payload: CreateTransactionPayload): Prom
 
 export async function updateTransaction(
   id: string,
-  payload: Partial<Pick<TransactionDto, 'amount' | 'description' | 'date' | 'accountId' | 'categoryId' | 'type' | 'toAccountId'>>,
+  payload: Partial<Pick<TransactionDto, 'amount' | 'title' | 'description' | 'date' | 'accountId' | 'categoryId' | 'type' | 'toAccountId'>>,
 ): Promise<TransactionDto> {
   const response = await apiClient.patch<{ transaction?: TransactionDto } | TransactionDto>(
     `/transactions/${id}`,

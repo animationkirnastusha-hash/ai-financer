@@ -25,7 +25,7 @@ function getScreenVoiceLabel(screen: string) {
     analytics: 'аналитику',
     goals: 'цели',
     settings: 'настройки',
-    'taxonomy-settings': 'категории',
+    sections: 'категории',
     companion: 'компаньона',
     premium: 'премиум',
     referral: 'рефералы',
