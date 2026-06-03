@@ -1,6 +1,7 @@
 import type { TransactionDto } from '@/features/transactions/api/transactions.api';
 import type { AppCurrency } from '@/features/settings/model/settings.types';
 import { convertCurrency } from '@/features/currency/lib/currency';
+import { getCategoryIcon } from '@/features/sections/lib/categoryIcons';
 
 export type HomeCashflowMode = 'expense' | 'income';
 export type HomeCashflowPeriod = 'day' | 'week' | 'month';
@@ -11,6 +12,7 @@ export type HomeFinanceGroup = {
   sectionName: string;
   amount: number;
   color: string;
+  icon: string;
   percent: number;
   count: number;
   transactions: TransactionDto[];
@@ -21,6 +23,7 @@ export type HomeSectionGroup = {
   name: string;
   amount: number;
   color: string;
+  icon: string;
   percent: number;
 };
 
@@ -39,11 +42,13 @@ type Rates = { usd: number; eur: number };
 
 type CategoryWithSection = {
   name?: string | null;
-  section?: { name?: string | null } | null;
+  icon?: string | null;
+  color?: string | null;
+  section?: { name?: string | null; icon?: string | null; color?: string | null } | null;
 };
 
 type ExtendedTransaction = TransactionDto & {
-  section?: { name?: string | null } | null;
+  section?: { name?: string | null; icon?: string | null; color?: string | null } | null;
   category?: CategoryWithSection | null;
 };
 
@@ -99,7 +104,9 @@ export function buildHomeFinanceAnalytics(
   filtered.forEach((transaction) => {
     const item = transaction as ExtendedTransaction;
     const categoryName = item.category?.name?.trim() || (mode === 'expense' ? 'Без категории' : 'Доходы');
+    const categoryIcon = item.category?.icon?.trim() || getCategoryIcon(categoryName, mode === 'expense' ? '•' : '💰');
     const sectionName = item.category?.section?.name?.trim() || item.section?.name?.trim() || 'Без раздела';
+    const sectionIcon = item.category?.section?.icon?.trim() || item.section?.icon?.trim() || getCategoryIcon(sectionName, '•');
     const key = `${sectionName}::${categoryName}`;
     const amount = toRub(Number(transaction.amount) || 0, transaction.account?.currency, rates);
 
@@ -109,13 +116,14 @@ export function buildHomeFinanceAnalytics(
       existingCategory.count += 1;
       existingCategory.transactions.push(transaction);
     } else {
-      const color = colors[categoryMap.size % colors.length];
+      const color = item.category?.color?.trim() || colors[categoryMap.size % colors.length];
       categoryMap.set(key, {
         key,
         name: categoryName,
         sectionName,
         amount,
         color,
+        icon: categoryIcon,
         percent: 0,
         count: 1,
         transactions: [transaction],
@@ -127,8 +135,8 @@ export function buildHomeFinanceAnalytics(
     if (existingSection) {
       existingSection.amount += amount;
     } else {
-      const color = colors[sectionMap.size % colors.length];
-      sectionMap.set(sectionKey, { key: sectionKey, name: sectionName, amount, color, percent: 0 });
+      const color = item.category?.section?.color?.trim() || item.section?.color?.trim() || colors[sectionMap.size % colors.length];
+      sectionMap.set(sectionKey, { key: sectionKey, name: sectionName, amount, color, icon: sectionIcon, percent: 0 });
     }
   });
 

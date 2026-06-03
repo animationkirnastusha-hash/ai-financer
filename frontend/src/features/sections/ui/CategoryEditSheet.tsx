@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import type { CategoryDto, SectionDto } from '@/features/sections/api/sections.api';
 import { Drawer } from '@/shared/ui/Drawer';
 import { Button } from '@/shared/ui/Button';
+import { CATEGORY_ICON_OPTIONS, getCategoryIcon } from '@/features/sections/lib/categoryIcons';
 
 type Props = {
   open: boolean;
@@ -31,7 +32,7 @@ export function CategoryEditSheet({ open, category, sections, isSaving = false, 
   useEffect(() => {
     if (!open) return;
     setName(category?.name ?? '');
-    setIcon(category?.icon ?? '');
+    setIcon(category?.icon ?? getCategoryIcon(category?.name, ''));
     setType((category?.type === 'income' || category?.type === 'both' ? category.type : initialType) as 'expense' | 'income' | 'both');
     setSectionId(category?.sectionId ?? initialSectionId ?? null);
     setError(null);
@@ -86,6 +87,20 @@ export function CategoryEditSheet({ open, category, sections, isSaving = false, 
               {sections.map((section) => <option key={section.id} value={section.id}>{section.icon ? `${section.icon} ` : ''}{section.name}</option>)}
             </select>
           </label>
+        </div>
+
+        <div className="app-category-icon-picker">
+          {CATEGORY_ICON_OPTIONS.map((item, index) => (
+            <button
+              key={`${item}-${index}`}
+              type="button"
+              className={icon === item ? 'app-category-icon-option app-category-icon-option--active' : 'app-category-icon-option'}
+              onClick={() => setIcon(item)}
+              aria-label={`Выбрать иконку ${item}`}
+            >
+              {item}
+            </button>
+          ))}
         </div>
 
         <div>

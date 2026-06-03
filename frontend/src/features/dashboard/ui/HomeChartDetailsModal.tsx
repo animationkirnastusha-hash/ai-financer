@@ -1,7 +1,23 @@
+import type { CSSProperties } from 'react';
 import type { TransactionDto } from '@/features/transactions/api/transactions.api';
 import type { HomeCashflowMode, HomeCashflowPeriod, HomeFinanceGroup } from '@/features/dashboard/lib/homeFinanceAnalytics';
 import { buildHomeFinanceAnalytics, conicGradient, modeLabel, periodLabel } from '@/features/dashboard/lib/homeFinanceAnalytics';
 import { formatMoney } from '@/shared/lib/money';
+
+
+function ChartIconLayer({ groups, size = 'large' }: { groups: Array<{ key: string; icon: string; color: string; percent: number }>; size?: 'small' | 'large' }) {
+  const visible = groups.filter((group) => group.percent > 0).slice(0, size === 'large' ? 12 : 6);
+  if (visible.length === 0) return null;
+
+  return (
+    <span className={size === 'large' ? 'app-chart-icon-layer app-chart-icon-layer--large' : 'app-chart-icon-layer'} aria-hidden="true">
+      {visible.map((group, index) => {
+        const angle = (360 / visible.length) * index - 90;
+        return <i key={group.key} style={{ '--icon-angle': `${angle}deg`, '--icon-color': group.color } as CSSProperties}>{group.icon}</i>;
+      })}
+    </span>
+  );
+}
 
 type Props = {
   open: boolean;
@@ -39,6 +55,8 @@ export function HomeChartDetailsModal({ open, transactions, mode, period, rates,
               <span className="app-home-donut app-home-donut--outer" style={{ background: conicGradient(analytics.sections) }}><i /></span>
             ) : null}
             <span className="app-home-donut app-home-donut--large" style={{ background: conicGradient(analytics.categories) }}><i /></span>
+            <ChartIconLayer groups={analytics.categories} />
+            {hasSections ? <ChartIconLayer groups={analytics.sections} size="small" /> : null}
           </div>
 
           <div className="app-home-chart-modal__actions">
@@ -51,7 +69,7 @@ export function HomeChartDetailsModal({ open, transactions, mode, period, rates,
               <div className="app-empty-button">Добавь первую операцию — здесь появится разбор по категориям.</div>
             ) : analytics.categories.map((group) => (
               <button key={group.key} type="button" className="app-home-chart-group" onClick={(event) => { event.stopPropagation(); onOpenGroup(group); }}>
-                <i style={{ background: group.color }} />
+                <i className="app-home-chart-group__icon" style={{ background: group.color }}>{group.icon}</i>
                 <span className="min-w-0">
                   <b>{group.name}</b>
                   <small>{group.sectionName} · {group.count} опер.</small>

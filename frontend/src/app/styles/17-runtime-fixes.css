@@ -647,3 +647,42 @@ body:has([data-drawer-backdrop="true"]) .voice-keyboard-entry {
     border-color .16s ease,
     box-shadow .16s ease !important;
 }
+
+/* Pack 11: back swipe, modal stack and category icon picker. */
+.app-category-icon-picker {
+  display: grid;
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+  gap: 7px;
+  max-height: 174px;
+  overflow-y: auto;
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 22px;
+  background: rgba(0,0,0,.18);
+  padding: 8px;
+}
+
+.app-category-icon-option {
+  min-width: 0;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,.08);
+  background: rgba(255,255,255,.045);
+  font-size: 18px;
+  transition: transform .14s ease, border-color .14s ease, background-color .14s ease;
+}
+
+.app-category-icon-option:active {
+  transform: scale(.96);
+}
+
+.app-category-icon-option--active {
+  border-color: rgba(129,239,208,.38);
+  background: rgba(129,239,208,.14);
+  box-shadow: 0 10px 24px rgba(16,185,129,.14);
+}
+
+@media (max-width: 390px) {
+  .app-category-icon-picker { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+}

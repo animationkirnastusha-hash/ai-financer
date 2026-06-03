@@ -6,12 +6,12 @@ import { VoiceFirstCompanionLayer } from '@/features/voice/ui/VoiceFirstCompanio
 export function AppShell({ children }: { children: ReactNode }) {
   const currentScreen = useNavigationStore((state) => state.currentScreen);
 
-  useSwipeNavigation();
+  const swipeHandlers = useSwipeNavigation();
 
 
   return (
     <div className="telegram-app-shell ai-app-shell">
-      <main key={currentScreen} className="telegram-app-content ai-screen-transition">
+      <main key={currentScreen} className="telegram-app-content ai-screen-transition" {...swipeHandlers}>
         {children}
       </main>
 

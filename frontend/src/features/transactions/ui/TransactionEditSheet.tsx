@@ -161,7 +161,7 @@ export function TransactionEditSheet({
   }
 
   return (
-    <div className="fixed inset-0 z-[112] flex items-end bg-black/70 backdrop-blur-sm" data-no-swipe="true">
+    <div className="fixed inset-0 z-[320] flex items-end bg-black/70 backdrop-blur-sm" data-no-swipe="true">
       <div className="max-h-[92dvh] w-full overflow-y-auto rounded-t-[30px] border border-white/10 bg-[#0b1016] px-4 pb-6 pt-4 text-white shadow-2xl">
         <div className="mx-auto mb-4 h-1.5 w-14 rounded-full bg-white/15" />
 
