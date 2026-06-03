@@ -27,6 +27,7 @@ export function AppModalManager() {
   const stack = useAppModalStore((state) => state.stack);
   const openModal = useAppModalStore((state) => state.openModal);
   const closeModal = useAppModalStore((state) => state.closeModal);
+  const closeAllModals = useAppModalStore((state) => state.closeAllModals);
 
   const navigateTo = useNavigationStore((state) => state.navigateTo);
 
@@ -118,6 +119,18 @@ export function AppModalManager() {
     await Promise.allSettled([loadAccounts(true), loadTransactions(true), loadTaxonomy(true)]);
   }
 
+  useEffect(() => {
+    if (stack.length <= 0) return;
+    document.body.classList.add('ai-any-modal-open');
+    document.documentElement.classList.add('ai-any-modal-open');
+
+    return () => {
+      document.body.classList.remove('ai-any-modal-open');
+      document.documentElement.classList.remove('ai-any-modal-open');
+    };
+  }, [stack.length]);
+
+
   return (
     <>
       <CreateAccountSheet
@@ -184,8 +197,8 @@ export function AppModalManager() {
         isSaving={isTransactionSaving}
         onClose={() => closeModal('transaction-create')}
         onSave={async (payload) => {
-          await createTransaction(payload);
           closeModal('transaction-create');
+          await createTransaction(payload);
           await refreshFinance();
         }}
       />
@@ -197,13 +210,14 @@ export function AppModalManager() {
         onClose={() => closeModal('transaction-edit')}
         onSave={async (payload) => {
           if (!transactionEditModal) return;
-          await updateTransaction(transactionEditModal.transaction.id, payload);
+          const transactionId = transactionEditModal.transaction.id;
           closeModal('transaction-edit');
+          await updateTransaction(transactionId, payload);
           await refreshFinance();
         }}
         onDelete={async (transaction) => {
-          await deleteTransaction(transaction);
           closeModal('transaction-edit');
+          await deleteTransaction(transaction);
           await refreshFinance();
         }}
       />
@@ -275,7 +289,7 @@ export function AppModalManager() {
         rates={rates}
         onClose={() => closeModal('home-chart-details')}
         onOpenAnalytics={() => {
-          closeModal('home-chart-details');
+          closeAllModals();
           navigateTo('analytics');
         }}
         onOpenGroup={(group) => openModal({ type: 'home-category-operations', group })}

@@ -42,15 +42,15 @@ export function HomeChartDetailsModal({ open, transactions, mode, period, rates,
           </div>
 
           <div className="app-home-chart-modal__actions">
-            <button type="button" onClick={onOpenAnalytics}>Открыть полную аналитику</button>
-            <button type="button" onClick={() => window.dispatchEvent(new CustomEvent('ai-financer:report-request'))}>Скачать отчёт</button>
+            <button type="button" onClick={(event) => { event.stopPropagation(); onOpenAnalytics(); }}>Открыть полную аналитику</button>
+            <button type="button" onClick={(event) => { event.stopPropagation(); window.dispatchEvent(new CustomEvent('ai-financer:report-request')); }}>Скачать отчёт</button>
           </div>
 
           <div className="app-home-chart-groups">
             {analytics.categories.length === 0 ? (
               <div className="app-empty-button">Добавь первую операцию — здесь появится разбор по категориям.</div>
             ) : analytics.categories.map((group) => (
-              <button key={group.key} type="button" className="app-home-chart-group" onClick={() => onOpenGroup(group)}>
+              <button key={group.key} type="button" className="app-home-chart-group" onClick={(event) => { event.stopPropagation(); onOpenGroup(group); }}>
                 <i style={{ background: group.color }} />
                 <span className="min-w-0">
                   <b>{group.name}</b>

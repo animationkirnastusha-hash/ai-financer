@@ -571,3 +571,79 @@ body:has([data-drawer-panel="true"]) .voice-first-layer {
   left: max(18px, env(safe-area-inset-left));
   right: auto;
 }
+
+/* Pack 10: fullscreen modal layer and instant-feel interactions. */
+.app-modal-backdrop,
+.app-pending-confirm-backdrop,
+[data-drawer-backdrop="true"] {
+  align-items: stretch !important;
+  justify-content: center !important;
+  padding-top: max(8px, env(safe-area-inset-top)) !important;
+  animation: appBackdropIn .16s ease-out both !important;
+}
+
+.app-modal-sheet,
+.app-drawer-panel,
+.app-bottom-sheet,
+[data-drawer-panel="true"] {
+  width: min(100%, 720px) !important;
+  height: calc(100dvh - max(8px, env(safe-area-inset-top))) !important;
+  max-height: none !important;
+  margin-top: auto !important;
+  border-radius: 28px 28px 0 0 !important;
+  transform-origin: 50% 100% !important;
+  animation: appSheetIn .22s cubic-bezier(.2,.9,.2,1) both !important;
+}
+
+.app-modal-body {
+  padding-bottom: calc(104px + env(safe-area-inset-bottom)) !important;
+  scroll-padding-bottom: calc(128px + env(safe-area-inset-bottom)) !important;
+}
+
+.app-modal-footer {
+  padding-bottom: calc(22px + env(safe-area-inset-bottom)) !important;
+}
+
+.app-home-chart-modal,
+.app-home-category-modal,
+.app-taxonomy-modal,
+.app-accounts-tools,
+.app-taxonomy-tools {
+  height: calc(100dvh - max(8px, env(safe-area-inset-top))) !important;
+  max-height: none !important;
+}
+
+body.ai-any-modal-open .voice-keyboard-entry,
+html.ai-any-modal-open .voice-keyboard-entry,
+body:has(.app-modal-backdrop) .voice-keyboard-entry,
+body:has([data-drawer-backdrop="true"]) .voice-keyboard-entry {
+  opacity: 0 !important;
+  pointer-events: none !important;
+  transform: translateY(10px) scale(.96) !important;
+}
+
+.app-inline-hint {
+  border: 1px solid rgba(129,239,208,.16);
+  border-radius: 16px;
+  background: rgba(129,239,208,.08);
+  color: rgba(219,255,247,.88);
+  font-size: 12px;
+  line-height: 1.35;
+  padding: 10px 12px;
+}
+
+.app-list-button,
+.app-home-chart-group,
+.app-primary-button,
+.app-secondary-button,
+.app-choice,
+.app-icon-button,
+.voice-keyboard-entry,
+.voice-first-companion {
+  transition:
+    transform .16s ease,
+    opacity .16s ease,
+    background-color .16s ease,
+    border-color .16s ease,
+    box-shadow .16s ease !important;
+}

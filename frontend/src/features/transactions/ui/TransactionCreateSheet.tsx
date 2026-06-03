@@ -4,6 +4,7 @@ import { useSectionsStore } from '@/features/sections/model/sections.store';
 import { Drawer } from '@/shared/ui/Drawer';
 import { Button } from '@/shared/ui/Button';
 import { useAppModalStore } from '@/features/modals/model/appModal.store';
+import { suggestCategoryId } from '@/features/transactions/lib/autoCategory';
 
 type TransactionType = 'income' | 'expense' | 'transfer';
 
@@ -37,6 +38,8 @@ export function TransactionCreateSheet({ open, isSaving = false, initialType = '
   const [accountId, setAccountId] = useState('');
   const [toAccountId, setToAccountId] = useState<string | null>(null);
   const [categoryId, setCategoryId] = useState<string | null>(null);
+  const [categoryWasTouched, setCategoryWasTouched] = useState(false);
+  const [autoCategoryLabel, setAutoCategoryLabel] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -53,6 +56,8 @@ export function TransactionCreateSheet({ open, isSaving = false, initialType = '
     setAccountId(accounts[0]?.id ?? '');
     setToAccountId(null);
     setCategoryId(null);
+    setCategoryWasTouched(false);
+    setAutoCategoryLabel(null);
     setError(null);
   }, [open, accounts, initialType]);
 
@@ -63,12 +68,30 @@ export function TransactionCreateSheet({ open, isSaving = false, initialType = '
   }, [categories, type]);
   const canSave = Number.isFinite(parsedAmount) && parsedAmount > 0 && Boolean(accountId) && !isSaving;
 
+  useEffect(() => {
+    if (!open || type === 'transfer' || categoryWasTouched) return;
+    const suggestedId = suggestCategoryId({ description, type, categories });
+    if (!suggestedId) {
+      setCategoryId(null);
+      setAutoCategoryLabel(null);
+      return;
+    }
+
+    const suggested = categories.find((category) => category.id === suggestedId);
+    setCategoryId(suggestedId);
+    setAutoCategoryLabel(suggested?.name ?? null);
+  }, [categories, categoryWasTouched, description, open, type]);
+
   const openCategoryCreate = () => {
     if (type === 'transfer') return;
     openModal({
       type: 'category-edit',
       initialType: type,
-      onSavedCategory: (category) => setCategoryId(category.id),
+      onSavedCategory: (category) => {
+        setCategoryId(category.id);
+        setCategoryWasTouched(true);
+        setAutoCategoryLabel(category.name);
+      },
     });
   };
 
@@ -87,7 +110,7 @@ export function TransactionCreateSheet({ open, isSaving = false, initialType = '
       return;
     }
 
-    await onSave({
+    const payload = {
       accountId,
       toAccountId: type === 'transfer' ? toAccountId : null,
       categoryId: type === 'transfer' ? null : categoryId,
@@ -96,8 +119,10 @@ export function TransactionCreateSheet({ open, isSaving = false, initialType = '
       description: description.trim() || null,
       date: new Date().toISOString(),
       isAIGenerated: false,
-    });
+    };
+
     onClose();
+    await onSave(payload);
   };
 
   return (
@@ -116,7 +141,7 @@ export function TransactionCreateSheet({ open, isSaving = false, initialType = '
       <div className="space-y-3">
         <div className="grid grid-cols-3 gap-2">
           {(['expense', 'income', 'transfer'] as const).map((item) => (
-            <button key={item} type="button" onClick={() => { setType(item); setCategoryId(null); }} className={type === item ? 'app-choice app-choice--active' : 'app-choice'}>
+            <button key={item} type="button" onClick={() => { setType(item); setCategoryId(null); setCategoryWasTouched(false); setAutoCategoryLabel(null); }} className={type === item ? 'app-choice app-choice--active' : 'app-choice'}>
               {item === 'expense' ? 'Расход' : item === 'income' ? 'Доход' : 'Перевод'}
             </button>
           ))}
@@ -151,7 +176,7 @@ export function TransactionCreateSheet({ open, isSaving = false, initialType = '
         ) : (
           <label className="app-field">
             <span>Категория</span>
-            <select value={categoryId ?? ''} onChange={(event) => setCategoryId(event.target.value || null)}>
+            <select value={categoryId ?? ''} onChange={(event) => { setCategoryId(event.target.value || null); setCategoryWasTouched(true); setAutoCategoryLabel(null); }}>
               <option value="">Автоматически / без категории</option>
               {filteredCategories.map((category) => <option key={category.id} value={category.id}>{category.icon ? `${category.icon} ` : ''}{category.name}</option>)}
             </select>
@@ -159,9 +184,12 @@ export function TransactionCreateSheet({ open, isSaving = false, initialType = '
         )}
 
         {type !== 'transfer' ? (
-          <button type="button" className="app-secondary-button" onClick={openCategoryCreate}>
-            Создать категорию
-          </button>
+          <div className="grid gap-2">
+            {autoCategoryLabel ? <div className="app-inline-hint">Фина выбрала категорию: {autoCategoryLabel}</div> : null}
+            <button type="button" className="app-secondary-button" onClick={openCategoryCreate}>
+              Создать категорию
+            </button>
+          </div>
         ) : null}
 
         {error ? <div className="app-error-box">{error}</div> : null}

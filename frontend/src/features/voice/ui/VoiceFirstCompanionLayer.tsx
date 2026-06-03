@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent } from 'react';
 import { useChatController } from '@/features/chat/model/useChatController';
 import { useNavigationStore } from '@/features/navigation/model/navigation.store';
+import { useAppModalStore } from '@/features/modals/model/appModal.store';
 import { useSettingsStore } from '@/features/settings/model/settings.store';
 import { logVoiceDebugEvent } from '@/features/voice/api/voice.api';
 import { useVoiceCommandDispatcher } from '@/features/voice/model/useVoiceCommandDispatcher';
@@ -35,6 +36,7 @@ const TAP_GUARD_MS = 320;
 
 export function VoiceFirstCompanionLayer() {
   const currentScreen = useNavigationStore((state) => state.currentScreen);
+  const hasOpenModal = useAppModalStore((state) => state.stack.length > 0);
   const navigateTo = useNavigationStore((state) => state.navigateTo);
   const goBack = useNavigationStore((state) => state.goBack);
 
@@ -426,7 +428,7 @@ export function VoiceFirstCompanionLayer() {
   }, [chat.isSending, chat.pendingActions.length, gestureMode, isDispatching, thought?.tone, voice.state]);
 
   const needsIntro = microphoneNeedsAction && (!permissionIntroDismissed || permissionIntroOpen);
-  const showFloatingCompanion = currentScreen !== 'ai-core';
+  const showFloatingCompanion = currentScreen !== 'ai-core' && !hasOpenModal;
   const isLocked = gestureMode === 'locked';
 
   if (!showFloatingCompanion && !needsIntro && chat.pendingActions.length === 0) return null;
