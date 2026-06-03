@@ -12,25 +12,26 @@ type Props = {
   initialSectionId?: string | null;
   modalLayer?: number;
   onClose: () => void;
-  onSave: (payload: { name: string; type: 'expense' | 'income'; sectionId?: string | null }) => Promise<void> | void;
+  onSave: (payload: { name: string; type: 'expense' | 'income' | 'both'; sectionId?: string | null }) => Promise<void> | void;
   onDelete?: (category: CategoryDto) => Promise<void> | void;
 };
 
-const typeOptions: Array<{ value: 'expense' | 'income'; label: string }> = [
+const typeOptions: Array<{ value: 'expense' | 'income' | 'both'; label: string }> = [
   { value: 'expense', label: 'Расход' },
   { value: 'income', label: 'Доход' },
+  { value: 'both', label: 'Оба' },
 ];
 
 export function CategoryEditSheet({ open, category, sections, isSaving = false, initialType = 'expense', initialSectionId = null, modalLayer, onClose, onSave, onDelete }: Props) {
   const [name, setName] = useState('');
-  const [type, setType] = useState<'expense' | 'income'>('expense');
+  const [type, setType] = useState<'expense' | 'income' | 'both'>('expense');
   const [sectionId, setSectionId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open) return;
     setName(category?.name ?? '');
-    setType(category?.type === 'income' || initialType === 'income' ? 'income' : 'expense');
+    setType(category?.type === 'income' || category?.type === 'expense' || category?.type === 'both' ? category.type : initialType);
     setSectionId(category?.sectionId ?? initialSectionId ?? null);
     setError(null);
   }, [open, category, initialType, initialSectionId]);
@@ -83,7 +84,7 @@ export function CategoryEditSheet({ open, category, sections, isSaving = false, 
 
         <div>
           <div className="mb-2 text-xs text-white/42">Тип</div>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-3 gap-2">
             {typeOptions.map((option) => (
               <button key={option.value} type="button" onClick={() => setType(option.value)} className={type === option.value ? 'app-choice app-choice--active' : 'app-choice'}>
                 {option.label}

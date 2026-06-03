@@ -3,11 +3,11 @@ import { BadRequestError, NotFoundError } from '../../shared/core/errors';
 import { progressionActivityBridge } from '../progression/activity-bridge.service';
 import { resolveCategoryAppearance, shouldReplaceGenericIcon } from '../taxonomy/taxonomy-icons';
 
-export type CategoryType = 'income' | 'expense';
+export type CategoryType = 'income' | 'expense' | 'both';
 
 export interface CreateCategoryInput {
   name: string;
-  type: CategoryType;
+  type?: CategoryType | null;
   icon?: string | null;
   color?: string | null;
   sectionId?: string | null;
@@ -15,100 +15,97 @@ export interface CreateCategoryInput {
 
 export interface UpdateCategoryInput {
   name?: string;
+  type?: CategoryType | null;
   icon?: string | null;
   color?: string | null;
   sectionId?: string | null;
 }
 
+function normalizeCategoryType(value?: CategoryType | string | null): CategoryType {
+  if (value === 'income' || value === 'expense' || value === 'both') return value;
+  return 'expense';
+}
+
 export class CategoryService {
   async getUserCategories(userId: string) {
-    const categories = await prisma.category.findMany({
+    return prisma.category.findMany({
       where: { userId },
       include: { section: true },
       orderBy: [{ createdAt: 'asc' }],
     });
-
-    return categories;
   }
 
   async createCategory(userId: string, input: CreateCategoryInput) {
-    const name = input.name?.trim();
+    const name = this.normalizeName(input.name);
+    const type = normalizeCategoryType(input.type);
+    const appearance = resolveCategoryAppearance(name, type === 'income' ? 'income' : 'expense');
 
-    if (!name) {
-      throw new BadRequestError('Category name is required');
+    const existing = await prisma.category.findFirst({ where: { userId, name } });
+    if (existing) {
+      return prisma.category.update({
+        where: { id: existing.id },
+        data: {
+          type,
+          sectionId: input.sectionId !== undefined ? input.sectionId : existing.sectionId,
+          icon: input.icon ?? (shouldReplaceGenericIcon(existing.icon) ? appearance.categoryIcon : existing.icon),
+          color: input.color ?? existing.color ?? appearance.categoryColor,
+        },
+        include: { section: true },
+      });
     }
-
-    if (input.type !== 'income' && input.type !== 'expense') {
-      throw new BadRequestError('Invalid category type');
-    }
-
-    const appearance = resolveCategoryAppearance(name, input.type);
 
     const category = await prisma.category.create({
       data: {
         userId,
         name,
-        type: input.type,
+        type,
         icon: input.icon ?? appearance.categoryIcon,
         color: input.color ?? appearance.categoryColor,
         sectionId: input.sectionId ?? null,
       },
+      include: { section: true },
     });
 
     await progressionActivityBridge.trackCategoryCreated(userId, category);
-
     return category;
   }
 
   async updateCategory(userId: string, categoryId: string, input: UpdateCategoryInput) {
-    const existing = await prisma.category.findFirst({
-      where: { id: categoryId, userId },
-    });
+    const existing = await prisma.category.findFirst({ where: { id: categoryId, userId } });
+    if (!existing) throw new NotFoundError('Category not found');
 
-    if (!existing) {
-      throw new NotFoundError('Category not found');
-    }
+    const nextName = input.name !== undefined ? this.normalizeName(input.name) : existing.name;
+    const nextType = input.type !== undefined ? normalizeCategoryType(input.type) : normalizeCategoryType(existing.type);
+    const appearance = resolveCategoryAppearance(nextName, nextType === 'income' ? 'income' : 'expense');
 
-    const nextName = input.name?.trim();
-    const appearance = resolveCategoryAppearance(nextName || existing.name, existing.type === 'income' ? 'income' : 'expense');
-
-    const updated = await prisma.category.update({
+    return prisma.category.update({
       where: { id: categoryId },
       data: {
-        ...(nextName ? { name: nextName } : {}),
-        ...(input.icon !== undefined ? { icon: input.icon } : (shouldReplaceGenericIcon(existing.icon) ? { icon: appearance.categoryIcon } : {})),
-        ...(input.color !== undefined ? { color: input.color } : (!existing.color ? { color: appearance.categoryColor } : {})),
-        ...(input.sectionId !== undefined ? { sectionId: input.sectionId } : {}),
+        name: input.name !== undefined ? nextName : existing.name,
+        type: nextType,
+        sectionId: input.sectionId !== undefined ? input.sectionId : existing.sectionId,
+        icon: input.icon !== undefined ? input.icon : shouldReplaceGenericIcon(existing.icon) ? appearance.categoryIcon : existing.icon,
+        color: input.color !== undefined ? input.color : existing.color ?? appearance.categoryColor,
       },
+      include: { section: true },
     });
-
-    return updated;
   }
 
   async deleteCategory(userId: string, categoryId: string) {
-    const existing = await prisma.category.findFirst({
-      where: { id: categoryId, userId },
-    });
+    const existing = await prisma.category.findFirst({ where: { id: categoryId, userId } });
+    if (!existing) throw new NotFoundError('Category not found');
 
-    if (!existing) {
-      throw new NotFoundError('Category not found');
-    }
-
-    const usage = await prisma.transaction.count({
-      where: {
-        userId,
-        categoryId,
-      },
-    });
-
-    if (usage > 0) {
-      throw new BadRequestError('Cannot delete category used in transactions');
-    }
-
-    await prisma.category.delete({
-      where: { id: categoryId },
-    });
+    await prisma.$transaction([
+      prisma.transaction.updateMany({ where: { userId, categoryId }, data: { categoryId: null } }),
+      prisma.category.delete({ where: { id: categoryId } }),
+    ]);
 
     return existing;
+  }
+
+  private normalizeName(value: string) {
+    const name = value?.trim().replace(/[«»"]/g, '').replace(/\s+/g, ' ');
+    if (!name) throw new BadRequestError('Category name is required');
+    return name.charAt(0).toUpperCase() + name.slice(1);
   }
 }
