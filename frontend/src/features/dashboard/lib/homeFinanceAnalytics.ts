@@ -1,7 +1,6 @@
 import type { TransactionDto } from '@/features/transactions/api/transactions.api';
 import type { AppCurrency } from '@/features/settings/model/settings.types';
 import { convertCurrency } from '@/features/currency/lib/currency';
-import { getCategoryIcon } from '@/features/sections/lib/categoryIcons';
 
 export type HomeCashflowMode = 'expense' | 'income';
 export type HomeCashflowPeriod = 'day' | 'week' | 'month';
@@ -44,6 +43,7 @@ type CategoryWithSection = {
   name?: string | null;
   icon?: string | null;
   color?: string | null;
+  sectionId?: string | null;
   section?: { name?: string | null; icon?: string | null; color?: string | null } | null;
 };
 
@@ -104,9 +104,11 @@ export function buildHomeFinanceAnalytics(
   filtered.forEach((transaction) => {
     const item = transaction as ExtendedTransaction;
     const categoryName = item.category?.name?.trim() || (mode === 'expense' ? 'Без категории' : 'Доходы');
-    const categoryIcon = item.category?.icon?.trim() || getCategoryIcon(categoryName, mode === 'expense' ? '•' : '💰');
     const sectionName = item.category?.section?.name?.trim() || item.section?.name?.trim() || 'Без раздела';
-    const sectionIcon = item.category?.section?.icon?.trim() || item.section?.icon?.trim() || getCategoryIcon(sectionName, '•');
+    const categoryIcon = item.category?.icon?.trim() || (mode === 'expense' ? '✨' : '💰');
+    const sectionIcon = item.category?.section?.icon?.trim() || item.section?.icon?.trim() || '🗂️';
+    const categoryColor = item.category?.color?.trim() || colors[categoryMap.size % colors.length];
+    const sectionColor = item.category?.section?.color?.trim() || item.section?.color?.trim() || colors[sectionMap.size % colors.length];
     const key = `${sectionName}::${categoryName}`;
     const amount = toRub(Number(transaction.amount) || 0, transaction.account?.currency, rates);
 
@@ -116,13 +118,12 @@ export function buildHomeFinanceAnalytics(
       existingCategory.count += 1;
       existingCategory.transactions.push(transaction);
     } else {
-      const color = item.category?.color?.trim() || colors[categoryMap.size % colors.length];
       categoryMap.set(key, {
         key,
         name: categoryName,
         sectionName,
         amount,
-        color,
+        color: categoryColor,
         icon: categoryIcon,
         percent: 0,
         count: 1,
@@ -135,8 +136,7 @@ export function buildHomeFinanceAnalytics(
     if (existingSection) {
       existingSection.amount += amount;
     } else {
-      const color = item.category?.section?.color?.trim() || item.section?.color?.trim() || colors[sectionMap.size % colors.length];
-      sectionMap.set(sectionKey, { key: sectionKey, name: sectionName, amount, color, icon: sectionIcon, percent: 0 });
+      sectionMap.set(sectionKey, { key: sectionKey, name: sectionName, amount, color: sectionColor, icon: sectionIcon, percent: 0 });
     }
   });
 

@@ -2,6 +2,7 @@ import { Prisma } from '@prisma/client';
 import { prisma } from '../../lib/prisma';
 import { BadRequestError, NotFoundError } from '../../shared/core/errors';
 import { progressionActivityBridge } from '../progression/activity-bridge.service';
+import { resolveTaxonomyIcon } from '../taxonomy/taxonomy-icons';
 
 export type TransactionType = 'income' | 'expense' | 'transfer';
 
@@ -221,8 +222,18 @@ export class TransactionService {
       throw new BadRequestError('Cannot transfer to the same account');
     }
 
-    if (input.categoryId) {
-      await this.ensureOwnedCategory(userId, input.categoryId, input.type);
+    let resolvedCategoryId: string | null = input.type === 'transfer' ? null : input.categoryId ?? null;
+    let resolvedSectionId: string | null = input.type === 'transfer' ? null : input.sectionId ?? null;
+
+    if (input.type !== 'transfer') {
+      if (input.categoryId) {
+        const category = await this.ensureOwnedCategory(userId, input.categoryId, input.type);
+        resolvedSectionId = resolvedSectionId ?? category.sectionId ?? null;
+      } else {
+        const autoTaxonomy = await this.findOrCreateAutoCategory(userId, input.type, input.description);
+        resolvedCategoryId = autoTaxonomy.categoryId;
+        resolvedSectionId = autoTaxonomy.sectionId;
+      }
     }
 
     const amount = this.normalizeAmount(input.amount);
@@ -241,8 +252,8 @@ export class TransactionService {
           userId,
           accountId: input.accountId,
           toAccountId: input.type === 'transfer' ? input.toAccountId! : null,
-          categoryId: input.type === 'transfer' ? null : input.categoryId ?? null,
-          sectionId: input.type === 'transfer' ? null : input.sectionId ?? null,
+          categoryId: resolvedCategoryId,
+          sectionId: resolvedSectionId,
           amount,
           type: input.type,
           description: input.description?.trim() || null,
@@ -315,8 +326,19 @@ export class TransactionService {
       }
     }
 
-    if (nextCategoryId) {
-      await this.ensureOwnedCategory(userId, nextCategoryId, nextType);
+    let resolvedNextCategoryId = nextCategoryId;
+    let resolvedNextSectionId = nextSectionId;
+
+    if (nextType !== 'transfer') {
+      if (input.categoryId) {
+        const category = await this.ensureOwnedCategory(userId, input.categoryId, nextType);
+        resolvedNextCategoryId = category.id;
+        resolvedNextSectionId = resolvedNextSectionId ?? category.sectionId ?? null;
+      } else {
+        const autoTaxonomy = await this.findOrCreateAutoCategory(userId, nextType, nextDescription);
+        resolvedNextCategoryId = autoTaxonomy.categoryId;
+        resolvedNextSectionId = autoTaxonomy.sectionId;
+      }
     }
 
     const updated = await prisma.$transaction(async (tx) => {
@@ -341,8 +363,8 @@ export class TransactionService {
         data: {
           accountId: nextAccountId,
           toAccountId: nextToAccountId,
-          categoryId: nextCategoryId,
-          sectionId: nextSectionId,
+          categoryId: resolvedNextCategoryId,
+          sectionId: resolvedNextSectionId,
           amount: nextAmount,
           type: nextType,
           description: nextDescription,
@@ -430,6 +452,69 @@ export class TransactionService {
     }
 
     return account;
+  }
+
+  private async findOrCreateAutoCategory(userId: string, type: Exclude<TransactionType, 'transfer'>, description?: string | null) {
+    const resolved = resolveTaxonomyIcon(description || '', type);
+
+    let section = await prisma.section.findFirst({
+      where: { userId, name: resolved.sectionName },
+    });
+
+    if (!section) {
+      section = await prisma.section.create({
+        data: {
+          userId,
+          name: resolved.sectionName,
+          icon: resolved.sectionIcon,
+          color: resolved.sectionColor,
+        },
+      });
+    }
+
+    let category = await prisma.category.findFirst({
+      where: { userId, name: resolved.categoryName },
+    });
+
+    if (category && category.type !== type) {
+      const typedName = `${resolved.categoryName} ${type === 'income' ? 'доход' : 'расход'}`;
+      category = await prisma.category.findFirst({
+        where: { userId, name: typedName },
+      }) ?? await prisma.category.create({
+        data: {
+          userId,
+          name: typedName,
+          type,
+          icon: resolved.categoryIcon,
+          color: resolved.categoryColor,
+          sectionId: section.id,
+        },
+      });
+    }
+
+    if (!category) {
+      category = await prisma.category.create({
+        data: {
+          userId,
+          name: resolved.categoryName,
+          type,
+          icon: resolved.categoryIcon,
+          color: resolved.categoryColor,
+          sectionId: section.id,
+        },
+      });
+    } else if (!category.sectionId || category.icon !== resolved.categoryIcon || category.color !== resolved.categoryColor) {
+      category = await prisma.category.update({
+        where: { id: category.id },
+        data: {
+          sectionId: category.sectionId ?? section.id,
+          icon: category.icon ?? resolved.categoryIcon,
+          color: category.color ?? resolved.categoryColor,
+        },
+      });
+    }
+
+    return { categoryId: category.id, sectionId: category.sectionId ?? section.id };
   }
 
   private async ensureOwnedCategory(userId: string, categoryId: string, type: TransactionType) {

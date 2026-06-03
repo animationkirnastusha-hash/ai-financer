@@ -25,7 +25,7 @@ export function HomeCategoryOperationsModal({ group, onClose, onEdit }: Props) {
           <div className="app-home-chart-modal__head">
             <div>
               <div className="app-eyebrow">{group.sectionName}</div>
-              <h2><span className="app-modal-title-icon" style={{ background: group.color }}>{group.icon}</span>{group.name}</h2>
+              <h2><span className="app-home-category-title-icon" style={{ background: group.color }}>{group.icon}</span>{group.name}</h2>
               <p>{group.count} опер. · {formatMoney(group.amount, 'RUB')}</p>
             </div>
             <button type="button" className="app-icon-button" onClick={onClose} aria-label="Закрыть">×</button>

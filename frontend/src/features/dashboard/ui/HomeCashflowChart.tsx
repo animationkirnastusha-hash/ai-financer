@@ -1,7 +1,6 @@
 import type { TransactionDto } from '@/features/transactions/api/transactions.api';
 import type { HomeCashflowMode, HomeCashflowPeriod } from '@/features/dashboard/lib/homeFinanceAnalytics';
 import { buildHomeFinanceAnalytics, conicGradient, modeLabel, periodLabel } from '@/features/dashboard/lib/homeFinanceAnalytics';
-import type { CSSProperties } from 'react';
 import { formatMoney } from '@/shared/lib/money';
 
 type Rates = { usd: number; eur: number };
@@ -17,21 +16,6 @@ type Props = {
   onCreate: (mode: HomeCashflowMode) => void;
 };
 
-
-function ChartIconLayer({ groups, size = 'small' }: { groups: Array<{ key: string; icon: string; color: string; percent: number }>; size?: 'small' | 'large' }) {
-  const visible = groups.filter((group) => group.percent > 0).slice(0, size === 'large' ? 10 : 6);
-  if (visible.length === 0) return null;
-
-  return (
-    <span className={size === 'large' ? 'app-chart-icon-layer app-chart-icon-layer--large' : 'app-chart-icon-layer'} aria-hidden="true">
-      {visible.map((group, index) => {
-        const angle = (360 / visible.length) * index - 90;
-        return <i key={group.key} style={{ '--icon-angle': `${angle}deg`, '--icon-color': group.color } as CSSProperties}>{group.icon}</i>;
-      })}
-    </span>
-  );
-}
-
 export function HomeCashflowChart({
   transactions,
   mode,
@@ -43,7 +27,9 @@ export function HomeCashflowChart({
   onCreate,
 }: Props) {
   const analytics = buildHomeFinanceAnalytics(transactions, mode, period, rates);
+  const primary = analytics.categories[0];
   const hasData = analytics.total > 0;
+  const iconMarkers = buildIconMarkers(analytics.categories);
 
   return (
     <section className="app-card app-home-cashflow-card">
@@ -65,15 +51,17 @@ export function HomeCashflowChart({
       </div>
 
       <button type="button" className="app-home-chart-preview" onClick={onOpenDetails} aria-label="Открыть диаграмму">
-        <span className="app-home-chart-preview__visual">
-          <span className="app-home-donut" style={{ background: conicGradient(analytics.categories) }}>
-            <i />
-          </span>
-          <ChartIconLayer groups={analytics.categories} />
+        <span className="app-home-donut app-home-donut--with-icons" style={{ background: conicGradient(analytics.categories) }}>
+          <i />
+          {iconMarkers.map((marker) => (
+            <em key={marker.key} style={{ left: `${marker.x}%`, top: `${marker.y}%`, background: marker.color }}>
+              {marker.icon}
+            </em>
+          ))}
         </span>
         <span className="app-home-chart-preview__text">
           <b>{hasData ? formatMoney(analytics.total, 'RUB', { sign: mode === 'expense' ? 'minus' : 'plus' }) : 'Пока пусто'}</b>
-          <small>{hasData ? `${analytics.categories.length} категорий · ${analytics.transactions.length} операций` : 'Добавь первую операцию за выбранный период'}</small>
+          <small>{hasData && primary ? `${primary.name} — ${primary.percent}%` : 'Добавь первую операцию за выбранный период'}</small>
         </span>
       </button>
 
@@ -82,4 +70,26 @@ export function HomeCashflowChart({
       </button>
     </section>
   );
+}
+
+
+function buildIconMarkers(groups: Array<{ key: string; amount: number; color: string; icon: string }>) {
+  const total = groups.reduce((sum, item) => sum + item.amount, 0);
+  if (total <= 0) return [];
+
+  let cursor = 0;
+  return groups.slice(0, 8).map((group) => {
+    const span = (group.amount / total) * 360;
+    const angle = cursor + span / 2 - 90;
+    cursor += span;
+    const radius = 40;
+    const radians = (angle * Math.PI) / 180;
+    return {
+      key: group.key,
+      icon: group.icon || '✨',
+      color: group.color,
+      x: 50 + Math.cos(radians) * radius,
+      y: 50 + Math.sin(radians) * radius,
+    };
+  });
 }

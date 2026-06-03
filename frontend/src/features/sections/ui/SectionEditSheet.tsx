@@ -2,30 +2,30 @@ import { useEffect, useMemo, useState } from 'react';
 import type { SectionDto } from '@/features/sections/api/sections.api';
 import { Drawer } from '@/shared/ui/Drawer';
 import { Button } from '@/shared/ui/Button';
+import { resolveSectionIcon } from '@/features/sections/lib/categoryIcons';
 
 type Props = {
   open: boolean;
   section?: SectionDto | null;
   isSaving?: boolean;
   onClose: () => void;
-  onSave: (payload: { name: string; icon?: string | null; description?: string | null }) => Promise<void> | void;
+  onSave: (payload: { name: string; description?: string | null }) => Promise<void> | void;
   onDelete?: (section: SectionDto) => Promise<void> | void;
 };
 
 export function SectionEditSheet({ open, section, isSaving = false, onClose, onSave, onDelete }: Props) {
   const [name, setName] = useState('');
-  const [icon, setIcon] = useState('');
   const [description, setDescription] = useState('');
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open) return;
     setName(section?.name ?? '');
-    setIcon(section?.icon ?? '');
     setDescription(section?.description ?? '');
     setError(null);
   }, [open, section]);
 
+  const suggestion = useMemo(() => resolveSectionIcon(name || section?.name || ''), [name, section?.name]);
   const canSave = useMemo(() => name.trim().length >= 2 && !isSaving, [name, isSaving]);
 
   const submit = async () => {
@@ -33,7 +33,7 @@ export function SectionEditSheet({ open, section, isSaving = false, onClose, onS
       setError('Название должно быть не короче двух символов.');
       return;
     }
-    await onSave({ name: name.trim(), icon: icon.trim() || null, description: description.trim() || null });
+    await onSave({ name: name.trim(), description: description.trim() || null });
     onClose();
   };
 
@@ -49,7 +49,7 @@ export function SectionEditSheet({ open, section, isSaving = false, onClose, onS
       open={open}
       onClose={onClose}
       title={section ? 'Раздел' : 'Новый раздел'}
-      subtitle="Раздел помогает AI раскладывать траты по смыслу."
+      subtitle="Иконка и цвет подбираются автоматически по названию раздела."
       footer={(
         <div className="grid grid-cols-2 gap-2">
           {section && onDelete ? <Button variant="secondary" onClick={remove} disabled={isSaving}>Удалить</Button> : <Button variant="secondary" onClick={onClose} disabled={isSaving}>Отмена</Button>}
@@ -58,16 +58,19 @@ export function SectionEditSheet({ open, section, isSaving = false, onClose, onS
       )}
     >
       <div className="space-y-3">
-        <div className="grid grid-cols-[76px_1fr] gap-3">
-          <label className="app-field">
-            <span>Иконка</span>
-            <input value={icon} onChange={(event) => setIcon(event.target.value)} placeholder="🏠" className="text-center text-xl" />
-          </label>
-          <label className="app-field">
-            <span>Название</span>
-            <input value={name} onChange={(event) => setName(event.target.value)} placeholder="Например, Дом" />
-          </label>
+        <div className="app-auto-taxonomy-preview">
+          <span style={{ background: suggestion.color }}>{suggestion.icon}</span>
+          <div>
+            <b>{name.trim() || 'Раздел'}</b>
+            <small>Фина подберёт визуальный стиль автоматически</small>
+          </div>
         </div>
+
+        <label className="app-field">
+          <span>Название</span>
+          <input value={name} onChange={(event) => setName(event.target.value)} placeholder="Например, Продукты" />
+        </label>
+
         <label className="app-field">
           <span>Описание</span>
           <textarea value={description} onChange={(event) => setDescription(event.target.value)} placeholder="Что относится к этому разделу" />

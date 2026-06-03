@@ -583,79 +583,65 @@
   .app-home-chart-modal__actions { grid-template-columns: 1fr; }
 }
 
-/* Pack 11: category icons on charts. */
-.app-home-chart-preview__visual {
+/* Pack 12: diagrams use colors + category/section icons, not text labels on chart. */
+.app-home-donut--with-icons {
   position: relative;
-  display: inline-grid;
-  place-items: center;
+  overflow: visible;
 }
 
-.app-chart-icon-layer {
+.app-home-donut--with-icons em {
   position: absolute;
-  inset: 0;
-  pointer-events: none;
-  display: block;
-}
-
-.app-chart-icon-layer > i {
-  --icon-angle: 0deg;
-  --icon-color: rgba(255,255,255,.18);
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: 30px;
-  height: 30px;
+  z-index: 3;
+  width: 28px;
+  height: 28px;
   display: grid;
   place-items: center;
   border-radius: 999px;
-  border: 1px solid rgba(255,255,255,.20);
-  background: color-mix(in srgb, var(--icon-color) 48%, rgba(8,12,18,.88));
-  box-shadow: 0 12px 28px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.16);
+  border: 1px solid rgba(255,255,255,.28);
+  box-shadow: 0 10px 24px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.20);
+  color: white;
   font-size: 15px;
   font-style: normal;
-  transform: rotate(var(--icon-angle)) translateY(-58px) rotate(calc(var(--icon-angle) * -1)) translate(-50%, -50%);
+  line-height: 1;
+  translate: -50% -50%;
+  pointer-events: none;
 }
 
-.app-chart-icon-layer--large > i {
-  width: 36px;
-  height: 36px;
-  font-size: 18px;
-  transform: rotate(var(--icon-angle)) translateY(-132px) rotate(calc(var(--icon-angle) * -1)) translate(-50%, -50%);
+.app-home-donut--large.app-home-donut--with-icons em {
+  width: 32px;
+  height: 32px;
+  font-size: 17px;
 }
 
-.app-home-chart-modal__visual .app-chart-icon-layer:not(.app-chart-icon-layer--large) > i {
-  width: 28px;
-  height: 28px;
+.app-home-donut--outer.app-home-donut--with-icons em {
+  width: 26px;
+  height: 26px;
   font-size: 14px;
-  opacity: .84;
-  transform: rotate(var(--icon-angle)) translateY(-96px) rotate(calc(var(--icon-angle) * -1)) translate(-50%, -50%);
 }
 
 .app-home-chart-group {
-  grid-template-columns: 40px minmax(0,1fr) auto;
+  grid-template-columns: 42px minmax(0,1fr) auto;
 }
 
-.app-home-chart-group .app-home-chart-group__icon {
-  width: 40px;
-  height: 40px;
+.app-home-chart-group i {
+  width: 42px;
+  height: 42px;
   display: grid;
   place-items: center;
   border-radius: 16px;
-  border: 1px solid rgba(255,255,255,.15);
   color: white;
   font-size: 19px;
   font-style: normal;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.16);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.20);
 }
 
-.app-modal-title-icon {
-  display: inline-grid;
-  place-items: center;
+.app-home-category-title-icon {
   width: 34px;
   height: 34px;
-  margin-right: 10px;
+  display: inline-grid;
+  place-items: center;
   border-radius: 14px;
-  border: 1px solid rgba(255,255,255,.14);
-  font-size: 18px;
+  margin-right: 10px;
   vertical-align: middle;
+  font-size: 18px;
 }

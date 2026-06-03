@@ -1,7 +1,6 @@
-import { type ReactNode, useEffect, useMemo, useState } from 'react';
+import { type ReactNode, useEffect, useState } from 'react';
 
 import { useAccountsStore } from '@/features/accounts/model/accounts.store';
-import { useSectionsStore } from '@/features/sections/model/sections.store';
 import type { TransactionDto } from '@/features/transactions/api/transactions.api';
 import { formatMoney } from '@/shared/lib/money';
 
@@ -17,7 +16,6 @@ type Props = {
     description?: string | null;
     date?: string;
     accountId?: string;
-    categoryId?: string | null;
     type?: TransactionType;
     toAccountId?: string | null;
   }) => Promise<void> | void;
@@ -51,26 +49,19 @@ export function TransactionEditSheet({
 }: Props) {
   const accounts = useAccountsStore((state) => state.items);
   const loadAccounts = useAccountsStore((state) => state.loadAccounts);
-  const categories = useSectionsStore((state) => state.categories);
-  const sections = useSectionsStore((state) => state.sections);
-  const loadTaxonomy = useSectionsStore((state) => state.loadAll);
-  const createCategory = useSectionsStore((state) => state.createCategory);
 
   const [type, setType] = useState<TransactionType>('expense');
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
   const [date, setDate] = useState(toDateInput(null));
   const [accountId, setAccountId] = useState('');
-  const [categoryId, setCategoryId] = useState<string | null>(null);
   const [toAccountId, setToAccountId] = useState<string | null>(null);
   const [localError, setLocalError] = useState<string | null>(null);
-  const [isCreatingCategory, setIsCreatingCategory] = useState(false);
 
   useEffect(() => {
     if (!open) return;
     void loadAccounts();
-    void loadTaxonomy();
-  }, [loadAccounts, loadTaxonomy, open]);
+  }, [loadAccounts, open]);
 
   useEffect(() => {
     if (!transaction || !open) return;
@@ -80,46 +71,13 @@ export function TransactionEditSheet({
     setDescription(transaction.description ?? '');
     setDate(toDateInput(transaction.date));
     setAccountId(transaction.accountId ?? '');
-    setCategoryId(transaction.categoryId ?? null);
     setToAccountId(transaction.toAccountId ?? null);
     setLocalError(null);
   }, [open, transaction]);
 
-  const filteredCategories = useMemo(() => {
-    if (type === 'transfer') return [];
-    return categories.filter((category) => {
-      if (!category.type || category.type === 'both') return true;
-      return category.type === type;
-    });
-  }, [categories, type]);
-
-  const selectedCategory = filteredCategories.find((category) => category.id === categoryId) ?? null;
-  const selectedSection = selectedCategory?.sectionId
-    ? sections.find((section) => section.id === selectedCategory.sectionId) ?? null
-    : null;
   const selectedAccount = accounts.find((account) => account.id === accountId) ?? transaction?.account ?? null;
   const parsedAmount = Number(amount.replace(',', '.'));
   const canSave = Number.isFinite(parsedAmount) && parsedAmount > 0 && Boolean(accountId) && !isSaving;
-
-  async function quickCreateCategory() {
-    const name = description.trim();
-    if (type === 'transfer') return;
-    if (name.length < 2) {
-      setLocalError('Напиши описание, чтобы создать категорию из него.');
-      return;
-    }
-    setIsCreatingCategory(true);
-    setLocalError(null);
-    try {
-      const category = await createCategory({ name, type, sectionId: selectedSection?.id ?? null });
-      setCategoryId(category.id);
-      await loadTaxonomy(true);
-    } catch (error) {
-      setLocalError(error instanceof Error ? error.message : 'Не удалось создать категорию.');
-    } finally {
-      setIsCreatingCategory(false);
-    }
-  }
 
   if (!open || !transaction) return null;
 
@@ -148,7 +106,6 @@ export function TransactionEditSheet({
       description: description.trim() || null,
       date: new Date(`${date}T12:00:00`).toISOString(),
       accountId,
-      categoryId: type === 'transfer' ? null : categoryId,
       type,
       toAccountId: type === 'transfer' ? toAccountId : null,
     });
@@ -161,7 +118,7 @@ export function TransactionEditSheet({
   }
 
   return (
-    <div className="fixed inset-0 z-[320] flex items-end bg-black/70 backdrop-blur-sm" data-no-swipe="true">
+    <div className="fixed inset-0 z-[112] flex items-end bg-black/70 backdrop-blur-sm" data-no-swipe="true">
       <div className="max-h-[92dvh] w-full overflow-y-auto rounded-t-[30px] border border-white/10 bg-[#0b1016] px-4 pb-6 pt-4 text-white shadow-2xl">
         <div className="mx-auto mb-4 h-1.5 w-14 rounded-full bg-white/15" />
 
@@ -191,8 +148,8 @@ export function TransactionEditSheet({
               })}
             </div>
             <div className="mt-3 flex flex-wrap gap-2">
-              {selectedSection ? <Badge>{selectedSection.icon ? `${selectedSection.icon} ` : ''}{selectedSection.name}</Badge> : <Badge muted>Без раздела</Badge>}
-              {selectedCategory ? <Badge>{selectedCategory.icon ? `${selectedCategory.icon} ` : ''}{selectedCategory.name}</Badge> : null}
+              {transaction.section ? <Badge>{transaction.section.icon ? `${transaction.section.icon} ` : ''}{transaction.section.name}</Badge> : <Badge muted>Авто-раздел</Badge>}
+              {transaction.category ? <Badge>{transaction.category.icon ? `${transaction.category.icon} ` : ''}{transaction.category.name}</Badge> : <Badge muted>Авто-категория</Badge>}
               {transaction.isAIGenerated ? <Badge tone="violet">Фина</Badge> : null}
             </div>
           </section>
@@ -204,7 +161,6 @@ export function TransactionEditSheet({
                 type="button"
                 onClick={() => {
                   setType(item);
-                  if (item === 'transfer') setCategoryId(null);
                 }}
                 className={`rounded-2xl border px-3 py-3 text-sm transition active:scale-[0.99] ${
                   type === item
@@ -296,43 +252,8 @@ export function TransactionEditSheet({
               </div>
             </section>
           ) : (
-            <section className="rounded-[24px] border border-white/8 bg-white/[0.035] p-3">
-              <div className="mb-3 text-xs uppercase tracking-[0.16em] text-white/35">Категория</div>
-              <div className="-mx-1 flex max-w-full gap-2 overflow-x-auto px-1 pb-1">
-                <button
-                  type="button"
-                  onClick={() => setCategoryId(null)}
-                  className={`shrink-0 rounded-full border px-3 py-2 text-xs ${
-                    categoryId === null
-                      ? 'border-white/30 bg-white/12 text-white'
-                      : 'border-white/10 bg-white/[0.04] text-white/45'
-                  }`}
-                >
-                  Без категории
-                </button>
-                {filteredCategories.map((category) => (
-                  <button
-                    key={category.id}
-                    type="button"
-                    onClick={() => setCategoryId(category.id)}
-                    className={`shrink-0 rounded-full border px-3 py-2 text-xs ${
-                      categoryId === category.id
-                        ? 'border-emerald-300/25 bg-emerald-300/12 text-emerald-50'
-                        : 'border-white/10 bg-white/[0.04] text-white/45'
-                    }`}
-                  >
-                    {category.icon ? `${category.icon} ` : ''}{category.name}
-                  </button>
-                ))}
-              </div>
-            </section>
+            <div className="app-inline-hint">После сохранения Фина заново подберёт категорию, раздел, цвет и иконку по описанию операции.</div>
           )}
-
-          {type !== 'transfer' ? (
-            <button type="button" className="app-secondary-button" onClick={quickCreateCategory} disabled={isCreatingCategory || !description.trim()}>
-              {isCreatingCategory ? 'Создаю категорию...' : 'Создать категорию из описания'}
-            </button>
-          ) : null}
 
           <section className="app-transaction-ai-advice">
             <div className="app-eyebrow">Совет Фины</div>

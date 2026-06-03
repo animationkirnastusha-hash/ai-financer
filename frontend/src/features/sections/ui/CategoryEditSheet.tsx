@@ -2,42 +2,39 @@ import { useEffect, useMemo, useState } from 'react';
 import type { CategoryDto, SectionDto } from '@/features/sections/api/sections.api';
 import { Drawer } from '@/shared/ui/Drawer';
 import { Button } from '@/shared/ui/Button';
-import { CATEGORY_ICON_OPTIONS, getCategoryIcon } from '@/features/sections/lib/categoryIcons';
+import { resolveCategoryIcon } from '@/features/sections/lib/categoryIcons';
+
+type CategoryType = 'income' | 'expense';
+type InitialCategoryType = CategoryType | 'both';
 
 type Props = {
   open: boolean;
   category?: CategoryDto | null;
   sections: SectionDto[];
-  isSaving?: boolean;
-  initialType?: 'expense' | 'income' | 'both';
+  initialType?: InitialCategoryType;
   initialSectionId?: string | null;
+  isSaving?: boolean;
   onClose: () => void;
-  onSave: (payload: { name: string; type: 'expense' | 'income' | 'both'; sectionId?: string | null; icon?: string | null }) => Promise<void> | void;
+  onSave: (payload: { name: string; type: CategoryType; sectionId?: string | null }) => Promise<void> | void;
   onDelete?: (category: CategoryDto) => Promise<void> | void;
 };
 
-const typeOptions: Array<{ value: 'expense' | 'income' | 'both'; label: string }> = [
-  { value: 'expense', label: 'Расход' },
-  { value: 'income', label: 'Доход' },
-  { value: 'both', label: 'Оба' },
-];
-
-export function CategoryEditSheet({ open, category, sections, isSaving = false, initialType = 'expense', initialSectionId = null, onClose, onSave, onDelete }: Props) {
+export function CategoryEditSheet({ open, category, sections, initialType = 'expense', initialSectionId = null, isSaving = false, onClose, onSave, onDelete }: Props) {
   const [name, setName] = useState('');
-  const [icon, setIcon] = useState('');
-  const [type, setType] = useState<'expense' | 'income' | 'both'>('expense');
+  const [type, setType] = useState<CategoryType>('expense');
   const [sectionId, setSectionId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open) return;
     setName(category?.name ?? '');
-    setIcon(category?.icon ?? getCategoryIcon(category?.name, ''));
-    setType((category?.type === 'income' || category?.type === 'both' ? category.type : initialType) as 'expense' | 'income' | 'both');
+    const nextType: CategoryType = category?.type === 'income' ? 'income' : category?.type === 'expense' ? 'expense' : initialType === 'income' ? 'income' : 'expense';
+    setType(nextType);
     setSectionId(category?.sectionId ?? initialSectionId ?? null);
     setError(null);
-  }, [open, category, initialType, initialSectionId]);
+  }, [category, initialSectionId, initialType, open]);
 
+  const suggestion = useMemo(() => resolveCategoryIcon(name || category?.name || '', type), [category?.name, name, type]);
   const canSave = useMemo(() => name.trim().length >= 2 && !isSaving, [name, isSaving]);
 
   const submit = async () => {
@@ -45,7 +42,7 @@ export function CategoryEditSheet({ open, category, sections, isSaving = false, 
       setError('Название должно быть не короче двух символов.');
       return;
     }
-    await onSave({ name: name.trim(), type, sectionId, icon: icon.trim() || null });
+    await onSave({ name: name.trim(), type, sectionId });
     onClose();
   };
 
@@ -61,7 +58,7 @@ export function CategoryEditSheet({ open, category, sections, isSaving = false, 
       open={open}
       onClose={onClose}
       title={category ? 'Категория' : 'Новая категория'}
-      subtitle="Категория нужна для диаграмм, аналитики и быстрых отчётов."
+      subtitle="Иконка и цвет подбираются автоматически по названию."
       footer={(
         <div className="grid grid-cols-2 gap-2">
           {category && onDelete ? <Button variant="secondary" onClick={remove} disabled={isSaving}>Удалить</Button> : <Button variant="secondary" onClick={onClose} disabled={isSaving}>Отмена</Button>}
@@ -70,52 +67,32 @@ export function CategoryEditSheet({ open, category, sections, isSaving = false, 
       )}
     >
       <div className="space-y-3">
+        <div className="app-auto-taxonomy-preview">
+          <span style={{ background: suggestion.color }}>{suggestion.icon}</span>
+          <div>
+            <b>{name.trim() || 'Категория'}</b>
+            <small>Фина подберёт иконку и цвет автоматически</small>
+          </div>
+        </div>
+
         <label className="app-field">
           <span>Название</span>
-          <input value={name} onChange={(event) => setName(event.target.value)} placeholder="Например, Кофе" />
+          <input value={name} onChange={(event) => setName(event.target.value)} placeholder="Например, Колбаса" />
         </label>
 
-        <div className="grid grid-cols-[76px_1fr] gap-3">
-          <label className="app-field">
-            <span>Иконка</span>
-            <input value={icon} onChange={(event) => setIcon(event.target.value)} placeholder="☕" className="text-center text-xl" />
-          </label>
-          <label className="app-field">
-            <span>Раздел</span>
-            <select value={sectionId ?? ''} onChange={(event) => setSectionId(event.target.value || null)}>
-              <option value="">Без раздела</option>
-              {sections.map((section) => <option key={section.id} value={section.id}>{section.icon ? `${section.icon} ` : ''}{section.name}</option>)}
-            </select>
-          </label>
-        </div>
-
-        <div className="app-category-icon-picker">
-          {CATEGORY_ICON_OPTIONS.map((item, index) => (
-            <button
-              key={`${item}-${index}`}
-              type="button"
-              className={icon === item ? 'app-category-icon-option app-category-icon-option--active' : 'app-category-icon-option'}
-              onClick={() => setIcon(item)}
-              aria-label={`Выбрать иконку ${item}`}
-            >
-              {item}
-            </button>
-          ))}
-        </div>
+        <label className="app-field">
+          <span>Раздел</span>
+          <select value={sectionId ?? ''} onChange={(event) => setSectionId(event.target.value || null)}>
+            <option value="">Автоматически</option>
+            {sections.map((section) => <option key={section.id} value={section.id}>{section.icon ? `${section.icon} ` : ''}{section.name}</option>)}
+          </select>
+        </label>
 
         <div>
           <div className="mb-2 text-xs text-white/42">Тип</div>
-          <div className="grid grid-cols-3 gap-2">
-            {typeOptions.map((option) => (
-              <button
-                key={option.value}
-                type="button"
-                onClick={() => setType(option.value)}
-                className={type === option.value ? 'app-choice app-choice--active' : 'app-choice'}
-              >
-                {option.label}
-              </button>
-            ))}
+          <div className="grid grid-cols-2 gap-2">
+            <button type="button" onClick={() => setType('expense')} className={type === 'expense' ? 'app-choice app-choice--active' : 'app-choice'}>Расход</button>
+            <button type="button" onClick={() => setType('income')} className={type === 'income' ? 'app-choice app-choice--active' : 'app-choice'}>Доход</button>
           </div>
         </div>
 

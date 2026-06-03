@@ -1,10 +1,7 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useAccountsStore } from '@/features/accounts/model/accounts.store';
-import { useSectionsStore } from '@/features/sections/model/sections.store';
 import { Drawer } from '@/shared/ui/Drawer';
 import { Button } from '@/shared/ui/Button';
-import { useAppModalStore } from '@/features/modals/model/appModal.store';
-import { suggestCategoryId } from '@/features/transactions/lib/autoCategory';
 
 type TransactionType = 'income' | 'expense' | 'transfer';
 
@@ -16,7 +13,6 @@ type Props = {
   onSave: (payload: {
     accountId: string;
     toAccountId?: string | null;
-    categoryId?: string | null;
     amount: number;
     type: TransactionType;
     description?: string | null;
@@ -28,25 +24,18 @@ type Props = {
 export function TransactionCreateSheet({ open, isSaving = false, initialType = 'expense', onClose, onSave }: Props) {
   const accounts = useAccountsStore((state) => state.items);
   const loadAccounts = useAccountsStore((state) => state.loadAccounts);
-  const categories = useSectionsStore((state) => state.categories);
-  const loadTaxonomy = useSectionsStore((state) => state.loadAll);
-  const openModal = useAppModalStore((state) => state.openModal);
 
   const [type, setType] = useState<TransactionType>('expense');
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
   const [accountId, setAccountId] = useState('');
   const [toAccountId, setToAccountId] = useState<string | null>(null);
-  const [categoryId, setCategoryId] = useState<string | null>(null);
-  const [categoryWasTouched, setCategoryWasTouched] = useState(false);
-  const [autoCategoryLabel, setAutoCategoryLabel] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open) return;
     void loadAccounts();
-    void loadTaxonomy();
-  }, [open, loadAccounts, loadTaxonomy]);
+  }, [open, loadAccounts]);
 
   useEffect(() => {
     if (!open) return;
@@ -55,45 +44,11 @@ export function TransactionCreateSheet({ open, isSaving = false, initialType = '
     setDescription('');
     setAccountId(accounts[0]?.id ?? '');
     setToAccountId(null);
-    setCategoryId(null);
-    setCategoryWasTouched(false);
-    setAutoCategoryLabel(null);
     setError(null);
   }, [open, accounts, initialType]);
 
   const parsedAmount = Number(amount.replace(',', '.'));
-  const filteredCategories = useMemo(() => {
-    if (type === 'transfer') return [];
-    return categories.filter((category) => !category.type || category.type === 'both' || category.type === type);
-  }, [categories, type]);
   const canSave = Number.isFinite(parsedAmount) && parsedAmount > 0 && Boolean(accountId) && !isSaving;
-
-  useEffect(() => {
-    if (!open || type === 'transfer' || categoryWasTouched) return;
-    const suggestedId = suggestCategoryId({ description, type, categories });
-    if (!suggestedId) {
-      setCategoryId(null);
-      setAutoCategoryLabel(null);
-      return;
-    }
-
-    const suggested = categories.find((category) => category.id === suggestedId);
-    setCategoryId(suggestedId);
-    setAutoCategoryLabel(suggested?.name ?? null);
-  }, [categories, categoryWasTouched, description, open, type]);
-
-  const openCategoryCreate = () => {
-    if (type === 'transfer') return;
-    openModal({
-      type: 'category-edit',
-      initialType: type,
-      onSavedCategory: (category) => {
-        setCategoryId(category.id);
-        setCategoryWasTouched(true);
-        setAutoCategoryLabel(category.name);
-      },
-    });
-  };
 
   const submit = async () => {
     setError(null);
@@ -113,7 +68,6 @@ export function TransactionCreateSheet({ open, isSaving = false, initialType = '
     const payload = {
       accountId,
       toAccountId: type === 'transfer' ? toAccountId : null,
-      categoryId: type === 'transfer' ? null : categoryId,
       amount: Math.round(parsedAmount),
       type,
       description: description.trim() || null,
@@ -130,7 +84,7 @@ export function TransactionCreateSheet({ open, isSaving = false, initialType = '
       open={open}
       onClose={onClose}
       title="Новая операция"
-      subtitle="Добавь расход, доход или перевод. Если категории нет — создай её прямо отсюда."
+      subtitle="Опиши покупку или доход. Фина сама выберет категорию, раздел, цвет и иконку."
       footer={(
         <div className="grid grid-cols-2 gap-2">
           <Button variant="secondary" onClick={onClose} disabled={isSaving}>Отмена</Button>
@@ -141,7 +95,7 @@ export function TransactionCreateSheet({ open, isSaving = false, initialType = '
       <div className="space-y-3">
         <div className="grid grid-cols-3 gap-2">
           {(['expense', 'income', 'transfer'] as const).map((item) => (
-            <button key={item} type="button" onClick={() => { setType(item); setCategoryId(null); setCategoryWasTouched(false); setAutoCategoryLabel(null); }} className={type === item ? 'app-choice app-choice--active' : 'app-choice'}>
+            <button key={item} type="button" onClick={() => setType(item)} className={type === item ? 'app-choice app-choice--active' : 'app-choice'}>
               {item === 'expense' ? 'Расход' : item === 'income' ? 'Доход' : 'Перевод'}
             </button>
           ))}
@@ -154,7 +108,7 @@ export function TransactionCreateSheet({ open, isSaving = false, initialType = '
 
         <label className="app-field">
           <span>Описание</span>
-          <input value={description} onChange={(event) => setDescription(event.target.value)} placeholder="Кофе" />
+          <input value={description} onChange={(event) => setDescription(event.target.value)} placeholder="Например: колбаса, кофе, зарплата" />
         </label>
 
         <label className="app-field">
@@ -174,23 +128,8 @@ export function TransactionCreateSheet({ open, isSaving = false, initialType = '
             </select>
           </label>
         ) : (
-          <label className="app-field">
-            <span>Категория</span>
-            <select value={categoryId ?? ''} onChange={(event) => { setCategoryId(event.target.value || null); setCategoryWasTouched(true); setAutoCategoryLabel(null); }}>
-              <option value="">Автоматически / без категории</option>
-              {filteredCategories.map((category) => <option key={category.id} value={category.id}>{category.icon ? `${category.icon} ` : ''}{category.name}</option>)}
-            </select>
-          </label>
+          <div className="app-inline-hint">Категория и раздел подставятся автоматически после сохранения.</div>
         )}
-
-        {type !== 'transfer' ? (
-          <div className="grid gap-2">
-            {autoCategoryLabel ? <div className="app-inline-hint">Фина выбрала категорию: {autoCategoryLabel}</div> : null}
-            <button type="button" className="app-secondary-button" onClick={openCategoryCreate}>
-              Создать категорию
-            </button>
-          </div>
-        ) : null}
 
         {error ? <div className="app-error-box">{error}</div> : null}
       </div>

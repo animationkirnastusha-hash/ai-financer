@@ -1,23 +1,7 @@
-import type { CSSProperties } from 'react';
 import type { TransactionDto } from '@/features/transactions/api/transactions.api';
 import type { HomeCashflowMode, HomeCashflowPeriod, HomeFinanceGroup } from '@/features/dashboard/lib/homeFinanceAnalytics';
 import { buildHomeFinanceAnalytics, conicGradient, modeLabel, periodLabel } from '@/features/dashboard/lib/homeFinanceAnalytics';
 import { formatMoney } from '@/shared/lib/money';
-
-
-function ChartIconLayer({ groups, size = 'large' }: { groups: Array<{ key: string; icon: string; color: string; percent: number }>; size?: 'small' | 'large' }) {
-  const visible = groups.filter((group) => group.percent > 0).slice(0, size === 'large' ? 12 : 6);
-  if (visible.length === 0) return null;
-
-  return (
-    <span className={size === 'large' ? 'app-chart-icon-layer app-chart-icon-layer--large' : 'app-chart-icon-layer'} aria-hidden="true">
-      {visible.map((group, index) => {
-        const angle = (360 / visible.length) * index - 90;
-        return <i key={group.key} style={{ '--icon-angle': `${angle}deg`, '--icon-color': group.color } as CSSProperties}>{group.icon}</i>;
-      })}
-    </span>
-  );
-}
 
 type Props = {
   open: boolean;
@@ -35,6 +19,8 @@ export function HomeChartDetailsModal({ open, transactions, mode, period, rates,
 
   const analytics = buildHomeFinanceAnalytics(transactions, mode, period, rates);
   const hasSections = analytics.sections.length > 0 && analytics.sections.some((item) => item.name !== 'Без раздела');
+  const categoryIcons = buildIconMarkers(analytics.categories, 44);
+  const sectionIcons = buildIconMarkers(analytics.sections, 47);
 
   return (
     <div className="app-modal-backdrop app-home-chart-backdrop" data-no-swipe="true" onClick={onClose}>
@@ -52,11 +38,9 @@ export function HomeChartDetailsModal({ open, transactions, mode, period, rates,
 
           <div className="app-home-chart-modal__visual">
             {hasSections ? (
-              <span className="app-home-donut app-home-donut--outer" style={{ background: conicGradient(analytics.sections) }}><i /></span>
+              <span className="app-home-donut app-home-donut--outer app-home-donut--with-icons" style={{ background: conicGradient(analytics.sections) }}><i />{sectionIcons.map((marker) => <em key={marker.key} style={{ left: `${marker.x}%`, top: `${marker.y}%`, background: marker.color }}>{marker.icon}</em>)}</span>
             ) : null}
-            <span className="app-home-donut app-home-donut--large" style={{ background: conicGradient(analytics.categories) }}><i /></span>
-            <ChartIconLayer groups={analytics.categories} />
-            {hasSections ? <ChartIconLayer groups={analytics.sections} size="small" /> : null}
+            <span className="app-home-donut app-home-donut--large app-home-donut--with-icons" style={{ background: conicGradient(analytics.categories) }}><i />{categoryIcons.map((marker) => <em key={marker.key} style={{ left: `${marker.x}%`, top: `${marker.y}%`, background: marker.color }}>{marker.icon}</em>)}</span>
           </div>
 
           <div className="app-home-chart-modal__actions">
@@ -69,7 +53,7 @@ export function HomeChartDetailsModal({ open, transactions, mode, period, rates,
               <div className="app-empty-button">Добавь первую операцию — здесь появится разбор по категориям.</div>
             ) : analytics.categories.map((group) => (
               <button key={group.key} type="button" className="app-home-chart-group" onClick={(event) => { event.stopPropagation(); onOpenGroup(group); }}>
-                <i className="app-home-chart-group__icon" style={{ background: group.color }}>{group.icon}</i>
+                <i style={{ background: group.color }}>{group.icon}</i>
                 <span className="min-w-0">
                   <b>{group.name}</b>
                   <small>{group.sectionName} · {group.count} опер.</small>
@@ -82,4 +66,25 @@ export function HomeChartDetailsModal({ open, transactions, mode, period, rates,
       </div>
     </div>
   );
+}
+
+
+function buildIconMarkers(groups: Array<{ key: string; amount: number; color: string; icon: string }>, radius = 40) {
+  const total = groups.reduce((sum, item) => sum + item.amount, 0);
+  if (total <= 0) return [];
+
+  let cursor = 0;
+  return groups.slice(0, 10).map((group) => {
+    const span = (group.amount / total) * 360;
+    const angle = cursor + span / 2 - 90;
+    cursor += span;
+    const radians = (angle * Math.PI) / 180;
+    return {
+      key: group.key,
+      icon: group.icon || '✨',
+      color: group.color,
+      x: 50 + Math.cos(radians) * radius,
+      y: 50 + Math.sin(radians) * radius,
+    };
+  });
 }

@@ -1,6 +1,7 @@
 import { prisma } from '../../lib/prisma';
 import { BadRequestError, NotFoundError } from '../../shared/core/errors';
 import { progressionActivityBridge } from '../progression/activity-bridge.service';
+import { resolveSectionIcon } from '../taxonomy/taxonomy-icons';
 
 export interface CreateSectionInput {
   name: string;
@@ -36,12 +37,14 @@ export class SectionService {
     const existing = await this.findSectionByName(userId, name);
     if (existing) return existing;
 
+    const suggestion = resolveSectionIcon(name);
+
     const section = await prisma.section.create({
       data: {
         userId,
         name,
-        icon: input.icon ?? '🗂️',
-        color: input.color ?? '#7C5CFF',
+        icon: input.icon ?? suggestion.icon,
+        color: input.color ?? suggestion.color,
       },
     });
 
@@ -59,14 +62,15 @@ export class SectionService {
       throw new NotFoundError('Section not found');
     }
 
-    const nextName = input.name !== undefined ? this.normalizeName(input.name) : undefined;
+    const nextName = input.name !== undefined ? this.normalizeName(input.name) : existing.name;
+    const suggestion = resolveSectionIcon(nextName);
 
     return prisma.section.update({
       where: { id: existing.id },
       data: {
-        ...(nextName ? { name: nextName } : {}),
-        ...(input.icon !== undefined ? { icon: input.icon } : {}),
-        ...(input.color !== undefined ? { color: input.color } : {}),
+        ...(input.name !== undefined ? { name: nextName } : {}),
+        icon: input.icon !== undefined ? input.icon : suggestion.icon,
+        color: input.color !== undefined ? input.color : suggestion.color,
       },
     });
   }
