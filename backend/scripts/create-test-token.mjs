@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import dotenv from 'dotenv';
 import jwt from 'jsonwebtoken';
-import crypto from 'node:crypto';
+import { randomUUID } from 'node:crypto';
 import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { PrismaClient } from '@prisma/client';
@@ -24,16 +24,21 @@ function readAdminTelegramIds() {
   return new Set(values);
 }
 
-function readJwtOptions() {
-  return {
-    expiresIn: process.env.TEST_AUTH_TOKEN_TTL || process.env.AUTH_ACCESS_TOKEN_TTL || '30d',
-    issuer: process.env.AUTH_JWT_ISSUER || 'ai-financer-api',
-    audience: process.env.AUTH_JWT_AUDIENCE || 'ai-financer-web',
-  };
+function readJwtConfig() {
+  const secret = process.env.JWT_SECRET || 'dev-secret';
+  const issuer = process.env.AUTH_JWT_ISSUER || 'ai-financer-api';
+  const audience = process.env.AUTH_JWT_AUDIENCE || 'ai-financer-web';
+  const expiresIn = process.env.TEST_JWT_TTL || '30d';
+
+  if (!secret || secret === 'dev-secret') {
+    console.warn('[test-token] JWT_SECRET is missing, using dev fallback. Do not use this in production.');
+  }
+
+  return { secret, issuer, audience, expiresIn };
 }
 
 async function main() {
-  const jwtSecret = process.env.JWT_SECRET || 'dev-secret';
+  const { secret: jwtSecret, issuer, audience, expiresIn } = readJwtConfig();
   const telegramId = readTelegramId();
   const telegramIdText = telegramId.toString();
   const adminIds = readAdminTelegramIds();
@@ -60,10 +65,14 @@ async function main() {
     {
       userId: user.id,
       sub: user.id,
-      jti: crypto.randomUUID(),
+      jti: randomUUID(),
     },
     jwtSecret,
-    readJwtOptions(),
+    {
+      expiresIn,
+      issuer,
+      audience,
+    },
   );
 
   const tokenPath = join(process.cwd(), '.test-auth-token');
@@ -73,6 +82,7 @@ async function main() {
 
   console.log(token);
   console.error(`Created/found test user: ${user.id} telegramId=${telegramIdText} admin=${user.isAdmin}`);
+  console.error(`JWT issuer=${issuer} audience=${audience} ttl=${expiresIn}`);
   console.error(`Saved token to: ${tokenPath}`);
   console.error(`Saved env snippet to: ${envPath}`);
   console.error('Run without pasting token: TEST_ADMIN=1 npm run test:base-ai');
