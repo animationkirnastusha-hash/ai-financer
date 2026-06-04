@@ -7,43 +7,7 @@ import { useAccountsStore } from '@/features/accounts/model/accounts.store';
 import { useTransactionsStore } from '@/features/transactions/model/transactions.store';
 import type { ChatMessage, SendChatMessageOptions, SendChatMessagePayload } from '@/features/chat/model/chat.types';
 import { useAuthStore } from '@/features/auth/model/auth.store';
-
-const MAX_LOCAL_MESSAGES = 50;
-
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-}
-
-function isClarificationPending(item: any) {
-  const parsed = isRecord(item?.parsed) ? item.parsed : isRecord(item?.payload) ? item.payload : null;
-  return Boolean(parsed && isRecord(parsed.clarification));
-}
-
-function isConfirmationPending(item: any) {
-  if (!item || item.status && item.status !== 'pending') return false;
-  return !isClarificationPending(item);
-}
-
-function appendLocalMessages(prev: ChatMessage[], next: ChatMessage | ChatMessage[]) {
-  const additions = Array.isArray(next) ? next : [next];
-  return [...prev, ...additions].slice(-MAX_LOCAL_MESSAGES);
-}
-
-function sleep(ms: number) {
-  return new Promise((resolve) => window.setTimeout(resolve, ms));
-}
-
-function isTransientNetworkError(error: unknown) {
-  if (!navigator.onLine) return true;
-  if (error instanceof TypeError) return true;
-  const status = typeof error === 'object' && error !== null && 'status' in error ? Number((error as { status?: unknown }).status) : 0;
-  return status === 408 || status === 429 || status === 500 || status === 502 || status === 503 || status === 504;
-}
-
-function emitPendingSync() {
-  window.dispatchEvent(new CustomEvent('ai-financer:pending-sync'));
-}
+import { appendLocalMessages, emitPendingSync, isClarificationPending, isConfirmationPending, isTransientNetworkError, sleep } from '@/features/chat/model/chatController.utils';
 
 export function useChatController() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
