@@ -5,6 +5,7 @@ export type AppScreen =
   | 'accounts'
   | 'analytics'
   | 'goals'
+  | 'obligations'
   | 'companion'
   | 'settings'
   | 'premium'

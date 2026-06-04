@@ -1,0 +1,232 @@
+.app-obligations-hero__top,
+.app-obligations-widget__top,
+.app-next-payment-card__body,
+.app-reminders-card__head,
+.app-loan-card__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.app-obligations-hero__top {
+  margin-top: 14px;
+}
+
+.app-obligations-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.app-obligations-summary-grid > div {
+  padding: 14px;
+  border: 1px solid rgb(255 255 255 / 0.08);
+  border-radius: 20px;
+  background: rgb(255 255 255 / 0.035);
+}
+
+.app-obligations-summary-grid strong {
+  display: block;
+  color: rgb(255 255 255 / 0.95);
+  font-size: 18px;
+  line-height: 1.1;
+}
+
+.app-obligations-summary-grid small {
+  display: block;
+  margin-top: 6px;
+  color: rgb(255 255 255 / 0.42);
+  font-size: 12px;
+}
+
+.app-obligations-widget {
+  padding: 20px;
+  background: linear-gradient(135deg, rgb(20 184 166 / 0.16), rgb(15 23 42 / 0.84));
+}
+
+.app-obligations-widget h2,
+.app-next-payment-card h2,
+.app-reminders-card h2,
+.app-loan-card h3 {
+  margin: 6px 0 0;
+  color: rgb(255 255 255 / 0.96);
+  font-weight: 800;
+}
+
+.app-obligations-widget p,
+.app-next-payment-card p,
+.app-loan-card p,
+.app-closed-loans-card p {
+  margin: 6px 0 0;
+  color: rgb(255 255 255 / 0.48);
+}
+
+.app-obligations-widget__amount,
+.app-next-payment-card strong,
+.app-loan-card__head strong {
+  flex-shrink: 0;
+  color: rgb(255 255 255 / 0.95);
+  font-size: 20px;
+  font-weight: 900;
+  text-align: right;
+}
+
+.app-obligations-widget__meta,
+.app-loan-card__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+  color: rgb(255 255 255 / 0.45);
+  font-size: 12px;
+}
+
+.app-obligations-widget__meta span,
+.app-loan-card__meta span {
+  padding: 7px 10px;
+  border: 1px solid rgb(255 255 255 / 0.08);
+  border-radius: 999px;
+  background: rgb(0 0 0 / 0.16);
+}
+
+.app-obligations-widget__actions,
+.app-next-payment-card__actions,
+.app-loan-card__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.app-next-payment-card,
+.app-reminders-card,
+.app-closed-loans-card {
+  padding: 20px;
+}
+
+.app-loan-card {
+  border: 1px solid rgb(255 255 255 / 0.08);
+  border-radius: 30px;
+  background: linear-gradient(180deg, rgb(255 255 255 / 0.055), rgb(255 255 255 / 0.025));
+  padding: 18px;
+}
+
+.app-loan-card__main {
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  text-align: left;
+}
+
+.app-loan-card__type {
+  color: rgb(94 234 212 / 0.72);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.app-loan-progress {
+  height: 8px;
+  margin-top: 16px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.08);
+}
+
+.app-loan-progress span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, rgb(94 234 212), rgb(20 184 166));
+}
+
+.app-reminders-card__head span {
+  min-width: 34px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgb(94 234 212 / 0.28);
+  border-radius: 999px;
+  color: rgb(94 234 212);
+  font-weight: 900;
+}
+
+.app-reminders-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.app-reminder-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid rgb(255 255 255 / 0.08);
+  border-radius: 18px;
+  background: rgb(0 0 0 / 0.14);
+}
+
+.app-reminder-row strong {
+  display: block;
+  color: rgb(255 255 255 / 0.92);
+}
+
+.app-reminder-row small,
+.app-muted-text {
+  display: block;
+  margin-top: 4px;
+  color: rgb(255 255 255 / 0.45);
+}
+
+.app-checkbox-card {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 14px;
+  border: 1px solid rgb(255 255 255 / 0.08);
+  border-radius: 18px;
+  background: rgb(255 255 255 / 0.035);
+}
+
+.app-checkbox-card input {
+  margin-top: 4px;
+}
+
+.app-checkbox-card strong,
+.app-checkbox-card small {
+  display: block;
+}
+
+.app-checkbox-card strong {
+  color: rgb(255 255 255 / 0.9);
+}
+
+.app-checkbox-card small {
+  margin-top: 4px;
+  color: rgb(255 255 255 / 0.45);
+}
+
+@media (max-width: 430px) {
+  .app-obligations-summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .app-obligations-widget__top,
+  .app-next-payment-card__body,
+  .app-loan-card__head {
+    flex-direction: column;
+  }
+
+  .app-obligations-widget__amount,
+  .app-next-payment-card strong,
+  .app-loan-card__head strong {
+    text-align: left;
+  }
+}

@@ -15,6 +15,7 @@ const AnalyticsPage = lazy(() => import('@/pages/analytics/AnalyticsPage'));
 const CompanionPage = lazy(() => import('@/pages/companion/CompanionPage'));
 const DashboardPage = lazy(() => import('@/pages/dashboard/DashboardPage'));
 const GoalsPage = lazy(() => import('@/pages/goals/GoalsPage'));
+const ObligationsPage = lazy(() => import('@/pages/obligations/ObligationsPage'));
 const PremiumPage = lazy(() => import('@/pages/premium/PremiumPage'));
 const BusinessAccountantPage = lazy(() => import('@/pages/business-accountant/BusinessAccountantPage'));
 const SettingsPage = lazy(() => import('@/pages/settings/SettingsPage'));
@@ -43,6 +44,7 @@ export function AppRouter() {
         {currentScreen === 'accounts' && <AccountsPage />}
         {currentScreen === 'analytics' && <AnalyticsPage />}
         {currentScreen === 'goals' && <GoalsPage />}
+        {currentScreen === 'obligations' && <ObligationsPage />}
         {currentScreen === 'companion' && <CompanionPage />}
         {currentScreen === 'settings' && <SettingsPage />}
         {currentScreen === 'premium' && (isAdmin ? <PremiumPage /> : <DashboardPage />)}

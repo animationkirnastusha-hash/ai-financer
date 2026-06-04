@@ -38,6 +38,9 @@ model User {
   budgets           Budget[]
   recurringPayments RecurringPayment[]
   notifications     Notification[]
+  loans             Loan[]
+  loanPayments      LoanPayment[]
+  obligationReminders ObligationReminder[]
   referralEarnings  ReferralTransaction[] @relation("ReferralEarnings")
   referralSources   ReferralTransaction[] @relation("ReferralSource")
   referrer          User?                @relation("Referrals", fields: [referrerId], references: [id])
@@ -82,6 +85,7 @@ model Account {
   transactionsFrom  Transaction[]       @relation("FromAccount")
   transactionsTo    Transaction[]       @relation("ToAccount")
   recurringPayments RecurringPayment[]
+  loans              Loan[]
   goals              Goal[]
 
   @@index([userId])
@@ -232,6 +236,83 @@ model Notification {
   @@index([userId])
   @@index([isRead])
   @@index([createdAt])
+}
+
+
+model Loan {
+  id                 String   @id @default(cuid())
+  userId             String
+  accountId          String?
+  title              String
+  type               String   @default("loan")
+  creditor           String?
+  currency           String   @default("RUB")
+  principalAmount    Int      @default(0)
+  currentDebt        Int      @default(0)
+  monthlyPayment     Int      @default(0)
+  interestRate       Float?
+  termMonths         Int?
+  paidMonths         Int      @default(0)
+  paymentDay         Int?
+  nextPaymentDate    DateTime?
+  reminderDaysBefore Int      @default(1)
+  autoCreateExpense  Boolean  @default(false)
+  status             String   @default("active")
+  note               String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  user      User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  account   Account?            @relation(fields: [accountId], references: [id], onDelete: SetNull)
+  payments  LoanPayment[]
+  reminders ObligationReminder[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([nextPaymentDate])
+  @@index([accountId])
+}
+
+model LoanPayment {
+  id            String   @id @default(cuid())
+  userId        String
+  loanId        String
+  accountId     String?
+  amount        Int
+  paidAt        DateTime @default(now())
+  transactionId String?
+  note          String?
+  createdAt     DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  loan Loan @relation(fields: [loanId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([loanId])
+  @@index([paidAt])
+  @@index([transactionId])
+}
+
+model ObligationReminder {
+  id        String   @id @default(cuid())
+  userId    String
+  loanId    String?
+  title     String
+  message   String
+  dueDate   DateTime
+  remindAt  DateTime
+  channel   String   @default("app")
+  status    String   @default("scheduled")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  loan Loan? @relation(fields: [loanId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([loanId])
+  @@index([remindAt])
+  @@index([status])
 }
 
 model ReferralTransaction {

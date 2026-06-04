@@ -3,6 +3,7 @@ import { useAccountsStore } from '@/features/accounts/model/accounts.store';
 import { HomeBalanceCarousel } from '@/features/dashboard/ui/HomeBalanceCarousel';
 import { HomeCashflowChart } from '@/features/dashboard/ui/HomeCashflowChart';
 import { HomeFinanceInsight } from '@/features/dashboard/ui/HomeFinanceInsight';
+import { HomeObligationsWidget } from '@/features/obligations/ui/HomeObligationsWidget';
 import type { HomeCashflowMode, HomeCashflowPeriod } from '@/features/dashboard/lib/homeFinanceAnalytics';
 import { useNavigationStore } from '@/features/navigation/model/navigation.store';
 import { useAppModalStore } from '@/features/modals/model/appModal.store';
@@ -74,6 +75,8 @@ export default function DashboardPage() {
           delta={month.delta}
           onOpenAccounts={() => navigateTo('accounts')}
         />
+
+        <HomeObligationsWidget />
 
         <HomeCashflowChart
           transactions={transactions}
