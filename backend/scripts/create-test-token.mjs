@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import dotenv from 'dotenv';
 import jwt from 'jsonwebtoken';
+import crypto from 'node:crypto';
 import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { PrismaClient } from '@prisma/client';
@@ -21,6 +22,14 @@ function readAdminTelegramIds() {
     .map((item) => String(item || '').trim())
     .filter(Boolean);
   return new Set(values);
+}
+
+function readJwtOptions() {
+  return {
+    expiresIn: process.env.TEST_AUTH_TOKEN_TTL || process.env.AUTH_ACCESS_TOKEN_TTL || '30d',
+    issuer: process.env.AUTH_JWT_ISSUER || 'ai-financer-api',
+    audience: process.env.AUTH_JWT_AUDIENCE || 'ai-financer-web',
+  };
 }
 
 async function main() {
@@ -47,7 +56,15 @@ async function main() {
     },
   });
 
-  const token = jwt.sign({ userId: user.id }, jwtSecret, { expiresIn: '30d' });
+  const token = jwt.sign(
+    {
+      userId: user.id,
+      sub: user.id,
+      jti: crypto.randomUUID(),
+    },
+    jwtSecret,
+    readJwtOptions(),
+  );
 
   const tokenPath = join(process.cwd(), '.test-auth-token');
   const envPath = join(process.cwd(), '.test-auth-token.env');
