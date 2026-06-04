@@ -11,6 +11,7 @@ import {
 import { getToolDefinition } from './tools/tool-registry';
 import { convertMoney, detectCurrencyInText, normalizeCurrency, normalizeMoneyAmount } from './utils/amount-normalizer';
 import { AIEntityResolverService } from './ai-entity-resolver.service';
+import { aiRiskPolicyService } from './ai-risk-policy.service';
 
 interface AccountLite {
   id: string;
@@ -611,14 +612,14 @@ export class AIValidatorService {
 
     const maxRisk = this.maxRisk(actions.map((action) => action.riskLevel));
 
-    return {
+    return aiRiskPolicyService.apply({
       ok: issues.length === 0,
       summary: this.buildSummary(actions),
       actions,
       issues,
       riskLevel: maxRisk,
       requiresConfirmation: actions.some((action) => action.requiresConfirmation),
-    };
+    });
   }
 
 

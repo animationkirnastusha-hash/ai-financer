@@ -8,8 +8,11 @@ import { AIAnswerService } from './ai-answer.service';
 import { AIAuditService } from './audit.service';
 import { AIPendingActionService } from './pending-action.service';
 import { aiSessionService } from './ai-session.service';
-import { AIMemoryService } from './ai-memory.service';
-import { AIActionPlan, AIClarificationRequest, AIHandleOptions, AIParsedCommand, AIResult, AIRiskLevel, AIValidatedPlan } from './types';
+import { AIActionPlan, AIHandleOptions, AIParsedCommand, AIResult, AIRiskLevel } from './types';
+import { AICommandBuilderService } from './ai-command-builder.service';
+import { AIClarificationService } from './ai-clarification.service';
+import { AIExecutionLifecycleService } from './ai-execution-lifecycle.service';
+import { AIPlanLimitService } from './ai-plan-limit.service';
 
 export class AIOrchestratorService {
   private readonly context = new AIContextService();
@@ -20,13 +23,16 @@ export class AIOrchestratorService {
   private readonly pending = new AIPendingActionService();
   private readonly audit = new AIAuditService();
   private readonly answer = new AIAnswerService();
-  private readonly memory = new AIMemoryService();
+  private readonly commandBuilder = new AICommandBuilderService();
+  private readonly clarification = new AIClarificationService();
+  private readonly lifecycle = new AIExecutionLifecycleService();
+  private readonly planLimits = new AIPlanLimitService();
 
   async handleCommand(userId: string, command: string, options: AIHandleOptions = {}): Promise<AIResult> {
     const trimmed = command.trim();
     if (!trimmed) throw new BadRequestError('command is required');
 
-    const plannerCommand = this.buildPlannerCommand(trimmed, options);
+    const plannerCommand = this.commandBuilder.build(trimmed, options);
 
     try {
       const clarificationResult = await this.tryAnswerPendingClarification(userId, plannerCommand);
@@ -35,7 +41,7 @@ export class AIOrchestratorService {
       const context = await this.context.buildUserContext(userId);
       const plan = await this.planner.plan(plannerCommand, context);
 
-      if (plan.actions.length > 3) {
+      if (this.planLimits.isExceeded(plan)) {
         const audit = await this.audit.create({
           userId,
           command: plannerCommand,
@@ -44,7 +50,7 @@ export class AIOrchestratorService {
           requiresConfirmation: false,
           executed: false,
           status: 'premium_action_limit',
-          result: { actionCount: plan.actions.length },
+          result: { actionCount: plan.actions.length, limit: this.planLimits.getLimit() },
         });
 
         return {
@@ -53,7 +59,7 @@ export class AIOrchestratorService {
           executed: false,
           requiresConfirmation: false,
           riskLevel: 'low',
-          message: 'В одном запросе можно выполнить до трёх действий. Больше трёх задач за раз будет доступно в Premium.',
+          message: `В одном запросе можно выполнить до ${this.planLimits.getLimit()} действий. Больше задач за раз будет доступно в Premium.`,
           parsed: null,
           meta: { auditLogId: audit.id },
         };
@@ -88,7 +94,7 @@ export class AIOrchestratorService {
       const parsed = this.preview.buildParsed(validated.summary, validated.actions);
 
       if (!validated.ok) {
-        const clarification = this.buildClarification(validated);
+        const clarification = this.clarification.build(validated);
         if (clarification) {
           const parsedWithClarification = { ...parsed, clarification };
           const pending = await this.pending.create({
@@ -151,9 +157,7 @@ export class AIOrchestratorService {
 
       if (!validated.requiresConfirmation) {
         const result = await this.executor.execute(userId, parsed);
-        await aiSessionService.clear(userId);
-        await aiSessionService.rememberResult(userId, { command: plannerCommand, intent: parsed.intent, tool: parsed.actions[0]?.tool, result });
-        await this.memory.rememberFinancialResult(userId, { command: plannerCommand, intent: parsed.intent, tools: parsed.actions.map((action) => action.tool), result });
+        await this.lifecycle.rememberSuccessfulExecution(userId, plannerCommand, parsed, result);
 
         const audit = await this.audit.create({
           userId,
@@ -231,31 +235,6 @@ export class AIOrchestratorService {
   }
 
 
-  private buildPlannerCommand(command: string, options: AIHandleOptions) {
-    const voiceSession = options.voiceSession;
-    if (options.source !== 'voice_session' || !voiceSession || !Array.isArray(voiceSession.segments) || !voiceSession.segments.length) {
-      return command;
-    }
-
-    const segments = voiceSession.segments
-      .map((segment, index) => {
-        const role = segment.role === 'correction' ? 'correction' : segment.role === 'initial' ? 'initial' : 'continuation';
-        return `${index + 1}. [${role}] ${String(segment.text || '').trim()}`;
-      })
-      .filter((line) => line.trim())
-      .join('\n');
-
-    if (!segments) return command;
-
-    return [
-      'VOICE_SESSION_COMMAND.',
-      'The user dictated one command in several speech segments. Later correction segments override earlier conflicting details. Preserve earlier details that were not explicitly cancelled or replaced. Do not create two competing plans. Resolve one final intended financial action. If uncertain, ask one clarification.',
-      'Segments:',
-      segments,
-      `Final transcript: ${voiceSession.finalText || command}`,
-    ].join('\n');
-  }
-
   async confirmCommand(userId: string, pendingActionId: string): Promise<AIResult> {
     const startedAt = Date.now();
     let pending: Awaited<ReturnType<AIPendingActionService['getForConfirm']>> | null = null;
@@ -274,9 +253,7 @@ export class AIOrchestratorService {
       const confirmedPending = await this.pending.markConfirmed(userId, pendingActionId);
       if (!confirmedPending) throw new BadRequestError('Pending action could not be marked as confirmed');
 
-      await aiSessionService.clear(userId);
-      await aiSessionService.rememberResult(userId, { command: pending.command, intent: parsed.intent, tool: parsed.actions[0]?.tool, result });
-      await this.memory.rememberFinancialResult(userId, { command: pending.command, intent: parsed.intent, tools: parsed.actions.map((action) => action.tool), result });
+      await this.lifecycle.rememberSuccessfulExecution(userId, pending.command, parsed, result);
 
       const riskLevel = this.normalizeRisk(pending.riskLevel);
       const audit = await this.audit.create({
@@ -367,15 +344,6 @@ export class AIOrchestratorService {
   }
 
 
-  private looksLikeNewCommand(answer: string): boolean {
-    const text = answer.toLowerCase().replace(/ё/g, 'е');
-    const hasAmount = /\b\d+[\d\s.,]*(к|k|тыс|руб|₽|доллар|евро)?\b/.test(text);
-    const hasActionVerb = /\b(созда[йть]|добав[ьить]|запиши|спиши|потрат|расход|доход|положи|переведи|перенеси|удали|измени|переименуй|сделай|отмени|покажи|открой|закрой|купи|оплатил|получил|заработал)\b/.test(text);
-    const hasFinancialObject = /\b(счет|сч[её]т|карта|налич|категор|раздел|цель|операци|расход|доход|перевод|валют)\b/.test(text);
-    return hasActionVerb || (hasAmount && hasFinancialObject);
-  }
-
-
   private async tryAnswerPendingClarification(userId: string, answer: string): Promise<AIResult | null> {
     const pending = await this.pending.getLatestClarification(userId);
     if (!pending) return null;
@@ -390,7 +358,7 @@ export class AIOrchestratorService {
     const candidate = answer.trim();
     if (!candidate) return null;
 
-    if (this.looksLikeNewCommand(candidate)) {
+    if (this.clarification.looksLikeNewCommand(candidate)) {
       await this.pending.markFailed(userId, pending.id, 'superseded_by_new_command').catch(() => null);
       await aiSessionService.clear(userId).catch(() => null);
       return null;
@@ -419,7 +387,7 @@ export class AIOrchestratorService {
     const nextParsed = this.preview.buildParsed(validated.summary, validated.actions);
 
     if (!validated.ok) {
-      const stillNeedsEntity = this.buildClarification(validated);
+      const stillNeedsEntity = this.clarification.build(validated);
       const message = stillNeedsEntity
         ? `${stillNeedsEntity.question} Я не нашёл: ${candidate}.`
         : validated.issues.map((issue) => issue.message).join('\n') || 'Не удалось применить уточнение.';
@@ -453,9 +421,7 @@ export class AIOrchestratorService {
     if (!validated.requiresConfirmation) {
       const result = await this.executor.execute(userId, nextParsed, { pendingActionId: pending.id });
       await this.pending.markConfirmed(userId, pending.id).catch(() => null);
-      await aiSessionService.clear(userId);
-      await aiSessionService.rememberResult(userId, { command: `${pending.command} / ${candidate}`, intent: nextParsed.intent, tool: nextParsed.actions[0]?.tool, result });
-      await this.memory.rememberFinancialResult(userId, { command: `${pending.command} / ${candidate}`, intent: nextParsed.intent, tools: nextParsed.actions.map((action) => action.tool), result });
+      await this.lifecycle.rememberSuccessfulExecution(userId, `${pending.command} / ${candidate}`, nextParsed, result);
 
       const audit = await this.audit.create({
         userId,
@@ -503,47 +469,6 @@ export class AIOrchestratorService {
       parsed: nextParsed as unknown as Record<string, unknown>,
       meta: { auditLogId: audit.id, pendingActionId: pending.id },
     };
-  }
-
-  private buildClarification(validated: AIValidatedPlan): AIClarificationRequest | null {
-    const issue = validated.issues.find((item) => [
-      'needs_account_clarification',
-      'account_not_found',
-      'from_account_not_found',
-      'to_account_not_found',
-      'goal_not_found',
-      'category_not_found',
-      'section_not_found',
-      'transaction_not_found',
-    ].includes(item.code) && typeof item.actionIndex === 'number');
-
-    if (!issue || typeof issue.actionIndex !== 'number') return null;
-
-    if (issue.code === 'transaction_not_found') {
-      return { type: 'transaction', field: 'transaction', actionIndex: issue.actionIndex, question: 'Какую операцию нужно изменить?', createdAt: new Date().toISOString() };
-    }
-
-    if (issue.code === 'goal_not_found') {
-      return { type: 'goal', field: 'goal', actionIndex: issue.actionIndex, question: 'Какую цель нужно изменить?', createdAt: new Date().toISOString() };
-    }
-
-    if (issue.code === 'category_not_found') {
-      return { type: 'category', field: 'category', actionIndex: issue.actionIndex, question: 'Какую категорию использовать?', createdAt: new Date().toISOString() };
-    }
-
-    if (issue.code === 'section_not_found') {
-      return { type: 'section', field: 'section', actionIndex: issue.actionIndex, question: 'Какой раздел использовать?', createdAt: new Date().toISOString() };
-    }
-
-    if (issue.code === 'from_account_not_found') {
-      return { type: 'account', field: 'fromAccount', actionIndex: issue.actionIndex, question: 'С какого счёта перевести?', createdAt: new Date().toISOString() };
-    }
-
-    if (issue.code === 'to_account_not_found') {
-      return { type: 'account', field: 'toAccount', actionIndex: issue.actionIndex, question: 'На какой счёт перевести?', createdAt: new Date().toISOString() };
-    }
-
-    return { type: 'account', field: 'account', actionIndex: issue.actionIndex, question: 'Какой счёт использовать?', createdAt: new Date().toISOString() };
   }
 
   private asResultObject(value: unknown): Record<string, unknown> {
