@@ -3,12 +3,12 @@ import { Drawer } from '@/shared/ui/Drawer';
 import type { AccountDto } from '@/features/accounts/api/accounts.api';
 import type { CreateLoanPayload, LoanDto, LoanType } from '@/features/obligations/api/obligations.api';
 
-const loanTypes: Array<{ value: LoanType; label: string; hint: string }> = [
-  { value: 'loan', label: 'Кредит', hint: 'Остаток, платёж, ставка' },
-  { value: 'mortgage', label: 'Ипотека', hint: 'Долг, срок, ставка' },
-  { value: 'installment', label: 'Рассрочка', hint: 'Сумма и срок' },
-  { value: 'subscription', label: 'Подписка', hint: 'Сервис и списание' },
-  { value: 'other', label: 'Другое', hint: 'Регулярный платёж' },
+const loanTypes: Array<{ value: LoanType; label: string }> = [
+  { value: 'loan', label: 'Кредит' },
+  { value: 'mortgage', label: 'Ипотека' },
+  { value: 'installment', label: 'Рассрочка' },
+  { value: 'subscription', label: 'Подписка' },
+  { value: 'other', label: 'Другое' },
 ];
 
 function toDateInput(value?: string | null) {
@@ -124,14 +124,12 @@ export function LoanEditSheet({ open, loan, initialType, accounts, isSaving, lay
     }
   }
 
-  const typeMeta = loanTypes.find((item) => item.value === type) ?? loanTypes[0];
 
   return (
     <Drawer
       open={open}
       onClose={onClose}
       title={loan ? 'Изменить обязательство' : 'Новое обязательство'}
-      subtitle="Настройки меняются под выбранный тип. Лишних полей не будет."
       className="app-obligation-sheet"
       bodyClassName="app-obligation-sheet__body"
       layer={layer}
@@ -163,7 +161,6 @@ export function LoanEditSheet({ open, loan, initialType, accounts, isSaving, lay
                 disabled={isSaving}
               >
                 <strong>{item.label}</strong>
-                <small>{item.hint}</small>
               </button>
             ))}
           </div>
@@ -171,8 +168,7 @@ export function LoanEditSheet({ open, loan, initialType, accounts, isSaving, lay
 
         <section className="app-obligation-section app-obligation-section--main">
           <div className="app-obligation-section__head">
-            <strong>{typeMeta.label}</strong>
-            <span>{typeMeta.hint}</span>
+            <strong>Основное</strong>
           </div>
 
           <label className="app-field app-obligation-field app-obligation-field--wide">
@@ -205,10 +201,34 @@ export function LoanEditSheet({ open, loan, initialType, accounts, isSaving, lay
           </div>
         </section>
 
+        <section className="app-obligation-section app-obligation-section--source">
+          <div className="app-obligation-section__head">
+            <strong>Списание</strong>
+          </div>
+          <div className="app-obligation-grid app-obligation-grid--2 app-obligation-source-grid">
+            <label className="app-field app-obligation-field">
+              <span>Счёт списания</span>
+              <select value={accountId} onChange={(event) => setAccountId(event.target.value)}>
+                <option value="">Не выбран</option>
+                {accountOptions.map((account) => (
+                  <option key={account.id} value={account.id}>{account.name} · {account.currency}</option>
+                ))}
+              </select>
+            </label>
+
+            <label className="app-checkbox-card app-obligation-checkbox">
+              <input type="checkbox" checked={autoCreateExpense} onChange={(event) => setAutoCreateExpense(event.target.checked)} />
+              <span>
+                <strong>Списывать как расход</strong>
+                <small>При оплате</small>
+              </span>
+            </label>
+          </div>
+        </section>
+
         <section className="app-obligation-section">
           <div className="app-obligation-section__head">
-            <strong>{isSubscription || isOther ? 'Платёж' : 'Суммы и долг'}</strong>
-            <span>{isSubscription ? 'Без остатка и ставки' : 'Основные цифры'}</span>
+            <strong>{isSubscription || isOther ? 'Платёж' : 'Суммы'}</strong>
           </div>
 
           <div className={isDebtLike ? 'app-obligation-grid app-obligation-grid--3' : 'app-obligation-grid app-obligation-grid--2'}>
@@ -237,7 +257,6 @@ export function LoanEditSheet({ open, loan, initialType, accounts, isSaving, lay
           <section className="app-obligation-section">
             <div className="app-obligation-section__head">
               <strong>{isInstallment ? 'Срок рассрочки' : 'Условия'}</strong>
-              <span>{isCreditLike ? 'Для будущих советов Фины' : 'Сколько уже оплачено'}</span>
             </div>
 
             <div className={isCreditLike ? 'app-obligation-grid app-obligation-grid--3' : 'app-obligation-grid app-obligation-grid--2'}>
@@ -263,8 +282,7 @@ export function LoanEditSheet({ open, loan, initialType, accounts, isSaving, lay
 
         <section className="app-obligation-section">
           <div className="app-obligation-section__head">
-            <strong>График и напоминание</strong>
-            <span>Когда списывать и когда напомнить</span>
+            <strong>Напоминание</strong>
           </div>
 
           <div className="app-obligation-grid app-obligation-grid--3">
@@ -281,28 +299,6 @@ export function LoanEditSheet({ open, loan, initialType, accounts, isSaving, lay
             <label className="app-field app-obligation-field app-obligation-field--short">
               <span>За дней</span>
               <input inputMode="numeric" value={reminderDaysBefore} onChange={(event) => setReminderDaysBefore(event.target.value)} placeholder="1" />
-            </label>
-          </div>
-        </section>
-
-        <section className="app-obligation-section">
-          <div className="app-obligation-grid app-obligation-grid--2">
-            <label className="app-field app-obligation-field">
-              <span>Счёт списания</span>
-              <select value={accountId} onChange={(event) => setAccountId(event.target.value)}>
-                <option value="">Не выбран</option>
-                {accountOptions.map((account) => (
-                  <option key={account.id} value={account.id}>{account.name} · {account.currency}</option>
-                ))}
-              </select>
-            </label>
-
-            <label className="app-checkbox-card app-obligation-checkbox">
-              <input type="checkbox" checked={autoCreateExpense} onChange={(event) => setAutoCreateExpense(event.target.checked)} />
-              <span>
-                <strong>Списывать как расход</strong>
-                <small>При отметке оплаты</small>
-              </span>
             </label>
           </div>
         </section>

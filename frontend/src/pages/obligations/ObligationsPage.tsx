@@ -98,8 +98,6 @@ export default function ObligationsPage() {
             eyebrow="Обязательства"
             title="Платежей пока нет"
             description="Добавь кредит, ипотеку, рассрочку или подписку. Фина будет держать срок платежа рядом."
-            actionLabel="Добавить"
-            onAction={handleCreate}
           />
         ) : (
           <div className="space-y-3">
