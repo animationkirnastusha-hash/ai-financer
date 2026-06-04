@@ -39,7 +39,8 @@
     "smoke:transactions": "node scripts/smoke/check-transactions.mjs",
     "smoke:taxonomy": "node scripts/smoke/check-taxonomy.mjs",
     "smoke:analytics": "node scripts/smoke/check-analytics.mjs",
-    "smoke:reset-admin": "node scripts/smoke/check-reset-admin.mjs"
+    "smoke:reset-admin": "node scripts/smoke/check-reset-admin.mjs",
+    "audit:final": "node scripts/run-final-audit.mjs"
   },
   "keywords": [],
   "author": "",
