@@ -3,12 +3,12 @@ import { Drawer } from '@/shared/ui/Drawer';
 import type { AccountDto } from '@/features/accounts/api/accounts.api';
 import type { CreateLoanPayload, LoanDto, LoanType } from '@/features/obligations/api/obligations.api';
 
-const loanTypes: Array<{ value: LoanType; label: string }> = [
-  { value: 'loan', label: 'Кредит' },
-  { value: 'mortgage', label: 'Ипотека' },
-  { value: 'installment', label: 'Рассрочка' },
-  { value: 'subscription', label: 'Подписка' },
-  { value: 'other', label: 'Другое' },
+const loanTypes: Array<{ value: LoanType; label: string; hint: string }> = [
+  { value: 'loan', label: 'Кредит', hint: 'Остаток, платёж, ставка' },
+  { value: 'mortgage', label: 'Ипотека', hint: 'Долг, срок, ставка' },
+  { value: 'installment', label: 'Рассрочка', hint: 'Сумма и срок' },
+  { value: 'subscription', label: 'Подписка', hint: 'Сервис и списание' },
+  { value: 'other', label: 'Другое', hint: 'Регулярный платёж' },
 ];
 
 function toDateInput(value?: string | null) {
@@ -28,16 +28,14 @@ function toNumber(value: string) {
 type Props = {
   open: boolean;
   loan?: LoanDto | null;
-  initialType?: LoanType | null;
   accounts: AccountDto[];
   isSaving: boolean;
-  layer?: number;
   onClose: () => void;
   onSave: (payload: CreateLoanPayload) => Promise<void>;
   onDelete?: (loan: LoanDto) => Promise<void>;
 };
 
-export function LoanEditSheet({ open, loan, initialType, accounts, isSaving, layer, onClose, onSave, onDelete }: Props) {
+export function LoanEditSheet({ open, loan, accounts, isSaving, onClose, onSave, onDelete }: Props) {
   const [title, setTitle] = useState('');
   const [type, setType] = useState<LoanType>('loan');
   const [creditor, setCreditor] = useState('');
@@ -59,7 +57,7 @@ export function LoanEditSheet({ open, loan, initialType, accounts, isSaving, lay
   useEffect(() => {
     if (!open) return;
     setTitle(loan?.title ?? '');
-    setType((loan?.type as LoanType) ?? initialType ?? 'loan');
+    setType((loan?.type as LoanType) ?? 'loan');
     setCreditor(loan?.creditor ?? '');
     setCurrency(loan?.currency ?? 'RUB');
     setPrincipalAmount(loan?.principalAmount ? String(loan.principalAmount) : '');
@@ -75,80 +73,25 @@ export function LoanEditSheet({ open, loan, initialType, accounts, isSaving, lay
     setAutoCreateExpense(Boolean(loan?.autoCreateExpense));
     setNote(loan?.note ?? '');
     setError(null);
-  }, [initialType, loan, open]);
+  }, [loan, open]);
 
   const accountOptions = useMemo(() => accounts.filter((account) => !account.lockSpending), [accounts]);
-
-  const typeMeta = useMemo(() => {
-    if (type === 'subscription') {
-      return {
-        titlePlaceholder: 'Netflix, связь, сервис',
-        creditorLabel: 'Сервис',
-        creditorPlaceholder: 'Netflix, Telegram, оператор связи',
-        paymentLabel: 'Сумма подписки',
-        paymentPlaceholder: '899',
-        notePlaceholder: 'Например: списывается каждый месяц автоматически',
-        description: 'Для подписки достаточно суммы платежа, даты списания и счёта. Остаток долга и ставка здесь не нужны.',
-        showDebt: false,
-        showPrincipal: false,
-        showCreditTerms: false,
-        showPaidMonths: false,
-      };
-    }
-
-    if (type === 'installment') {
-      return {
-        titlePlaceholder: 'Телефон, техника, обучение',
-        creditorLabel: 'Магазин или сервис',
-        creditorPlaceholder: 'Магазин, банк, сервис рассрочки',
-        paymentLabel: 'Ежемесячный платёж',
-        paymentPlaceholder: '4500',
-        notePlaceholder: 'Например: беспроцентная рассрочка на 12 месяцев',
-        description: 'Для рассрочки важны платёж, остаток, срок и сколько месяцев уже оплачено.',
-        showDebt: true,
-        showPrincipal: true,
-        showCreditTerms: true,
-        showPaidMonths: true,
-      };
-    }
-
-    if (type === 'other') {
-      return {
-        titlePlaceholder: 'Аренда, алименты, регулярный платёж',
-        creditorLabel: 'Получатель',
-        creditorPlaceholder: 'Кому или куда платишь',
-        paymentLabel: 'Сумма платежа',
-        paymentPlaceholder: '12000',
-        notePlaceholder: 'Например: обязательный платёж каждый месяц',
-        description: 'Для регулярного платежа можно указать только сумму, дату, счёт и напоминание.',
-        showDebt: false,
-        showPrincipal: false,
-        showCreditTerms: false,
-        showPaidMonths: false,
-      };
-    }
-
-    return {
-      titlePlaceholder: type === 'mortgage' ? 'Ипотека Дом' : 'Автокредит, кредит наличными',
-      creditorLabel: 'Банк',
-      creditorPlaceholder: 'Сбер, Т-Банк, ВТБ',
-      paymentLabel: 'Ежемесячный платёж',
-      paymentPlaceholder: '18000',
-      notePlaceholder: 'Например: досрочно гасить тело кредита при возможности',
-      description: type === 'mortgage'
-        ? 'Для ипотеки полезны остаток, ставка, срок и дата платежа. Это поможет позже считать переплату и сценарии досрочного погашения.'
-        : 'Для кредита полезны остаток, общая сумма, ставка, срок и дата платежа.',
-      showDebt: true,
-      showPrincipal: true,
-      showCreditTerms: true,
-      showPaidMonths: true,
-    };
-  }, [type]);
+  const isDebtLike = type === 'loan' || type === 'mortgage' || type === 'installment';
+  const isCreditLike = type === 'loan' || type === 'mortgage';
+  const isInstallment = type === 'installment';
+  const isSubscription = type === 'subscription';
+  const isOther = type === 'other';
 
   async function handleSave() {
     setError(null);
     if (!title.trim()) {
-      setError('Укажи название. Например: ипотека, автокредит или рассрочка.');
+      setError(isSubscription ? 'Укажи название подписки.' : 'Укажи название обязательства.');
+      return;
+    }
+
+    const payment = toNumber(monthlyPayment);
+    if ((isSubscription || isOther) && !payment) {
+      setError('Укажи сумму регулярного платежа.');
       return;
     }
 
@@ -157,12 +100,12 @@ export function LoanEditSheet({ open, loan, initialType, accounts, isSaving, lay
       type,
       creditor: creditor.trim() || null,
       currency,
-      principalAmount: typeMeta.showPrincipal ? toNumber(principalAmount) : undefined,
-      currentDebt: typeMeta.showDebt ? toNumber(currentDebt) : undefined,
-      monthlyPayment: toNumber(monthlyPayment),
-      interestRate: typeMeta.showCreditTerms ? toNumber(interestRate) ?? null : null,
-      termMonths: typeMeta.showCreditTerms ? toNumber(termMonths) ?? null : null,
-      paidMonths: typeMeta.showPaidMonths ? toNumber(paidMonths) : undefined,
+      principalAmount: isDebtLike ? toNumber(principalAmount) : undefined,
+      currentDebt: isDebtLike ? toNumber(currentDebt) : undefined,
+      monthlyPayment: payment,
+      interestRate: isCreditLike ? (toNumber(interestRate) ?? null) : null,
+      termMonths: isDebtLike ? (toNumber(termMonths) ?? null) : null,
+      paidMonths: isDebtLike ? toNumber(paidMonths) : undefined,
       paymentDay: toNumber(paymentDay) ?? null,
       nextPaymentDate: nextPaymentDate ? new Date(`${nextPaymentDate}T09:00:00`).toISOString() : null,
       reminderDaysBefore: toNumber(reminderDaysBefore),
@@ -179,15 +122,18 @@ export function LoanEditSheet({ open, loan, initialType, accounts, isSaving, lay
     }
   }
 
+  const typeMeta = loanTypes.find((item) => item.value === type) ?? loanTypes[0];
+
   return (
     <Drawer
       open={open}
       onClose={onClose}
       title={loan ? 'Изменить обязательство' : 'Новое обязательство'}
-      layer={layer}
-      subtitle={typeMeta.description}
+      subtitle="Настройки меняются под выбранный тип. Лишних полей не будет."
+      className="app-obligation-sheet"
+      bodyClassName="app-obligation-sheet__body"
       footer={(
-        <>
+        <div className="app-obligation-footer">
           {loan && onDelete ? (
             <button type="button" className="app-danger-button" disabled={isSaving} onClick={() => onDelete(loan)}>
               Удалить
@@ -197,123 +143,170 @@ export function LoanEditSheet({ open, loan, initialType, accounts, isSaving, lay
           <button type="button" className="app-primary-button" onClick={handleSave} disabled={isSaving}>
             {isSaving ? 'Сохраняю...' : 'Сохранить'}
           </button>
-        </>
+        </div>
       )}
     >
-      <div className="app-form-grid">
-        {error ? <div className="app-error-box">{error}</div> : null}
+      <div className="app-obligation-form">
+        {error ? <div className="app-error-box app-obligation-error">{error}</div> : null}
 
-        <label className="app-field">
-          <span>Название</span>
-          <input value={title} onChange={(event) => setTitle(event.target.value)} placeholder={typeMeta.titlePlaceholder} />
-        </label>
+        <section className="app-obligation-section">
+          <div className="app-obligation-type-grid" aria-label="Тип обязательства">
+            {loanTypes.map((item) => (
+              <button
+                key={item.value}
+                type="button"
+                className={item.value === type ? 'app-obligation-type app-obligation-type--active' : 'app-obligation-type'}
+                onClick={() => setType(item.value)}
+                disabled={isSaving}
+              >
+                <strong>{item.label}</strong>
+                <small>{item.hint}</small>
+              </button>
+            ))}
+          </div>
+        </section>
 
-        <label className="app-field">
-          <span>Тип</span>
-          <select value={type} onChange={(event) => setType(event.target.value as LoanType)}>
-            {loanTypes.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
-          </select>
-        </label>
+        <section className="app-obligation-section app-obligation-section--main">
+          <div className="app-obligation-section__head">
+            <strong>{typeMeta.label}</strong>
+            <span>{typeMeta.hint}</span>
+          </div>
 
-        <label className="app-field">
-          <span>{typeMeta.creditorLabel}</span>
-          <input value={creditor} onChange={(event) => setCreditor(event.target.value)} placeholder={typeMeta.creditorPlaceholder} />
-        </label>
+          <label className="app-field app-obligation-field app-obligation-field--wide">
+            <span>{isSubscription ? 'Название подписки' : 'Название'}</span>
+            <input
+              value={title}
+              onChange={(event) => setTitle(event.target.value)}
+              placeholder={isSubscription ? 'Netflix, Spotify, связь' : 'Ипотека, автокредит, рассрочка'}
+            />
+          </label>
 
-        <div className="app-obligation-type-note">{typeMeta.description}</div>
-
-        <div className="app-form-row">
-          {typeMeta.showDebt ? (
-            <label className="app-field">
-              <span>Остаток</span>
-              <input inputMode="numeric" value={currentDebt} onChange={(event) => setCurrentDebt(event.target.value)} placeholder="500000" />
+          <div className="app-obligation-grid app-obligation-grid--2">
+            <label className="app-field app-obligation-field">
+              <span>{isSubscription ? 'Сервис' : 'Банк / организация'}</span>
+              <input
+                value={creditor}
+                onChange={(event) => setCreditor(event.target.value)}
+                placeholder={isSubscription ? 'Онлайн-кинотеатр' : 'Сбер, Т-Банк, магазин'}
+              />
             </label>
-          ) : null}
-          <label className="app-field">
-            <span>{typeMeta.paymentLabel}</span>
-            <input inputMode="numeric" value={monthlyPayment} onChange={(event) => setMonthlyPayment(event.target.value)} placeholder={typeMeta.paymentPlaceholder} />
-          </label>
-        </div>
 
-        <div className="app-form-row">
-          {typeMeta.showPrincipal ? (
-            <label className="app-field">
-              <span>Общая сумма</span>
-              <input inputMode="numeric" value={principalAmount} onChange={(event) => setPrincipalAmount(event.target.value)} placeholder="700000" />
+            <label className="app-field app-obligation-field app-obligation-field--short">
+              <span>Валюта</span>
+              <select value={currency} onChange={(event) => setCurrency(event.target.value)}>
+                <option value="RUB">RUB</option>
+                <option value="USD">USD</option>
+                <option value="EUR">EUR</option>
+              </select>
             </label>
-          ) : null}
-          <label className="app-field">
-            <span>Валюта</span>
-            <select value={currency} onChange={(event) => setCurrency(event.target.value)}>
-              <option value="RUB">RUB</option>
-              <option value="USD">USD</option>
-              <option value="EUR">EUR</option>
-            </select>
-          </label>
-        </div>
+          </div>
+        </section>
 
-        <div className="app-form-row">
-          <label className="app-field">
-            <span>День платежа</span>
-            <input inputMode="numeric" value={paymentDay} onChange={(event) => setPaymentDay(event.target.value)} placeholder="15" />
-          </label>
-          <label className="app-field">
-            <span>Следующий платёж</span>
-            <input type="date" value={nextPaymentDate} onChange={(event) => setNextPaymentDate(event.target.value)} />
-          </label>
-        </div>
+        <section className="app-obligation-section">
+          <div className="app-obligation-section__head">
+            <strong>{isSubscription || isOther ? 'Платёж' : 'Суммы и долг'}</strong>
+            <span>{isSubscription ? 'Без остатка и ставки' : 'Основные цифры'}</span>
+          </div>
 
-        <div className="app-form-row">
-          <label className="app-field">
-            <span>Напомнить за</span>
-            <input inputMode="numeric" value={reminderDaysBefore} onChange={(event) => setReminderDaysBefore(event.target.value)} placeholder="1" />
-          </label>
-          {typeMeta.showCreditTerms ? (
-            <label className="app-field">
-              <span>Ставка, %</span>
-              <input inputMode="decimal" value={interestRate} onChange={(event) => setInterestRate(event.target.value)} placeholder="12.9" />
-            </label>
-          ) : null}
-        </div>
-
-        {typeMeta.showCreditTerms || typeMeta.showPaidMonths ? (
-          <div className="app-form-row">
-            {typeMeta.showCreditTerms ? (
-              <label className="app-field">
-                <span>Срок, месяцев</span>
-                <input inputMode="numeric" value={termMonths} onChange={(event) => setTermMonths(event.target.value)} placeholder="36" />
+          <div className={isDebtLike ? 'app-obligation-grid app-obligation-grid--3' : 'app-obligation-grid app-obligation-grid--2'}>
+            {isDebtLike ? (
+              <label className="app-field app-obligation-field app-obligation-field--short">
+                <span>Остаток</span>
+                <input inputMode="numeric" value={currentDebt} onChange={(event) => setCurrentDebt(event.target.value)} placeholder="500000" />
               </label>
             ) : null}
-            {typeMeta.showPaidMonths ? (
-              <label className="app-field">
-                <span>Уже оплачено</span>
-                <input inputMode="numeric" value={paidMonths} onChange={(event) => setPaidMonths(event.target.value)} placeholder="4" />
+
+            <label className="app-field app-obligation-field app-obligation-field--short">
+              <span>{isSubscription ? 'Списание' : 'Платёж'}</span>
+              <input inputMode="numeric" value={monthlyPayment} onChange={(event) => setMonthlyPayment(event.target.value)} placeholder={isSubscription ? '899' : '18000'} />
+            </label>
+
+            {isDebtLike ? (
+              <label className="app-field app-obligation-field app-obligation-field--short">
+                <span>Общая сумма</span>
+                <input inputMode="numeric" value={principalAmount} onChange={(event) => setPrincipalAmount(event.target.value)} placeholder="700000" />
               </label>
             ) : null}
           </div>
+        </section>
+
+        {isDebtLike ? (
+          <section className="app-obligation-section">
+            <div className="app-obligation-section__head">
+              <strong>{isInstallment ? 'Срок рассрочки' : 'Условия'}</strong>
+              <span>{isCreditLike ? 'Для будущих советов Фины' : 'Сколько уже оплачено'}</span>
+            </div>
+
+            <div className={isCreditLike ? 'app-obligation-grid app-obligation-grid--3' : 'app-obligation-grid app-obligation-grid--2'}>
+              {isCreditLike ? (
+                <label className="app-field app-obligation-field app-obligation-field--short">
+                  <span>Ставка, %</span>
+                  <input inputMode="decimal" value={interestRate} onChange={(event) => setInterestRate(event.target.value)} placeholder="12.9" />
+                </label>
+              ) : null}
+
+              <label className="app-field app-obligation-field app-obligation-field--short">
+                <span>Срок</span>
+                <input inputMode="numeric" value={termMonths} onChange={(event) => setTermMonths(event.target.value)} placeholder="36" />
+              </label>
+
+              <label className="app-field app-obligation-field app-obligation-field--short">
+                <span>Оплачено</span>
+                <input inputMode="numeric" value={paidMonths} onChange={(event) => setPaidMonths(event.target.value)} placeholder="4" />
+              </label>
+            </div>
+          </section>
         ) : null}
 
-        <label className="app-field">
-          <span>Счёт списания</span>
-          <select value={accountId} onChange={(event) => setAccountId(event.target.value)}>
-            <option value="">Не выбран</option>
-            {accountOptions.map((account) => (
-              <option key={account.id} value={account.id}>{account.name} · {account.currency}</option>
-            ))}
-          </select>
-        </label>
+        <section className="app-obligation-section">
+          <div className="app-obligation-section__head">
+            <strong>График и напоминание</strong>
+            <span>Когда списывать и когда напомнить</span>
+          </div>
 
-        <label className="app-checkbox-card">
-          <input type="checkbox" checked={autoCreateExpense} onChange={(event) => setAutoCreateExpense(event.target.checked)} />
-          <span>
-            <strong>Создавать расход при отметке оплаты</strong>
-            <small>Если выбран счёт, Фина сможет сразу списывать платёж как расход.</small>
-          </span>
-        </label>
+          <div className="app-obligation-grid app-obligation-grid--3">
+            <label className="app-field app-obligation-field app-obligation-field--short">
+              <span>День</span>
+              <input inputMode="numeric" value={paymentDay} onChange={(event) => setPaymentDay(event.target.value)} placeholder="15" />
+            </label>
 
-        <label className="app-field">
+            <label className="app-field app-obligation-field">
+              <span>Ближайший</span>
+              <input type="date" value={nextPaymentDate} onChange={(event) => setNextPaymentDate(event.target.value)} />
+            </label>
+
+            <label className="app-field app-obligation-field app-obligation-field--short">
+              <span>За дней</span>
+              <input inputMode="numeric" value={reminderDaysBefore} onChange={(event) => setReminderDaysBefore(event.target.value)} placeholder="1" />
+            </label>
+          </div>
+        </section>
+
+        <section className="app-obligation-section">
+          <div className="app-obligation-grid app-obligation-grid--2">
+            <label className="app-field app-obligation-field">
+              <span>Счёт списания</span>
+              <select value={accountId} onChange={(event) => setAccountId(event.target.value)}>
+                <option value="">Не выбран</option>
+                {accountOptions.map((account) => (
+                  <option key={account.id} value={account.id}>{account.name} · {account.currency}</option>
+                ))}
+              </select>
+            </label>
+
+            <label className="app-checkbox-card app-obligation-checkbox">
+              <input type="checkbox" checked={autoCreateExpense} onChange={(event) => setAutoCreateExpense(event.target.checked)} />
+              <span>
+                <strong>Списывать как расход</strong>
+                <small>При отметке оплаты</small>
+              </span>
+            </label>
+          </div>
+        </section>
+
+        <label className="app-field app-obligation-field app-obligation-note">
           <span>Заметка</span>
-          <textarea value={note} onChange={(event) => setNote(event.target.value)} placeholder={typeMeta.notePlaceholder} />
+          <textarea value={note} onChange={(event) => setNote(event.target.value)} placeholder="Например: гасить досрочно при возможности" />
         </label>
       </div>
     </Drawer>
