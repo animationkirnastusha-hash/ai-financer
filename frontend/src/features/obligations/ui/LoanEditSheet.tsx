@@ -205,18 +205,34 @@ export function LoanEditSheet({ open, loan, initialType, accounts, isSaving, lay
           <div className="app-obligation-section__head">
             <strong>Списание</strong>
           </div>
-          <div className="app-obligation-grid app-obligation-grid--2 app-obligation-source-grid">
-            <label className="app-field app-obligation-field">
-              <span>Счёт списания</span>
-              <select value={accountId} onChange={(event) => setAccountId(event.target.value)}>
-                <option value="">Не выбран</option>
-                {accountOptions.map((account) => (
-                  <option key={account.id} value={account.id}>{account.name} · {account.currency}</option>
-                ))}
-              </select>
-            </label>
 
-            <label className="app-checkbox-card app-obligation-checkbox">
+          <div className="app-obligation-source-panel">
+            <div className="app-obligation-account-picker" role="radiogroup" aria-label="Счёт списания">
+              <button
+                type="button"
+                className={!accountId ? 'app-obligation-account app-obligation-account--active' : 'app-obligation-account'}
+                onClick={() => setAccountId('')}
+                disabled={isSaving}
+              >
+                <span>Без счёта</span>
+                <small>Только напоминание</small>
+              </button>
+
+              {accountOptions.map((account) => (
+                <button
+                  key={account.id}
+                  type="button"
+                  className={account.id === accountId ? 'app-obligation-account app-obligation-account--active' : 'app-obligation-account'}
+                  onClick={() => setAccountId(account.id)}
+                  disabled={isSaving}
+                >
+                  <span>{account.name}</span>
+                  <small>{account.currency}</small>
+                </button>
+              ))}
+            </div>
+
+            <label className="app-checkbox-card app-obligation-checkbox app-obligation-checkbox--inline">
               <input type="checkbox" checked={autoCreateExpense} onChange={(event) => setAutoCreateExpense(event.target.checked)} />
               <span>
                 <strong>Списывать как расход</strong>
