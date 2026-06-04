@@ -10,8 +10,6 @@ import { notFoundHandler } from './middleware/not-found';
 import { errorHandler } from './middleware/error-handler';
 import { rateLimit } from './middleware/rate-limit';
 import { apiMonitoringMiddleware } from './middleware/api-monitoring';
-import adminRoutes from './modules/admin/routes';
-import voiceRoutes from './routes/voice.routes';
 
 export function createApp() {
   const app = express();
@@ -50,20 +48,7 @@ export function createApp() {
 
   app.use('/health', healthRoutes);
 
-  const monitoredApi = [apiMonitoringMiddleware, rateLimit({ windowMs: 60_000, max: 300 })] as const;
-
-  // Admin routes are mounted explicitly as well as through apiRoutes.
-  // This keeps the closed admin panel reachable even if an older routes/index.js
-  // remains in a deployed dist bundle during incremental server updates.
-  app.use('/api/admin', ...monitoredApi, adminRoutes);
-  app.use('/admin', ...monitoredApi, adminRoutes);
-
-  // Voice debug/transcribe produces many short requests while the microphone is active.
-  // Mount it before the general API rate limiter so voice diagnostics cannot block
-  // normal product data such as accounts/transactions. Voice routes still run auth.
-  app.use('/api/voice', apiMonitoringMiddleware, voiceRoutes);
-
-  app.use('/api', ...monitoredApi, apiRoutes);
+  app.use('/api', apiMonitoringMiddleware, rateLimit({ windowMs: 60_000, max: 300 }), apiRoutes);
 
   app.use(notFoundHandler);
   app.use(errorHandler);

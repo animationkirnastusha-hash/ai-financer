@@ -19,8 +19,6 @@ export function HomeChartDetailsModal({ open, transactions, mode, period, rates,
   if (!open) return null;
 
   const analytics = buildHomeFinanceAnalytics(transactions, mode, period, rates);
-  const hasSections = analytics.sections.length > 0 && analytics.sections.some((item) => item.name !== 'Без раздела');
-
   return (
     <div className="app-modal-backdrop app-home-chart-backdrop" style={{ zIndex: modalLayer }} data-no-swipe="true" onClick={onClose}>
       <div className="app-modal-sheet app-home-chart-modal" data-no-swipe="true" onClick={(event) => event.stopPropagation()}>
@@ -36,10 +34,7 @@ export function HomeChartDetailsModal({ open, transactions, mode, period, rates,
           </div>
 
           <div className="app-home-chart-modal__visual">
-            {hasSections ? (
-              <span className="app-home-donut app-home-donut--outer" style={{ background: conicGradient(analytics.sections) }}><i />{analytics.sections.slice(0, 5).map((group, index) => <em key={group.key} className={`app-home-donut-icon app-home-donut-icon--${index}`}>{group.icon || '•'}</em>)}</span>
-            ) : null}
-            <span className="app-home-donut app-home-donut--large" style={{ background: conicGradient(analytics.categories) }}><i />{analytics.categories.slice(0, 5).map((group, index) => <em key={group.key} className={`app-home-donut-icon app-home-donut-icon--${index}`}>{group.icon || '•'}</em>)}</span>
+            <span className="app-home-donut app-home-donut--large" style={{ background: conicGradient(analytics.categories) }}><i /></span>
           </div>
 
           <div className="app-home-chart-modal__actions">

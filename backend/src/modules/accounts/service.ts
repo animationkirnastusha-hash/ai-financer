@@ -40,6 +40,7 @@ const accountSelect = {
   type: true,
   currency: true,
   balance: true,
+  openingBalance: true,
   showInTotalBalance: true,
   lockRename: true,
   lockSpending: true,
@@ -95,7 +96,7 @@ export class AccountService {
     });
 
     if (existing) {
-      return this.serializeAccount(existing);
+      throw new ConflictError('Account with this name already exists');
     }
 
     const account = await prisma.account.create({
@@ -105,6 +106,7 @@ export class AccountService {
         type: data.type,
         currency: data.currency,
         balance: data.balance,
+        openingBalance: data.balance,
         showInTotalBalance: data.showInTotalBalance,
         lockRename: data.lockRename,
         lockSpending: data.lockSpending,
@@ -154,6 +156,11 @@ export class AccountService {
 
     if (existing.lockVisibility && data.showInTotalBalance !== undefined && data.showInTotalBalance !== existing.showInTotalBalance) {
       throw new ConflictError('Account visibility is locked');
+    }
+
+    if (data.balance !== undefined) {
+      const transactionDelta = await this.calculateTransactionDelta(userId, accountId);
+      (data as Prisma.AccountUpdateInput).openingBalance = data.balance - transactionDelta;
     }
 
     const updated = await prisma.account.update({
@@ -255,7 +262,7 @@ export class AccountService {
   async recalculateAllBalances(userId: string) {
     const accounts = await prisma.account.findMany({
       where: { userId },
-      select: { id: true },
+      select: { id: true, openingBalance: true },
     });
 
     const updatedAccounts = await prisma.$transaction(async (tx) => {
@@ -275,7 +282,7 @@ export class AccountService {
           },
         });
 
-        let balance = 0;
+        let balance = account.openingBalance;
 
         for (const transaction of transactions) {
           if (transaction.type === 'income' && transaction.accountId === account.id) {
@@ -311,6 +318,47 @@ export class AccountService {
     });
 
     return updatedAccounts;
+  }
+
+  private async calculateTransactionDelta(userId: string, accountId: string) {
+    const transactions = await prisma.transaction.findMany({
+      where: {
+        userId,
+        OR: [{ accountId }, { toAccountId: accountId }],
+      },
+      select: {
+        amount: true,
+        type: true,
+        accountId: true,
+        toAccountId: true,
+      },
+    });
+
+    let delta = 0;
+
+    for (const transaction of transactions) {
+      if (transaction.type === 'income' && transaction.accountId === accountId) {
+        delta += transaction.amount;
+        continue;
+      }
+
+      if (transaction.type === 'expense' && transaction.accountId === accountId) {
+        delta -= transaction.amount;
+        continue;
+      }
+
+      if (transaction.type === 'transfer') {
+        if (transaction.accountId === accountId) {
+          delta -= transaction.amount;
+        }
+
+        if (transaction.toAccountId === accountId) {
+          delta += transaction.amount;
+        }
+      }
+    }
+
+    return delta;
   }
 
   private validateCreateInput(input: CreateAccountInput) {
@@ -446,6 +494,7 @@ export class AccountService {
       type: account.type,
       currency: account.currency,
       balance: account.balance,
+      openingBalance: account.openingBalance,
       showInTotalBalance: account.showInTotalBalance,
       lockRename: account.lockRename,
       lockSpending: account.lockSpending,

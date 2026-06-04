@@ -126,7 +126,8 @@ export const updateTransaction = asyncHandler(async (req: Request, res: Response
 export const deleteTransaction = asyncHandler(async (req: Request, res: Response) => {
   const transactionId = getStringParam(req.params.id, 'Transaction id');
 
-  const transaction = await transactionService.deleteTransaction(req.userId!, transactionId);
+  const balanceMode = req.body?.balanceMode === 'keep' ? 'keep' : 'revert';
+  const transaction = await transactionService.deleteTransaction(req.userId!, transactionId, { balanceMode });
 
   res.json({
     message: 'Transaction deleted successfully',

@@ -31,8 +31,15 @@ export async function authMiddleware(req: AuthRequest, res: Response, next: Next
   }
 
   try {
-    const decoded = jwt.verify(token, env.jwtSecret) as { userId?: string };
-    const userId = typeof decoded.userId === 'string' ? decoded.userId : '';
+    const decoded = jwt.verify(token, env.jwtSecret, {
+      issuer: process.env.AUTH_JWT_ISSUER || 'ai-financer-api',
+      audience: process.env.AUTH_JWT_AUDIENCE || 'ai-financer-web',
+    }) as { userId?: string; sub?: string };
+    const userId = typeof decoded.userId === 'string'
+      ? decoded.userId
+      : typeof decoded.sub === 'string'
+        ? decoded.sub
+        : '';
 
     if (!userId) {
       return res.status(401).json({

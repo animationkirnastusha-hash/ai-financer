@@ -1,4 +1,5 @@
 import { env } from '@/shared/config/env';
+import { getAccessToken } from '@/features/auth/lib/accessToken';
 
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 
@@ -25,7 +26,7 @@ export async function request<T>(
   path: string,
   options: RequestOptions = {},
 ): Promise<T> {
-  const token = localStorage.getItem('auth-token');
+  const token = getAccessToken();
 
   const response = await fetch(`${env.apiBaseUrl}${path}`, {
     method: options.method ?? 'GET',
@@ -43,8 +44,14 @@ export async function request<T>(
   const payload = isJson ? await response.json() : await response.text();
 
   if (!response.ok) {
+    const message = typeof payload === 'object' && payload !== null
+      ? String((payload as { error?: { message?: unknown }; message?: unknown }).error?.message
+        || (payload as { message?: unknown }).message
+        || `Request failed with status ${response.status}`)
+      : `Request failed with status ${response.status}`;
+
     throw new HttpError(
-      `Request failed with status ${response.status}`,
+      message,
       response.status,
       payload,
     );

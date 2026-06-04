@@ -8,6 +8,17 @@ export type TelegramInitDataUser = {
   photo_url?: string;
 };
 export type TelegramUser = TelegramInitDataUser;
+
+const DEFAULT_MAX_INIT_DATA_AGE_SEC = 24 * 60 * 60;
+
+function getMaxInitDataAgeSec() {
+  const raw = process.env.TELEGRAM_INIT_DATA_MAX_AGE_SEC;
+  if (!raw) return DEFAULT_MAX_INIT_DATA_AGE_SEC;
+
+  const parsed = Number(raw);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : DEFAULT_MAX_INIT_DATA_AGE_SEC;
+}
+
 export function verifyTelegramWebAppData(
   initData: string,
   botToken: string,
@@ -16,8 +27,14 @@ export function verifyTelegramWebAppData(
 
   const params = new URLSearchParams(initData);
   const hash = params.get('hash');
+  const authDate = Number(params.get('auth_date'));
 
-  if (!hash) return false;
+  if (!hash || !/^[a-f0-9]{64}$/i.test(hash)) return false;
+  if (!Number.isFinite(authDate)) return false;
+
+  const nowSec = Math.floor(Date.now() / 1000);
+  const ageSec = nowSec - authDate;
+  if (ageSec < 0 || ageSec > getMaxInitDataAgeSec()) return false;
 
   params.delete('hash');
 

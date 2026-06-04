@@ -1,4 +1,5 @@
 import { env } from '@/shared/config/env';
+import { getAccessToken } from '@/features/auth/lib/accessToken';
 
 type VoiceTranscriptionResponse = {
   success: boolean;
@@ -20,7 +21,7 @@ type VoiceStatusResponse = {
 };
 
 function getAuthHeaders() {
-  const token = localStorage.getItem('auth-token');
+  const token = getAccessToken();
   return token ? { Authorization: `Bearer ${token}` } : undefined;
 }
 
@@ -97,8 +98,7 @@ export function logVoiceDebugEvent(event: string, details?: VoiceDebugDetails) {
 
   try {
     const headers = getVoiceDebugHeaders();
-    const token = localStorage.getItem('auth-token');
-    if (!token) return;
+    if (!getAccessToken()) return;
 
     void fetch(`${env.apiBaseUrl}/voice/debug`, {
       method: 'POST',

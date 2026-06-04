@@ -1,4 +1,4 @@
-import { env } from '@/shared/config/env';
+import { apiClient } from '@/shared/api/client';
 
 export type AccountDto = {
   id: string;
@@ -50,43 +50,23 @@ export type UpdateAccountPayload = Partial<{
   lockVisibility: boolean;
 }>;
 
-function getAuthHeaders(): HeadersInit {
-  const token = localStorage.getItem('auth-token');
-  if (!token) return {};
-  return { Authorization: `Bearer ${token}` };
-}
-
-async function readPayload(response: Response) {
-  return response.json().catch(() => null);
-}
-
-function getErrorMessage(payload: any, fallback: string) {
-  return payload?.error?.message || payload?.message || fallback;
+function getErrorMessage(error: unknown, fallback: string) {
+  if (error instanceof Error && error.message) return error.message;
+  return fallback;
 }
 
 export async function fetchAccounts(): Promise<AccountDto[]> {
-  const response = await fetch(`${env.apiBaseUrl}/accounts`, {
-    method: 'GET',
-    headers: getAuthHeaders(),
-  });
-
-  const payload = await readPayload(response);
-
-  if (!response.ok) {
-    throw new Error(getErrorMessage(payload, 'Failed to fetch accounts'));
+  try {
+    const payload = await apiClient.get<{ accounts?: AccountDto[] }>('/accounts');
+    return Array.isArray(payload.accounts) ? payload.accounts : [];
+  } catch (error) {
+    throw new Error(getErrorMessage(error, 'Failed to fetch accounts'));
   }
-
-  return Array.isArray(payload?.accounts) ? payload.accounts : [];
 }
 
 export async function createAccount(input: CreateAccountPayload): Promise<AccountDto> {
-  const response = await fetch(`${env.apiBaseUrl}/accounts`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      ...getAuthHeaders(),
-    },
-    body: JSON.stringify({
+  try {
+    const payload = await apiClient.post<{ account: AccountDto }>('/accounts', {
       name: input.name,
       type: input.type,
       currency: input.currency,
@@ -99,46 +79,26 @@ export async function createAccount(input: CreateAccountPayload): Promise<Accoun
       lockTransfers: input.lockTransfers,
       lockBalance: input.lockBalance,
       lockVisibility: input.lockVisibility,
-    }),
-  });
-
-  const payload = await readPayload(response);
-
-  if (!response.ok) {
-    throw new Error(getErrorMessage(payload, 'Failed to create account'));
+    });
+    return payload.account;
+  } catch (error) {
+    throw new Error(getErrorMessage(error, 'Failed to create account'));
   }
-
-  return payload.account;
 }
 
 export async function updateAccountRequest(accountId: string, input: UpdateAccountPayload): Promise<AccountDto> {
-  const response = await fetch(`${env.apiBaseUrl}/accounts/${accountId}`, {
-    method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json',
-      ...getAuthHeaders(),
-    },
-    body: JSON.stringify(input),
-  });
-
-  const payload = await readPayload(response);
-
-  if (!response.ok) {
-    throw new Error(getErrorMessage(payload, 'Не удалось обновить счёт'));
+  try {
+    const payload = await apiClient.put<{ account: AccountDto }>(`/accounts/${accountId}`, input);
+    return payload.account;
+  } catch (error) {
+    throw new Error(getErrorMessage(error, 'Не удалось обновить счёт'));
   }
-
-  return payload.account;
 }
 
 export async function deleteAccountRequest(accountId: string): Promise<void> {
-  const response = await fetch(`${env.apiBaseUrl}/accounts/${accountId}`, {
-    method: 'DELETE',
-    headers: getAuthHeaders(),
-  });
-
-  const payload = await readPayload(response);
-
-  if (!response.ok) {
-    throw new Error(getErrorMessage(payload, 'Не удалось удалить счёт'));
+  try {
+    await apiClient.delete(`/accounts/${accountId}`);
+  } catch (error) {
+    throw new Error(getErrorMessage(error, 'Не удалось удалить счёт'));
   }
 }

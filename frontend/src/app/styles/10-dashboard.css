@@ -621,3 +621,48 @@
   min-height: min(720px, 100dvh);
   padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 18px);
 }
+
+/* Pack 15: диаграмма без иконок внутри круга */
+.app-home-donut-icon {
+  display: none !important;
+}
+
+.app-home-chart-modal__visual--single {
+  min-height: min(62vw, 360px);
+  align-items: center;
+  justify-content: center;
+}
+
+.app-delete-choice {
+  border: 1px solid rgba(248, 113, 113, 0.22);
+  border-radius: 26px;
+  background:
+    radial-gradient(circle at top right, rgba(248, 113, 113, 0.14), transparent 44%),
+    rgba(255, 255, 255, 0.045);
+  padding: 16px;
+  display: grid;
+  gap: 14px;
+}
+
+.app-delete-choice b {
+  display: block;
+  color: rgba(255, 255, 255, 0.94);
+  font-size: 15px;
+}
+
+.app-delete-choice p {
+  margin: 6px 0 0;
+  color: rgba(255, 255, 255, 0.52);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.app-ghost-button {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 20px;
+  min-height: 46px;
+  padding: 0 16px;
+  color: rgba(255, 255, 255, 0.66);
+  background: rgba(255, 255, 255, 0.035);
+  font-weight: 800;
+}

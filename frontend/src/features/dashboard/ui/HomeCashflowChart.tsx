@@ -52,13 +52,10 @@ export function HomeCashflowChart({
       <button type="button" className="app-home-chart-preview" onClick={onOpenDetails} aria-label="Открыть диаграмму">
         <span className="app-home-donut" style={{ background: conicGradient(analytics.categories) }}>
           <i />
-          {analytics.categories.slice(0, 5).map((group, index) => (
-            <em key={group.key} className={`app-home-donut-icon app-home-donut-icon--${index}`}>{group.icon || '•'}</em>
-          ))}
         </span>
         <span className="app-home-chart-preview__text">
           <b>{hasData ? formatMoney(analytics.total, 'RUB', { sign: mode === 'expense' ? 'minus' : 'plus' }) : 'Пока пусто'}</b>
-          <small>{hasData && primary ? `${primary.icon || ''} ${primary.name} — ${primary.percent}%` : 'Добавь первую операцию за выбранный период'}</small>
+          <small>{hasData && primary ? `${primary.name} — ${primary.percent}%` : 'Добавь первую операцию за выбранный период'}</small>
         </span>
       </button>
 

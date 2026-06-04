@@ -6,6 +6,7 @@ import { chatApi } from '@/features/chat/api/chat.api';
 import { useAccountsStore } from '@/features/accounts/model/accounts.store';
 import { useTransactionsStore } from '@/features/transactions/model/transactions.store';
 import type { ChatMessage, SendChatMessageOptions, SendChatMessagePayload } from '@/features/chat/model/chat.types';
+import { useAuthStore } from '@/features/auth/model/auth.store';
 
 const MAX_LOCAL_MESSAGES = 50;
 
@@ -59,9 +60,7 @@ export function useChatController() {
   const loadAccounts = useAccountsStore((state) => state.loadAccounts);
   const refreshTransactions = useTransactionsStore((state) => state.refreshAll);
 
-  const hasAuthToken = useMemo(() => {
-    return !!localStorage.getItem('auth-token');
-  }, []);
+  const hasAuthToken = useAuthStore((state) => Boolean(state.token));
 
   const loadPendingActions = useCallback(async () => {
     if (!hasAuthToken) return;

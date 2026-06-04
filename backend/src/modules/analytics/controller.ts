@@ -3,11 +3,12 @@ import { Response } from 'express';
 import { prisma } from '../../lib/prisma';
 import { asyncHandler } from '../../shared/utils/asyncHandler';
 import type { AuthRequest } from '../../middleware/auth';
-import { ensureProductAnalyticsSchema } from './bootstrap';
 
 const ALLOWED_EVENTS = new Set([
   'session_start',
   'screen_view',
+  'screen_leave',
+  'session_pause',
   'ai_command_submitted',
   'ai_confirmed',
   'ai_cancelled',
@@ -53,8 +54,6 @@ export const trackProductEvent = asyncHandler(async (req: AuthRequest, res: Resp
   if (!ALLOWED_EVENTS.has(event)) {
     return res.status(400).json({ error: { message: 'Unsupported event', code: 'UNSUPPORTED_EVENT' } });
   }
-
-  await ensureProductAnalyticsSchema();
 
   const safeData = sanitizeData(body.data);
 

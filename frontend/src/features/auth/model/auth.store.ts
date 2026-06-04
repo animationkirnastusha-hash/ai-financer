@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { authApi, type AuthUserDto } from '@/features/chat/api/auth.api';
 import { hasTelegramRuntime } from '@/shared/lib/telegram';
+import { clearAccessToken, setAccessToken } from '@/features/auth/lib/accessToken';
 
 type AuthState = {
   user: AuthUserDto | null;
@@ -14,17 +15,21 @@ type AuthState = {
   logout: () => void;
 };
 
-const TOKEN_KEY = 'auth-token';
 const AUTH_MODE_KEY = 'auth-mode';
 
+function clearLegacyAuthStorage() {
+  localStorage.removeItem('auth-token');
+  localStorage.removeItem(AUTH_MODE_KEY);
+}
+
 function saveAuth(response: { token: string; mode: string; user: AuthUserDto }) {
-  localStorage.setItem(TOKEN_KEY, response.token);
+  setAccessToken(response.token);
   localStorage.setItem(AUTH_MODE_KEY, response.mode);
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
   user: null,
-  token: localStorage.getItem(TOKEN_KEY),
+  token: null,
   isReady: false,
   isLoading: false,
   error: null,
@@ -42,8 +47,8 @@ export const useAuthStore = create<AuthState>((set) => ({
        * Дальше AuthBootstrap покажет безопасный вход через код из бота.
        */
       if (telegramRuntime && !hasTelegramInitData) {
-        localStorage.removeItem(TOKEN_KEY);
-        localStorage.removeItem(AUTH_MODE_KEY);
+        clearAccessToken();
+        clearLegacyAuthStorage();
 
         throw new Error('Не удалось подтвердить вход через Telegram');
       }
@@ -52,8 +57,8 @@ export const useAuthStore = create<AuthState>((set) => ({
        * В Telegram всегда перелогиниваемся через initData.
        */
       if (hasTelegramInitData) {
-        localStorage.removeItem(TOKEN_KEY);
-        localStorage.removeItem(AUTH_MODE_KEY);
+        clearAccessToken();
+        clearLegacyAuthStorage();
 
         const response = await authApi.login(initData);
 
@@ -72,25 +77,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       /**
        * Вне Telegram: dev/web режим.
        */
-      const existingToken = localStorage.getItem(TOKEN_KEY);
-
-      if (existingToken) {
-        try {
-          const me = await authApi.me();
-
-          set({
-            user: me.user,
-            token: existingToken,
-            isReady: true,
-            isLoading: false,
-          });
-
-          return;
-        } catch {
-          localStorage.removeItem(TOKEN_KEY);
-          localStorage.removeItem(AUTH_MODE_KEY);
-        }
-      }
+      clearLegacyAuthStorage();
 
       const response = await authApi.login();
 
@@ -105,8 +92,8 @@ export const useAuthStore = create<AuthState>((set) => ({
     } catch (error) {
       console.error('Auth bootstrap failed', error);
 
-      localStorage.removeItem(TOKEN_KEY);
-      localStorage.removeItem(AUTH_MODE_KEY);
+      clearAccessToken();
+      clearLegacyAuthStorage();
 
       set({
         user: null,
@@ -148,8 +135,8 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   logout: () => {
-    localStorage.removeItem(TOKEN_KEY);
-    localStorage.removeItem(AUTH_MODE_KEY);
+    clearAccessToken();
+    clearLegacyAuthStorage();
 
     set({
       user: null,

@@ -5,6 +5,7 @@ import { AccountDetailsSheet } from '@/features/accounts/ui/AccountDetailsSheet'
 import { AccountTransferSheet } from '@/features/accounts/ui/AccountTransferSheet';
 import { CreateAccountSheet } from '@/features/accounts/ui/CreateAccountSheet';
 import { EditAccountModal } from '@/features/accounts/ui/EditAccountModal';
+import { buildHomeFinanceAnalytics } from '@/features/dashboard/lib/homeFinanceAnalytics';
 import { HomeCategoryOperationsModal } from '@/features/dashboard/ui/HomeCategoryOperationsModal';
 import { HomeChartDetailsModal } from '@/features/dashboard/ui/HomeChartDetailsModal';
 import { goalsApi } from '@/features/goals/api/goals.api';
@@ -125,7 +126,7 @@ export function AppModalManager() {
       case 'transaction-create':
         return <TransactionCreateSheet open initialType={modal.initialType} isSaving={isTransactionSaving} modalLayer={layer} onClose={() => closeModal('transaction-create')} onSave={async (payload) => { closeModal('transaction-create'); await createTransaction(payload); await refreshFinance(); }} />;
       case 'transaction-edit':
-        return <TransactionEditSheet open transaction={modal.transaction} isSaving={isTransactionSaving} modalLayer={layer} onClose={() => closeModal('transaction-edit')} onSave={async (payload) => { closeModal('transaction-edit'); await updateTransaction(modal.transaction.id, payload); await refreshFinance(); }} onDelete={async (transaction) => { closeModal('transaction-edit'); await deleteTransaction(transaction); await refreshFinance(); }} />;
+        return <TransactionEditSheet open transaction={modal.transaction} isSaving={isTransactionSaving} modalLayer={layer} onClose={() => closeModal('transaction-edit')} onSave={async (payload) => { closeModal('transaction-edit'); await updateTransaction(modal.transaction.id, payload); await refreshFinance(); }} onDelete={async (transaction, balanceMode) => { closeModal('transaction-edit'); await deleteTransaction(transaction, balanceMode); await refreshFinance(); }} />;
       case 'category-edit':
         return <CategoryEditSheet open category={modal.category ?? null} sections={sections} initialType={modal.initialType} initialSectionId={modal.sectionId ?? null} isSaving={isCreatingTaxonomy || isTaxonomySaving} modalLayer={layer} onClose={() => closeModal('category-edit')} onSave={async (payload) => { const saved = modal.category ? await updateCategory(modal.category.id, payload) : await createCategory({ ...payload, sectionId: payload.sectionId ?? modal.sectionId ?? null }); modal.onSavedCategory?.(saved); closeModal('category-edit'); await loadTaxonomy(true); }} onDelete={async (category) => { await deleteCategory(category.id); closeModal('category-edit'); await loadTaxonomy(true); }} />;
       case 'section-edit':
@@ -134,8 +135,13 @@ export function AppModalManager() {
         return <GoalEditSheet open goal={modal.goal ?? null} isSaving={false} onClose={() => closeModal('goal-edit')} onSave={async (payload) => { if (modal.goal) await goalsApi.update(modal.goal.id, payload); else await goalsApi.create(payload); modal.onAfterSave?.(); closeModal('goal-edit'); }} onDelete={async (goal) => { await goalsApi.delete(goal.id); modal.onAfterSave?.(); closeModal('goal-edit'); }} />;
       case 'home-chart-details':
         return <HomeChartDetailsModal open transactions={transactions} mode={modal.mode} period={modal.period} rates={rates} modalLayer={layer} onClose={() => closeModal('home-chart-details')} onOpenAnalytics={() => { closeAllModals(); navigateTo('analytics'); }} onOpenGroup={(group) => openModal({ type: 'home-category-operations', group })} />;
-      case 'home-category-operations':
-        return <HomeCategoryOperationsModal group={modal.group} modalLayer={layer} onClose={() => closeModal('home-category-operations')} onEdit={(transaction) => openModal({ type: 'transaction-edit', transaction })} />;
+      case 'home-category-operations': {
+        const activeDetails = pickModal(stack, 'home-chart-details');
+        const currentGroup = activeDetails
+          ? buildHomeFinanceAnalytics(transactions, activeDetails.mode, activeDetails.period, rates).categories.find((group) => group.key === modal.group.key) ?? null
+          : modal.group;
+        return <HomeCategoryOperationsModal group={currentGroup} modalLayer={layer} onClose={() => closeModal('home-category-operations')} onEdit={(transaction) => openModal({ type: 'transaction-edit', transaction })} />;
+      }
       case 'accounts-tools':
         return <div className="app-modal-backdrop" style={{ zIndex: layer }} data-no-swipe="true" onClick={() => closeModal('accounts-tools')}><div className="app-modal-sheet app-accounts-tools" data-no-swipe="true" onClick={(event) => event.stopPropagation()}><div className="app-modal-handle" /><div className="app-modal-body space-y-4"><div><div className="app-eyebrow">Счета</div><h2 className="mt-2 text-2xl font-semibold tracking-[-0.045em] text-white">Правила кошелька</h2><p className="mt-2 text-sm leading-6 text-white/50">Выбери основную валюту и быстро проверь важные счета.</p></div><section className="app-settings-grid"><div className="app-settings-tile"><div className="text-xs text-white/42">Основная валюта</div><div className="mt-3 flex gap-2">{(['RUB', 'USD', 'EUR'] as const).map((currency) => <button key={currency} type="button" onClick={() => setMainCurrency(currency)} className={mainCurrency === currency ? 'app-choice app-choice--active' : 'app-choice'}>{currency}</button>)}</div></div><div className="app-settings-tile"><small>Главный счёт</small><b>{accounts.find((item) => item.id === primaryAccountId)?.name || 'Не выбран'}</b></div><div className="app-settings-tile"><small>Доходы</small><b>{accounts.find((item) => item.id === incomeAccountId)?.name || 'Не выбран'}</b></div></section></div><footer className="app-modal-footer"><button type="button" onClick={() => closeModal('accounts-tools')} className="app-secondary-button w-full">Готово</button></footer></div></div>;
       case 'taxonomy-tools':

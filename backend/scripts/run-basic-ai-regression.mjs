@@ -132,7 +132,7 @@ async function createAndSaveTestToken(tokenFile) {
       },
     });
 
-    const token = jwt.sign({ userId: user.id }, jwtSecret, { expiresIn: '30d' });
+    const token = jwt.sign({ userId: user.id, sub: user.id }, jwtSecret, { expiresIn: process.env.AUTH_ACCESS_TOKEN_TTL || '12h', issuer: process.env.AUTH_JWT_ISSUER || 'ai-financer-api', audience: process.env.AUTH_JWT_AUDIENCE || 'ai-financer-web' });
     const envPath = join(process.cwd(), '.test-auth-token.env');
     writeFileSync(tokenFile, `${token}
 `, 'utf8');

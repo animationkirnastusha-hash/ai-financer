@@ -296,24 +296,15 @@ export class TransactionService {
 
     const nextTitle = input.title !== undefined ? input.title?.trim() || null : existing.title;
     const nextDescription = input.description !== undefined ? input.description?.trim() || null : existing.description;
-    const shouldAutoTaxonomy = nextType !== 'transfer' && input.categoryId === undefined && (
-      input.title !== undefined || input.description !== undefined || input.type !== undefined
-    );
 
-    const taxonomy = nextType === 'transfer'
-      ? { categoryId: null as string | null, sectionId: null as string | null }
-      : shouldAutoTaxonomy
-        ? await this.resolveTransactionTaxonomy(userId, {
-            type: nextType,
-            title: nextTitle,
-            description: nextDescription,
-            categoryId: null,
-            sectionId: input.sectionId !== undefined ? input.sectionId : existing.sectionId,
-          })
-        : {
-            categoryId: input.categoryId !== undefined ? input.categoryId : existing.categoryId,
-            sectionId: input.sectionId !== undefined ? input.sectionId : existing.sectionId,
-          };
+    const taxonomy = await this.resolveUpdatedTransactionTaxonomy(userId, {
+      existingType: existing.type as TransactionType,
+      existingCategoryId: existing.categoryId,
+      existingSectionId: existing.sectionId,
+      nextType,
+      categoryId: input.categoryId,
+      sectionId: input.sectionId,
+    });
 
     const nextCategoryId = taxonomy.categoryId;
     const nextSectionId = taxonomy.sectionId;
@@ -383,7 +374,7 @@ export class TransactionService {
     return updated;
   }
 
-  async deleteTransaction(userId: string, transactionId: string) {
+  async deleteTransaction(userId: string, transactionId: string, options: { balanceMode?: 'revert' | 'keep' } = {}) {
     const existing = await prisma.transaction.findFirst({
       where: { id: transactionId, userId },
       include: transactionInclude,
@@ -394,13 +385,15 @@ export class TransactionService {
     }
 
     await prisma.$transaction(async (tx) => {
-      await this.applyBalanceEffect(tx, {
-        type: existing.type as TransactionType,
-        amount: existing.amount,
-        accountId: existing.accountId,
-        toAccountId: existing.toAccountId,
-        direction: 'revert',
-      });
+      if ((options.balanceMode ?? 'revert') === 'revert') {
+        await this.applyBalanceEffect(tx, {
+          type: existing.type as TransactionType,
+          amount: existing.amount,
+          accountId: existing.accountId,
+          toAccountId: existing.toAccountId,
+          direction: 'revert',
+        });
+      }
 
       await tx.transaction.delete({
         where: { id: existing.id },
@@ -460,6 +453,49 @@ export class TransactionService {
     return account;
   }
 
+
+  private async resolveUpdatedTransactionTaxonomy(
+    userId: string,
+    params: {
+      existingType: TransactionType;
+      existingCategoryId?: string | null;
+      existingSectionId?: string | null;
+      nextType: TransactionType;
+      categoryId?: string | null;
+      sectionId?: string | null;
+    },
+  ) {
+    if (params.nextType === 'transfer') {
+      return { categoryId: null as string | null, sectionId: null as string | null };
+    }
+
+    if (params.categoryId !== undefined) {
+      if (!params.categoryId) {
+        return {
+          categoryId: null as string | null,
+          sectionId: params.sectionId ?? null,
+        };
+      }
+
+      const category = await this.ensureOwnedCategory(userId, params.categoryId, params.nextType);
+      return {
+        categoryId: category.id,
+        sectionId: params.sectionId !== undefined ? params.sectionId : (category.sectionId ?? null),
+      };
+    }
+
+    if (params.nextType !== params.existingType) {
+      return {
+        categoryId: null as string | null,
+        sectionId: params.sectionId ?? null,
+      };
+    }
+
+    return {
+      categoryId: params.existingCategoryId ?? null,
+      sectionId: params.sectionId !== undefined ? params.sectionId : (params.existingSectionId ?? null),
+    };
+  }
 
   private async resolveTransactionTaxonomy(
     userId: string,

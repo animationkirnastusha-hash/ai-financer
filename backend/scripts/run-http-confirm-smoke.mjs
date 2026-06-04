@@ -59,7 +59,7 @@ async function createUserAndToken() {
       referralCode: `HTTP${Date.now().toString(36).toUpperCase()}`,
     },
   });
-  const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET || 'dev-secret', { expiresIn: '30d' });
+  const token = jwt.sign({ userId: user.id, sub: user.id }, process.env.JWT_SECRET || 'dev-secret', { expiresIn: process.env.AUTH_ACCESS_TOKEN_TTL || '12h', issuer: process.env.AUTH_JWT_ISSUER || 'ai-financer-api', audience: process.env.AUTH_JWT_AUDIENCE || 'ai-financer-web' });
   fs.writeFileSync(path.join(root, '.test-auth-token'), `${token}\n`, 'utf8');
   return { user, token };
 }

@@ -2,7 +2,7 @@ import { type ReactNode, useEffect, useMemo, useState } from 'react';
 
 import { useAccountsStore } from '@/features/accounts/model/accounts.store';
 import { useSectionsStore } from '@/features/sections/model/sections.store';
-import type { TransactionDto } from '@/features/transactions/api/transactions.api';
+import type { DeleteTransactionBalanceMode, TransactionDto } from '@/features/transactions/api/transactions.api';
 import { formatMoney } from '@/shared/lib/money';
 
 type TransactionType = 'income' | 'expense' | 'transfer';
@@ -23,7 +23,7 @@ type Props = {
     type?: TransactionType;
     toAccountId?: string | null;
   }) => Promise<void> | void;
-  onDelete: (transaction: TransactionDto) => Promise<void> | void;
+  onDelete: (transaction: TransactionDto, balanceMode?: DeleteTransactionBalanceMode) => Promise<void> | void;
 };
 
 function toDateInput(value?: string | null) {
@@ -147,9 +147,22 @@ export function TransactionEditSheet({
   }
 
   async function remove() {
-    const confirmed = window.confirm(`Удалить операцию «${getTransactionTitle(currentTransaction)}»?`);
-    if (!confirmed) return;
-    await onDelete(currentTransaction);
+    const titleText = getTransactionTitle(currentTransaction);
+    const shouldRevertBalance = window.confirm(
+      `Удалить операцию «${titleText}» и вернуть деньги на счёт?\n\nОК — удалить и пересчитать баланс.\nОтмена — выбрать следующий вариант.`,
+    );
+
+    if (shouldRevertBalance) {
+      await onDelete(currentTransaction, 'revert');
+      return;
+    }
+
+    const shouldKeepBalance = window.confirm(
+      `Удалить только запись «${titleText}», не меняя баланс счёта?`,
+    );
+
+    if (!shouldKeepBalance) return;
+    await onDelete(currentTransaction, 'keep');
   }
 
   return (

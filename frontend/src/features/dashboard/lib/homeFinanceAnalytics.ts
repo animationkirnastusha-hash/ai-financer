@@ -37,6 +37,14 @@ const colors = [
   'rgba(163, 230, 53, .90)',
 ];
 
+function stableColorFromKey(key: string) {
+  let hash = 0;
+  for (let index = 0; index < key.length; index += 1) {
+    hash = (hash * 31 + key.charCodeAt(index)) >>> 0;
+  }
+  return colors[hash % colors.length];
+}
+
 type Rates = { usd: number; eur: number };
 
 type CategoryWithSection = {
@@ -87,6 +95,14 @@ export function toRub(amount: number, currency: string | undefined, rates: Rates
   return convertCurrency(amount, (currency || 'RUB') as AppCurrency, 'RUB', { USD: rates.usd, EUR: rates.eur });
 }
 
+
+export function getHomeFinanceGroupKey(transaction: TransactionDto, mode: HomeCashflowMode) {
+  const item = transaction as ExtendedTransaction;
+  const categoryName = item.category?.name?.trim() || (mode === 'expense' ? 'Без категории' : 'Доходы');
+  const sectionName = item.category?.section?.name?.trim() || item.section?.name?.trim() || 'Без раздела';
+  return `${sectionName}::${categoryName}`;
+}
+
 export function buildHomeFinanceAnalytics(
   transactions: TransactionDto[],
   mode: HomeCashflowMode,
@@ -104,7 +120,7 @@ export function buildHomeFinanceAnalytics(
     const sectionName = item.category?.section?.name?.trim() || item.section?.name?.trim() || 'Без раздела';
     const categoryIcon = item.category?.icon || (mode === 'expense' ? '🧾' : '💵');
     const sectionIcon = item.category?.section?.icon || item.section?.icon || '📌';
-    const key = `${sectionName}::${categoryName}`;
+    const key = getHomeFinanceGroupKey(transaction, mode);
     const amount = toRub(Number(transaction.amount) || 0, transaction.account?.currency, rates);
 
     const existingCategory = categoryMap.get(key);
@@ -113,7 +129,7 @@ export function buildHomeFinanceAnalytics(
       existingCategory.count += 1;
       existingCategory.transactions.push(transaction);
     } else {
-      const color = item.category?.color || colors[categoryMap.size % colors.length];
+      const color = item.category?.color || stableColorFromKey(key);
       categoryMap.set(key, {
         key,
         name: categoryName,
@@ -132,7 +148,7 @@ export function buildHomeFinanceAnalytics(
     if (existingSection) {
       existingSection.amount += amount;
     } else {
-      const color = item.category?.section?.color || item.section?.color || colors[sectionMap.size % colors.length];
+      const color = item.category?.section?.color || item.section?.color || stableColorFromKey(sectionKey);
       sectionMap.set(sectionKey, { key: sectionKey, name: sectionName, amount, color, icon: sectionIcon, percent: 0 });
     }
   });

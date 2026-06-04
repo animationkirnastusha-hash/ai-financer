@@ -1,5 +1,6 @@
 import type { TransactionDto } from '@/features/transactions/api/transactions.api';
-import type { HomeFinanceGroup } from '@/features/dashboard/lib/homeFinanceAnalytics';
+import type { HomeCashflowMode, HomeFinanceGroup } from '@/features/dashboard/lib/homeFinanceAnalytics';
+import { getHomeFinanceGroupKey } from '@/features/dashboard/lib/homeFinanceAnalytics';
 import { formatMoney, formatTransactionDate } from '@/shared/lib/money';
 
 function operationTitle(transaction: TransactionDto) {
@@ -8,15 +9,23 @@ function operationTitle(transaction: TransactionDto) {
 
 type Props = {
   group: HomeFinanceGroup | null;
+  transactions?: TransactionDto[];
+  mode?: HomeCashflowMode;
   onClose: () => void;
   modalLayer?: number;
   onEdit: (transaction: TransactionDto) => void;
 };
 
-export function HomeCategoryOperationsModal({ group, onClose, modalLayer, onEdit }: Props) {
+export function HomeCategoryOperationsModal({ group, transactions = [], mode = 'expense', onClose, modalLayer, onEdit }: Props) {
   if (!group) return null;
 
-  const sorted = [...group.transactions].sort((a, b) => Number(b.amount || 0) - Number(a.amount || 0));
+  const liveTransactionIds = new Set(transactions.map((transaction) => transaction.id));
+  const source = transactions.length > 0
+    ? transactions.filter((transaction) => transaction.type === mode && getHomeFinanceGroupKey(transaction, mode) === group.key)
+    : group.transactions.filter((transaction) => liveTransactionIds.size === 0 || liveTransactionIds.has(transaction.id));
+
+  const sorted = [...source].sort((a, b) => Number(b.amount || 0) - Number(a.amount || 0));
+  const total = sorted.reduce((sum, transaction) => sum + Number(transaction.amount || 0), 0);
 
   return (
     <div className="app-modal-backdrop app-home-chart-backdrop" style={{ zIndex: modalLayer }} data-no-swipe="true" onClick={onClose}>
@@ -27,13 +36,15 @@ export function HomeCategoryOperationsModal({ group, onClose, modalLayer, onEdit
             <div>
               <div className="app-eyebrow">{group.sectionName}</div>
               <h2>{group.name}</h2>
-              <p>{group.count} опер. · {formatMoney(group.amount, 'RUB')}</p>
+              <p>{sorted.length} опер. · {formatMoney(total || group.amount, 'RUB')}</p>
             </div>
             <button type="button" className="app-icon-button" onClick={onClose} aria-label="Закрыть">×</button>
           </div>
 
           <div className="app-home-category-operation-list">
-            {sorted.map((transaction) => {
+            {sorted.length === 0 ? (
+              <div className="app-empty-button">Операций в этой категории больше нет.</div>
+            ) : sorted.map((transaction) => {
               const sign = transaction.type === 'income' ? 'plus' : transaction.type === 'expense' ? 'minus' : 'none';
               return (
                 <button key={transaction.id} type="button" className="app-transaction-row" onClick={() => onEdit(transaction)}>

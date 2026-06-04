@@ -1,5 +1,5 @@
 import crypto from 'crypto';
-import jwt from 'jsonwebtoken';
+import jwt, { type SignOptions } from 'jsonwebtoken';
 
 import { env } from '../../config/env';
 import { prisma } from '../../lib/prisma';
@@ -115,14 +115,20 @@ export class AuthService {
   }
 
   generateToken(userId: string) {
+    const signOptions: SignOptions = {
+      expiresIn: (process.env.AUTH_ACCESS_TOKEN_TTL || '12h') as SignOptions['expiresIn'],
+      issuer: process.env.AUTH_JWT_ISSUER || 'ai-financer-api',
+      audience: process.env.AUTH_JWT_AUDIENCE || 'ai-financer-web',
+    };
+
     return jwt.sign(
       {
         userId,
+        sub: userId,
+        jti: crypto.randomUUID(),
       },
       env.jwtSecret,
-      {
-        expiresIn: '30d',
-      },
+      signOptions,
     );
   }
 

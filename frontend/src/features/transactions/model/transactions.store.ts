@@ -9,10 +9,12 @@ import {
   type CreateTransactionPayload,
   type MonthlyStatsDto,
   type TransactionDto,
+  type DeleteTransactionBalanceMode,
 } from '@/features/transactions/api/transactions.api';
 
 type UpdateTransactionPayload = {
   amount?: number;
+  title?: string | null;
   description?: string | null;
   date?: string;
   accountId?: string;
@@ -45,8 +47,8 @@ type TransactionsState = {
     description?: string | null;
   }) => Promise<TransactionDto | null>;
 
-  deleteTx: (transaction: TransactionDto | string) => Promise<void>;
-  deleteItem: (transactionOrId: TransactionDto | string) => Promise<void>;
+  deleteTx: (transaction: TransactionDto | string, balanceMode?: DeleteTransactionBalanceMode) => Promise<void>;
+  deleteItem: (transactionOrId: TransactionDto | string, balanceMode?: DeleteTransactionBalanceMode) => Promise<void>;
 
   updateItem: (id: string, payload: UpdateTransactionPayload) => Promise<void>;
   undoLast: () => Promise<void>;
@@ -143,23 +145,31 @@ export const useTransactionsStore = create<TransactionsState>((set, get) => ({
     });
   },
 
-  deleteTx: async (transactionOrId) => {
+  deleteTx: async (transactionOrId, balanceMode: DeleteTransactionBalanceMode = 'revert') => {
     const id = typeof transactionOrId === 'string' ? transactionOrId : transactionOrId.id;
+    const previousItems = get().items;
+    const previousLatest = get().latest;
 
-    set({ isMutating: true, error: null });
+    set({
+      isMutating: true,
+      error: null,
+      items: previousItems.filter((item) => item.id !== id),
+      latest: previousLatest?.id === id ? previousItems.find((item) => item.id !== id) ?? null : previousLatest,
+    });
 
     try {
-      await deleteTransaction(id);
+      await deleteTransaction(id, balanceMode);
       set({ isMutating: false });
       await get().refreshDashboard();
     } catch (error) {
       console.error(error);
-      set({ isMutating: false, error: getErrorMessage(error) });
+      set({ isMutating: false, items: previousItems, latest: previousLatest, error: getErrorMessage(error) });
+      throw error;
     }
   },
 
-  deleteItem: async (transactionOrId) => {
-    await get().deleteTx(transactionOrId);
+  deleteItem: async (transactionOrId, balanceMode: DeleteTransactionBalanceMode = 'revert') => {
+    await get().deleteTx(transactionOrId, balanceMode);
   },
 
   updateItem: async (id, payload) => {

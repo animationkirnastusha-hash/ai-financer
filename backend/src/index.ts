@@ -4,9 +4,11 @@ import { prisma } from './lib/prisma';
 import cron from 'node-cron';
 import { BudgetService } from './modules/budgets/service';
 import { ensureProductAnalyticsSchema } from './modules/analytics/bootstrap';
+import { aiCleanupService } from './modules/ai/ai-cleanup.service';
 
 async function bootstrap() {
   await ensureProductAnalyticsSchema();
+  aiCleanupService.start();
 
   const app = createApp();
 

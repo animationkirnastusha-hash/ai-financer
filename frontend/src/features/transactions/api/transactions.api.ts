@@ -151,8 +151,10 @@ export async function updateTransaction(
   return extractTransaction(response);
 }
 
-export async function deleteTransaction(id: string): Promise<TransactionDto | null> {
-  const response = await apiClient.delete<{ transaction?: TransactionDto } | TransactionDto>(`/transactions/${id}`);
+export type DeleteTransactionBalanceMode = 'revert' | 'keep';
+
+export async function deleteTransaction(id: string, balanceMode: DeleteTransactionBalanceMode = 'revert'): Promise<TransactionDto | null> {
+  const response = await apiClient.delete<{ transaction?: TransactionDto } | TransactionDto>(`/transactions/${id}`, { balanceMode });
 
   if ('transaction' in response) return response.transaction ?? null;
   return response as TransactionDto;
