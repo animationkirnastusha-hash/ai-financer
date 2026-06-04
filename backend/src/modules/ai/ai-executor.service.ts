@@ -619,6 +619,175 @@ export class AIExecutorService {
     }
 
 
+
+    if (tool === 'show_obligations') {
+      const status = this.cleanString(input.status) || 'active';
+      const loans = await tx.loan.findMany({
+        where: { userId, ...(status !== 'all' ? { status } : {}) },
+        include: {
+          account: { select: { id: true, name: true, currency: true, icon: true, color: true } },
+          payments: { orderBy: { paidAt: 'desc' }, take: 5 },
+          reminders: { where: { status: { in: ['scheduled', 'sent'] } }, orderBy: { remindAt: 'asc' }, take: 3 },
+        },
+        orderBy: [{ status: 'asc' }, { nextPaymentDate: 'asc' }, { createdAt: 'desc' }],
+      });
+      const monthlyPaymentTotal = loans.reduce((sum, item) => sum + item.monthlyPayment, 0);
+      const totalDebt = loans.reduce((sum, item) => sum + item.currentDebt, 0);
+      return { tool, loans, monthlyPaymentTotal, totalDebt };
+    }
+
+    if (tool === 'create_obligation') {
+      const title = this.cleanString(input.title);
+      if (!title) throw new BadRequestError('Obligation title is required');
+      const accountId = typeof resolved.accountId === 'string' ? resolved.accountId : null;
+      const paymentDay = input.paymentDay === null || input.paymentDay === undefined ? null : this.toInteger(input.paymentDay, 0) || null;
+      const nextPaymentDate = this.optionalDate(input.nextPaymentDate) ?? this.nextMonthlyDate(paymentDay);
+      const loan = await tx.loan.create({
+        data: {
+          userId,
+          accountId,
+          title,
+          type: this.cleanString(input.type) || 'loan',
+          creditor: this.optionalString(input.creditor),
+          currency: this.cleanString(input.currency).toUpperCase() || 'RUB',
+          principalAmount: this.toInteger(input.principalAmount, 0),
+          currentDebt: this.toInteger(input.currentDebt, this.toInteger(input.principalAmount, 0)),
+          monthlyPayment: this.toInteger(input.monthlyPayment, 0),
+          interestRate: input.interestRate === null || input.interestRate === undefined ? null : Number(input.interestRate),
+          termMonths: input.termMonths === null || input.termMonths === undefined ? null : this.toInteger(input.termMonths, 0) || null,
+          paidMonths: this.toInteger(input.paidMonths, 0),
+          paymentDay,
+          nextPaymentDate,
+          reminderDaysBefore: this.toInteger(input.reminderDaysBefore, 1),
+          autoCreateExpense: Boolean(input.autoCreateExpense),
+          note: this.optionalString(input.note),
+          status: 'active',
+        },
+      });
+      await this.rebuildObligationReminder(tx, userId, loan.id);
+      return { tool, obligation: loan };
+    }
+
+    if (tool === 'update_obligation') {
+      const loanId = this.requireString(resolved.loanId, 'loanId');
+      const data: Prisma.LoanUpdateInput = {};
+      if (input.title !== undefined) data.title = this.cleanString(input.title);
+      if (input.type !== undefined) data.type = this.cleanString(input.type) || 'loan';
+      if (input.creditor !== undefined) data.creditor = this.optionalString(input.creditor);
+      if (input.currency !== undefined) data.currency = this.cleanString(input.currency).toUpperCase() || 'RUB';
+      if (input.principalAmount !== undefined) data.principalAmount = this.toInteger(input.principalAmount, 0);
+      if (input.currentDebt !== undefined) data.currentDebt = this.toInteger(input.currentDebt, 0);
+      if (input.monthlyPayment !== undefined) data.monthlyPayment = this.toInteger(input.monthlyPayment, 0);
+      if (input.interestRate !== undefined) data.interestRate = input.interestRate === null ? null : Number(input.interestRate);
+      if (input.termMonths !== undefined) data.termMonths = input.termMonths === null ? null : this.toInteger(input.termMonths, 0) || null;
+      if (input.paidMonths !== undefined) data.paidMonths = this.toInteger(input.paidMonths, 0);
+      const nextPaymentDay = input.paymentDay !== undefined
+        ? (input.paymentDay === null ? null : this.toInteger(input.paymentDay, 0) || null)
+        : undefined;
+      if (input.paymentDay !== undefined) data.paymentDay = nextPaymentDay ?? null;
+      if (input.nextPaymentDate !== undefined) data.nextPaymentDate = this.optionalDate(input.nextPaymentDate);
+      else if (input.paymentDay !== undefined) data.nextPaymentDate = this.nextMonthlyDate(nextPaymentDay ?? null);
+      if (input.reminderDaysBefore !== undefined) data.reminderDaysBefore = this.toInteger(input.reminderDaysBefore, 1);
+      if (input.account !== undefined) {
+        data.account = typeof resolved.accountId === 'string'
+          ? { connect: { id: resolved.accountId } }
+          : { disconnect: true };
+      }
+      if (input.autoCreateExpense !== undefined) data.autoCreateExpense = Boolean(input.autoCreateExpense);
+      if (input.status !== undefined) data.status = this.cleanString(input.status) || 'active';
+      if (input.note !== undefined) data.note = this.optionalString(input.note);
+
+      const loan = await tx.loan.update({ where: { id: loanId }, data });
+      await this.rebuildObligationReminder(tx, userId, loan.id);
+      return { tool, obligation: loan };
+    }
+
+    if (tool === 'delete_obligation') {
+      const loanId = this.requireString(resolved.loanId, 'loanId');
+      const loan = await tx.loan.findFirst({ where: { id: loanId, userId } });
+      if (!loan) throw new NotFoundError('Obligation not found');
+      await tx.loan.delete({ where: { id: loan.id } });
+      return { tool, deleted: loan };
+    }
+
+    if (tool === 'mark_obligation_paid') {
+      const loanId = this.requireString(resolved.loanId, 'loanId');
+      const loan = await tx.loan.findFirst({ where: { id: loanId, userId } });
+      if (!loan) throw new NotFoundError('Obligation not found');
+      const amount = this.toInteger(input.amount, loan.monthlyPayment || loan.currentDebt);
+      if (amount <= 0) throw new BadRequestError('Payment amount is required');
+      const accountId = typeof resolved.accountId === 'string' ? resolved.accountId : loan.accountId;
+      const createExpense = input.createExpense !== undefined ? Boolean(input.createExpense) : loan.autoCreateExpense;
+      const paidAt = this.optionalDate(input.paidAt) ?? new Date();
+      let transactionId: string | null = null;
+
+      if (createExpense) {
+        if (!accountId) throw new BadRequestError('Account is required to create payment expense');
+        await this.applyBalanceEffect(tx, { type: 'expense', amount, accountId, direction: 'apply' });
+        const transaction = await tx.transaction.create({
+          data: {
+            userId,
+            accountId,
+            amount,
+            type: 'expense',
+            description: this.optionalString(input.note) ?? `Платёж: ${loan.title}`,
+            date: paidAt,
+            isAIGenerated: true,
+          },
+          include: transactionInclude,
+        });
+        transactionId = transaction.id;
+      }
+
+      const payment = await tx.loanPayment.create({
+        data: {
+          userId,
+          loanId: loan.id,
+          accountId: accountId ?? null,
+          amount,
+          paidAt,
+          transactionId,
+          note: this.optionalString(input.note),
+        },
+      });
+
+      const nextDebt = Math.max(0, loan.currentDebt - amount);
+      const nextDate = loan.nextPaymentDate ? this.addMonths(loan.nextPaymentDate, 1) : this.nextMonthlyDate(loan.paymentDay);
+      const updated = await tx.loan.update({
+        where: { id: loan.id },
+        data: {
+          currentDebt: nextDebt,
+          paidMonths: { increment: 1 },
+          nextPaymentDate: nextDebt > 0 ? nextDate : null,
+          status: nextDebt > 0 ? loan.status : 'closed',
+        },
+      });
+      await tx.obligationReminder.updateMany({ where: { userId, loanId: loan.id, status: 'scheduled' }, data: { status: 'done' } });
+      await this.rebuildObligationReminder(tx, userId, loan.id);
+
+      return { tool, payment, obligation: updated, transactionId };
+    }
+
+    if (tool === 'create_obligation_reminder') {
+      const loanId = typeof resolved.loanId === 'string' ? resolved.loanId : null;
+      const title = this.cleanString(input.title) || 'Напоминание';
+      const dueDate = this.optionalDate(input.dueDate) ?? new Date();
+      const remindAt = this.optionalDate(input.remindAt) ?? dueDate;
+      const reminder = await tx.obligationReminder.create({
+        data: {
+          userId,
+          loanId,
+          title,
+          message: this.optionalString(input.message) ?? title,
+          dueDate,
+          remindAt,
+          channel: this.cleanString(input.channel) || 'app',
+          status: 'scheduled',
+        },
+      });
+      return { tool, reminder };
+    }
+
     if (tool === 'query_analytics') {
       const analytics = await aiAnalyticsService.query(userId, input);
       return { tool, analytics };
@@ -902,6 +1071,68 @@ export class AIExecutorService {
   private safeDate(value: string, fallback: Date) {
     const parsed = new Date(value);
     return Number.isFinite(parsed.getTime()) ? parsed : fallback;
+  }
+
+
+  private optionalString(value: unknown) {
+    if (value === undefined || value === null) return null;
+    const text = this.cleanString(value);
+    return text || null;
+  }
+
+  private optionalDate(value: unknown) {
+    if (value === undefined || value === null || value === '') return null;
+    if (value instanceof Date && !Number.isNaN(value.getTime())) return value;
+    if (typeof value !== 'string') return null;
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? null : date;
+  }
+
+  private addMonths(date: Date, months: number) {
+    const copy = new Date(date);
+    copy.setMonth(copy.getMonth() + months);
+    return copy;
+  }
+
+  private nextMonthlyDate(paymentDay?: number | null) {
+    if (!paymentDay) return null;
+    const now = new Date();
+    const day = Math.min(paymentDay, 28);
+    const next = new Date(now.getFullYear(), now.getMonth(), day, 9, 0, 0, 0);
+    if (next.getTime() < now.getTime()) next.setMonth(next.getMonth() + 1);
+    return next;
+  }
+
+  private reminderDate(dueDate: Date, daysBefore: number) {
+    const remindAt = new Date(dueDate);
+    remindAt.setDate(remindAt.getDate() - daysBefore);
+    remindAt.setHours(9, 0, 0, 0);
+    return remindAt;
+  }
+
+  private async rebuildObligationReminder(tx: Prisma.TransactionClient, userId: string, loanId: string) {
+    const loan = await tx.loan.findFirst({ where: { id: loanId, userId } });
+    if (!loan) return;
+
+    await tx.obligationReminder.updateMany({
+      where: { userId, loanId, status: 'scheduled' },
+      data: { status: 'cancelled' },
+    });
+
+    if (loan.status !== 'active' || !loan.nextPaymentDate || loan.monthlyPayment <= 0) return;
+
+    await tx.obligationReminder.create({
+      data: {
+        userId,
+        loanId,
+        title: `Платёж: ${loan.title}`,
+        message: `Платёж ${loan.monthlyPayment} ${loan.currency} по обязательству «${loan.title}»`,
+        dueDate: loan.nextPaymentDate,
+        remindAt: this.reminderDate(loan.nextPaymentDate, loan.reminderDaysBefore),
+        channel: 'app',
+        status: 'scheduled',
+      },
+    });
   }
 
   private presetConfig(preset: string) {

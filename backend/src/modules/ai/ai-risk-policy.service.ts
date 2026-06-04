@@ -6,6 +6,7 @@ const HIGH_RISK_TOOLS = new Set<AIToolName>([
   'delete_category',
   'delete_section',
   'delete_goal',
+  'delete_obligation',
   'transfer_money',
   'undo_last_action',
 ]);
@@ -14,6 +15,7 @@ const ALWAYS_CONFIRM_TOOLS = new Set<AIToolName>([
   ...HIGH_RISK_TOOLS,
   'update_ai_settings',
   'apply_ai_settings_preset',
+  'mark_obligation_paid',
 ]);
 
 export class AIRiskPolicyService {

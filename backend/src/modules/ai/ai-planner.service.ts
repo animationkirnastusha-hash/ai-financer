@@ -9,6 +9,8 @@ type UserContext = {
   categories?: Array<{ name?: string; type?: string; sectionId?: string | null }>;
   sections?: Array<{ id?: string; name?: string }>;
   goals?: Array<{ title?: string; targetAmount?: number; currentAmount?: number; currency?: string; status?: string }>;
+  obligations?: Array<{ title?: string; type?: string; monthlyPayment?: number; currentDebt?: number; currency?: string; status?: string; nextPaymentDate?: string | Date | null }>;
+  obligationReminders?: Array<{ title?: string; dueDate?: string | Date; remindAt?: string | Date; status?: string }>;
   recentTransactions?: Array<{ id?: string; description?: string | null; type?: string; amount?: number; createdAt?: string; account?: { name?: string }; category?: { name?: string } | null; section?: { name?: string } | null }>;
   memory?: {
     accountAliases?: Array<{ name?: string; type?: string; currency?: string; aliases?: string[] }>;
@@ -103,6 +105,8 @@ export class AIPlannerService {
       'Do not invent unavailable fields. Use natural entity names; backend validator resolves them.',
       'If the user says something unrelated to finance, answer briefly and meaningfully in summary, but do not create actions and do not pretend to save memory.',
       'For analytics questions, use query_analytics.',
+      'For loans, credits, mortgages, installments, subscriptions and required recurring payments, use obligation tools, not normal transactions. Normal transaction is only for a single finished expense/income.',
+      'If the user says they have a credit/loan/mortgage/installment/subscription, create an obligation. If they say they paid it, use mark_obligation_paid.',
       'For undo/cancel last completed operation, use undo_last_action.',
       'For companion/reactions, use show_companion_reactions.',
       'For premium/tariff/capabilities, use show_premium_capabilities.',
@@ -168,6 +172,7 @@ export class AIPlannerService {
       categories: Array.isArray(value.categories) ? value.categories.slice(0, 12).map((item) => item.name).filter(Boolean) : [],
       sections: Array.isArray(value.sections) ? value.sections.slice(0, 12).map((item) => item.name).filter(Boolean) : [],
       goals: Array.isArray(value.goals) ? value.goals.slice(0, 8).map((item) => item.title).filter(Boolean) : [],
+      obligations: Array.isArray(value.obligations) ? value.obligations.slice(0, 8).map((item) => item.title).filter(Boolean) : [],
     };
   }
 
@@ -217,6 +222,25 @@ export class AIPlannerService {
           currentAmount: goal.currentAmount,
           currency: goal.currency,
           status: goal.status,
+        }))
+        : [],
+      obligations: Array.isArray(value.obligations)
+        ? value.obligations.slice(0, 8).map((item) => ({
+          title: item.title,
+          type: item.type,
+          monthlyPayment: item.monthlyPayment,
+          currentDebt: item.currentDebt,
+          currency: item.currency,
+          status: item.status,
+          nextPaymentDate: item.nextPaymentDate,
+        }))
+        : [],
+      obligationReminders: Array.isArray(value.obligationReminders)
+        ? value.obligationReminders.slice(0, 8).map((item) => ({
+          title: item.title,
+          dueDate: item.dueDate,
+          remindAt: item.remindAt,
+          status: item.status,
         }))
         : [],
       recentTransactions: Array.isArray(value.recentTransactions)

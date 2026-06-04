@@ -35,7 +35,13 @@ export type AIToolName =
   | 'update_ai_settings'
   | 'apply_ai_settings_preset'
   | 'update_onboarding_state'
-  | 'restart_onboarding';
+  | 'restart_onboarding'
+  | 'create_obligation'
+  | 'update_obligation'
+  | 'delete_obligation'
+  | 'mark_obligation_paid'
+  | 'show_obligations'
+  | 'create_obligation_reminder';
 
 export interface AIToolCall<TInput extends Record<string, unknown> = Record<string, unknown>> {
   tool: AIToolName;
@@ -75,8 +81,8 @@ export interface AIValidatedPlan {
 }
 
 export interface AIClarificationRequest {
-  type: 'account' | 'goal' | 'category' | 'section' | 'transaction';
-  field: 'account' | 'goal' | 'category' | 'section' | 'transaction' | string;
+  type: 'account' | 'goal' | 'category' | 'section' | 'transaction' | 'obligation';
+  field: 'account' | 'goal' | 'category' | 'section' | 'transaction' | 'obligation' | string;
   actionIndex: number;
   question: string;
   createdAt: string;

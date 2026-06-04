@@ -38,18 +38,33 @@ interface TransactionLite {
   section?: { id: string; name: string } | null;
 }
 
+interface LoanLite {
+  id: string;
+  title: string;
+  type: string;
+  currency: string;
+  monthlyPayment: number;
+  currentDebt: number;
+  status: string;
+  nextPaymentDate: Date | null;
+  accountId: string | null;
+}
+
 const ACCOUNT_TYPES: AIAccountType[] = ['cash', 'card', 'savings', 'investment'];
 const CURRENCIES: AICurrency[] = ['RUB', 'USD', 'EUR', 'VND'];
 const DEFAULT_AUTO_TRANSACTION_LIMIT = 100000;
+const OBLIGATION_TYPES = ['loan', 'mortgage', 'installment', 'subscription', 'other'];
+const OBLIGATION_STATUSES = ['active', 'paused', 'closed'];
 
 export class AIValidatorService {
   private readonly entityResolver = new AIEntityResolverService();
   async validate(userId: string, plan: AIActionPlan): Promise<AIValidatedPlan> {
-    const [accounts, categories, sections, goals, transactions, aiSettings] = await Promise.all([
+    const [accounts, categories, sections, goals, loans, transactions, aiSettings] = await Promise.all([
       prisma.account.findMany({ where: { userId }, orderBy: { createdAt: 'asc' } }),
       prisma.category.findMany({ where: { userId }, orderBy: { createdAt: 'asc' } }),
       prisma.section.findMany({ where: { userId }, orderBy: { createdAt: 'asc' } }),
       prisma.goal.findMany({ where: { userId }, orderBy: { createdAt: 'asc' } }),
+      prisma.loan.findMany({ where: { userId }, orderBy: [{ status: 'asc' }, { nextPaymentDate: 'asc' }, { createdAt: 'asc' }] }),
       prisma.transaction.findMany({
         where: { userId },
         include: {
@@ -478,6 +493,135 @@ export class AIValidatorService {
       }
 
 
+
+      if (action.tool === 'show_obligations') {
+        const status = this.cleanString(input.status).toLowerCase();
+        input.status = status && ['active', 'paused', 'closed', 'all'].includes(status) ? status : 'active';
+      }
+
+      if (action.tool === 'create_obligation') {
+        const title = this.cleanEntityName(input.title || input.name || input.obligation);
+        const type = this.normalizeObligationType(input.type);
+        const principalAmount = normalizeMoneyAmount(input.principalAmount || input.amount) ?? 0;
+        const currentDebt = normalizeMoneyAmount(input.currentDebt) ?? principalAmount;
+        const monthlyPayment = normalizeMoneyAmount(input.monthlyPayment || input.payment) ?? 0;
+        const currency = this.coerceCurrency(input.currency, '', 'RUB') ?? 'RUB';
+        const accountName = this.cleanString(input.account);
+        const account = accountName ? this.resolveAccount(accounts, accountName) : null;
+        const paymentDay = this.optionalDay(input.paymentDay);
+        const reminderDaysBefore = this.optionalReminderDays(input.reminderDaysBefore, 1);
+        const nextPaymentDate = this.optionalDate(input.nextPaymentDate);
+
+        if (!title) issues.push({ code: 'missing_obligation_title', message: 'Не хватает названия обязательства.', actionIndex: index, field: 'title' });
+        if (accountName && !account) issues.push({ code: 'obligation_account_not_found', message: `Не нашёл счёт списания: ${accountName}`, actionIndex: index, field: 'account' });
+        if (!monthlyPayment && type !== 'other') issues.push({ code: 'missing_obligation_payment', message: 'Не хватает ежемесячного платежа.', actionIndex: index, field: 'monthlyPayment' });
+
+        input.title = title;
+        input.type = type;
+        input.principalAmount = principalAmount;
+        input.currentDebt = currentDebt;
+        input.monthlyPayment = monthlyPayment;
+        input.currency = currency;
+        input.creditor = this.cleanEntityName(input.creditor);
+        input.interestRate = input.interestRate === null || input.interestRate === undefined || input.interestRate === '' ? null : Number(input.interestRate);
+        input.termMonths = this.optionalPositiveInteger(input.termMonths);
+        input.paidMonths = this.optionalNonNegativeInteger(input.paidMonths, 0);
+        input.paymentDay = paymentDay;
+        input.nextPaymentDate = nextPaymentDate ? nextPaymentDate.toISOString() : null;
+        input.reminderDaysBefore = reminderDaysBefore;
+        input.account = account?.name ?? null;
+        input.autoCreateExpense = Boolean(input.autoCreateExpense ?? false);
+        input.note = this.cleanEntityName(input.note);
+        if (account) resolved.accountId = account.id;
+      }
+
+      if (action.tool === 'update_obligation' || action.tool === 'delete_obligation' || action.tool === 'mark_obligation_paid') {
+        const obligationName = this.cleanString(input.obligation || input.title || input.name);
+        const obligation = this.resolveLoan(loans as LoanLite[], obligationName);
+        if (!obligation) {
+          issues.push({ code: 'obligation_not_found', message: obligationName ? `Не нашёл обязательство: ${obligationName}` : 'Не хватает обязательства.', actionIndex: index, field: 'obligation' });
+        } else {
+          resolved.loanId = obligation.id;
+          input.obligation = obligation.title;
+        }
+
+        if (action.tool === 'update_obligation') {
+          const title = this.cleanEntityName(input.title);
+          const type = this.cleanString(input.type).toLowerCase();
+          const principalAmount = normalizeMoneyAmount(input.principalAmount || input.amount);
+          const currentDebt = normalizeMoneyAmount(input.currentDebt);
+          const monthlyPayment = normalizeMoneyAmount(input.monthlyPayment || input.payment);
+          const accountName = this.cleanString(input.account);
+          const account = accountName ? this.resolveAccount(accounts, accountName) : null;
+          const status = this.cleanString(input.status).toLowerCase();
+          const currency = this.coerceCurrency(input.currency, '', null);
+          const nextPaymentDate = this.optionalDate(input.nextPaymentDate);
+
+          if (title) input.title = title; else delete input.title;
+          if (OBLIGATION_TYPES.includes(type)) input.type = type; else delete input.type;
+          if (input.creditor !== undefined) input.creditor = this.cleanEntityName(input.creditor); else delete input.creditor;
+          if (principalAmount !== null) input.principalAmount = principalAmount; else delete input.principalAmount;
+          if (currentDebt !== null) input.currentDebt = currentDebt; else delete input.currentDebt;
+          if (monthlyPayment !== null) input.monthlyPayment = monthlyPayment; else delete input.monthlyPayment;
+          if (currency) input.currency = currency; else delete input.currency;
+          if (input.interestRate !== undefined) input.interestRate = input.interestRate === null || input.interestRate === '' ? null : Number(input.interestRate); else delete input.interestRate;
+          if (input.termMonths !== undefined) input.termMonths = this.optionalPositiveInteger(input.termMonths); else delete input.termMonths;
+          if (input.paidMonths !== undefined) input.paidMonths = this.optionalNonNegativeInteger(input.paidMonths, 0); else delete input.paidMonths;
+          if (input.paymentDay !== undefined) input.paymentDay = this.optionalDay(input.paymentDay); else delete input.paymentDay;
+          if (input.nextPaymentDate !== undefined) input.nextPaymentDate = nextPaymentDate ? nextPaymentDate.toISOString() : null; else delete input.nextPaymentDate;
+          if (input.reminderDaysBefore !== undefined) input.reminderDaysBefore = this.optionalReminderDays(input.reminderDaysBefore, 1); else delete input.reminderDaysBefore;
+          if (input.account !== undefined) {
+            if (accountName && !account) issues.push({ code: 'obligation_account_not_found', message: `Не нашёл счёт списания: ${accountName}`, actionIndex: index, field: 'account' });
+            input.account = account?.name ?? null;
+            if (account) resolved.accountId = account.id;
+          } else {
+            delete input.account;
+          }
+          if (input.autoCreateExpense !== undefined) input.autoCreateExpense = Boolean(input.autoCreateExpense); else delete input.autoCreateExpense;
+          if (OBLIGATION_STATUSES.includes(status)) input.status = status; else delete input.status;
+          if (input.note !== undefined) input.note = this.cleanEntityName(input.note); else delete input.note;
+        }
+
+        if (action.tool === 'mark_obligation_paid') {
+          const amount = normalizeMoneyAmount(input.amount);
+          const accountName = this.cleanString(input.account);
+          const account = accountName ? this.resolveAccount(accounts, accountName) : null;
+          const paidAt = this.optionalDate(input.paidAt);
+
+          if (amount !== null) input.amount = amount; else delete input.amount;
+          if (accountName && !account) issues.push({ code: 'obligation_account_not_found', message: `Не нашёл счёт списания: ${accountName}`, actionIndex: index, field: 'account' });
+          if (account) resolved.accountId = account.id;
+          input.account = account?.name ?? null;
+          if (paidAt) input.paidAt = paidAt.toISOString(); else delete input.paidAt;
+          if (input.createExpense !== undefined) input.createExpense = Boolean(input.createExpense); else delete input.createExpense;
+          if (input.note !== undefined) input.note = this.cleanEntityName(input.note); else delete input.note;
+        }
+      }
+
+      if (action.tool === 'create_obligation_reminder') {
+        const obligationName = this.cleanString(input.obligation || input.loan);
+        const obligation = obligationName ? this.resolveLoan(loans as LoanLite[], obligationName) : null;
+        if (obligationName && !obligation) issues.push({ code: 'obligation_not_found', message: `Не нашёл обязательство: ${obligationName}`, actionIndex: index, field: 'obligation' });
+        if (obligation) {
+          resolved.loanId = obligation.id;
+          input.obligation = obligation.title;
+        } else {
+          input.obligation = null;
+        }
+
+        const title = this.cleanEntityName(input.title) || (obligation ? `Напоминание: ${obligation.title}` : 'Напоминание');
+        const dueDate = this.optionalDate(input.dueDate) ?? (obligation?.nextPaymentDate ?? null);
+        const remindAt = this.optionalDate(input.remindAt) ?? dueDate;
+        if (!dueDate) issues.push({ code: 'missing_reminder_date', message: 'Не хватает даты напоминания.', actionIndex: index, field: 'dueDate' });
+
+        input.title = title;
+        input.message = this.cleanEntityName(input.message) || title;
+        input.dueDate = dueDate ? dueDate.toISOString() : null;
+        input.remindAt = remindAt ? remindAt.toISOString() : null;
+        const channel = this.cleanString(input.channel).toLowerCase();
+        input.channel = ['app', 'bot', 'both'].includes(channel) ? channel : 'app';
+      }
+
       if (action.tool === 'show_goals') {
         // No validation needed.
       }
@@ -667,7 +811,7 @@ export class AIValidatorService {
     defaultValue: boolean,
     settings: { autoConfirmExpenseLimit?: number | null; autoConfirmIncomeLimit?: number | null; autoConfirmTransferLimit?: number | null; requireConfirmForAccountActions?: boolean | null },
   ) {
-    if (tool === 'show_accounts' || tool === 'show_transactions' || tool === 'show_ai_settings' || tool === 'show_goals' || tool === 'show_taxonomy') return false;
+    if (tool === 'show_accounts' || tool === 'show_transactions' || tool === 'show_ai_settings' || tool === 'show_goals' || tool === 'show_taxonomy' || tool === 'show_obligations') return false;
     if (tool === 'update_onboarding_state' || tool === 'restart_onboarding') return false;
 
     if (tool === 'create_account' || tool === 'update_account' || tool === 'update_transaction' || tool === 'delete_account' || tool === 'delete_accounts' || tool === 'set_primary_account' || tool === 'create_category' || tool === 'update_category' || tool === 'delete_category' || tool === 'create_section' || tool === 'update_section' || tool === 'delete_section' || tool === 'assign_category_to_section' || tool === 'create_goal' || tool === 'update_goal' || tool === 'delete_goal') {
@@ -814,6 +958,56 @@ export class AIValidatorService {
     const type = transaction.type === 'income' ? 'доход' : transaction.type === 'expense' ? 'расход' : 'перевод';
     const description = this.cleanString(transaction.description) || transaction.category?.name || 'операция';
     return `последний ${type}: ${description}`;
+  }
+
+
+  private resolveLoan(loans: LoanLite[], rawName: string) {
+    const name = this.key(rawName);
+    if (!name) return null;
+    return loans.find((loan) => this.key(loan.title) === name)
+      ?? loans.find((loan) => this.key(loan.title).includes(name) || name.includes(this.key(loan.title)))
+      ?? null;
+  }
+
+  private normalizeObligationType(value: unknown) {
+    const type = this.cleanString(value).toLowerCase();
+    return OBLIGATION_TYPES.includes(type) ? type : 'loan';
+  }
+
+  private optionalDay(value: unknown) {
+    if (value === undefined || value === null || value === '') return null;
+    const day = Math.round(Number(value));
+    if (!Number.isFinite(day) || day < 1 || day > 31) return null;
+    return day;
+  }
+
+  private optionalReminderDays(value: unknown, fallback = 1) {
+    if (value === undefined || value === null || value === '') return fallback;
+    const days = Math.round(Number(value));
+    if (!Number.isFinite(days)) return fallback;
+    return Math.min(Math.max(days, 0), 30);
+  }
+
+  private optionalPositiveInteger(value: unknown) {
+    if (value === undefined || value === null || value === '') return null;
+    const num = Math.round(Number(value));
+    if (!Number.isFinite(num) || num < 1) return null;
+    return num;
+  }
+
+  private optionalNonNegativeInteger(value: unknown, fallback = 0) {
+    if (value === undefined || value === null || value === '') return fallback;
+    const num = Math.round(Number(value));
+    if (!Number.isFinite(num) || num < 0) return fallback;
+    return num;
+  }
+
+  private optionalDate(value: unknown) {
+    if (value === undefined || value === null || value === '') return null;
+    if (value instanceof Date && !Number.isNaN(value.getTime())) return value;
+    if (typeof value !== 'string') return null;
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? null : date;
   }
 
   private findGoalByName<T extends { id?: string | null; title: string }>(items: T[], raw: string) {

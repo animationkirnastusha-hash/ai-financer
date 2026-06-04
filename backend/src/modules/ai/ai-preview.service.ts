@@ -33,6 +33,12 @@ const TOOL_LABELS: Record<string, string> = {
   apply_ai_settings_preset: 'применить режим настроек',
   update_onboarding_state: 'обновить обучение',
   restart_onboarding: 'запустить обучение заново',
+  create_obligation: 'добавить обязательство',
+  update_obligation: 'изменить обязательство',
+  delete_obligation: 'удалить обязательство',
+  mark_obligation_paid: 'отметить платёж',
+  show_obligations: 'показать обязательства',
+  create_obligation_reminder: 'создать напоминание',
 };
 
 export class AIPreviewService {
@@ -175,6 +181,31 @@ export class AIPreviewService {
 
     if (tool === 'transfer_money') {
       return `перевод ${this.formatAmount(input.amount, input.currency)} со счёта ${this.clean(input.fromAccount) || '?'} на ${this.clean(input.toAccount) || '?'}`;
+    }
+
+
+    if (tool === 'create_obligation') {
+      return `добавить обязательство ${this.clean(input.title) || 'без названия'}${Number(input.monthlyPayment ?? 0) > 0 ? `, платёж ${this.formatAmount(input.monthlyPayment, input.currency)}` : ''}`;
+    }
+
+    if (tool === 'update_obligation') {
+      return `изменить обязательство ${this.clean(input.obligation) || this.clean(input.title) || ''}`.trim();
+    }
+
+    if (tool === 'delete_obligation') {
+      return `удалить обязательство ${this.clean(input.obligation) || ''}`.trim();
+    }
+
+    if (tool === 'mark_obligation_paid') {
+      return `отметить платёж по обязательству ${this.clean(input.obligation) || ''}${input.amount !== undefined ? ` на ${this.formatAmount(input.amount, input.currency)}` : ''}`.trim();
+    }
+
+    if (tool === 'show_obligations') {
+      return 'показать обязательства и напоминания';
+    }
+
+    if (tool === 'create_obligation_reminder') {
+      return `создать напоминание ${this.clean(input.title) || ''}`.trim();
     }
 
     if (tool === 'apply_ai_settings_preset') {

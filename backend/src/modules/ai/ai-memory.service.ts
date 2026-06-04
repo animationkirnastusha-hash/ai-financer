@@ -21,6 +21,11 @@ const FINANCIAL_MEMORY_TOOLS = new Set([
   'create_goal',
   'update_goal',
   'delete_goal',
+  'create_obligation',
+  'update_obligation',
+  'delete_obligation',
+  'mark_obligation_paid',
+  'create_obligation_reminder',
   'update_ai_settings',
   'apply_ai_settings_preset',
 ]);
