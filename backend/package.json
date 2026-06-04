@@ -30,7 +30,16 @@
     "test:http-confirm": "node scripts/run-http-confirm-smoke.mjs",
     "db:deploy": "prisma migrate deploy && prisma generate",
     "db:check-baseline": "node scripts/check-prisma-baseline.mjs",
-    "db:status": "prisma migrate status"
+    "db:status": "prisma migrate status",
+    "smoke:predeploy": "node scripts/run-predeploy-smoke.mjs",
+    "smoke:health": "node scripts/smoke/check-health-auth.mjs",
+    "smoke:prisma": "node scripts/smoke/check-prisma-status.mjs",
+    "smoke:ai": "node scripts/smoke/check-ai-base.mjs",
+    "smoke:accounts": "node scripts/smoke/check-accounts-balances.mjs",
+    "smoke:transactions": "node scripts/smoke/check-transactions.mjs",
+    "smoke:taxonomy": "node scripts/smoke/check-taxonomy.mjs",
+    "smoke:analytics": "node scripts/smoke/check-analytics.mjs",
+    "smoke:reset-admin": "node scripts/smoke/check-reset-admin.mjs"
   },
   "keywords": [],
   "author": "",
