@@ -1,0 +1,50 @@
+/* Less aggressive swipe visuals */
+body.ai-screen-dragging .telegram-app-content {
+  transform: translate3d(var(--ai-swipe-drag-x), 0, 0) scale(.997) !important;
+}
+body.ai-screen-snap-back .telegram-app-content {
+  transition: transform 190ms cubic-bezier(.22,.8,.18,1), opacity 190ms ease !important;
+}
+body.ai-screen-slide-left .ai-screen-transition,
+body.ai-screen-slide-right .ai-screen-transition {
+  animation-duration: 260ms !important;
+  animation-timing-function: cubic-bezier(.2,.82,.22,1) !important;
+}
+
+@media (max-width: 390px) {
+  :root {
+    --ai-companion-size: 80px;
+    --ai-companion-bottom: calc(48px + env(safe-area-inset-bottom));
+    --ai-bottom-reserve: calc(166px + env(safe-area-inset-bottom));
+  }
+  .app-accounts-actions,
+  .app-taxonomy-actions,
+  .app-taxonomy-rules-grid,
+  .app-settings-grid { grid-template-columns: 1fr; }
+  .app-account-card { grid-template-columns: minmax(0,1fr); }
+  .app-account-card__balance { max-width: 100%; text-align: left; }
+  .app-secondary-links { grid-template-columns: repeat(3, minmax(0,1fr)); }
+}
+
+
+/* 99-legacy-compat.css — временный мост старых классов. Удалять только после аудита всех экранов. */
+.app-home-hero,
+.app-fina-primary-card,
+.app-home-menu-sheet,
+.app-account-card,
+.app-taxonomy-page,
+.app-settings-page {
+  isolation: isolate;
+}
+
+/* страховка от слёта текста */
+.app-home-hero h1,
+.app-home-hero h2,
+.app-fina-primary-card h2,
+.app-card h1,
+.app-card h2,
+.app-card h3 {
+  overflow-wrap: anywhere;
+  word-break: normal;
+  line-height: 1.08;
+}

@@ -16,7 +16,12 @@
 @import "./app/styles/14-settings.css";
 @import "./app/styles/15-ai-text.css";
 @import "./app/styles/16-companion-progress.css";
-@import "./app/styles/99-legacy-compat.css";
-@import "./app/styles/17-runtime-fixes.css";
+@import "./app/styles/20-legacy-product-screens.css";
+@import "./app/styles/21-legacy-mobile-layout.css";
+@import "./app/styles/22-legacy-swipe-text-guards.css";
+@import "./app/styles/23-legacy-voice-bridge.css";
+@import "./app/styles/17-runtime-stability.css";
+@import "./app/styles/24-voice-runtime.css";
+@import "./app/styles/25-input-modal-runtime.css";
 @import "./app/styles/18-premium-admin.css";
 @import "./app/styles/19-onboarding-setup.css";

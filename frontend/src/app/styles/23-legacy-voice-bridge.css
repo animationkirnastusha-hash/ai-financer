@@ -1,0 +1,45 @@
+/* patch-50: stable voice bubble, no blur jitter */
+.voice-first-bubble {
+  transform: translate3d(0,0,0) !important;
+  filter: none !important;
+  will-change: opacity;
+}
+.voice-first-status,
+.voice-first-mic-toggle,
+.voice-first-companion .ai-companion-control {
+  transform: translate3d(0,0,0);
+  backface-visibility: hidden;
+}
+.voice-window-control--number {
+  grid-template-columns: minmax(0,1fr) auto;
+  align-items: center;
+}
+.voice-window-control__input {
+  display: inline-grid;
+  grid-template-columns: 54px auto;
+  align-items: center;
+  gap: 6px;
+  min-height: 40px;
+  border: 1px solid rgba(255,255,255,.10);
+  border-radius: 16px;
+  background: rgba(0,0,0,.20);
+  padding: 4px 9px;
+  color: rgba(255,255,255,.72);
+  font-size: 12px;
+}
+.voice-window-control__input input {
+  width: 54px;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: white;
+  font-size: 15px;
+  font-weight: 760;
+  text-align: right;
+}
+@media (max-width: 390px) {
+  .voice-first-companion { right: 8px !important; }
+  .voice-first-mic-toggle { display: none !important; }
+}
+
+
