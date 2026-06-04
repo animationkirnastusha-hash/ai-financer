@@ -28,14 +28,16 @@ function toNumber(value: string) {
 type Props = {
   open: boolean;
   loan?: LoanDto | null;
+  initialType?: LoanType | null;
   accounts: AccountDto[];
   isSaving: boolean;
+  layer?: number;
   onClose: () => void;
   onSave: (payload: CreateLoanPayload) => Promise<void>;
   onDelete?: (loan: LoanDto) => Promise<void>;
 };
 
-export function LoanEditSheet({ open, loan, accounts, isSaving, onClose, onSave, onDelete }: Props) {
+export function LoanEditSheet({ open, loan, initialType, accounts, isSaving, layer, onClose, onSave, onDelete }: Props) {
   const [title, setTitle] = useState('');
   const [type, setType] = useState<LoanType>('loan');
   const [creditor, setCreditor] = useState('');
@@ -57,7 +59,7 @@ export function LoanEditSheet({ open, loan, accounts, isSaving, onClose, onSave,
   useEffect(() => {
     if (!open) return;
     setTitle(loan?.title ?? '');
-    setType((loan?.type as LoanType) ?? 'loan');
+    setType((loan?.type as LoanType) ?? initialType ?? 'loan');
     setCreditor(loan?.creditor ?? '');
     setCurrency(loan?.currency ?? 'RUB');
     setPrincipalAmount(loan?.principalAmount ? String(loan.principalAmount) : '');
@@ -73,9 +75,75 @@ export function LoanEditSheet({ open, loan, accounts, isSaving, onClose, onSave,
     setAutoCreateExpense(Boolean(loan?.autoCreateExpense));
     setNote(loan?.note ?? '');
     setError(null);
-  }, [loan, open]);
+  }, [initialType, loan, open]);
 
   const accountOptions = useMemo(() => accounts.filter((account) => !account.lockSpending), [accounts]);
+
+  const typeMeta = useMemo(() => {
+    if (type === 'subscription') {
+      return {
+        titlePlaceholder: 'Netflix, связь, сервис',
+        creditorLabel: 'Сервис',
+        creditorPlaceholder: 'Netflix, Telegram, оператор связи',
+        paymentLabel: 'Сумма подписки',
+        paymentPlaceholder: '899',
+        notePlaceholder: 'Например: списывается каждый месяц автоматически',
+        description: 'Для подписки достаточно суммы платежа, даты списания и счёта. Остаток долга и ставка здесь не нужны.',
+        showDebt: false,
+        showPrincipal: false,
+        showCreditTerms: false,
+        showPaidMonths: false,
+      };
+    }
+
+    if (type === 'installment') {
+      return {
+        titlePlaceholder: 'Телефон, техника, обучение',
+        creditorLabel: 'Магазин или сервис',
+        creditorPlaceholder: 'Магазин, банк, сервис рассрочки',
+        paymentLabel: 'Ежемесячный платёж',
+        paymentPlaceholder: '4500',
+        notePlaceholder: 'Например: беспроцентная рассрочка на 12 месяцев',
+        description: 'Для рассрочки важны платёж, остаток, срок и сколько месяцев уже оплачено.',
+        showDebt: true,
+        showPrincipal: true,
+        showCreditTerms: true,
+        showPaidMonths: true,
+      };
+    }
+
+    if (type === 'other') {
+      return {
+        titlePlaceholder: 'Аренда, алименты, регулярный платёж',
+        creditorLabel: 'Получатель',
+        creditorPlaceholder: 'Кому или куда платишь',
+        paymentLabel: 'Сумма платежа',
+        paymentPlaceholder: '12000',
+        notePlaceholder: 'Например: обязательный платёж каждый месяц',
+        description: 'Для регулярного платежа можно указать только сумму, дату, счёт и напоминание.',
+        showDebt: false,
+        showPrincipal: false,
+        showCreditTerms: false,
+        showPaidMonths: false,
+      };
+    }
+
+    return {
+      titlePlaceholder: type === 'mortgage' ? 'Ипотека Дом' : 'Автокредит, кредит наличными',
+      creditorLabel: 'Банк',
+      creditorPlaceholder: 'Сбер, Т-Банк, ВТБ',
+      paymentLabel: 'Ежемесячный платёж',
+      paymentPlaceholder: '18000',
+      notePlaceholder: 'Например: досрочно гасить тело кредита при возможности',
+      description: type === 'mortgage'
+        ? 'Для ипотеки полезны остаток, ставка, срок и дата платежа. Это поможет позже считать переплату и сценарии досрочного погашения.'
+        : 'Для кредита полезны остаток, общая сумма, ставка, срок и дата платежа.',
+      showDebt: true,
+      showPrincipal: true,
+      showCreditTerms: true,
+      showPaidMonths: true,
+    };
+  }, [type]);
 
   async function handleSave() {
     setError(null);
@@ -89,12 +157,12 @@ export function LoanEditSheet({ open, loan, accounts, isSaving, onClose, onSave,
       type,
       creditor: creditor.trim() || null,
       currency,
-      principalAmount: toNumber(principalAmount),
-      currentDebt: toNumber(currentDebt),
+      principalAmount: typeMeta.showPrincipal ? toNumber(principalAmount) : undefined,
+      currentDebt: typeMeta.showDebt ? toNumber(currentDebt) : undefined,
       monthlyPayment: toNumber(monthlyPayment),
-      interestRate: toNumber(interestRate) ?? null,
-      termMonths: toNumber(termMonths) ?? null,
-      paidMonths: toNumber(paidMonths),
+      interestRate: typeMeta.showCreditTerms ? toNumber(interestRate) ?? null : null,
+      termMonths: typeMeta.showCreditTerms ? toNumber(termMonths) ?? null : null,
+      paidMonths: typeMeta.showPaidMonths ? toNumber(paidMonths) : undefined,
       paymentDay: toNumber(paymentDay) ?? null,
       nextPaymentDate: nextPaymentDate ? new Date(`${nextPaymentDate}T09:00:00`).toISOString() : null,
       reminderDaysBefore: toNumber(reminderDaysBefore),
@@ -116,7 +184,8 @@ export function LoanEditSheet({ open, loan, accounts, isSaving, onClose, onSave,
       open={open}
       onClose={onClose}
       title={loan ? 'Изменить обязательство' : 'Новое обязательство'}
-      subtitle="Кредит, ипотека, рассрочка, подписка или другой регулярный платёж."
+      layer={layer}
+      subtitle={typeMeta.description}
       footer={(
         <>
           {loan && onDelete ? (
@@ -136,7 +205,7 @@ export function LoanEditSheet({ open, loan, accounts, isSaving, onClose, onSave,
 
         <label className="app-field">
           <span>Название</span>
-          <input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Ипотека, автокредит, рассрочка" />
+          <input value={title} onChange={(event) => setTitle(event.target.value)} placeholder={typeMeta.titlePlaceholder} />
         </label>
 
         <label className="app-field">
@@ -147,26 +216,32 @@ export function LoanEditSheet({ open, loan, accounts, isSaving, onClose, onSave,
         </label>
 
         <label className="app-field">
-          <span>Банк или сервис</span>
-          <input value={creditor} onChange={(event) => setCreditor(event.target.value)} placeholder="Сбер, Т-Банк, магазин" />
+          <span>{typeMeta.creditorLabel}</span>
+          <input value={creditor} onChange={(event) => setCreditor(event.target.value)} placeholder={typeMeta.creditorPlaceholder} />
         </label>
 
+        <div className="app-obligation-type-note">{typeMeta.description}</div>
+
         <div className="app-form-row">
+          {typeMeta.showDebt ? (
+            <label className="app-field">
+              <span>Остаток</span>
+              <input inputMode="numeric" value={currentDebt} onChange={(event) => setCurrentDebt(event.target.value)} placeholder="500000" />
+            </label>
+          ) : null}
           <label className="app-field">
-            <span>Остаток</span>
-            <input inputMode="numeric" value={currentDebt} onChange={(event) => setCurrentDebt(event.target.value)} placeholder="500000" />
-          </label>
-          <label className="app-field">
-            <span>Платёж</span>
-            <input inputMode="numeric" value={monthlyPayment} onChange={(event) => setMonthlyPayment(event.target.value)} placeholder="18000" />
+            <span>{typeMeta.paymentLabel}</span>
+            <input inputMode="numeric" value={monthlyPayment} onChange={(event) => setMonthlyPayment(event.target.value)} placeholder={typeMeta.paymentPlaceholder} />
           </label>
         </div>
 
         <div className="app-form-row">
-          <label className="app-field">
-            <span>Общая сумма</span>
-            <input inputMode="numeric" value={principalAmount} onChange={(event) => setPrincipalAmount(event.target.value)} placeholder="700000" />
-          </label>
+          {typeMeta.showPrincipal ? (
+            <label className="app-field">
+              <span>Общая сумма</span>
+              <input inputMode="numeric" value={principalAmount} onChange={(event) => setPrincipalAmount(event.target.value)} placeholder="700000" />
+            </label>
+          ) : null}
           <label className="app-field">
             <span>Валюта</span>
             <select value={currency} onChange={(event) => setCurrency(event.target.value)}>
@@ -193,22 +268,30 @@ export function LoanEditSheet({ open, loan, accounts, isSaving, onClose, onSave,
             <span>Напомнить за</span>
             <input inputMode="numeric" value={reminderDaysBefore} onChange={(event) => setReminderDaysBefore(event.target.value)} placeholder="1" />
           </label>
-          <label className="app-field">
-            <span>Ставка, %</span>
-            <input inputMode="decimal" value={interestRate} onChange={(event) => setInterestRate(event.target.value)} placeholder="12.9" />
-          </label>
+          {typeMeta.showCreditTerms ? (
+            <label className="app-field">
+              <span>Ставка, %</span>
+              <input inputMode="decimal" value={interestRate} onChange={(event) => setInterestRate(event.target.value)} placeholder="12.9" />
+            </label>
+          ) : null}
         </div>
 
-        <div className="app-form-row">
-          <label className="app-field">
-            <span>Срок, месяцев</span>
-            <input inputMode="numeric" value={termMonths} onChange={(event) => setTermMonths(event.target.value)} placeholder="36" />
-          </label>
-          <label className="app-field">
-            <span>Уже оплачено</span>
-            <input inputMode="numeric" value={paidMonths} onChange={(event) => setPaidMonths(event.target.value)} placeholder="4" />
-          </label>
-        </div>
+        {typeMeta.showCreditTerms || typeMeta.showPaidMonths ? (
+          <div className="app-form-row">
+            {typeMeta.showCreditTerms ? (
+              <label className="app-field">
+                <span>Срок, месяцев</span>
+                <input inputMode="numeric" value={termMonths} onChange={(event) => setTermMonths(event.target.value)} placeholder="36" />
+              </label>
+            ) : null}
+            {typeMeta.showPaidMonths ? (
+              <label className="app-field">
+                <span>Уже оплачено</span>
+                <input inputMode="numeric" value={paidMonths} onChange={(event) => setPaidMonths(event.target.value)} placeholder="4" />
+              </label>
+            ) : null}
+          </div>
+        ) : null}
 
         <label className="app-field">
           <span>Счёт списания</span>
@@ -230,7 +313,7 @@ export function LoanEditSheet({ open, loan, accounts, isSaving, onClose, onSave,
 
         <label className="app-field">
           <span>Заметка</span>
-          <textarea value={note} onChange={(event) => setNote(event.target.value)} placeholder="Например: досрочно гасить тело кредита при возможности" />
+          <textarea value={note} onChange={(event) => setNote(event.target.value)} placeholder={typeMeta.notePlaceholder} />
         </label>
       </div>
     </Drawer>

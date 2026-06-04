@@ -4,6 +4,7 @@ import type { AccountDto } from '@/features/accounts/api/accounts.api';
 import type { CategoryDto, SectionDto } from '@/features/sections/api/sections.api';
 import type { TransactionDto } from '@/features/transactions/api/transactions.api';
 import type { GoalDto } from '@/features/goals/api/goals.api';
+import type { LoanDto, LoanType } from '@/features/obligations/api/obligations.api';
 import type { HomeCashflowMode, HomeCashflowPeriod, HomeFinanceGroup } from '@/features/dashboard/lib/homeFinanceAnalytics';
 
 export type AppModalDescriptor =
@@ -16,6 +17,7 @@ export type AppModalDescriptor =
   | { type: 'category-edit'; category?: CategoryDto | null; sectionId?: string | null; initialType?: 'expense' | 'income' | 'both'; onSavedCategory?: (category: CategoryDto) => void }
   | { type: 'section-edit'; section?: SectionDto | null }
   | { type: 'goal-edit'; goal?: GoalDto | null; onAfterSave?: () => void }
+  | { type: 'obligation-edit'; loan?: LoanDto | null; initialType?: LoanType | null }
   | { type: 'home-chart-details'; mode: HomeCashflowMode; period: HomeCashflowPeriod }
   | { type: 'home-category-operations'; group: HomeFinanceGroup }
   | { type: 'accounts-tools' }

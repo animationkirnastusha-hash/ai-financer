@@ -185,6 +185,17 @@
   color: rgb(255 255 255 / 0.45);
 }
 
+
+.app-obligation-type-note {
+  padding: 12px 14px;
+  border: 1px solid rgb(94 234 212 / 0.16);
+  border-radius: 18px;
+  background: linear-gradient(135deg, rgb(94 234 212 / 0.08), rgb(255 255 255 / 0.03));
+  color: rgb(255 255 255 / 0.58);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
 .app-checkbox-card {
   display: flex;
   gap: 12px;

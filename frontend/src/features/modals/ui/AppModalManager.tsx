@@ -3,6 +3,7 @@ import { useAccountFlowStore } from '@/features/accounts/model/accountFlow.store
 import { useAccountsStore } from '@/features/accounts/model/accounts.store';
 import { useNavigationStore } from '@/features/navigation/model/navigation.store';
 import { useAppModalStore, type AppModalDescriptor } from '@/features/modals/model/appModal.store';
+import { useObligationsStore } from '@/features/obligations/model/obligations.store';
 import { useSectionsStore } from '@/features/sections/model/sections.store';
 import { useSettingsStore } from '@/features/settings/model/settings.store';
 import { useTransactionsStore } from '@/features/transactions/model/transactions.store';
@@ -10,12 +11,14 @@ import { AccountModals } from '@/features/modals/ui/AccountModals';
 import { AppModalBodyLock } from '@/features/modals/ui/AppModalBodyLock';
 import { FinanceEntityModals } from '@/features/modals/ui/FinanceEntityModals';
 import { HomeFinanceModals } from '@/features/modals/ui/HomeFinanceModals';
+import { ObligationModals } from '@/features/modals/ui/ObligationModals';
 import { UtilityModals } from '@/features/modals/ui/UtilityModals';
 import { layerByIndex, pickModal } from '@/features/modals/lib/modalLayers';
 
 const ACCOUNT_MODAL_TYPES = new Set<AppModalDescriptor['type']>(['account-create', 'account-details', 'account-transfer', 'account-edit']);
 const FINANCE_ENTITY_MODAL_TYPES = new Set<AppModalDescriptor['type']>(['transaction-create', 'transaction-edit', 'category-edit', 'section-edit', 'goal-edit']);
 const HOME_FINANCE_MODAL_TYPES = new Set<AppModalDescriptor['type']>(['home-chart-details', 'home-category-operations']);
+const OBLIGATION_MODAL_TYPES = new Set<AppModalDescriptor['type']>(['obligation-edit']);
 const UTILITY_MODAL_TYPES = new Set<AppModalDescriptor['type']>(['accounts-tools', 'taxonomy-tools', 'taxonomy-section']);
 
 function isAccountModal(modal: AppModalDescriptor): modal is Extract<AppModalDescriptor, { type: 'account-create' | 'account-details' | 'account-transfer' | 'account-edit' }> {
@@ -28,6 +31,10 @@ function isFinanceEntityModal(modal: AppModalDescriptor): modal is Extract<AppMo
 
 function isHomeFinanceModal(modal: AppModalDescriptor): modal is Extract<AppModalDescriptor, { type: 'home-chart-details' | 'home-category-operations' }> {
   return HOME_FINANCE_MODAL_TYPES.has(modal.type);
+}
+
+function isObligationModal(modal: AppModalDescriptor): modal is Extract<AppModalDescriptor, { type: 'obligation-edit' }> {
+  return OBLIGATION_MODAL_TYPES.has(modal.type);
 }
 
 function isUtilityModal(modal: AppModalDescriptor): modal is Extract<AppModalDescriptor, { type: 'accounts-tools' | 'taxonomy-tools' | 'taxonomy-section' }> {
@@ -78,6 +85,13 @@ export function AppModalManager() {
   const isCreatingTaxonomy = useSectionsStore((state) => state.isCreating);
   const isTaxonomySaving = useSectionsStore((state) => state.isMutating);
 
+
+  const loadObligations = useObligationsStore((state) => state.loadAll);
+  const createLoan = useObligationsStore((state) => state.createLoan);
+  const updateLoan = useObligationsStore((state) => state.updateLoan);
+  const deleteLoan = useObligationsStore((state) => state.deleteLoan);
+  const isObligationSaving = useObligationsStore((state) => state.isMutating);
+
   const updateAccountDraft = useAccountFlowStore((state) => state.updateDraft);
   const resetAccountDraft = useAccountFlowStore((state) => state.resetDraft);
   const accountCreateModal = pickModal(stack, 'account-create');
@@ -103,6 +117,10 @@ export function AppModalManager() {
   useEffect(() => {
     if (stack.some((modal) => ['home-chart-details', 'home-category-operations', 'transaction-edit'].includes(modal.type))) void loadTransactions(true);
   }, [loadTransactions, stack]);
+
+  useEffect(() => {
+    if (stack.some((modal) => modal.type === 'obligation-edit')) void Promise.allSettled([loadAccounts(), loadObligations(true)]);
+  }, [loadAccounts, loadObligations, stack]);
 
   function renderModal(modal: AppModalDescriptor, index: number) {
     const layer = layerByIndex(index);
@@ -169,6 +187,22 @@ export function AppModalManager() {
           closeAllModals={closeAllModals}
           openModal={openModal}
           openAnalytics={() => navigateTo('analytics')}
+        />
+      );
+    }
+
+
+    if (isObligationModal(modal)) {
+      return (
+        <ObligationModals
+          modal={modal}
+          layer={layer}
+          accounts={accounts}
+          isSaving={isObligationSaving}
+          closeModal={closeModal}
+          createLoan={createLoan}
+          updateLoan={updateLoan}
+          deleteLoan={deleteLoan}
         />
       );
     }

@@ -1,8 +1,7 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useAccountsStore } from '@/features/accounts/model/accounts.store';
 import { useObligationsStore } from '@/features/obligations/model/obligations.store';
-import { LoanEditSheet } from '@/features/obligations/ui/LoanEditSheet';
-import type { CreateLoanPayload, LoanDto } from '@/features/obligations/api/obligations.api';
+import { useAppModalStore } from '@/features/modals/model/appModal.store';
 import { ScreenTopBar } from '@/shared/ui/ScreenTopBar';
 import { EmptyState } from '@/shared/ui/EmptyState';
 import { formatMoney, formatTransactionDate } from '@/shared/lib/money';
@@ -15,6 +14,10 @@ function loanTypeLabel(type: string) {
   return 'Кредит';
 }
 
+function isDebtObligation(type: string) {
+  return type === 'loan' || type === 'mortgage' || type === 'installment';
+}
+
 function daysLabel(value?: number | null) {
   if (value == null) return 'дата не указана';
   if (value < 0) return `просрочено на ${Math.abs(value)} дн.`;
@@ -24,7 +27,6 @@ function daysLabel(value?: number | null) {
 }
 
 export default function ObligationsPage() {
-  const accounts = useAccountsStore((state) => state.items);
   const loadAccounts = useAccountsStore((state) => state.loadAccounts);
   const loans = useObligationsStore((state) => state.loans);
   const reminders = useObligationsStore((state) => state.reminders);
@@ -33,14 +35,10 @@ export default function ObligationsPage() {
   const isMutating = useObligationsStore((state) => state.isMutating);
   const error = useObligationsStore((state) => state.error);
   const loadAll = useObligationsStore((state) => state.loadAll);
-  const createLoan = useObligationsStore((state) => state.createLoan);
-  const updateLoan = useObligationsStore((state) => state.updateLoan);
-  const deleteLoan = useObligationsStore((state) => state.deleteLoan);
+  const openModal = useAppModalStore((state) => state.openModal);
   const markPaid = useObligationsStore((state) => state.markPaid);
   const updateReminderStatus = useObligationsStore((state) => state.updateReminderStatus);
 
-  const [editingLoan, setEditingLoan] = useState<LoanDto | null>(null);
-  const [isEditorOpen, setIsEditorOpen] = useState(false);
 
   useEffect(() => {
     void Promise.allSettled([loadAll(true), loadAccounts()]);
@@ -50,26 +48,8 @@ export default function ObligationsPage() {
   const closedLoans = useMemo(() => loans.filter((loan) => loan.status === 'closed'), [loans]);
   const scheduledReminders = reminders.filter((reminder) => reminder.status === 'scheduled');
 
-  const handleCreate = () => {
-    setEditingLoan(null);
-    setIsEditorOpen(true);
-  };
-
-  const handleSave = async (payload: CreateLoanPayload) => {
-    if (editingLoan) {
-      await updateLoan(editingLoan.id, payload);
-      return;
-    }
-    await createLoan(payload);
-  };
-
-  const handleDelete = async (loan: LoanDto) => {
-    const confirmed = window.confirm(`Удалить «${loan.title}»? Платежи и напоминания по нему тоже будут удалены.`);
-    if (!confirmed) return;
-    await deleteLoan(loan.id);
-    setIsEditorOpen(false);
-    setEditingLoan(null);
-  };
+  const handleCreate = () => openModal({ type: 'obligation-edit', loan: null });
+  const handleEdit = (loan: typeof loans[number]) => openModal({ type: 'obligation-edit', loan });
 
   return (
     <div className="app-page app-obligations-page text-white">
@@ -105,7 +85,7 @@ export default function ObligationsPage() {
               <strong>{formatMoney(summary.nearest.monthlyPayment, summary.nearest.currency)}</strong>
             </div>
             <div className="app-next-payment-card__actions">
-              <button type="button" className="app-secondary-button" onClick={() => { setEditingLoan(summary.nearest); setIsEditorOpen(true); }}>Изменить</button>
+              <button type="button" className="app-secondary-button" onClick={() => handleEdit(summary.nearest!)}>Изменить</button>
               <button type="button" className="app-primary-button" disabled={isMutating} onClick={() => markPaid(summary.nearest!.id)}>Оплатил</button>
             </div>
           </section>
@@ -125,7 +105,7 @@ export default function ObligationsPage() {
           <div className="space-y-3">
             {activeLoans.map((loan) => (
               <article key={loan.id} className="app-loan-card">
-                <button type="button" className="app-loan-card__main" onClick={() => { setEditingLoan(loan); setIsEditorOpen(true); }}>
+                <button type="button" className="app-loan-card__main" onClick={() => handleEdit(loan)}>
                   <div className="app-loan-card__head">
                     <div className="min-w-0">
                       <div className="app-loan-card__type">{loanTypeLabel(loan.type)}{loan.creditor ? ` · ${loan.creditor}` : ''}</div>
@@ -134,14 +114,23 @@ export default function ObligationsPage() {
                     </div>
                     <strong>{formatMoney(loan.monthlyPayment, loan.currency)}</strong>
                   </div>
-                  <div className="app-loan-progress"><span style={{ width: `${Math.max(0, Math.min(100, loan.progress || 0))}%` }} /></div>
-                  <div className="app-loan-card__meta">
-                    <span>Остаток: {formatMoney(loan.currentDebt, loan.currency)}</span>
-                    <span>{loan.progress || 0}% закрыто</span>
-                  </div>
+                  {isDebtObligation(String(loan.type)) ? (
+                    <>
+                      <div className="app-loan-progress"><span style={{ width: `${Math.max(0, Math.min(100, loan.progress || 0))}%` }} /></div>
+                      <div className="app-loan-card__meta">
+                        <span>Остаток: {formatMoney(loan.currentDebt, loan.currency)}</span>
+                        <span>{loan.progress || 0}% закрыто</span>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="app-loan-card__meta">
+                      <span>Регулярный платёж</span>
+                      <span>{loan.account ? `Счёт: ${loan.account.name}` : 'Счёт не выбран'}</span>
+                    </div>
+                  )}
                 </button>
                 <div className="app-loan-card__actions">
-                  <button type="button" className="app-secondary-button" onClick={() => { setEditingLoan(loan); setIsEditorOpen(true); }}>Подробнее</button>
+                  <button type="button" className="app-secondary-button" onClick={() => handleEdit(loan)}>Подробнее</button>
                   <button type="button" className="app-primary-button" disabled={isMutating} onClick={() => markPaid(loan.id)}>Оплатил</button>
                 </div>
               </article>
@@ -182,15 +171,6 @@ export default function ObligationsPage() {
         ) : null}
       </div>
 
-      <LoanEditSheet
-        open={isEditorOpen}
-        loan={editingLoan}
-        accounts={accounts}
-        isSaving={isMutating}
-        onClose={() => { setIsEditorOpen(false); setEditingLoan(null); }}
-        onSave={handleSave}
-        onDelete={handleDelete}
-      />
     </div>
   );
 }

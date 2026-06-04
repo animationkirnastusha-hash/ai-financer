@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { useAppModalStore } from '@/features/modals/model/appModal.store';
 import { useNavigationStore } from '@/features/navigation/model/navigation.store';
 import { useObligationsStore } from '@/features/obligations/model/obligations.store';
 import { formatMoney, formatTransactionDate } from '@/shared/lib/money';
@@ -8,6 +9,7 @@ export function HomeObligationsWidget() {
   const summary = useObligationsStore((state) => state.summary);
   const loadSummary = useObligationsStore((state) => state.loadSummary);
   const markPaid = useObligationsStore((state) => state.markPaid);
+  const openModal = useAppModalStore((state) => state.openModal);
   const isMutating = useObligationsStore((state) => state.isMutating);
 
   useEffect(() => {
@@ -38,6 +40,7 @@ export function HomeObligationsWidget() {
         <span>Долг: {formatMoney(summary.totalDebt, nearest.currency)}</span>
       </div>
       <div className="app-obligations-widget__actions">
+        <button type="button" className="app-secondary-button" onClick={() => openModal({ type: 'obligation-edit', loan: nearest })}>Изменить</button>
         <button type="button" className="app-secondary-button" onClick={() => navigateTo('obligations')}>Открыть</button>
         <button type="button" className="app-primary-button" disabled={isMutating} onClick={() => markPaid(nearest.id)}>
           Оплатил
