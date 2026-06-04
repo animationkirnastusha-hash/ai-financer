@@ -28,14 +28,16 @@ function toNumber(value: string) {
 type Props = {
   open: boolean;
   loan?: LoanDto | null;
+  initialType?: LoanType | null;
   accounts: AccountDto[];
   isSaving: boolean;
+  layer?: number;
   onClose: () => void;
   onSave: (payload: CreateLoanPayload) => Promise<void>;
   onDelete?: (loan: LoanDto) => Promise<void>;
 };
 
-export function LoanEditSheet({ open, loan, accounts, isSaving, onClose, onSave, onDelete }: Props) {
+export function LoanEditSheet({ open, loan, initialType, accounts, isSaving, layer, onClose, onSave, onDelete }: Props) {
   const [title, setTitle] = useState('');
   const [type, setType] = useState<LoanType>('loan');
   const [creditor, setCreditor] = useState('');
@@ -57,7 +59,7 @@ export function LoanEditSheet({ open, loan, accounts, isSaving, onClose, onSave,
   useEffect(() => {
     if (!open) return;
     setTitle(loan?.title ?? '');
-    setType((loan?.type as LoanType) ?? 'loan');
+    setType((loan?.type as LoanType) ?? initialType ?? 'loan');
     setCreditor(loan?.creditor ?? '');
     setCurrency(loan?.currency ?? 'RUB');
     setPrincipalAmount(loan?.principalAmount ? String(loan.principalAmount) : '');
@@ -73,7 +75,7 @@ export function LoanEditSheet({ open, loan, accounts, isSaving, onClose, onSave,
     setAutoCreateExpense(Boolean(loan?.autoCreateExpense));
     setNote(loan?.note ?? '');
     setError(null);
-  }, [loan, open]);
+  }, [initialType, loan, open]);
 
   const accountOptions = useMemo(() => accounts.filter((account) => !account.lockSpending), [accounts]);
   const isDebtLike = type === 'loan' || type === 'mortgage' || type === 'installment';
@@ -132,6 +134,7 @@ export function LoanEditSheet({ open, loan, accounts, isSaving, onClose, onSave,
       subtitle="Настройки меняются под выбранный тип. Лишних полей не будет."
       className="app-obligation-sheet"
       bodyClassName="app-obligation-sheet__body"
+      layer={layer}
       footer={(
         <div className="app-obligation-footer">
           {loan && onDelete ? (
