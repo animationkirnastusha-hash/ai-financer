@@ -1,13 +1,14 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { useSettingsStore } from '@/features/settings/model/settings.store';
-import { useNavigationStore } from '@/features/navigation/model/navigation.store';
+import { useNavigationStore, type SettingsSection } from '@/features/navigation/model/navigation.store';
 import { LanguageSwitcher } from '@/shared/ui/LanguageSwitcher';
 import { ScreenTopBar } from '@/shared/ui/ScreenTopBar';
 import { useAuthStore } from '@/features/auth/model/auth.store';
 import { dataResetApi, type DataResetMode } from '@/features/data-reset/api/dataReset.api';
+import { useNotificationsStore } from '@/features/notifications/model/notifications.store';
 import type { AppCurrency } from '@/features/settings/model/settings.types';
 
-type SettingsModal = 'voice' | 'fina' | 'ai' | 'currency' | 'data' | null;
+type SettingsModal = SettingsSection | null;
 
 const currencyOptions: AppCurrency[] = ['RUB', 'USD', 'EUR', 'KZT', 'UZS', 'KGS', 'AMD', 'GEL', 'AZN'];
 
@@ -55,6 +56,7 @@ export default function SettingsPage() {
   const [resetMode, setResetMode] = useState<DataResetMode | null>(null);
   const [modal, setModal] = useState<SettingsModal>(null);
   const navigateTo = useNavigationStore((state) => state.navigateTo);
+  const consumeSettingsSection = useNavigationStore((state) => state.consumeSettingsSection);
   const user = useAuthStore((state) => state.user);
   const isAdmin = Boolean(user?.isAdmin);
 
@@ -68,6 +70,12 @@ export default function SettingsPage() {
   const secondaryCurrency = useSettingsStore((state) => state.secondaryCurrency);
   const rubToUsdRate = useSettingsStore((state) => state.rubToUsdRate);
   const rubToEurRate = useSettingsStore((state) => state.rubToEurRate);
+
+  const notificationSettings = useNotificationsStore((state) => state.settings);
+  const notificationError = useNotificationsStore((state) => state.error);
+  const notificationSaving = useNotificationsStore((state) => state.isSaving);
+  const loadNotificationSettings = useNotificationsStore((state) => state.loadSettings);
+  const updateNotificationSettings = useNotificationsStore((state) => state.updateSettings);
 
   const setVoiceEnabled = useSettingsStore((state) => state.setVoiceEnabled);
   const setVoiceBetaEnabled = useSettingsStore((state) => state.setVoiceBetaEnabled);
@@ -85,6 +93,15 @@ export default function SettingsPage() {
 
   useEffect(() => setUsdDraft(String(rubToUsdRate)), [rubToUsdRate, modal]);
   useEffect(() => setEurDraft(String(rubToEurRate)), [rubToEurRate, modal]);
+
+  useEffect(() => {
+    const section = consumeSettingsSection();
+    if (section) setModal(section);
+  }, [consumeSettingsSection]);
+
+  useEffect(() => {
+    if (modal === 'notifications') void loadNotificationSettings();
+  }, [loadNotificationSettings, modal]);
 
   const saveUsdRate = () => {
     const value = Number(usdDraft.replace(',', '.'));
@@ -134,7 +151,7 @@ export default function SettingsPage() {
   return (
     <div className="app-page app-settings-page text-white">
       <div className="app-page__inner space-y-4">
-        <ScreenTopBar title="Настройки" left="back" right={['home']} />
+        <ScreenTopBar title="Настройки" left="back" right={['notifications', 'home']} />
 
         <header className="app-card app-card--hero app-settings-hero">
           <div className="app-eyebrow">Настройки</div>
@@ -152,7 +169,8 @@ export default function SettingsPage() {
 
         <section className="app-settings-grid">
           <SettingsCard title="Голос" caption="Голосовой ввод по нажатию" value={voiceEnabled ? 'включён' : 'выключен'} onClick={() => setModal('voice')} />
-          <SettingsCard title="Фина" caption="Как работает голосовой ввод" value="по имени" onClick={() => setModal('fina')} />
+          <SettingsCard title="Фина" caption="Как работает голосовой ввод" value="по нажатию" onClick={() => setModal('fina')} />
+          <SettingsCard title="Уведомления" caption="Платежи и напоминания" value={notificationSettings?.inAppEnabled === false ? 'выключены' : 'включены'} onClick={() => setModal('notifications')} />
           <SettingsCard title="Валюты" caption="Главная валюта и курсы" value={`${mainCurrency}${secondaryCurrencyEnabled ? ` + ${secondaryCurrency}` : ''}`} onClick={() => setModal('currency')} />
           <SettingsCard title="Подсказки" caption="Текстовый ввод и наблюдения" value={textInputEnabled ? 'текст есть' : 'только голос'} onClick={() => setModal('ai')} />
           <SettingsCard title="Данные" caption="Очистка финансов или полный сброс" value="тесты" onClick={() => setModal('data')} />
@@ -242,6 +260,52 @@ export default function SettingsPage() {
           <div className="grid gap-3">
             <ToggleLine title="Текстовый ввод" caption="Показывать поле, если говорить неудобно." checked={textInputEnabled} onChange={setTextInputEnabled} />
             <ToggleLine title="Наблюдения" caption="Показывать короткие финансовые выводы." checked={aiInsightsEnabled} onChange={setAIInsightsEnabled} />
+          </div>
+        </ModalShell>
+      ) : null}
+
+
+      {modal === 'notifications' ? (
+        <ModalShell title="Уведомления" caption="Напоминания по платежам и важным событиям." onClose={() => setModal(null)}>
+          <div className="grid gap-3">
+            <ToggleLine
+              title="В приложении"
+              caption="Показывать уведомления в панели сверху."
+              checked={notificationSettings?.inAppEnabled !== false}
+              onChange={(value) => void updateNotificationSettings({ inAppEnabled: value })}
+            />
+            <ToggleLine
+              title="В Telegram"
+              caption="Отправлять напоминания в бота, когда будет подключена доставка."
+              checked={notificationSettings?.telegramEnabled !== false}
+              onChange={(value) => void updateNotificationSettings({ telegramEnabled: value })}
+            />
+            <div className="app-settings-inline-field">
+              <span><b>Напоминать заранее</b><small>За сколько дней до платежа.</small></span>
+              <select
+                value={notificationSettings?.remindDaysBefore ?? 1}
+                disabled={notificationSaving}
+                onChange={(event) => void updateNotificationSettings({ remindDaysBefore: Number(event.target.value) })}
+              >
+                <option value={0}>В день платежа</option>
+                <option value={1}>За 1 день</option>
+                <option value={3}>За 3 дня</option>
+                <option value={7}>За 7 дней</option>
+              </select>
+            </div>
+            <ToggleLine
+              title="В день платежа"
+              caption="Напоминать в дату списания."
+              checked={notificationSettings?.remindOnDueDate !== false}
+              onChange={(value) => void updateNotificationSettings({ remindOnDueDate: value })}
+            />
+            <ToggleLine
+              title="Просрочка"
+              caption="Показывать, если платёж не отмечен."
+              checked={notificationSettings?.remindOverdue !== false}
+              onChange={(value) => void updateNotificationSettings({ remindOverdue: value })}
+            />
+            {notificationError ? <div className="app-status-box app-status-box--error">{notificationError}</div> : null}
           </div>
         </ModalShell>
       ) : null}

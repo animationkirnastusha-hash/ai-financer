@@ -1,5 +1,7 @@
 import { create } from 'zustand';
 
+export type SettingsSection = 'voice' | 'fina' | 'ai' | 'currency' | 'data' | 'notifications';
+
 export type AppScreen =
   | 'dashboard'
   | 'accounts'
@@ -25,8 +27,11 @@ type NavigationState = {
   hasSystemNotifications: boolean;
   isNotificationsOpen: boolean;
   initialAICommand: string | null;
+  settingsSection: SettingsSection | null;
 
   navigateTo: (screen: AppScreen) => void;
+  openSettingsSection: (section: SettingsSection) => void;
+  consumeSettingsSection: () => SettingsSection | null;
   openAIWithCommand: (command?: string) => void;
   consumeInitialAICommand: () => string | null;
   goBack: () => void;
@@ -59,6 +64,7 @@ export const useNavigationStore = create<NavigationState>((set, get) => ({
   hasSystemNotifications: true,
   isNotificationsOpen: false,
   initialAICommand: null,
+  settingsSection: null,
 
   navigateTo: (screen) => {
     const targetScreen = screen;
@@ -82,7 +88,28 @@ export const useNavigationStore = create<NavigationState>((set, get) => ({
       isNavigationMenuOpen: false,
       isNotificationsOpen: false,
       initialAICommand: targetScreen === 'ai-core' ? get().initialAICommand : null,
+      settingsSection: targetScreen === 'settings' ? get().settingsSection : null,
     });
+  },
+
+  openSettingsSection: (section) => {
+    const { currentScreen, history } = get();
+    set({
+      currentScreen: 'settings',
+      history: currentScreen === 'settings' ? history : compactHistory(history, currentScreen, 'settings'),
+      settingsSection: section,
+      isAIMenuOpen: false,
+      isGlobalCommandListOpen: false,
+      isNavigationMenuOpen: false,
+      isNotificationsOpen: false,
+      initialAICommand: null,
+    });
+  },
+
+  consumeSettingsSection: () => {
+    const section = get().settingsSection;
+    if (section) set({ settingsSection: null });
+    return section;
   },
 
   openAIWithCommand: (command) => {
@@ -93,6 +120,7 @@ export const useNavigationStore = create<NavigationState>((set, get) => ({
       currentScreen: 'ai-core',
       history: currentScreen === 'ai-core' ? history : compactHistory(history, currentScreen, 'ai-core'),
       initialAICommand: trimmedCommand,
+      settingsSection: null,
       isAIMenuOpen: false,
       isGlobalCommandListOpen: false,
       isNavigationMenuOpen: false,
@@ -138,6 +166,7 @@ export const useNavigationStore = create<NavigationState>((set, get) => ({
       isNavigationMenuOpen: false,
       isNotificationsOpen: false,
       initialAICommand: null,
+      settingsSection: null,
     }),
 
   openAIMenu: () => set({ isAIMenuOpen: true, isNotificationsOpen: false, isNavigationMenuOpen: false }),

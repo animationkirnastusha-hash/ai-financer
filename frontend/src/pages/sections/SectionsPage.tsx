@@ -35,7 +35,7 @@ export default function SectionsPage({ onBack }: Props) {
   return (
     <div className="app-page app-taxonomy-page text-white">
       <div className="app-page__inner space-y-4">
-        <ScreenTopBar title="Категории" left={{ label: 'Назад', onClick: onBack }} right={['home']} />
+        <ScreenTopBar title="Категории" left={{ label: 'Назад', onClick: onBack }} right={['notifications', 'home']} />
 
         <header className="app-card app-card--hero app-taxonomy-hero">
           <div className="app-taxonomy-hero__top app-accounts-hero__top">

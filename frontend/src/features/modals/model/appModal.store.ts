@@ -18,6 +18,7 @@ export type AppModalDescriptor =
   | { type: 'section-edit'; section?: SectionDto | null }
   | { type: 'goal-edit'; goal?: GoalDto | null; onAfterSave?: () => void }
   | { type: 'obligation-edit'; loan?: LoanDto | null; initialType?: LoanType | null }
+  | { type: 'notifications' }
   | { type: 'home-chart-details'; mode: HomeCashflowMode; period: HomeCashflowPeriod }
   | { type: 'home-category-operations'; group: HomeFinanceGroup }
   | { type: 'accounts-tools' }

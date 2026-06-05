@@ -45,7 +45,7 @@ export default function GoalsPage() {
   return (
     <div className="app-page app-goals-page text-white">
       <div className="app-page__inner space-y-4">
-        <ScreenTopBar title="Цели" left="back" right={['home']} />
+        <ScreenTopBar title="Цели" left="back" right={['notifications', 'home']} />
 
         <header className="app-card app-card--hero">
           <div className="app-eyebrow">Прогресс</div>

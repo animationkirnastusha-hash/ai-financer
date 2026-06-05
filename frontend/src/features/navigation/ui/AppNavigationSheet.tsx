@@ -7,7 +7,6 @@ const mainLinks: Array<{ screen: AppScreen; label: string; caption: string }> = 
   { screen: 'goals', label: 'Цели', caption: 'Накопления и планы' },
   { screen: 'obligations', label: 'Обязательства', caption: 'Кредиты, подписки и напоминания' },
   { screen: 'sections', label: 'Категории', caption: 'Разделы расходов и доходов' },
-  { screen: 'analytics', label: 'Аналитика', caption: 'Подробная статистика' },
 ];
 
 const adminLinks: Array<{ screen: AppScreen; label: string; caption: string }> = [

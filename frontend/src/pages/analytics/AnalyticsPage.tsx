@@ -53,7 +53,7 @@ export default function AnalyticsPage() {
   return (
     <div className="app-page app-analytics-page text-white">
       <div className="app-page__inner space-y-4">
-        <ScreenTopBar title="Аналитика" right={['history', 'settings']} />
+        <ScreenTopBar title="Аналитика" right={['notifications', 'settings']} />
 
         <header className="app-card app-card--hero">
           <div className="app-eyebrow">Аналитика</div>

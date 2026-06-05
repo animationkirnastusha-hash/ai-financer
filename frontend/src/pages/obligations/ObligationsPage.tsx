@@ -54,7 +54,7 @@ export default function ObligationsPage() {
   return (
     <div className="app-page app-obligations-page text-white">
       <div className="app-page__inner space-y-4">
-        <ScreenTopBar title="Обязательства" left="back" right={['home']} />
+        <ScreenTopBar title="Обязательства" left="back" right={['notifications', 'home']} />
 
         <header className="app-card app-card--hero app-obligations-hero">
           <div className="app-eyebrow">Кредиты, рассрочки и подписки</div>

@@ -38,6 +38,7 @@ model User {
   budgets           Budget[]
   recurringPayments RecurringPayment[]
   notifications     Notification[]
+  notificationSettings NotificationSettings?
   loans             Loan[]
   loanPayments      LoanPayment[]
   obligationReminders ObligationReminder[]
@@ -223,19 +224,48 @@ model RecurringPayment {
 }
 
 model Notification {
-  id        String   @id @default(cuid())
-  userId    String
-  type      String
-  title     String
-  message   String
-  isRead    Boolean  @default(false)
-  createdAt DateTime @default(now())
+  id                String    @id @default(cuid())
+  userId            String
+  type              String
+  title             String
+  message           String
+  severity          String    @default("info")
+  relatedEntityType String?
+  relatedEntityId   String?
+  action            String?
+  dueAt             DateTime?
+  isRead            Boolean   @default(false)
+  readAt            DateTime?
+  archivedAt        DateTime?
+  createdAt         DateTime  @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([isRead])
   @@index([createdAt])
+  @@index([archivedAt])
+  @@index([relatedEntityType, relatedEntityId])
+  @@index([dueAt])
+}
+
+model NotificationSettings {
+  id                 String   @id @default(cuid())
+  userId             String   @unique
+  inAppEnabled       Boolean  @default(true)
+  telegramEnabled    Boolean  @default(true)
+  remindDaysBefore   Int      @default(1)
+  remindOnDueDate    Boolean  @default(true)
+  remindOverdue      Boolean  @default(true)
+  quietHoursEnabled  Boolean  @default(false)
+  quietHoursFrom     String?
+  quietHoursTo       String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 

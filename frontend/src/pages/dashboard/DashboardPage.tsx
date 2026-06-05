@@ -62,7 +62,7 @@ export default function DashboardPage() {
   return (
     <div className="app-page app-dashboard-page text-white">
       <div className="app-page__inner app-home-layout">
-        <ScreenTopBar title="Главная" right={['analytics', 'settings']} />
+        <ScreenTopBar title="Главная" right={['notifications', 'analytics', 'settings']} />
 
         <HomeBalanceCarousel
           accounts={accounts}

@@ -59,7 +59,7 @@ export function AICoreScreen() {
   return (
     <div className="app-page app-ai-text-page text-white">
       <div className="app-page__inner space-y-4">
-        <ScreenTopBar title="Текстовый ввод" left="back" right={['home']} />
+        <ScreenTopBar title="Текстовый ввод" left="back" right={['notifications', 'home']} />
 
         <AICoreBalanceHero />
 

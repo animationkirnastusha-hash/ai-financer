@@ -65,6 +65,7 @@ export class DataResetService {
       deleted.accounts = (await tx.account.deleteMany({ where: userWhere })).count;
 
       if (mode === 'full') {
+        deleted.notificationSettings = (await tx.notificationSettings.deleteMany({ where: userWhere })).count;
         deleted.userAchievements = (await tx.userAchievement.deleteMany({ where: userWhere })).count;
         deleted.userActivities = (await tx.userActivity.deleteMany({ where: userWhere })).count;
         deleted.progressionProfiles = (await tx.progressionProfile.deleteMany({ where: userWhere })).count;

@@ -12,6 +12,7 @@ import { AppModalBodyLock } from '@/features/modals/ui/AppModalBodyLock';
 import { FinanceEntityModals } from '@/features/modals/ui/FinanceEntityModals';
 import { HomeFinanceModals } from '@/features/modals/ui/HomeFinanceModals';
 import { ObligationModals } from '@/features/modals/ui/ObligationModals';
+import { NotificationSheet } from '@/features/notifications/ui/NotificationSheet';
 import { UtilityModals } from '@/features/modals/ui/UtilityModals';
 import { layerByIndex, pickModal } from '@/features/modals/lib/modalLayers';
 
@@ -19,6 +20,7 @@ const ACCOUNT_MODAL_TYPES = new Set<AppModalDescriptor['type']>(['account-create
 const FINANCE_ENTITY_MODAL_TYPES = new Set<AppModalDescriptor['type']>(['transaction-create', 'transaction-edit', 'category-edit', 'section-edit', 'goal-edit']);
 const HOME_FINANCE_MODAL_TYPES = new Set<AppModalDescriptor['type']>(['home-chart-details', 'home-category-operations']);
 const OBLIGATION_MODAL_TYPES = new Set<AppModalDescriptor['type']>(['obligation-edit']);
+const NOTIFICATION_MODAL_TYPES = new Set<AppModalDescriptor['type']>(['notifications']);
 const UTILITY_MODAL_TYPES = new Set<AppModalDescriptor['type']>(['accounts-tools', 'taxonomy-tools', 'taxonomy-section']);
 
 function isAccountModal(modal: AppModalDescriptor): modal is Extract<AppModalDescriptor, { type: 'account-create' | 'account-details' | 'account-transfer' | 'account-edit' }> {
@@ -39,6 +41,10 @@ function isObligationModal(modal: AppModalDescriptor): modal is Extract<AppModal
 
 function isUtilityModal(modal: AppModalDescriptor): modal is Extract<AppModalDescriptor, { type: 'accounts-tools' | 'taxonomy-tools' | 'taxonomy-section' }> {
   return UTILITY_MODAL_TYPES.has(modal.type);
+}
+
+function isNotificationModal(modal: AppModalDescriptor): modal is Extract<AppModalDescriptor, { type: 'notifications' }> {
+  return NOTIFICATION_MODAL_TYPES.has(modal.type);
 }
 
 export function AppModalManager() {
@@ -203,6 +209,17 @@ export function AppModalManager() {
           createLoan={createLoan}
           updateLoan={updateLoan}
           deleteLoan={deleteLoan}
+        />
+      );
+    }
+
+
+    if (isNotificationModal(modal)) {
+      return (
+        <NotificationSheet
+          open
+          layer={layer}
+          onClose={() => closeModal('notifications')}
         />
       );
     }

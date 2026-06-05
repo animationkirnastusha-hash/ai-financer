@@ -18,6 +18,21 @@ export const getNotifications = asyncHandler(async (req: Request, res: Response)
   res.json({ notifications });
 });
 
+export const getUnreadCount = asyncHandler(async (req: Request, res: Response) => {
+  const result = await notificationService.getUnreadCount(req.userId!);
+  res.json(result);
+});
+
+export const getNotificationSettings = asyncHandler(async (req: Request, res: Response) => {
+  const settings = await notificationService.getSettings(req.userId!);
+  res.json({ settings });
+});
+
+export const updateNotificationSettings = asyncHandler(async (req: Request, res: Response) => {
+  const settings = await notificationService.updateSettings(req.userId!, req.body ?? {});
+  res.json({ settings });
+});
+
 export const markNotificationAsRead = asyncHandler(async (req: Request, res: Response) => {
   const notificationId = getStringParam(req.params.id, 'Notification id');
   const notification = await notificationService.markAsRead(req.userId!, notificationId);
