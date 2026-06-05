@@ -199,6 +199,11 @@ export function AppModalManager() {
           closeAllModals={closeAllModals}
           openModal={openModal}
           openAnalytics={() => navigateTo('analytics')}
+          openAnalyticsReport={() => {
+            closeAllModals();
+            navigateTo('analytics');
+            openModal({ type: 'report-export', mode: 'base' });
+          }}
         />
       );
     }

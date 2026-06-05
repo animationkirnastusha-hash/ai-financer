@@ -22,6 +22,7 @@ type Props = {
   closeAllModals: () => void;
   openModal: (modal: AppModalDescriptor) => void;
   openAnalytics: () => void;
+  openAnalyticsReport?: () => void;
 };
 
 export function HomeFinanceModals({
@@ -34,6 +35,7 @@ export function HomeFinanceModals({
   closeAllModals,
   openModal,
   openAnalytics,
+  openAnalyticsReport,
 }: Props) {
   switch (modal.type) {
     case 'home-chart-details':
@@ -49,6 +51,15 @@ export function HomeFinanceModals({
           onOpenAnalytics={() => {
             closeAllModals();
             openAnalytics();
+          }}
+          onOpenReport={() => {
+            if (openAnalyticsReport) {
+              openAnalyticsReport();
+              return;
+            }
+            closeAllModals();
+            openAnalytics();
+            openModal({ type: 'report-export', mode: 'base' });
           }}
           onOpenGroup={(group) => openModal({ type: 'home-category-operations', group })}
         />

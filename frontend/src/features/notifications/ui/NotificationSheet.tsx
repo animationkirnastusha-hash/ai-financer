@@ -99,11 +99,13 @@ export function NotificationSheet({ open, layer = 80, onClose }: Props) {
             </div>
           </div>
 
-          <div className="notification-sheet__toolbar">
-            <button type="button" className="notification-sheet__read-all" disabled={unreadCount === 0} onClick={() => void markAllRead()}>
-              Прочитать все
-            </button>
-          </div>
+          {unreadCount > 0 ? (
+            <div className="notification-sheet__toolbar">
+              <button type="button" className="notification-sheet__read-all" onClick={() => void markAllRead()}>
+                Прочитать все
+              </button>
+            </div>
+          ) : null}
 
           {error ? <div className="app-status-box app-status-box--error">{error}</div> : null}
 
@@ -126,21 +128,21 @@ export function NotificationSheet({ open, layer = 80, onClose }: Props) {
                 </div>
                 <div className="notification-card__actions">
                   {item.relatedEntityType === 'obligation' ? (
-                    <button type="button" className="app-small-link" onClick={() => void handleOpenRelated(item.id, item.relatedEntityId)}>
+                    <button type="button" className="notification-card__action" onClick={() => void handleOpenRelated(item.id, item.relatedEntityId)}>
                       Открыть
                     </button>
                   ) : null}
                   {item.action === 'mark_obligation_paid' ? (
-                    <button type="button" className="app-small-link" onClick={() => void handleMarkPaid(item.id, item.relatedEntityId)}>
+                    <button type="button" className="notification-card__action" onClick={() => void handleMarkPaid(item.id, item.relatedEntityId)}>
                       Оплатил
                     </button>
                   ) : null}
                   {!item.isRead ? (
-                    <button type="button" className="app-small-link" onClick={() => void markRead(item.id)}>
+                    <button type="button" className="notification-card__action" onClick={() => void markRead(item.id)}>
                       Прочитано
                     </button>
                   ) : null}
-                  <button type="button" className="app-small-link app-small-link--muted" onClick={() => void remove(item.id)}>
+                  <button type="button" className="notification-card__action notification-card__action--muted" onClick={() => void remove(item.id)}>
                     Скрыть
                   </button>
                 </div>

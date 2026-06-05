@@ -12,10 +12,11 @@ type Props = {
   onClose: () => void;
   modalLayer?: number;
   onOpenAnalytics: () => void;
+  onOpenReport: () => void;
   onOpenGroup: (group: HomeFinanceGroup) => void;
 };
 
-export function HomeChartDetailsModal({ open, transactions, mode, period, rates, onClose, modalLayer, onOpenAnalytics, onOpenGroup }: Props) {
+export function HomeChartDetailsModal({ open, transactions, mode, period, rates, onClose, modalLayer, onOpenAnalytics, onOpenReport, onOpenGroup }: Props) {
   if (!open) return null;
 
   const analytics = buildHomeFinanceAnalytics(transactions, mode, period, rates);
@@ -39,7 +40,7 @@ export function HomeChartDetailsModal({ open, transactions, mode, period, rates,
 
           <div className="app-home-chart-modal__actions">
             <button type="button" onClick={(event) => { event.stopPropagation(); onOpenAnalytics(); }}>Открыть полную аналитику</button>
-            <button type="button" onClick={(event) => { event.stopPropagation(); window.dispatchEvent(new CustomEvent('ai-financer:report-request')); }}>Скачать отчёт</button>
+            <button type="button" onClick={(event) => { event.stopPropagation(); onOpenReport(); }}>Скачать отчёт</button>
           </div>
 
           <div className="app-home-chart-groups">

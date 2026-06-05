@@ -177,3 +177,85 @@
   gap: 10px;
   margin-top: 14px;
 }
+
+
+/* pack-33b: report sheet polish */
+.report-export-sheet {
+  gap: 13px !important;
+}
+
+.report-export-hero {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  overflow: hidden;
+}
+
+.report-export-hero--clickable {
+  cursor: pointer;
+  user-select: none;
+}
+
+.report-export-hero--clickable:active {
+  transform: scale(0.992);
+}
+
+.report-export-hero > i {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 26px;
+  font-style: normal;
+  line-height: 1;
+}
+
+.report-export-hero small {
+  display: inline-flex;
+  width: max-content;
+  margin-top: 11px;
+  color: rgba(129, 239, 208, 0.86);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.report-export-hero--premium small {
+  color: rgba(255, 224, 138, 0.92);
+}
+
+.report-export-section {
+  gap: 8px !important;
+}
+
+.report-export-label {
+  font-size: 10px !important;
+  letter-spacing: 0.16em !important;
+}
+
+.report-export-chips,
+.report-export-segment {
+  gap: 7px !important;
+}
+
+.report-export-chips button,
+.report-export-segment button {
+  min-height: 40px !important;
+  padding: 0 13px !important;
+  font-size: 13px !important;
+}
+
+.report-export-note {
+  font-size: 13px !important;
+}
+
+.report-export-actions {
+  position: sticky;
+  bottom: 0;
+  padding-top: 6px !important;
+  background: linear-gradient(180deg, transparent, rgba(6, 10, 17, 0.88) 45%, rgba(6, 10, 17, 0.96));
+}

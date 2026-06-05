@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { reportsApi, type ReportFormat, type ReportMode, type ReportPreviewDto, type ReportType } from '@/features/reports/api/reports.api';
+import { useNavigationStore } from '@/features/navigation/model/navigation.store';
 import { Drawer } from '@/shared/ui/Drawer';
 import { formatMoney } from '@/shared/lib/money';
 
@@ -63,8 +64,10 @@ export function ReportExportSheet({ open, mode = 'base', layer, onClose }: Props
   const [isLoadingPreview, setIsLoadingPreview] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const navigateTo = useNavigationStore((state) => state.navigateTo);
 
   const copy = modeCopy[mode];
+  const isHeroClickable = mode === 'premium' || mode === 'business';
 
   function changePeriod(next: PeriodPreset) {
     setPeriod(next);
@@ -96,6 +99,18 @@ export function ReportExportSheet({ open, mode = 'base', layer, onClose }: Props
     }
   }
 
+  function openModePage() {
+    if (mode === 'premium') {
+      onClose();
+      navigateTo('premium');
+      return;
+    }
+    if (mode === 'business') {
+      onClose();
+      navigateTo('business-accountant');
+    }
+  }
+
   async function download() {
     setIsDownloading(true);
     setError(null);
@@ -111,12 +126,25 @@ export function ReportExportSheet({ open, mode = 'base', layer, onClose }: Props
   return (
     <Drawer open={open} onClose={onClose} title={copy.title} layer={layer}>
       <div className="report-export-sheet">
-        <section className={`report-export-hero report-export-hero--${mode}`}>
+        <section
+          className={`report-export-hero report-export-hero--${mode}${isHeroClickable ? ' report-export-hero--clickable' : ''}`}
+          role={isHeroClickable ? 'button' : undefined}
+          tabIndex={isHeroClickable ? 0 : undefined}
+          onClick={isHeroClickable ? openModePage : undefined}
+          onKeyDown={isHeroClickable ? (event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+              event.preventDefault();
+              openModePage();
+            }
+          } : undefined}
+        >
           <div>
             <span>{copy.badge}</span>
             <h2>{copy.title}</h2>
             <p>{copy.caption}</p>
+            {isHeroClickable ? <small>{mode === 'premium' ? 'Открыть Premium' : 'Открыть ИИ-бухгалтера'}</small> : null}
           </div>
+          {isHeroClickable ? <i aria-hidden="true">›</i> : null}
         </section>
 
         <section className="report-export-section">
