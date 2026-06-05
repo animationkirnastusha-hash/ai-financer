@@ -1,5 +1,6 @@
 import { useAuthStore } from '@/features/auth/model/auth.store';
 import { useNavigationStore } from '@/features/navigation/model/navigation.store';
+import { useAppModalStore } from '@/features/modals/model/appModal.store';
 import { ScreenTopBar } from '@/shared/ui/ScreenTopBar';
 
 type ProfileCard = {
@@ -102,6 +103,7 @@ function AdminOnlyFallback() {
 export default function BusinessAccountantPage() {
   const isAdmin = Boolean(useAuthStore((state) => state.user?.isAdmin));
   const navigateTo = useNavigationStore((state) => state.navigateTo);
+  const openModal = useAppModalStore((state) => state.openModal);
 
   if (!isAdmin) return <AdminOnlyFallback />;
 
@@ -122,6 +124,17 @@ export default function BusinessAccountantPage() {
             <button type="button" className="app-secondary-button" onClick={() => navigateTo('admin')}>Админка</button>
           </div>
         </header>
+
+
+        <section className="business-report-card">
+          <div className="app-eyebrow">Отчёты</div>
+          <h2>Экспорт для бизнеса</h2>
+          <p>Подготовь PDF или Excel со сводкой доходов, расходов, прибыли и операций за выбранный период.</p>
+          <div className="business-report-card__actions">
+            <button type="button" className="app-primary-button" onClick={() => openModal({ type: 'report-export', mode: 'business' })}>Сделать отчёт</button>
+            <button type="button" className="app-secondary-button" onClick={() => openModal({ type: 'report-export', mode: 'premium' })}>Расширенный</button>
+          </div>
+        </section>
 
         <section className="business-admin-warning">
           <b>Позиционирование</b>

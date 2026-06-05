@@ -2,6 +2,7 @@ import { useEffect, useMemo } from 'react';
 import { useTransactionsStore } from '@/features/transactions/model/transactions.store';
 import { useNavigationStore } from '@/features/navigation/model/navigation.store';
 import { useAuthStore } from '@/features/auth/model/auth.store';
+import { useAppModalStore } from '@/features/modals/model/appModal.store';
 import { ScreenTopBar } from '@/shared/ui/ScreenTopBar';
 import { formatMoney } from '@/shared/lib/money';
 
@@ -21,6 +22,7 @@ export default function AnalyticsPage() {
   const navigateTo = useNavigationStore((state) => state.navigateTo);
   const isAdmin = Boolean(useAuthStore((state) => state.user?.isAdmin));
   const openAIWithCommand = useNavigationStore((state) => state.openAIWithCommand);
+  const openModal = useAppModalStore((state) => state.openModal);
   const transactions = useTransactionsStore((state) => state.items);
   const loadTransactions = useTransactionsStore((state) => state.loadTransactions);
 
@@ -62,6 +64,7 @@ export default function AnalyticsPage() {
               <h1 className="app-hero-title">Картина месяца</h1>
               <p className="app-hero-caption">Коротко: сколько пришло, сколько ушло и где главный расход.</p>
             </div>
+            <button type="button" className="app-secondary-button shrink-0" onClick={() => openModal({ type: 'report-export', mode: 'base' })}>Экспорт</button>
           </div>
           <div className="mt-5 grid grid-cols-2 gap-3">
             <div className="app-stat-card">
@@ -118,7 +121,10 @@ export default function AnalyticsPage() {
                 <div className="app-section-title">Глубже</div>
                 <p className="mt-2 text-sm text-white/46">Прогнозы, месячные отчёты и более глубокие выводы для Premium.</p>
               </div>
-              <button type="button" onClick={() => navigateTo('premium')} className="app-secondary-button shrink-0">Премиум</button>
+              <div className="flex gap-2 shrink-0">
+                <button type="button" onClick={() => openModal({ type: 'report-export', mode: 'premium' })} className="app-secondary-button">Отчёт</button>
+                <button type="button" onClick={() => navigateTo('premium')} className="app-secondary-button">Премиум</button>
+              </div>
             </div>
           </section>
         ) : null}

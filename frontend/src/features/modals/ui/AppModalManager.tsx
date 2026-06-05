@@ -14,6 +14,7 @@ import { HomeFinanceModals } from '@/features/modals/ui/HomeFinanceModals';
 import { ObligationModals } from '@/features/modals/ui/ObligationModals';
 import { NotificationSheet } from '@/features/notifications/ui/NotificationSheet';
 import { UtilityModals } from '@/features/modals/ui/UtilityModals';
+import { ReportExportSheet } from '@/features/reports/ui/ReportExportSheet';
 import { layerByIndex, pickModal } from '@/features/modals/lib/modalLayers';
 
 const ACCOUNT_MODAL_TYPES = new Set<AppModalDescriptor['type']>(['account-create', 'account-details', 'account-transfer', 'account-edit']);
@@ -21,6 +22,7 @@ const FINANCE_ENTITY_MODAL_TYPES = new Set<AppModalDescriptor['type']>(['transac
 const HOME_FINANCE_MODAL_TYPES = new Set<AppModalDescriptor['type']>(['home-chart-details', 'home-category-operations']);
 const OBLIGATION_MODAL_TYPES = new Set<AppModalDescriptor['type']>(['obligation-edit']);
 const NOTIFICATION_MODAL_TYPES = new Set<AppModalDescriptor['type']>(['notifications']);
+const REPORT_MODAL_TYPES = new Set<AppModalDescriptor['type']>(['report-export']);
 const UTILITY_MODAL_TYPES = new Set<AppModalDescriptor['type']>(['accounts-tools', 'taxonomy-tools', 'taxonomy-section']);
 
 function isAccountModal(modal: AppModalDescriptor): modal is Extract<AppModalDescriptor, { type: 'account-create' | 'account-details' | 'account-transfer' | 'account-edit' }> {
@@ -45,6 +47,10 @@ function isUtilityModal(modal: AppModalDescriptor): modal is Extract<AppModalDes
 
 function isNotificationModal(modal: AppModalDescriptor): modal is Extract<AppModalDescriptor, { type: 'notifications' }> {
   return NOTIFICATION_MODAL_TYPES.has(modal.type);
+}
+
+function isReportModal(modal: AppModalDescriptor): modal is Extract<AppModalDescriptor, { type: 'report-export' }> {
+  return REPORT_MODAL_TYPES.has(modal.type);
 }
 
 export function AppModalManager() {
@@ -220,6 +226,17 @@ export function AppModalManager() {
           open
           layer={layer}
           onClose={() => closeModal('notifications')}
+        />
+      );
+    }
+
+    if (isReportModal(modal)) {
+      return (
+        <ReportExportSheet
+          open
+          mode={modal.mode ?? 'base'}
+          layer={layer}
+          onClose={() => closeModal('report-export')}
         />
       );
     }

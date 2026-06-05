@@ -6,6 +6,7 @@ import type { TransactionDto } from '@/features/transactions/api/transactions.ap
 import type { GoalDto } from '@/features/goals/api/goals.api';
 import type { LoanDto, LoanType } from '@/features/obligations/api/obligations.api';
 import type { HomeCashflowMode, HomeCashflowPeriod, HomeFinanceGroup } from '@/features/dashboard/lib/homeFinanceAnalytics';
+import type { ReportMode } from '@/features/reports/api/reports.api';
 
 export type AppModalDescriptor =
   | { type: 'account-create'; prefill?: Partial<{ name: string; type: AccountType; currency: 'RUB' | 'USD' | 'EUR'; initialBalance: string }> }
@@ -19,6 +20,7 @@ export type AppModalDescriptor =
   | { type: 'goal-edit'; goal?: GoalDto | null; onAfterSave?: () => void }
   | { type: 'obligation-edit'; loan?: LoanDto | null; initialType?: LoanType | null }
   | { type: 'notifications' }
+  | { type: 'report-export'; mode?: ReportMode }
   | { type: 'home-chart-details'; mode: HomeCashflowMode; period: HomeCashflowPeriod }
   | { type: 'home-category-operations'; group: HomeFinanceGroup }
   | { type: 'accounts-tools' }
