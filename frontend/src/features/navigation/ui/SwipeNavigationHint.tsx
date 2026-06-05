@@ -1,17 +1,20 @@
 import type { AppScreen } from '@/features/navigation/model/navigation.store';
+import { useI18n } from '@/shared/lib/i18n';
 
 type Props = {
   currentScreen: AppScreen;
   onNavigate: (screen: AppScreen) => void;
 };
 
-const items: Array<{ screen: AppScreen; label: string }> = [
-  { screen: 'dashboard', label: 'Dashboard' },
-  { screen: 'ai-core', label: 'AI Core' },
-  { screen: 'settings', label: 'Settings' },
+const items: Array<{ screen: AppScreen; labelKey: 'screen.dashboard' | 'screen.accounts' | 'common.settings' }> = [
+  { screen: 'dashboard', labelKey: 'screen.dashboard' },
+  { screen: 'accounts', labelKey: 'screen.accounts' },
+  { screen: 'settings', labelKey: 'common.settings' },
 ];
 
 export function SwipeNavigationHint({ currentScreen, onNavigate }: Props) {
+  const { t } = useI18n();
+
   return (
     <div className="pointer-events-auto fixed left-0 right-0 z-[70] px-4"
       style={{ bottom: 'calc(env(safe-area-inset-bottom) + 14px)' }}
@@ -32,14 +35,14 @@ export function SwipeNavigationHint({ currentScreen, onNavigate }: Props) {
                   : 'text-white/45'
               }`}
             >
-              {item.label}
+              {t(item.labelKey)}
             </button>
           );
         })}
       </div>
 
       <div className="mt-2 text-center text-[10px] text-white/30">
-        Свайп: вправо — Dashboard · влево — Settings
+        {t('nav.swipeHint')}
       </div>
     </div>
   );

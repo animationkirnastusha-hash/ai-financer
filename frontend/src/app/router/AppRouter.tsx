@@ -5,7 +5,6 @@ import { AppNavigationSheet } from '@/features/navigation/ui/AppNavigationSheet'
 import { AppModalManager } from '@/features/modals/ui/AppModalManager';
 import { PremiumUpgradeSheet } from '@/features/premium/ui/PremiumUpgradeSheet';
 import { LaunchOnboardingSheet } from '@/features/onboarding/ui/LaunchOnboardingSheet';
-import { AICoreScreen } from '@/features/ai-core/ui/AICoreScreen';
 import { ProductAnalyticsTracker } from '@/features/product-analytics/ui/ProductAnalyticsTracker';
 import { useAuthStore } from '@/features/auth/model/auth.store';
 import { Spinner } from '@/shared/ui/Spinner';
@@ -47,10 +46,11 @@ export function AppRouter() {
         {currentScreen === 'obligations' && <ObligationsPage />}
         {currentScreen === 'companion' && <CompanionPage />}
         {currentScreen === 'settings' && <SettingsPage />}
-        {currentScreen === 'premium' && (isAdmin ? <PremiumPage /> : <DashboardPage />)}
+        {currentScreen === 'store' && <PremiumPage />}
+        {currentScreen === 'premium' && <PremiumPage />}
         {currentScreen === 'business-accountant' && (isAdmin ? <BusinessAccountantPage /> : <DashboardPage />)}
         {currentScreen === 'sections' && <SectionsPage onBack={goBack} />}
-        {currentScreen === 'ai-core' && <AICoreScreen />}
+        {currentScreen === 'ai-core' && <DashboardPage />}
         {currentScreen === 'admin' && (isAdmin ? <AdminPage /> : <DashboardPage />)}
         {currentScreen === 'referral' && (isAdmin ? <ReferralPage /> : <DashboardPage />)}
       </Suspense>

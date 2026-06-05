@@ -8,9 +8,11 @@ import { useTransactionsStore } from '@/features/transactions/model/transactions
 import type { ChatMessage, SendChatMessageOptions, SendChatMessagePayload } from '@/features/chat/model/chat.types';
 import { useAuthStore } from '@/features/auth/model/auth.store';
 import { appendLocalMessages, emitPendingSync, isClarificationPending, isConfirmationPending, isTransientNetworkError, sleep } from '@/features/chat/model/chatController.utils';
+import { useChatStore } from '@/features/chat/model/chat.store';
 
 export function useChatController() {
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const messages = useChatStore((state) => state.messages) as ChatMessage[];
+  const setMessages = useChatStore((state) => state.setMessages) as (value: ChatMessage[] | ((messages: ChatMessage[]) => ChatMessage[])) => void;
   const [pendingActions, setPendingActions] = useState<any[]>([]);
   const [auditLogs, setAuditLogs] = useState<any[]>([]);
   const [isPendingOpen, setIsPendingOpen] = useState(false);

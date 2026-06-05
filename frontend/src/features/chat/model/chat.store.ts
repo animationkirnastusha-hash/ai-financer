@@ -1,10 +1,13 @@
 import { create } from 'zustand';
 import type { MessageEntity } from '@/entities/message/model/message.types';
 
+type MessagesUpdater = MessageEntity[] | ((messages: MessageEntity[]) => MessageEntity[]);
+
 type ChatState = {
   messages: MessageEntity[];
   isSending: boolean;
   error: string | null;
+  setMessages: (value: MessagesUpdater) => void;
   appendMessage: (message: MessageEntity) => void;
   replaceLastAssistantMessage: (message: MessageEntity) => void;
   setIsSending: (value: boolean) => void;
@@ -15,6 +18,11 @@ export const useChatStore = create<ChatState>((set) => ({
   messages: [],
   isSending: false,
   error: null,
+
+  setMessages: (value) =>
+    set((state) => ({
+      messages: typeof value === 'function' ? value(state.messages) : value,
+    })),
 
   appendMessage: (message) =>
     set((state) => ({

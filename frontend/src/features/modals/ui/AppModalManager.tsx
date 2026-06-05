@@ -15,6 +15,7 @@ import { ObligationModals } from '@/features/modals/ui/ObligationModals';
 import { NotificationSheet } from '@/features/notifications/ui/NotificationSheet';
 import { UtilityModals } from '@/features/modals/ui/UtilityModals';
 import { ReportExportSheet } from '@/features/reports/ui/ReportExportSheet';
+import { TextChatOverlay } from '@/features/chat/ui/TextChatOverlay';
 import { layerByIndex, pickModal } from '@/features/modals/lib/modalLayers';
 
 const ACCOUNT_MODAL_TYPES = new Set<AppModalDescriptor['type']>(['account-create', 'account-details', 'account-transfer', 'account-edit']);
@@ -23,6 +24,7 @@ const HOME_FINANCE_MODAL_TYPES = new Set<AppModalDescriptor['type']>(['home-char
 const OBLIGATION_MODAL_TYPES = new Set<AppModalDescriptor['type']>(['obligation-edit']);
 const NOTIFICATION_MODAL_TYPES = new Set<AppModalDescriptor['type']>(['notifications']);
 const REPORT_MODAL_TYPES = new Set<AppModalDescriptor['type']>(['report-export']);
+const TEXT_CHAT_MODAL_TYPES = new Set<AppModalDescriptor['type']>(['ai-text-overlay']);
 const UTILITY_MODAL_TYPES = new Set<AppModalDescriptor['type']>(['accounts-tools', 'taxonomy-tools', 'taxonomy-section']);
 
 function isAccountModal(modal: AppModalDescriptor): modal is Extract<AppModalDescriptor, { type: 'account-create' | 'account-details' | 'account-transfer' | 'account-edit' }> {
@@ -51,6 +53,10 @@ function isNotificationModal(modal: AppModalDescriptor): modal is Extract<AppMod
 
 function isReportModal(modal: AppModalDescriptor): modal is Extract<AppModalDescriptor, { type: 'report-export' }> {
   return REPORT_MODAL_TYPES.has(modal.type);
+}
+
+function isTextChatModal(modal: AppModalDescriptor): modal is Extract<AppModalDescriptor, { type: 'ai-text-overlay' }> {
+  return TEXT_CHAT_MODAL_TYPES.has(modal.type);
 }
 
 export function AppModalManager() {
@@ -109,6 +115,16 @@ export function AppModalManager() {
   const accountCreateModal = pickModal(stack, 'account-create');
   const rates = useMemo(() => ({ usd: rubToUsdRate || 90, eur: rubToEurRate || 100 }), [rubToEurRate, rubToUsdRate]);
 
+  useEffect(() => {
+    const handler = (event: Event) => {
+      const detail = (event as CustomEvent<{ command?: string | null }>).detail;
+      openModal({ type: 'ai-text-overlay', initialCommand: detail?.command ?? null });
+    };
+
+    window.addEventListener('ai-financer:open-text-chat', handler);
+    return () => window.removeEventListener('ai-financer:open-text-chat', handler);
+  }, [openModal]);
+
   async function refreshFinance() {
     await Promise.allSettled([loadAccounts(true), loadTransactions(true), loadTaxonomy(true)]);
   }
@@ -157,7 +173,7 @@ export function AppModalManager() {
           setPrimaryAccountId={setPrimaryAccountId}
           setIncomeAccountId={setIncomeAccountId}
           createTransfer={createTransfer}
-          navigateToAI={() => navigateTo('ai-core')}
+          navigateToAI={() => openModal({ type: 'ai-text-overlay' })}
         />
       );
     }
@@ -242,6 +258,17 @@ export function AppModalManager() {
           mode={modal.mode ?? 'base'}
           layer={layer}
           onClose={() => closeModal('report-export')}
+        />
+      );
+    }
+
+    if (isTextChatModal(modal)) {
+      return (
+        <TextChatOverlay
+          open
+          initialCommand={modal.initialCommand ?? null}
+          layer={layer}
+          onClose={() => closeModal('ai-text-overlay')}
         />
       );
     }

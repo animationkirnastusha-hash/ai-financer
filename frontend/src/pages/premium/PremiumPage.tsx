@@ -80,7 +80,7 @@ function AdminOnlyFallback() {
   return (
     <div className="app-page text-white">
       <div className="app-page__inner space-y-4">
-        <ScreenTopBar title="Премиум" left="back" right={['home']} />
+        <ScreenTopBar title="Магазин" left="back" right={['home']} />
         <section className="app-card app-card--hero">
           <div className="app-eyebrow">Скоро</div>
           <h1 className="app-hero-title">Premium готовится</h1>
@@ -104,14 +104,14 @@ export default function PremiumPage() {
   return (
     <div className="app-page premium-admin-page text-white">
       <div className="app-page__inner space-y-4">
-        <ScreenTopBar title="Premium" left="back" right={['home', 'settings']} />
+        <ScreenTopBar title="Магазин" left="back" right={['home', 'settings']} />
 
         <header className="premium-admin-hero">
           <div className="premium-admin-hero__glow" aria-hidden="true" />
-          <div className="premium-admin-kicker">Premium</div>
-          <h1>Фина на уровень выше</h1>
+          <div className="premium-admin-kicker">Store</div>
+          <h1>Магазин возможностей</h1>
           <p>
-            {adminName}, здесь собирается будущий Premium-опыт: больше анализа, меньше ручной работы и больше полезных подсказок по деньгам.
+            {adminName}, здесь собирается Premium и Business: больше анализа, меньше ручной работы и больше полезных подсказок по деньгам.
           </p>
           <div className="premium-admin-hero__actions">
             <button type="button" className="app-primary-button" onClick={() => navigateTo('business-accountant')}>ИИ-бухгалтер</button>

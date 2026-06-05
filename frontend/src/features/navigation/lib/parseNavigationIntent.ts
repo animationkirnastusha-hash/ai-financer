@@ -20,6 +20,7 @@ function normalize(input: string) {
 
 function detectScreen(input: string): AppScreen | null {
   if (includesAny(input, ['админ', 'админка', 'admin', 'панель администратора'])) return 'admin';
+  if (includesAny(input, ['магазин', 'store', 'стор', 'тарифы', 'купить премиум', 'premium', 'business'])) return 'store';
   if (includesAny(input, ['чат', 'текстовый ввод', 'написать фине', 'ии чат'])) return 'ai-core';
   if (includesAny(input, ['ии бухгалтер', 'бухгалтер', 'бухгалтерия', 'фина бухгалтер', 'самозанятый', 'ип', 'малый бизнес'])) return 'business-accountant';
   if (includesAny(input, ['аналитика', 'аналитику', 'анализ', 'analytics', 'статистика', 'отчет', 'отчеты', 'операции', 'история', 'платежи'])) return 'analytics';
@@ -53,6 +54,7 @@ function isBareNavigationTarget(input: string, screen: AppScreen) {
     sections: ['категории', 'разделы', 'категории и разделы', 'разделы и категории'],
     companion: ['компаньон', 'фина', 'помощник'],
     admin: ['админка', 'админ'],
+    store: ['магазин', 'стор', 'тарифы', 'premium', 'премиум'],
     'business-accountant': ['ии бухгалтер', 'бухгалтер', 'бухгалтерия', 'фина бухгалтер'],
     'ai-core': ['чат', 'текстовый ввод', 'ии чат'],
   };

@@ -10,6 +10,7 @@ export type AppScreen =
   | 'obligations'
   | 'companion'
   | 'settings'
+  | 'store'
   | 'premium'
   | 'business-accountant'
   | 'sections'
@@ -113,12 +114,13 @@ export const useNavigationStore = create<NavigationState>((set, get) => ({
   },
 
   openAIWithCommand: (command) => {
-    const { currentScreen, history } = get();
     const trimmedCommand = command?.trim() || null;
 
+    window.dispatchEvent(new CustomEvent('ai-financer:open-text-chat', {
+      detail: { command: trimmedCommand },
+    }));
+
     set({
-      currentScreen: 'ai-core',
-      history: currentScreen === 'ai-core' ? history : compactHistory(history, currentScreen, 'ai-core'),
       initialAICommand: trimmedCommand,
       settingsSection: null,
       isAIMenuOpen: false,

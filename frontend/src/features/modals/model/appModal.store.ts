@@ -21,6 +21,7 @@ export type AppModalDescriptor =
   | { type: 'obligation-edit'; loan?: LoanDto | null; initialType?: LoanType | null }
   | { type: 'notifications' }
   | { type: 'report-export'; mode?: ReportMode }
+  | { type: 'ai-text-overlay'; initialCommand?: string | null }
   | { type: 'home-chart-details'; mode: HomeCashflowMode; period: HomeCashflowPeriod }
   | { type: 'home-category-operations'; group: HomeFinanceGroup }
   | { type: 'accounts-tools' }
