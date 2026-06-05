@@ -5,6 +5,7 @@ import cron from 'node-cron';
 import { BudgetService } from './modules/budgets/service';
 import { ensureProductAnalyticsSchema } from './modules/analytics/bootstrap';
 import { aiCleanupService } from './modules/ai/ai-cleanup.service';
+import { notificationService } from './modules/notifications/service';
 
 async function bootstrap() {
   await ensureProductAnalyticsSchema();
@@ -21,6 +22,17 @@ async function bootstrap() {
         console.log('✅ Budgets checked');
       } catch (error) {
         console.error('❌ Budget cron failed:', error);
+      }
+    });
+
+    cron.schedule('*/15 * * * *', async () => {
+      try {
+        const result = await notificationService.deliverTelegramNotifications();
+        if (result.checked > 0 || result.sent > 0 || result.failed > 0) {
+          console.log('🔔 Notification delivery:', result);
+        }
+      } catch (error) {
+        console.error('❌ Notification delivery cron failed:', error);
       }
     });
   }

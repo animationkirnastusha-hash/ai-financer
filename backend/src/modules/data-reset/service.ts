@@ -52,6 +52,7 @@ export class DataResetService {
       deleted.aiIdempotencyRecords = (await tx.aIIdempotencyRecord.deleteMany({ where: userWhere })).count;
       deleted.aiOperationEvents = (await tx.aIOperationEvent.deleteMany({ where: userWhere })).count;
 
+      deleted.notificationDeliveries = (await tx.notificationDelivery.deleteMany({ where: userWhere })).count;
       deleted.notifications = (await tx.notification.deleteMany({ where: userWhere })).count;
       deleted.obligationReminders = (await tx.obligationReminder.deleteMany({ where: userWhere })).count;
       deleted.loanPayments = (await tx.loanPayment.deleteMany({ where: userWhere })).count;

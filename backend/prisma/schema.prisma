@@ -39,6 +39,7 @@ model User {
   recurringPayments RecurringPayment[]
   notifications     Notification[]
   notificationSettings NotificationSettings?
+  notificationDeliveries NotificationDelivery[]
   loans             Loan[]
   loanPayments      LoanPayment[]
   obligationReminders ObligationReminder[]
@@ -240,6 +241,7 @@ model Notification {
   createdAt         DateTime  @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deliveries NotificationDelivery[]
 
   @@index([userId])
   @@index([isRead])
@@ -268,6 +270,30 @@ model NotificationSettings {
   @@index([userId])
 }
 
+
+
+model NotificationDelivery {
+  id             String    @id @default(cuid())
+  notificationId String
+  userId         String
+  channel        String    @default("telegram")
+  status         String    @default("pending")
+  attemptCount   Int       @default(0)
+  sentAt         DateTime?
+  failedAt       DateTime?
+  lastError      String?
+  externalId     String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  notification Notification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([notificationId, channel])
+  @@index([userId])
+  @@index([channel, status])
+  @@index([createdAt])
+}
 
 model Loan {
   id                 String   @id @default(cuid())

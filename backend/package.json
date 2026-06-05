@@ -40,7 +40,8 @@
     "smoke:taxonomy": "node scripts/smoke/check-taxonomy.mjs",
     "smoke:analytics": "node scripts/smoke/check-analytics.mjs",
     "smoke:reset-admin": "node scripts/smoke/check-reset-admin.mjs",
-    "audit:final": "node scripts/run-final-audit.mjs"
+    "audit:final": "node scripts/run-final-audit.mjs",
+    "notifications:deliver": "node -e \"fetch(process.env.TEST_BASE_URL || 'http://localhost:3000/api/notifications/deliver-telegram', {method:'POST', headers:{Authorization:'Bearer '+require('fs').readFileSync('.test-auth-token','utf8').trim()}}).then(r=>r.json()).then(x=>console.log(JSON.stringify(x,null,2))).catch(e=>{console.error(e);process.exit(1)})\""
   },
   "keywords": [],
   "author": "",

@@ -61,3 +61,8 @@ export const deleteNotification = asyncHandler(async (req: Request, res: Respons
     notification,
   });
 });
+
+export const deliverTelegramNotifications = asyncHandler(async (_req: Request, res: Response) => {
+  const result = await notificationService.deliverTelegramNotifications();
+  res.json(result);
+});
