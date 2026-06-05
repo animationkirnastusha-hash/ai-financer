@@ -4,7 +4,7 @@ import { authApi, type FallbackInfoResponse } from '@/features/chat/api/auth.api
 import { useAuthStore } from '@/features/auth/model/auth.store';
 import { env } from '@/shared/config/env';
 import { getTelegramInitData, getTelegramUserPreview, initTelegramMiniApp } from '@/shared/lib/telegram';
-
+import { useI18n } from '@/shared/lib/i18n';
 
 async function waitForTelegramInitData(timeoutMs = 1200) {
   initTelegramMiniApp();
@@ -23,11 +23,12 @@ async function waitForTelegramInitData(timeoutMs = 1200) {
 
 function AuthLoadingState() {
   const previewUser = getTelegramUserPreview();
+  const { t } = useI18n();
 
   return (
     <div className="flex h-dvh items-center justify-center bg-[#070b10] px-6 text-center text-sm text-white/60">
       <div>
-        <div>Авторизация через Telegram...</div>
+        <div>{t('auth.loading')}</div>
 
         {previewUser ? (
           <div className="mt-2 text-xs text-white/35">
@@ -47,6 +48,7 @@ function FallbackLoginState({ error }: { error: string }) {
   const [code, setCode] = useState('');
   const [fallbackInfo, setFallbackInfo] = useState<FallbackInfoResponse | null>(null);
   const [localError, setLocalError] = useState('');
+  const { t } = useI18n();
 
   useEffect(() => {
     let isMounted = true;
@@ -76,7 +78,7 @@ function FallbackLoginState({ error }: { error: string }) {
     setLocalError('');
 
     if (normalizedCode.length !== 6) {
-      setLocalError('Введи 6 цифр из сообщения бота.');
+      setLocalError(t('auth.code.error'));
       return;
     }
 
@@ -86,20 +88,20 @@ function FallbackLoginState({ error }: { error: string }) {
   return (
     <div className="flex min-h-dvh items-center justify-center bg-[#070b10] px-5 py-8 text-white">
       <div className="w-full max-w-[390px] rounded-[32px] border border-white/10 bg-white/[0.06] p-5 shadow-2xl shadow-black/30 backdrop-blur-xl">
-        <div className="text-lg font-semibold">Вход через Telegram</div>
+        <div className="text-lg font-semibold">{t('auth.fallback.title')}</div>
 
         <div className="mt-2 text-sm leading-6 text-white/62">
-          {error || 'Не удалось подтвердить вход через Telegram.'}
+          {error || t('auth.fallback.error')}
         </div>
 
         <div className="mt-4 rounded-[24px] border border-white/10 bg-black/20 p-4 text-sm leading-6 text-white/70">
-          Если используешь сторонний Telegram-клиент, войди через одноразовый код из бота.
+          {t('auth.fallback.caption')}
         </div>
 
         <div className="mt-4 grid gap-2 text-sm text-white/70">
-          <div>1. Открой бота и отправь команду <span className="font-semibold text-white">/login</span>.</div>
-          <div>2. Скопируй 6-значный код.</div>
-          <div>3. Введи код здесь.</div>
+          <div>{t('auth.fallback.step1.prefix')} <span className="font-semibold text-white">/login</span>.</div>
+          <div>{t('auth.fallback.step2')}</div>
+          <div>{t('auth.fallback.step3')}</div>
         </div>
 
         {botUrl ? (
@@ -109,11 +111,11 @@ function FallbackLoginState({ error }: { error: string }) {
             target="_blank"
             rel="noreferrer"
           >
-            Открыть бота
+            {t('auth.openBot')}
           </a>
         ) : (
           <div className="mt-5 rounded-2xl border border-amber-300/20 bg-amber-300/10 p-3 text-xs leading-5 text-amber-100/80">
-            Ссылка на бота не настроена. Можно открыть бота вручную и отправить /login.
+            {t('auth.botNotConfigured')}
           </div>
         )}
 
@@ -123,7 +125,7 @@ function FallbackLoginState({ error }: { error: string }) {
             autoComplete="one-time-code"
             value={normalizedCode}
             onChange={(event) => setCode(event.target.value)}
-            placeholder="Код из бота"
+            placeholder={t('auth.code.placeholder')}
             className="h-12 rounded-2xl border border-white/10 bg-black/25 px-4 text-center text-xl font-semibold tracking-[0.32em] text-white outline-none placeholder:text-sm placeholder:font-normal placeholder:tracking-normal placeholder:text-white/28 focus:border-white/28"
           />
 
@@ -132,14 +134,14 @@ function FallbackLoginState({ error }: { error: string }) {
             disabled={isLoading}
             className="h-12 rounded-2xl bg-[#8df7cf] text-sm font-semibold text-[#092016] disabled:cursor-not-allowed disabled:opacity-55"
           >
-            {isLoading ? 'Проверяю...' : 'Войти'}
+            {isLoading ? t('common.checking') : t('auth.signIn')}
           </button>
         </form>
 
         {localError ? <div className="mt-3 text-center text-xs text-red-200">{localError}</div> : null}
 
         <div className="mt-4 text-center text-[11px] leading-5 text-white/35">
-          Официальный Telegram продолжит входить автоматически. Код нужен только если клиент не передал безопасные данные входа.
+          {t('auth.fallback.footnote')}
         </div>
       </div>
     </div>

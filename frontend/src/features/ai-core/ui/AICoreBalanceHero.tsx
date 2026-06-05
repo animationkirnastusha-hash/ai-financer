@@ -5,6 +5,7 @@ import { useSettingsStore } from '@/features/settings/model/settings.store';
 import { convertCurrency, getCurrencyProfile, normalizeCurrency, type AppCurrencyCode } from '@/features/currency/lib/currency';
 import { formatMoney } from '@/shared/lib/money';
 import { cn } from '@/shared/lib/cn';
+import { useI18n } from '@/shared/lib/i18n';
 
 type BalanceAccountView = {
   id: string;
@@ -15,12 +16,12 @@ type BalanceAccountView = {
   exists: boolean;
 };
 
-function getAccountTypeLabel(type?: string | null) {
-  if (type === 'cash') return 'Наличные';
-  if (type === 'card') return 'Карта';
-  if (type === 'savings') return 'Накопления';
-  if (type === 'investment') return 'Инвестиции';
-  return 'Счёт';
+function getAccountTypeLabel(type: string | null | undefined, t: ReturnType<typeof useI18n>['t']) {
+  if (type === 'cash') return t('accounts.type.cash');
+  if (type === 'card') return t('accounts.type.card');
+  if (type === 'savings') return t('accounts.type.savings');
+  if (type === 'investment') return t('accounts.type.investment');
+  return t('accounts.type.default');
 }
 
 function fallbackAccountForCurrency(currency: AppCurrencyCode): BalanceAccountView {
@@ -36,6 +37,7 @@ function fallbackAccountForCurrency(currency: AppCurrencyCode): BalanceAccountVi
 }
 
 export function AICoreBalanceHero() {
+  const { t } = useI18n();
   const accounts = useAccountsStore((state) => state.items);
   const mainCurrency = normalizeCurrency(useSettingsStore((state) => state.mainCurrency));
   const secondaryCurrencyEnabled = useSettingsStore((state) => state.secondaryCurrencyEnabled);
@@ -127,7 +129,7 @@ export function AICoreBalanceHero() {
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
             <div className="text-[11px] uppercase tracking-[0.18em] text-white/38">
-              {activeView.exists ? getAccountTypeLabel(activeView.type) : 'Будущий счёт'}
+              {activeView.exists ? getAccountTypeLabel(activeView.type, t) : t('accounts.hero.futureAccount')}
             </div>
 
             <div className="mt-2 truncate text-lg font-semibold tracking-[-0.02em] text-white/85">
@@ -149,7 +151,7 @@ export function AICoreBalanceHero() {
                 {activeView.currency}
               </span>
               <span className="truncate">
-                {activeView.exists ? 'Свайпни, чтобы перейти к другому счёту' : 'Счёта пока нет, можно создать'}
+                {activeView.exists ? t('accounts.hero.swipeHint') : t('accounts.hero.createHint')}
               </span>
             </div>
           </div>
@@ -166,7 +168,7 @@ export function AICoreBalanceHero() {
       </div>
 
       {accountViews.length > 1 ? (
-        <div className="mt-1 flex justify-center gap-1.5" aria-label="Свайп счетов">
+        <div className="mt-1 flex justify-center gap-1.5" aria-label={t('accounts.hero.swipeAria')}>
           {accountViews.map((view, index) => (
             <button
               key={view.id}
@@ -176,7 +178,7 @@ export function AICoreBalanceHero() {
                 'h-2 rounded-full transition-all duration-200',
                 index === safeIndex ? 'w-6 bg-emerald-300 shadow-[0_0_14px_rgba(110,231,183,0.5)]' : 'w-2 bg-white/20',
               )}
-              aria-label={`Показать ${view.name}`}
+              aria-label={t('accounts.hero.showAccount', { name: view.name })}
             />
           ))}
         </div>

@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import type { AccountDto } from '@/features/accounts/api/accounts.api';
 import { formatMoney } from '@/shared/lib/money';
+import { useI18n } from '@/shared/lib/i18n';
 
 type Props = {
   account: AccountDto | null;
@@ -31,6 +32,8 @@ export function AccountDetailsSheet({
   onDelete,
   onAskAI,
 }: Props) {
+  const { t } = useI18n();
+
   useEffect(() => {
     document.body.classList.toggle('ai-modal-open', open);
     return () => document.body.classList.remove('ai-modal-open');
@@ -41,9 +44,7 @@ export function AccountDetailsSheet({
   const transactionCount = Number(account.transactionCount ?? 0);
 
   const handleDelete = async () => {
-    const confirmed = window.confirm(
-      `Удалить счёт «${account.name}»? Если у счёта есть операции, удаление будет остановлено для безопасности.`,
-    );
+    const confirmed = window.confirm(t('accounts.details.deleteConfirm', { name: account.name }));
     if (!confirmed) return;
     await onDelete(account.id);
   };
@@ -56,61 +57,61 @@ export function AccountDetailsSheet({
         <div className="mx-auto max-w-[560px] space-y-4">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <div className="text-[11px] uppercase tracking-[0.16em] text-white/35">Account details</div>
+              <div className="text-[11px] uppercase tracking-[0.16em] text-white/35">{t('accounts.details.eyebrow')}</div>
               <h2 className="mt-1 text-2xl font-semibold">{account.name}</h2>
               <div className="mt-2 text-sm text-white/45">{account.type} · {account.currency}</div>
             </div>
             <button type="button" onClick={onClose} className="rounded-2xl border border-white/10 bg-white/6 px-3 py-2 text-sm">
-              Закрыть
+              {t('common.close')}
             </button>
           </div>
 
           <div className="rounded-[30px] border border-white/8 bg-[radial-gradient(circle_at_top_right,rgba(52,211,153,0.16),transparent_42%),rgba(255,255,255,0.04)] p-5">
-            <div className="text-sm text-white/45">Баланс</div>
+            <div className="text-sm text-white/45">{t('accounts.details.balance')}</div>
             <div className="mt-2 text-3xl font-semibold">{formatMoney(Number(account.balance) || 0, account.currency)}</div>
             <div className="mt-4 flex flex-wrap gap-2">
-              {isPrimary ? <Badge tone="green">Главный счёт</Badge> : null}
-              {isIncomeDefault ? <Badge tone="blue">Доходы сюда</Badge> : null}
-              {account.showInTotalBalance ? <Badge tone="green">В общем балансе</Badge> : <Badge tone="yellow">Скрыт из общего</Badge>}
-              {account.lockRename ? <Badge tone="yellow">Название защищено</Badge> : null}
-              {account.lockSpending ? <Badge tone="red">Траты запрещены</Badge> : null}
-              {account.lockTransfers ? <Badge tone="red">Переводы запрещены</Badge> : null}
-              {account.lockBalance ? <Badge tone="yellow">Баланс защищён</Badge> : null}
-              {account.lockVisibility ? <Badge tone="yellow">Видимость защищена</Badge> : null}
+              {isPrimary ? <Badge tone="green">{t('accounts.details.badge.primary')}</Badge> : null}
+              {isIncomeDefault ? <Badge tone="blue">{t('accounts.details.badge.income')}</Badge> : null}
+              {account.showInTotalBalance ? <Badge tone="green">{t('accounts.details.badge.inTotal')}</Badge> : <Badge tone="yellow">{t('accounts.details.badge.hiddenFromTotal')}</Badge>}
+              {account.lockRename ? <Badge tone="yellow">{t('accounts.details.badge.lockRename')}</Badge> : null}
+              {account.lockSpending ? <Badge tone="red">{t('accounts.details.badge.lockSpending')}</Badge> : null}
+              {account.lockTransfers ? <Badge tone="red">{t('accounts.details.badge.lockTransfers')}</Badge> : null}
+              {account.lockBalance ? <Badge tone="yellow">{t('accounts.details.badge.lockBalance')}</Badge> : null}
+              {account.lockVisibility ? <Badge tone="yellow">{t('accounts.details.badge.lockVisibility')}</Badge> : null}
             </div>
           </div>
 
           <section className="grid grid-cols-2 gap-3">
-            <InfoTile label="Операции" value={transactionCount > 0 ? String(transactionCount) : 'Нет'} />
-            <InfoTile label="Валюта" value={account.currency} />
+            <InfoTile label={t('accounts.details.transactions')} value={transactionCount > 0 ? String(transactionCount) : t('common.none')} />
+            <InfoTile label={t('accounts.details.currency')} value={account.currency} />
           </section>
 
           <div className="grid gap-3">
             <button type="button" onClick={() => onTransfer(account)} className="rounded-2xl border border-emerald-300/20 bg-emerald-300/12 px-4 py-3 text-left text-sm text-white transition active:scale-[0.99]">
-              ↔️ Перевести на другой счёт
-              <div className="mt-1 text-xs text-white/45">Ручной перевод сейчас, AI-перевод через подтверждение — тем же принципом.</div>
+              {t('accounts.details.transfer')}
+              <div className="mt-1 text-xs text-white/45">{t('accounts.details.transfer.caption')}</div>
             </button>
 
             <button type="button" onClick={() => onEdit(account)} className="rounded-2xl border border-white/10 bg-white/6 px-4 py-3 text-left text-sm text-white transition active:scale-[0.99]">
-              ✏️ Редактировать счёт
-              <div className="mt-1 text-xs text-white/45">Название, баланс, валюта и защитные правила.</div>
+              {t('accounts.details.edit')}
+              <div className="mt-1 text-xs text-white/45">{t('accounts.details.edit.caption')}</div>
             </button>
 
             <button type="button" disabled={isPrimary} onClick={() => onSetPrimary(account.id)} className="rounded-2xl border border-white/10 bg-white/6 px-4 py-3 text-left text-sm transition disabled:opacity-45">
-              Сделать главным счётом
+              {t('accounts.details.setPrimary')}
             </button>
 
             <button type="button" disabled={isIncomeDefault} onClick={() => onSetIncomeDefault(account.id)} className="rounded-2xl border border-white/10 bg-white/6 px-4 py-3 text-left text-sm transition disabled:opacity-45">
-              Сделать счётом для доходов
+              {t('accounts.details.setIncomeDefault')}
             </button>
 
             <button type="button" onClick={onAskAI} className="rounded-2xl border border-sky-300/15 bg-sky-300/10 px-4 py-3 text-left text-sm text-white">
-              Открыть AI для работы со счётом
-              <div className="mt-1 text-xs text-white/45">Например: “запрети переводы с этого счёта”.</div>
+              {t('accounts.details.askAi')}
+              <div className="mt-1 text-xs text-white/45">{t('accounts.details.askAi.caption')}</div>
             </button>
 
             <button type="button" disabled={isDeleting} onClick={handleDelete} className="rounded-2xl border border-red-300/15 bg-red-300/10 px-4 py-3 text-left text-sm text-red-100 disabled:opacity-50">
-              {isDeleting ? 'Удаляю...' : 'Удалить счёт'}
+              {isDeleting ? t('accounts.details.deleting') : t('accounts.details.delete')}
             </button>
           </div>
         </div>

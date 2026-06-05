@@ -1,5 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import type { AccountDto, UpdateAccountPayload } from '@/features/accounts/api/accounts.api';
+import { useI18n } from '@/shared/lib/i18n';
 
 const ACCOUNT_TYPES = ['card', 'cash', 'savings', 'investment'];
 const CURRENCIES = ['RUB', 'USD', 'EUR'];
@@ -23,6 +24,7 @@ export function EditAccountModal({ account, open, isSaving = false, onClose, onS
   const [lockTransfers, setLockTransfers] = useState(false);
   const [lockBalance, setLockBalance] = useState(false);
   const [lockVisibility, setLockVisibility] = useState(false);
+  const { t } = useI18n();
 
   useEffect(() => {
     if (!account) return;
@@ -69,44 +71,44 @@ export function EditAccountModal({ account, open, isSaving = false, onClose, onS
         <div className="mx-auto max-w-[560px] space-y-4">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <div className="text-[11px] uppercase tracking-[0.16em] text-white/35">Edit account</div>
+              <div className="text-[11px] uppercase tracking-[0.16em] text-white/35">{t('accounts.edit.eyebrow')}</div>
               <h2 className="mt-1 text-2xl font-semibold">{account.name}</h2>
             </div>
             <button type="button" onClick={onClose} className="rounded-2xl border border-white/10 bg-white/6 px-3 py-2 text-sm">
-              Закрыть
+              {t('common.close')}
             </button>
           </div>
 
-          <Field label="Название">
+          <Field label={t('common.name')}>
             <input value={name} onChange={(e) => setName(e.target.value)} className="w-full bg-transparent text-base outline-none" />
           </Field>
 
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Тип">
+            <Field label={t('common.type')}>
               <select value={type} onChange={(e) => setType(e.target.value)} className="w-full bg-transparent text-base outline-none">
                 {ACCOUNT_TYPES.map((item) => <option key={item} value={item}>{item}</option>)}
               </select>
             </Field>
-            <Field label="Валюта">
+            <Field label={t('common.currency')}>
               <select value={currency} onChange={(e) => setCurrency(e.target.value)} className="w-full bg-transparent text-base outline-none">
                 {CURRENCIES.map((item) => <option key={item} value={item}>{item}</option>)}
               </select>
             </Field>
           </div>
 
-          <Field label="Баланс">
+          <Field label={t('common.balance')}>
             <input inputMode="numeric" value={balance} onChange={(e) => setBalance(e.target.value)} className="w-full bg-transparent text-base outline-none" />
           </Field>
 
           <section className="rounded-[26px] border border-white/8 bg-white/[0.035] p-4">
-            <div className="text-[11px] uppercase tracking-[0.16em] text-white/35">Защита счёта</div>
+            <div className="text-[11px] uppercase tracking-[0.16em] text-white/35">{t('accounts.edit.protection')}</div>
             <div className="mt-3 grid gap-3">
-              <Toggle label="Показывать в общем балансе" checked={showInTotalBalance} onChange={setShowInTotalBalance} />
-              <Toggle label="Запретить переименование" checked={lockRename} onChange={setLockRename} />
-              <Toggle label="Запретить траты" checked={lockSpending} onChange={setLockSpending} />
-              <Toggle label="Запретить переводы с этого счёта" checked={lockTransfers} onChange={setLockTransfers} />
-              <Toggle label="Запретить ручное изменение баланса" checked={lockBalance} onChange={setLockBalance} />
-              <Toggle label="Запретить скрытие из общего баланса" checked={lockVisibility} onChange={setLockVisibility} />
+              <Toggle label={t('accounts.edit.showInTotal')} checked={showInTotalBalance} onChange={setShowInTotalBalance} />
+              <Toggle label={t('accounts.edit.lockRename')} checked={lockRename} onChange={setLockRename} />
+              <Toggle label={t('accounts.edit.lockSpending')} checked={lockSpending} onChange={setLockSpending} />
+              <Toggle label={t('accounts.edit.lockTransfers')} checked={lockTransfers} onChange={setLockTransfers} />
+              <Toggle label={t('accounts.edit.lockBalance')} checked={lockBalance} onChange={setLockBalance} />
+              <Toggle label={t('accounts.edit.lockVisibility')} checked={lockVisibility} onChange={setLockVisibility} />
             </div>
           </section>
 
@@ -116,7 +118,7 @@ export function EditAccountModal({ account, open, isSaving = false, onClose, onS
             onClick={handleSubmit}
             className="w-full rounded-[24px] bg-emerald-400 px-5 py-4 text-base font-semibold text-black transition active:scale-[0.98] disabled:opacity-50"
           >
-            {isSaving ? 'Сохраняю...' : 'Сохранить'}
+            {isSaving ? t('common.saving') : t('common.save')}
           </button>
         </div>
       </div>
