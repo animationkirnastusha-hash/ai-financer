@@ -7,6 +7,7 @@ import { useAuthStore } from '@/features/auth/model/auth.store';
 import { dataResetApi, type DataResetMode } from '@/features/data-reset/api/dataReset.api';
 import { useNotificationsStore } from '@/features/notifications/model/notifications.store';
 import type { AppCurrency } from '@/features/settings/model/settings.types';
+import { useI18n } from '@/shared/lib/i18n';
 
 type SettingsModal = SettingsSection | null;
 
@@ -52,6 +53,7 @@ function ToggleLine({ title, caption, checked, onChange }: { title: string; capt
 }
 
 export default function SettingsPage() {
+  const { t, language } = useI18n();
   const [resetStatus, setResetStatus] = useState<string | null>(null);
   const [resetMode, setResetMode] = useState<DataResetMode | null>(null);
   const [modal, setModal] = useState<SettingsModal>(null);
@@ -136,47 +138,47 @@ export default function SettingsPage() {
   };
 
   const navigationItems = [
-    { title: 'Счета', caption: 'Баланс и основные счета', screen: 'accounts' as const },
-    { title: 'Цели', caption: 'Накопления и планы', screen: 'goals' as const },
-    { title: 'Фина', caption: 'Прогресс и привычка', screen: 'companion' as const },
-    { title: 'Разделы', caption: 'Категории и структура', screen: 'sections' as const },
+    { title: t('screen.accounts'), caption: t('nav.accounts.caption'), screen: 'accounts' as const },
+    { title: t('screen.goals'), caption: t('nav.goals.caption'), screen: 'goals' as const },
+    { title: 'Фина', caption: language === 'en' ? 'Progress and habit' : 'Прогресс и привычка', screen: 'companion' as const },
+    { title: t('screen.sections'), caption: t('nav.sections.caption'), screen: 'sections' as const },
     ...(isAdmin ? [
-      { title: 'ИИ-бухгалтер', caption: 'Business-модуль для ИП и самозанятых', screen: 'business-accountant' as const },
-      { title: 'Рефералы', caption: 'Admin-only прототип приглашений', screen: 'referral' as const },
-      { title: 'Премиум', caption: 'Admin-only прототип монетизации', screen: 'premium' as const },
+      { title: t('screen.business'), caption: t('nav.business.caption'), screen: 'business-accountant' as const },
+      { title: t('common.referrals'), caption: t('nav.referral.caption'), screen: 'referral' as const },
+      { title: t('screen.premium'), caption: t('nav.premium.caption'), screen: 'premium' as const },
     ] : []),
   ];
 
   return (
     <div className="app-page app-settings-page text-white">
       <div className="app-page__inner space-y-4">
-        <ScreenTopBar title="Настройки" left="back" right={['notifications', 'home']} />
+        <ScreenTopBar title={t('settings.title')} left="back" right={['notifications', 'home']} />
 
         <header className="app-card app-card--hero app-settings-hero">
           <div className="app-eyebrow">Настройки</div>
-          <h1>Управление</h1>
-          <p>Голос по нажатию, валюты, подсказки, данные и быстрые разделы.</p>
+          <h1>{t('settings.hero.title')}</h1>
+          <p>{t('settings.hero.caption')}</p>
         </header>
 
         <section className="app-card app-settings-language">
           <div>
-            <div className="app-section-title">Язык</div>
-            <p>Сейчас активен русский интерфейс.</p>
+            <div className="app-section-title">{t('settings.language.title')}</div>
+            <p>{language === 'en' ? t('settings.language.caption.en') : t('settings.language.caption')}</p>
           </div>
           <LanguageSwitcher />
         </section>
 
         <section className="app-settings-grid">
-          <SettingsCard title="Голос" caption="Голосовой ввод по нажатию" value={voiceEnabled ? 'включён' : 'выключен'} onClick={() => setModal('voice')} />
-          <SettingsCard title="Фина" caption="Как работает голосовой ввод" value="по нажатию" onClick={() => setModal('fina')} />
-          <SettingsCard title="Уведомления" caption="Платежи и напоминания" value={notificationSettings?.inAppEnabled === false ? 'выключены' : 'включены'} onClick={() => setModal('notifications')} />
-          <SettingsCard title="Валюты" caption="Главная валюта и курсы" value={`${mainCurrency}${secondaryCurrencyEnabled ? ` + ${secondaryCurrency}` : ''}`} onClick={() => setModal('currency')} />
-          <SettingsCard title="Подсказки" caption="Текстовый ввод и наблюдения" value={textInputEnabled ? 'текст есть' : 'только голос'} onClick={() => setModal('ai')} />
-          <SettingsCard title="Данные" caption="Очистка финансов или полный сброс" value="тесты" onClick={() => setModal('data')} />
+          <SettingsCard title={t('settings.card.voice.title')} caption={t('settings.card.voice.caption')} value={voiceEnabled ? t('settings.card.voice.on') : t('settings.card.voice.off')} onClick={() => setModal('voice')} />
+          <SettingsCard title={t('settings.card.fina.title')} caption={t('settings.card.fina.caption')} value={t('settings.card.fina.value')} onClick={() => setModal('fina')} />
+          <SettingsCard title={t('settings.card.notifications.title')} caption={t('settings.card.notifications.caption')} value={notificationSettings?.inAppEnabled === false ? t('settings.card.notifications.off') : t('settings.card.notifications.on')} onClick={() => setModal('notifications')} />
+          <SettingsCard title={t('settings.card.currency.title')} caption={t('settings.card.currency.caption')} value={`${mainCurrency}${secondaryCurrencyEnabled ? ` + ${secondaryCurrency}` : ''}`} onClick={() => setModal('currency')} />
+          <SettingsCard title={t('settings.card.ai.title')} caption={t('settings.card.ai.caption')} value={textInputEnabled ? t('settings.card.ai.on') : t('settings.card.ai.off')} onClick={() => setModal('ai')} />
+          <SettingsCard title={t('settings.card.data.title')} caption={t('settings.card.data.caption')} value={t('settings.card.data.value')} onClick={() => setModal('data')} />
         </section>
 
         <section className="app-card app-settings-nav">
-          <div className="app-section-title">Разделы приложения</div>
+          <div className="app-section-title">{t('settings.sections.title')}</div>
           <div className="mt-3 grid gap-2">
             {navigationItems.map((item) => (
               <button key={item.screen} type="button" onClick={() => navigateTo(item.screen)} className="app-list-button">
@@ -189,7 +191,7 @@ export default function SettingsPage() {
 
         {user ? (
           <section className="app-card app-settings-user">
-            <div className="app-section-title">Профиль</div>
+            <div className="app-section-title">{t('settings.profile.title')}</div>
             <p>{user.firstName || user.username || 'Пользователь'}</p>
             <small>ID: {user.telegramId}</small>
           </section>

@@ -1,22 +1,30 @@
 import { useAuthStore } from '@/features/auth/model/auth.store';
 import { useNavigationStore, type AppScreen } from '@/features/navigation/model/navigation.store';
+import { useI18n, type I18nKey } from '@/shared/lib/i18n';
 
-const mainLinks: Array<{ screen: AppScreen; label: string; caption: string }> = [
-  { screen: 'dashboard', label: 'Главная', caption: 'Баланс, счета и картина денег' },
-  { screen: 'accounts', label: 'Счета', caption: 'Карты, наличные и накопления' },
-  { screen: 'goals', label: 'Цели', caption: 'Накопления и планы' },
-  { screen: 'obligations', label: 'Обязательства', caption: 'Кредиты, подписки и напоминания' },
-  { screen: 'sections', label: 'Категории', caption: 'Разделы расходов и доходов' },
+type NavigationItem = {
+  screen: AppScreen;
+  labelKey: I18nKey;
+  captionKey: I18nKey;
+};
+
+const mainLinks: NavigationItem[] = [
+  { screen: 'dashboard', labelKey: 'screen.dashboard', captionKey: 'nav.dashboard.caption' },
+  { screen: 'accounts', labelKey: 'screen.accounts', captionKey: 'nav.accounts.caption' },
+  { screen: 'goals', labelKey: 'screen.goals', captionKey: 'nav.goals.caption' },
+  { screen: 'obligations', labelKey: 'screen.obligations', captionKey: 'nav.obligations.caption' },
+  { screen: 'sections', labelKey: 'screen.sections', captionKey: 'nav.sections.caption' },
 ];
 
-const adminLinks: Array<{ screen: AppScreen; label: string; caption: string }> = [
-  { screen: 'premium', label: 'Premium', caption: 'Тарифы и возможности' },
-  { screen: 'business-accountant', label: 'ИИ-бухгалтер', caption: 'Для ИП, самозанятых и бизнеса' },
-  { screen: 'referral', label: 'Рефералы', caption: 'Приглашения и бонусы' },
-  { screen: 'admin', label: 'Админка', caption: 'Пользователи и инструменты' },
+const adminLinks: NavigationItem[] = [
+  { screen: 'premium', labelKey: 'screen.premium', captionKey: 'nav.premium.caption' },
+  { screen: 'business-accountant', labelKey: 'screen.business', captionKey: 'nav.business.caption' },
+  { screen: 'referral', labelKey: 'common.referrals', captionKey: 'nav.referral.caption' },
+  { screen: 'admin', labelKey: 'screen.admin', captionKey: 'nav.admin.caption' },
 ];
 
 export function AppNavigationSheet() {
+  const { t } = useI18n();
   const currentScreen = useNavigationStore((state) => state.currentScreen);
   const isOpen = useNavigationStore((state) => state.isNavigationMenuOpen);
   const close = useNavigationStore((state) => state.closeNavigationMenu);
@@ -39,10 +47,10 @@ export function AppNavigationSheet() {
         <div className="app-modal-body">
           <div className="app-navigation-head">
             <div>
-              <div className="app-eyebrow">Меню</div>
-              <h2>Куда перейти</h2>
+              <div className="app-eyebrow">{t('nav.eyebrow')}</div>
+              <h2>{t('nav.title')}</h2>
             </div>
-            <button type="button" className="app-icon-button" onClick={close} aria-label="Закрыть меню">×</button>
+            <button type="button" className="app-icon-button" onClick={close} aria-label={t('common.close')}>×</button>
           </div>
 
           <div className="app-navigation-grid">
@@ -54,8 +62,8 @@ export function AppNavigationSheet() {
                 data-active={currentScreen === item.screen}
                 onClick={() => handleNavigate(item.screen)}
               >
-                <span>{item.label}</span>
-                <small>{item.caption}</small>
+                <span>{t(item.labelKey)}</span>
+                <small>{t(item.captionKey)}</small>
               </button>
             ))}
           </div>

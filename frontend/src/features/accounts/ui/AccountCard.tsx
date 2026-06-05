@@ -1,3 +1,5 @@
+import { useI18n } from '@/shared/lib/i18n';
+
 type Props = {
   name: string;
   balance: string;
@@ -23,10 +25,12 @@ export function AccountCard({
   lockTransfers,
   onClick,
 }: Props) {
+  const { t } = useI18n();
+
   return (
     <button type="button" onClick={onClick} className="app-account-card">
       <div className="app-account-card__main">
-        <div className="min-w-0">
+        <div className="app-account-card__identity">
           <div className="app-account-card__title-row">
             <div className="app-account-card__name">{name}</div>
             {currency ? <span className="app-account-card__currency">{currency}</span> : null}
@@ -35,11 +39,11 @@ export function AccountCard({
           {hint ? <div className="app-account-card__hint">{hint}</div> : null}
 
           <div className="app-account-card__badges">
-            {isPrimary ? <Badge tone="green">Главный</Badge> : null}
-            {isIncomeDefault ? <Badge tone="blue">Доход сюда</Badge> : null}
-            {lockRename ? <Badge tone="yellow">Имя защищено</Badge> : null}
-            {lockSpending ? <Badge tone="red">Без трат</Badge> : null}
-            {lockTransfers ? <Badge tone="red">Без переводов</Badge> : null}
+            {isPrimary ? <Badge tone="green">{t('accounts.badge.primary')}</Badge> : null}
+            {isIncomeDefault ? <Badge tone="blue">{t('accounts.badge.income')}</Badge> : null}
+            {lockRename ? <Badge tone="yellow">{t('accounts.badge.lockRename')}</Badge> : null}
+            {lockSpending ? <Badge tone="red">{t('accounts.badge.lockSpending')}</Badge> : null}
+            {lockTransfers ? <Badge tone="red">{t('accounts.badge.lockTransfers')}</Badge> : null}
           </div>
         </div>
 

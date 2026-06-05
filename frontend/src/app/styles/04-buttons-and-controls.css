@@ -512,3 +512,15 @@
   justify-content: space-between;
   padding: 14px 16px;
 }
+
+/* Pack 34: unified SVG icon buttons. */
+.app-icon-button__svg {
+  width: 22px;
+  height: 22px;
+  color: currentColor;
+  display: block;
+}
+
+.app-icon-button > svg {
+  flex: 0 0 auto;
+}

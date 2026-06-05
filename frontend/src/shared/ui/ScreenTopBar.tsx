@@ -3,6 +3,8 @@ import { useEffect } from 'react';
 import { useAppModalStore } from '@/features/modals/model/appModal.store';
 import { useNavigationStore } from '@/features/navigation/model/navigation.store';
 import { useNotificationsStore } from '@/features/notifications/model/notifications.store';
+import { useI18n, type I18nKey } from '@/shared/lib/i18n';
+import { SettingsGearIcon } from '@/shared/ui/AppIcons';
 
 type Action = 'back' | 'analytics' | 'history' | 'settings' | 'home' | 'referral' | 'notifications';
 type LeftAction = 'menu' | 'back' | 'none' | { label: string; onClick: () => void };
@@ -33,12 +35,7 @@ function ChartIcon() {
 }
 
 function GearIcon() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true" className="screen-top-bar__svg">
-      <path d="M12 15.6a3.6 3.6 0 1 0 0-7.2 3.6 3.6 0 0 0 0 7.2Z" />
-      <path d="M19.3 13.35c.06-.44.06-.91 0-1.35l1.45-1.12a.78.78 0 0 0 .18-.98l-1.38-2.38a.78.78 0 0 0-.93-.34l-1.7.68a7.4 7.4 0 0 0-1.15-.67l-.26-1.82a.78.78 0 0 0-.77-.67h-2.75a.78.78 0 0 0-.77.67l-.26 1.82c-.4.18-.78.4-1.15.67l-1.7-.68a.78.78 0 0 0-.93.34L3.69 9.9a.78.78 0 0 0 .18.98L5.32 12c-.06.44-.06.91 0 1.35l-1.45 1.12a.78.78 0 0 0-.18.98l1.38 2.38c.2.34.6.48.93.34l1.7-.68c.36.27.75.49 1.15.67l.26 1.82c.06.38.39.67.77.67h2.75c.38 0 .71-.29.77-.67l.26-1.82c.4-.18.78-.4 1.15-.67l1.7.68c.34.14.74 0 .93-.34l1.38-2.38a.78.78 0 0 0-.18-.98l-1.45-1.12Zm-7.3 3.2a4.55 4.55 0 1 1 0-9.1 4.55 4.55 0 0 1 0 9.1Z" />
-    </svg>
-  );
+  return <SettingsGearIcon className="screen-top-bar__svg" />;
 }
 
 function HomeIcon() {
@@ -76,14 +73,14 @@ const actionIcon: Record<Action, ReactNode> = {
   notifications: <BellIcon />,
 };
 
-const actionLabel: Record<Action, string> = {
-  back: 'Назад',
-  analytics: 'Аналитика',
-  history: 'Аналитика',
-  settings: 'Настройки',
-  home: 'Домой',
-  referral: 'Рефералы',
-  notifications: 'Уведомления',
+const actionLabelKey: Record<Action, I18nKey> = {
+  back: 'common.back',
+  analytics: 'common.analytics',
+  history: 'common.analytics',
+  settings: 'common.settings',
+  home: 'common.home',
+  referral: 'common.referrals',
+  notifications: 'common.notifications',
 };
 
 function IconButton({ children, label, onClick, badge }: { children: ReactNode; label: string; onClick: () => void; badge?: number }) {
@@ -117,6 +114,7 @@ function TextButton({ children, label, onClick }: { children: ReactNode; label: 
 }
 
 export function ScreenTopBar({ title, left = 'menu', right = ['notifications', 'analytics', 'settings'], className = '' }: Props) {
+  const { t } = useI18n();
   const openNavigationMenu = useNavigationStore((state) => state.openNavigationMenu);
   const navigateTo = useNavigationStore((state) => state.navigateTo);
   const goBack = useNavigationStore((state) => state.goBack);
@@ -144,14 +142,14 @@ export function ScreenTopBar({ title, left = 'menu', right = ['notifications', '
 
       <div className="screen-top-bar__actions">
         <div className="screen-top-bar__side screen-top-bar__side--left">
-          {left === 'menu' ? <TextButton label="Меню" onClick={openNavigationMenu}>Меню</TextButton> : null}
-          {left === 'back' ? <TextButton label="Назад" onClick={goBack}>Назад</TextButton> : null}
+          {left === 'menu' ? <TextButton label={t('common.menu')} onClick={openNavigationMenu}>{t('common.menu')}</TextButton> : null}
+          {left === 'back' ? <TextButton label={t('common.back')} onClick={goBack}>{t('common.back')}</TextButton> : null}
           {typeof left === 'object' ? <TextButton label={left.label} onClick={left.onClick}>{left.label}</TextButton> : null}
         </div>
 
         <div className="screen-top-bar__side screen-top-bar__side--right">
           {right.map((action) => (
-            <IconButton key={action} label={actionLabel[action]} onClick={() => handleAction(action)} badge={action === 'notifications' ? unreadCount : undefined}>
+            <IconButton key={action} label={t(actionLabelKey[action])} onClick={() => handleAction(action)} badge={action === 'notifications' ? unreadCount : undefined}>
               {actionIcon[action]}
             </IconButton>
           ))}

@@ -4,6 +4,7 @@ import { useSectionsStore } from '@/features/sections/model/sections.store';
 import type { CategoryDto } from '@/features/sections/api/sections.api';
 import { ScreenTopBar } from '@/shared/ui/ScreenTopBar';
 import { EmptyState } from '@/shared/ui/EmptyState';
+import { SettingsGearIcon } from '@/shared/ui/AppIcons';
 
 type Props = { onBack: () => void };
 
@@ -44,7 +45,7 @@ export default function SectionsPage({ onBack }: Props) {
               <h1 className="app-hero-title">Разделы и категории</h1>
               <p className="app-hero-caption">Разделы помогают видеть расходы и доходы в понятном порядке.</p>
             </div>
-            <button type="button" onClick={() => openModal({ type: 'taxonomy-tools' })} className="app-icon-button app-icon-button--lg" aria-label="Правила категорий">⚙</button>
+            <button type="button" onClick={() => openModal({ type: 'taxonomy-tools' })} className="app-icon-button app-icon-button--lg" aria-label="Правила категорий"><SettingsGearIcon className="app-icon-button__svg" /></button>
           </div>
 
           <div className="app-taxonomy-stats">

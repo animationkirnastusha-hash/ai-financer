@@ -7,7 +7,9 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
-    "audit:css": "node scripts/audit-css.mjs"
+    "audit:css": "node scripts/audit-css.mjs",
+    "audit:i18n": "node scripts/audit-i18n.mjs",
+    "audit:i18n:strict": "node scripts/audit-i18n.mjs --strict"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.59.0",

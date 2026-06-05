@@ -3,6 +3,7 @@ import type { PropsWithChildren } from 'react';
 import { AuthBootstrap } from './AuthBootstrap';
 import { TelegramBootstrap } from './TelegramBootstrap';
 import { FinanceBootstrap } from './FinanceBootstrap';
+import { LanguageRuntimeProvider } from './LanguageRuntimeProvider';
 
 export function AppProviders({ children }: PropsWithChildren) {
   return (
@@ -10,7 +11,7 @@ export function AppProviders({ children }: PropsWithChildren) {
       <TelegramBootstrap />
       <AuthBootstrap>
         <FinanceBootstrap />
-        {children}
+        <LanguageRuntimeProvider>{children}</LanguageRuntimeProvider>
       </AuthBootstrap>
     </>
   );
