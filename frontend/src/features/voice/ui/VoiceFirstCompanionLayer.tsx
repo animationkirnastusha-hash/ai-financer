@@ -35,10 +35,10 @@ const SWIPE_CANCEL_PX = 58;
 const TAP_GUARD_MS = 320;
 
 export function VoiceFirstCompanionLayer() {
-  const currentScreen = useNavigationStore((state) => state.currentScreen);
   const hasOpenModal = useAppModalStore((state) => state.stack.length > 0);
   const navigateTo = useNavigationStore((state) => state.navigateTo);
   const goBack = useNavigationStore((state) => state.goBack);
+  const openAIWithCommand = useNavigationStore((state) => state.openAIWithCommand);
 
   const chat = useChatController();
 
@@ -92,7 +92,7 @@ export function VoiceFirstCompanionLayer() {
     }, timeoutMs);
   }, []);
 
-  const dispatchCommand = useVoiceCommandDispatcher({ chat, navigateTo, goBack, showThought });
+  const dispatchCommand = useVoiceCommandDispatcher({ chat, navigateTo, goBack, openTextChat: () => openAIWithCommand(), showThought });
 
   const machine = useVoiceSessionMachine({
     companionName: wakeName,
@@ -428,7 +428,7 @@ export function VoiceFirstCompanionLayer() {
   }, [chat.isSending, chat.pendingActions.length, gestureMode, isDispatching, thought?.tone, voice.state]);
 
   const needsIntro = microphoneNeedsAction && (!permissionIntroDismissed || permissionIntroOpen);
-  const showFloatingCompanion = currentScreen !== 'ai-core' && !hasOpenModal;
+  const showFloatingCompanion = !hasOpenModal;
   const isLocked = gestureMode === 'locked';
 
   if (!showFloatingCompanion && !needsIntro && chat.pendingActions.length === 0) return null;

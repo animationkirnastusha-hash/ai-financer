@@ -3,7 +3,8 @@ import type { AppScreen } from '@/features/navigation/model/navigation.store';
 export type NavigationIntent =
   | { type: 'none' }
   | { type: 'go_back' }
-  | { type: 'open_screen'; screen: AppScreen };
+  | { type: 'open_screen'; screen: AppScreen }
+  | { type: 'open_text_chat' };
 
 function includesAny(input: string, variants: string[]) {
   return variants.some((variant) => input.includes(variant));
@@ -21,7 +22,6 @@ function normalize(input: string) {
 function detectScreen(input: string): AppScreen | null {
   if (includesAny(input, ['админ', 'админка', 'admin', 'панель администратора'])) return 'admin';
   if (includesAny(input, ['магазин', 'store', 'стор', 'тарифы', 'купить премиум', 'premium', 'business'])) return 'store';
-  if (includesAny(input, ['чат', 'текстовый ввод', 'написать фине', 'ии чат'])) return 'ai-core';
   if (includesAny(input, ['ии бухгалтер', 'бухгалтер', 'бухгалтерия', 'фина бухгалтер', 'самозанятый', 'ип', 'малый бизнес'])) return 'business-accountant';
   if (includesAny(input, ['аналитика', 'аналитику', 'анализ', 'analytics', 'статистика', 'отчет', 'отчеты', 'операции', 'история', 'платежи'])) return 'analytics';
   if (includesAny(input, ['цели', 'цель', 'копилка', 'копилки', 'goals'])) return 'goals';
@@ -56,7 +56,6 @@ function isBareNavigationTarget(input: string, screen: AppScreen) {
     admin: ['админка', 'админ'],
     store: ['магазин', 'стор', 'тарифы', 'premium', 'премиум'],
     'business-accountant': ['ии бухгалтер', 'бухгалтер', 'бухгалтерия', 'фина бухгалтер'],
-    'ai-core': ['чат', 'текстовый ввод', 'ии чат'],
   };
 
   return (bareAliases[screen] ?? []).some((alias) => input === alias || input === `страница ${alias}` || input === `экран ${alias}`);
@@ -68,6 +67,10 @@ export function parseNavigationIntent(command: string): NavigationIntent {
 
   if ((input.includes('главн') || input.includes('домой')) && (input.includes('верни') || input.includes('открой') || input.includes('покажи') || input === 'домой')) {
     return { type: 'open_screen', screen: 'dashboard' };
+  }
+
+  if (includesAny(input, ['чат', 'текстовый ввод', 'написать фине', 'ии чат', 'открой чат', 'напиши фине', 'write to fina'])) {
+    return { type: 'open_text_chat' };
   }
 
   if (includesAny(input, ['назад', 'вернись', 'верни меня', 'предыдущий экран', 'go back', 'back'])) return { type: 'go_back' };

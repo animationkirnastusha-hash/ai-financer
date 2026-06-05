@@ -14,7 +14,6 @@ export type AppScreen =
   | 'premium'
   | 'business-accountant'
   | 'sections'
-  | 'ai-core'
   | 'admin'
   | 'referral';
 
@@ -27,14 +26,12 @@ type NavigationState = {
   isNavigationMenuOpen: boolean;
   hasSystemNotifications: boolean;
   isNotificationsOpen: boolean;
-  initialAICommand: string | null;
   settingsSection: SettingsSection | null;
 
   navigateTo: (screen: AppScreen) => void;
   openSettingsSection: (section: SettingsSection) => void;
   consumeSettingsSection: () => SettingsSection | null;
   openAIWithCommand: (command?: string) => void;
-  consumeInitialAICommand: () => string | null;
   goBack: () => void;
   goHome: () => void;
 
@@ -64,7 +61,6 @@ export const useNavigationStore = create<NavigationState>((set, get) => ({
   isNavigationMenuOpen: false,
   hasSystemNotifications: true,
   isNotificationsOpen: false,
-  initialAICommand: null,
   settingsSection: null,
 
   navigateTo: (screen) => {
@@ -88,7 +84,6 @@ export const useNavigationStore = create<NavigationState>((set, get) => ({
       isGlobalCommandListOpen: false,
       isNavigationMenuOpen: false,
       isNotificationsOpen: false,
-      initialAICommand: targetScreen === 'ai-core' ? get().initialAICommand : null,
       settingsSection: targetScreen === 'settings' ? get().settingsSection : null,
     });
   },
@@ -103,7 +98,6 @@ export const useNavigationStore = create<NavigationState>((set, get) => ({
       isGlobalCommandListOpen: false,
       isNavigationMenuOpen: false,
       isNotificationsOpen: false,
-      initialAICommand: null,
     });
   },
 
@@ -121,19 +115,12 @@ export const useNavigationStore = create<NavigationState>((set, get) => ({
     }));
 
     set({
-      initialAICommand: trimmedCommand,
       settingsSection: null,
       isAIMenuOpen: false,
       isGlobalCommandListOpen: false,
       isNavigationMenuOpen: false,
       isNotificationsOpen: false,
     });
-  },
-
-  consumeInitialAICommand: () => {
-    const command = get().initialAICommand;
-    if (command) set({ initialAICommand: null });
-    return command;
   },
 
   goBack: () => {
@@ -155,7 +142,6 @@ export const useNavigationStore = create<NavigationState>((set, get) => ({
       isGlobalCommandListOpen: false,
       isNavigationMenuOpen: false,
       isNotificationsOpen: false,
-      initialAICommand: null,
     });
   },
 
@@ -167,7 +153,6 @@ export const useNavigationStore = create<NavigationState>((set, get) => ({
       isGlobalCommandListOpen: false,
       isNavigationMenuOpen: false,
       isNotificationsOpen: false,
-      initialAICommand: null,
       settingsSection: null,
     }),
 

@@ -50,7 +50,6 @@ export function AppRouter() {
         {currentScreen === 'premium' && <PremiumPage />}
         {currentScreen === 'business-accountant' && (isAdmin ? <BusinessAccountantPage /> : <DashboardPage />)}
         {currentScreen === 'sections' && <SectionsPage onBack={goBack} />}
-        {currentScreen === 'ai-core' && <DashboardPage />}
         {currentScreen === 'admin' && (isAdmin ? <AdminPage /> : <DashboardPage />)}
         {currentScreen === 'referral' && (isAdmin ? <ReferralPage /> : <DashboardPage />)}
       </Suspense>

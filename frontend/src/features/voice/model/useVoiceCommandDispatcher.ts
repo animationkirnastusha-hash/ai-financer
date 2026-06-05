@@ -14,6 +14,7 @@ type UseVoiceCommandDispatcherParams = {
   chat: ChatController;
   navigateTo: (screen: AppScreen) => void;
   goBack: () => void;
+  openTextChat: () => void;
   showThought: (text: string, tone?: VoiceBubbleTone, timeoutMs?: number) => void;
 };
 
@@ -30,13 +31,12 @@ function getScreenVoiceLabel(screen: string) {
     premium: 'премиум',
     referral: 'рефералы',
     admin: 'админку',
-    'ai-core': 'чат',
   };
 
   return labels[screen] ?? 'страницу';
 }
 
-export function useVoiceCommandDispatcher({ chat, navigateTo, goBack, showThought }: UseVoiceCommandDispatcherParams) {
+export function useVoiceCommandDispatcher({ chat, navigateTo, goBack, openTextChat, showThought }: UseVoiceCommandDispatcherParams) {
   const lastHandledRef = useRef<{ text: string; at: number; sessionId: string }>({ text: '', at: 0, sessionId: '' });
 
   return useCallback(async (params: { sessionId: string; finalText: string; segments: VoiceSessionSegment[] }) => {
@@ -72,6 +72,19 @@ export function useVoiceCommandDispatcher({ chat, navigateTo, goBack, showThough
 
     const hasCorrections = params.segments.some((segment) => segment.role === 'correction');
     const navigationIntent = hasCorrections ? { type: 'none' as const } : parseNavigationIntent(text);
+
+    if (navigationIntent.type === 'open_text_chat') {
+      telegramHaptic('light');
+      logVoiceDebugEvent('voice_session_dispatched', {
+        kind: 'navigation',
+        target: 'text_chat_overlay',
+        textLength: text.length,
+        segmentCount: params.segments.length,
+      });
+      openTextChat();
+      showThought('Открываю текстовый ввод.', 'success', 2400);
+      return;
+    }
 
     if (navigationIntent.type === 'open_screen') {
       telegramHaptic('light');
@@ -116,5 +129,5 @@ export function useVoiceCommandDispatcher({ chat, navigateTo, goBack, showThough
         correctionCount: params.segments.filter((segment) => segment.role === 'correction').length,
       },
     }, { supersedeInFlight: true });
-  }, [chat, goBack, navigateTo, showThought]);
+  }, [chat, goBack, navigateTo, openTextChat, showThought]);
 }
