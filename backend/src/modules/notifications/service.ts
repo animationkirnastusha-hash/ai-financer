@@ -79,11 +79,13 @@ export class NotificationService {
       const amount = new Intl.NumberFormat('ru-RU').format(loan.monthlyPayment || 0);
       const accountText = loan.account?.name ? ` Счёт: ${loan.account.name}.` : '';
 
-      if (days === settings.remindDaysBefore && settings.remindDaysBefore > 0) {
+      const advanceDays = Math.max(0, Math.min(30, Number(loan.reminderDaysBefore ?? settings.remindDaysBefore ?? 1)));
+
+      if (days === advanceDays && advanceDays > 0) {
         await this.createOnce(userId, {
           type: 'obligation_due',
           title: 'Скоро платёж',
-          message: `Через ${settings.remindDaysBefore} дн. платёж: ${loan.title} — ${amount} ${loan.currency}.${accountText}`,
+          message: `Через ${advanceDays} дн. платёж: ${loan.title} — ${amount} ${loan.currency}.${accountText}`,
           severity: 'info',
           relatedEntityType: 'obligation',
           relatedEntityId: loan.id,

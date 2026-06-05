@@ -19,6 +19,15 @@ function formatDate(value?: string | null) {
   }
 }
 
+function NotificationGearIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="notification-sheet__icon-svg">
+      <path d="M12 15.55a3.55 3.55 0 1 0 0-7.1 3.55 3.55 0 0 0 0 7.1Zm0-1.85a1.7 1.7 0 1 1 0-3.4 1.7 1.7 0 0 1 0 3.4Z" />
+      <path d="M20.4 13.42c.04-.45.04-.86 0-1.28l1.35-1.06a.75.75 0 0 0 .18-.95l-1.28-2.22a.75.75 0 0 0-.9-.33l-1.6.64a7.47 7.47 0 0 0-1.1-.64l-.24-1.7a.75.75 0 0 0-.74-.64h-2.56a.75.75 0 0 0-.74.64l-.24 1.7c-.38.17-.75.38-1.1.64l-1.6-.64a.75.75 0 0 0-.9.33L6.65 10.13a.75.75 0 0 0 .18.95l1.35 1.06a7.14 7.14 0 0 0 0 1.28l-1.35 1.06a.75.75 0 0 0-.18.95l1.28 2.22c.19.32.57.46.9.33l1.6-.64c.35.26.72.47 1.1.64l.24 1.7c.06.37.37.64.74.64h2.56c.37 0 .68-.27.74-.64l.24-1.7c.38-.17.75-.38 1.1-.64l1.6.64c.33.13.71-.01.9-.33l1.28-2.22a.75.75 0 0 0-.18-.95l-1.35-1.06Z" />
+    </svg>
+  );
+}
+
 export function NotificationSheet({ open, layer = 80, onClose }: Props) {
   const items = useNotificationsStore((state) => state.items);
   const isLoading = useNotificationsStore((state) => state.isLoading);
@@ -77,21 +86,21 @@ export function NotificationSheet({ open, layer = 80, onClose }: Props) {
             <div className="notification-sheet__head-actions">
               <button
                 type="button"
-                className="app-icon-button"
+                className="notification-sheet__icon-button"
                 aria-label="Настройки уведомлений"
                 onClick={() => {
                   closeAllModals();
                   openSettingsSection('notifications');
                 }}
               >
-                ⚙
+                <NotificationGearIcon />
               </button>
-              <button type="button" className="app-icon-button" onClick={onClose} aria-label="Закрыть">×</button>
+              <button type="button" className="notification-sheet__icon-button notification-sheet__icon-button--close" onClick={onClose} aria-label="Закрыть">×</button>
             </div>
           </div>
 
           <div className="notification-sheet__toolbar">
-            <button type="button" className="app-secondary-button app-secondary-button--compact" disabled={unreadCount === 0} onClick={() => void markAllRead()}>
+            <button type="button" className="notification-sheet__read-all" disabled={unreadCount === 0} onClick={() => void markAllRead()}>
               Прочитать все
             </button>
           </div>

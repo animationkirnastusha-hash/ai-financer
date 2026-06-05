@@ -73,7 +73,6 @@ export default function SettingsPage() {
 
   const notificationSettings = useNotificationsStore((state) => state.settings);
   const notificationError = useNotificationsStore((state) => state.error);
-  const notificationSaving = useNotificationsStore((state) => state.isSaving);
   const loadNotificationSettings = useNotificationsStore((state) => state.loadSettings);
   const updateNotificationSettings = useNotificationsStore((state) => state.updateSettings);
 
@@ -266,7 +265,7 @@ export default function SettingsPage() {
 
 
       {modal === 'notifications' ? (
-        <ModalShell title="Уведомления" caption="Напоминания по платежам и важным событиям." onClose={() => setModal(null)}>
+        <ModalShell title="Уведомления" caption="Каналы и важные события. Срок напоминания задаётся в самом платеже." onClose={() => setModal(null)}>
           <div className="grid gap-3">
             <ToggleLine
               title="В приложении"
@@ -276,23 +275,10 @@ export default function SettingsPage() {
             />
             <ToggleLine
               title="В Telegram"
-              caption="Отправлять напоминания в бота, когда будет подключена доставка."
+              caption="Отправлять напоминания в бота."
               checked={notificationSettings?.telegramEnabled !== false}
               onChange={(value) => void updateNotificationSettings({ telegramEnabled: value })}
             />
-            <div className="app-settings-inline-field">
-              <span><b>Напоминать заранее</b><small>За сколько дней до платежа.</small></span>
-              <select
-                value={notificationSettings?.remindDaysBefore ?? 1}
-                disabled={notificationSaving}
-                onChange={(event) => void updateNotificationSettings({ remindDaysBefore: Number(event.target.value) })}
-              >
-                <option value={0}>В день платежа</option>
-                <option value={1}>За 1 день</option>
-                <option value={3}>За 3 дня</option>
-                <option value={7}>За 7 дней</option>
-              </select>
-            </div>
             <ToggleLine
               title="В день платежа"
               caption="Напоминать в дату списания."

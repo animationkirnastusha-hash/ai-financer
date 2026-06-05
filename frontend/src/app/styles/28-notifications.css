@@ -26,55 +26,120 @@
   box-shadow: 0 7px 18px rgba(248, 113, 113, 0.38);
 }
 
+.notification-backdrop {
+  align-items: flex-end;
+}
+
 .notification-sheet {
-  max-height: min(78vh, 680px);
+  width: min(100%, 620px);
+  max-height: min(72dvh, 620px) !important;
+  min-height: auto;
 }
 
 .notification-sheet__body {
   display: grid;
   gap: 14px;
+  padding: 16px 16px calc(18px + env(safe-area-inset-bottom));
 }
 
 .notification-sheet__head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 14px;
 }
 
 .notification-sheet__head h2 {
   margin: 4px 0 0;
-  color: rgba(255, 255, 255, 0.94);
-  font-size: 22px;
-  line-height: 1.08;
-  font-weight: 830;
-  letter-spacing: -0.04em;
+  color: rgba(255, 255, 255, 0.95);
+  font-size: clamp(26px, 7vw, 34px);
+  line-height: 0.98;
+  font-weight: 850;
+  letter-spacing: -0.065em;
 }
 
 .notification-sheet__head p {
-  margin: 7px 0 0;
-  color: rgba(255, 255, 255, 0.48);
-  font-size: 12px;
+  margin: 8px 0 0;
+  color: rgba(255, 255, 255, 0.52);
+  font-size: 13px;
   line-height: 1.35;
 }
 
 .notification-sheet__head-actions {
   display: inline-flex;
+  align-items: center;
   gap: 8px;
   flex-shrink: 0;
 }
 
+.notification-sheet__icon-button {
+  display: inline-grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  min-width: 48px;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.11);
+  background: rgba(255, 255, 255, 0.075);
+  color: rgba(255, 255, 255, 0.82);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 14px 30px rgba(0, 0, 0, 0.18);
+}
+
+.notification-sheet__icon-button:active {
+  transform: translateY(1px) scale(0.98);
+}
+
+.notification-sheet__icon-button--close {
+  font-size: 26px;
+  line-height: 1;
+  font-weight: 500;
+}
+
+.notification-sheet__icon-svg {
+  width: 22px;
+  height: 22px;
+  display: block;
+  fill: currentColor;
+}
+
 .notification-sheet__toolbar {
   display: flex;
-  justify-content: flex-end;
+  justify-content: flex-start;
+  min-height: 28px;
+}
+
+.notification-sheet__read-all {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 30px;
+  width: auto;
+  max-width: max-content;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.62);
+  padding: 0 12px;
+  font-size: 12px;
+  line-height: 1;
+  font-weight: 760;
+}
+
+.notification-sheet__read-all:not(:disabled) {
+  color: rgba(129, 239, 208, 0.92);
+  background: rgba(129, 239, 208, 0.10);
+}
+
+.notification-sheet__read-all:disabled {
+  opacity: 0.42;
 }
 
 .notification-list {
   display: grid;
   gap: 10px;
-  max-height: 50vh;
+  max-height: min(43dvh, 390px);
   overflow: auto;
-  padding-right: 2px;
+  padding: 1px 2px 2px 0;
 }
 
 .notification-card {
@@ -139,16 +204,36 @@
 
 .notification-empty {
   display: grid;
-  gap: 6px;
-  padding: 24px 16px;
+  place-items: center;
+  gap: 10px;
+  min-height: 210px;
+  padding: 26px 18px;
   text-align: center;
   color: rgba(255, 255, 255, 0.48);
   font-size: 13px;
+  line-height: 1.42;
+}
+
+.notification-empty::before {
+  content: '';
+  width: 74px;
+  height: 74px;
+  border-radius: 28px;
+  border: 1px solid rgba(129, 239, 208, 0.12);
+  background:
+    radial-gradient(circle at 50% 36%, rgba(129, 239, 208, 0.18), transparent 38%),
+    rgba(255, 255, 255, 0.035);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
 .notification-empty b {
-  color: rgba(255, 255, 255, 0.8);
-  font-size: 15px;
+  color: rgba(255, 255, 255, 0.86);
+  font-size: 17px;
+  line-height: 1.15;
+}
+
+.notification-empty span {
+  max-width: 260px;
 }
 
 .app-settings-inline-field {
@@ -191,6 +276,12 @@
 
 @media (max-width: 390px) {
   .screen-top-bar__side { gap: 6px; }
-  .notification-sheet { max-height: 82vh; }
-  .notification-list { max-height: 54vh; }
+  .notification-sheet { max-height: min(76dvh, 620px) !important; }
+  .notification-list { max-height: 47dvh; }
+  .notification-sheet__icon-button {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    border-radius: 18px;
+  }
 }
