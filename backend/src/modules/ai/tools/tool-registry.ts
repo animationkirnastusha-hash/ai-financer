@@ -269,6 +269,36 @@ export const AI_TOOL_REGISTRY: AIToolDefinition[] = [
     requiresConfirmation: true,
     input: { obligation: 'string|null', title: 'string', message: 'string|null', dueDate: 'string|null', remindAt: 'string|null', channel: 'app|bot|both|null' },
   },
+
+  {
+    name: 'create_spending_limit',
+    description: 'Create a spending limit for an account, expense category, or total expenses. Use for commands like set a monthly limit on card, limit cafes to 10000, control total spending.',
+    risk: 'medium',
+    requiresConfirmation: false,
+    input: { targetType: 'account|category|total', account: 'string|null', category: 'string|null', amount: 'number|string', period: 'daily|weekly|monthly|null', notifyAt: 'number|string|null' },
+  },
+  {
+    name: 'update_spending_limit',
+    description: 'Change an existing spending limit amount, period, target, or active state.',
+    risk: 'medium',
+    requiresConfirmation: false,
+    input: { limit: 'string|null', targetType: 'account|category|total|null', account: 'string|null', category: 'string|null', amount: 'number|string|null', period: 'daily|weekly|monthly|null', notifyAt: 'number|string|null', isActive: 'boolean|null' },
+  },
+  {
+    name: 'delete_spending_limit',
+    description: 'Delete a spending limit. Use only when user explicitly asks to delete/remove a limit.',
+    risk: 'high',
+    requiresConfirmation: true,
+    input: { limit: 'string|null', targetType: 'account|category|total|null', account: 'string|null', category: 'string|null' },
+  },
+  {
+    name: 'show_spending_limits',
+    description: 'Show spending limits, budget limits and progress.',
+    risk: 'low',
+    requiresConfirmation: false,
+    input: {},
+  },
+
   {
     name: 'show_premium_capabilities',
     description: 'Show premium-ready capability boundaries and enabled flags.',

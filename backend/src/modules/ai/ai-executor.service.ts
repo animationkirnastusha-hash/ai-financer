@@ -464,6 +464,101 @@ export class AIExecutorService {
     }
 
 
+    if (tool === 'show_spending_limits') {
+      const limits = await tx.spendingLimit.findMany({
+        where: { userId },
+        include: {
+          account: { select: { id: true, name: true, currency: true, icon: true, color: true } },
+          category: { select: { id: true, name: true, type: true, icon: true, color: true } },
+        },
+        orderBy: [{ isActive: 'desc' }, { createdAt: 'desc' }],
+      });
+      return { tool, limits };
+    }
+
+    if (tool === 'create_spending_limit') {
+      const targetType = this.cleanString(input.targetType) || 'total';
+      const amount = this.toInteger(input.amount, 0);
+      if (amount <= 0) throw new BadRequestError('Limit amount must be positive');
+      const period = this.normalizeSpendingLimitPeriod(input.period);
+      const notifyAt = this.toInteger(input.notifyAt, 80);
+
+      const data: Prisma.SpendingLimitCreateInput = {
+        user: { connect: { id: userId } },
+        targetType,
+        amount,
+        period,
+        notifyAt,
+        isActive: true,
+      };
+
+      if (targetType === 'account') {
+        const accountId = this.requireString(resolved.accountId, 'accountId');
+        data.account = { connect: { id: accountId } };
+      }
+
+      if (targetType === 'category') {
+        const categoryId = this.requireString(resolved.categoryId, 'categoryId');
+        data.category = { connect: { id: categoryId } };
+      }
+
+      const limit = await tx.spendingLimit.create({
+        data,
+        include: {
+          account: { select: { id: true, name: true, currency: true, icon: true, color: true } },
+          category: { select: { id: true, name: true, type: true, icon: true, color: true } },
+        },
+      });
+      return { tool, limit };
+    }
+
+    if (tool === 'update_spending_limit') {
+      const limitId = this.requireString(resolved.spendingLimitId, 'spendingLimitId');
+      const data: Prisma.SpendingLimitUpdateInput = {};
+      if (input.amount !== undefined) data.amount = this.toInteger(input.amount, 0);
+      if (input.period !== undefined) data.period = this.normalizeSpendingLimitPeriod(input.period);
+      if (input.notifyAt !== undefined) data.notifyAt = this.toInteger(input.notifyAt, 80);
+      if (input.isActive !== undefined) data.isActive = Boolean(input.isActive);
+
+      if (input.targetType === 'total') {
+        data.targetType = 'total';
+        data.account = { disconnect: true };
+        data.category = { disconnect: true };
+      }
+
+      if (input.targetType === 'account') {
+        const accountId = this.requireString(resolved.accountId, 'accountId');
+        data.targetType = 'account';
+        data.account = { connect: { id: accountId } };
+        data.category = { disconnect: true };
+      }
+
+      if (input.targetType === 'category') {
+        const categoryId = this.requireString(resolved.categoryId, 'categoryId');
+        data.targetType = 'category';
+        data.category = { connect: { id: categoryId } };
+        data.account = { disconnect: true };
+      }
+
+      const limit = await tx.spendingLimit.update({
+        where: { id: limitId },
+        data,
+        include: {
+          account: { select: { id: true, name: true, currency: true, icon: true, color: true } },
+          category: { select: { id: true, name: true, type: true, icon: true, color: true } },
+        },
+      });
+      return { tool, limit };
+    }
+
+    if (tool === 'delete_spending_limit') {
+      const limitId = this.requireString(resolved.spendingLimitId, 'spendingLimitId');
+      const limit = await tx.spendingLimit.findFirst({ where: { id: limitId, userId }, include: { account: true, category: true } });
+      if (!limit) throw new NotFoundError('Spending limit not found');
+      await tx.spendingLimit.delete({ where: { id: limitId } });
+      return { tool, deleted: limit };
+    }
+
     if (tool === 'show_goals') {
       const goals = await tx.goal.findMany({
         where: { userId },
@@ -1060,6 +1155,14 @@ export class AIExecutorService {
 
   private cleanString(value: unknown) {
     return typeof value === 'string' ? value.trim().replace(/\s+/g, ' ') : '';
+  }
+
+
+  private normalizeSpendingLimitPeriod(value: unknown) {
+    const raw = this.cleanString(value).toLowerCase();
+    if (raw === 'daily' || raw === 'day' || raw === 'день' || raw === 'дневной') return 'daily';
+    if (raw === 'weekly' || raw === 'week' || raw === 'неделя' || raw === 'недельный') return 'weekly';
+    return 'monthly';
   }
 
   private toInteger(value: unknown, fallback: number) {

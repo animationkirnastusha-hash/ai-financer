@@ -35,7 +35,9 @@ const SWIPE_CANCEL_PX = 58;
 const TAP_GUARD_MS = 320;
 
 export function VoiceFirstCompanionLayer() {
-  const hasOpenModal = useAppModalStore((state) => state.stack.length > 0);
+  const modalStack = useAppModalStore((state) => state.stack);
+  const hasOpenModal = modalStack.length > 0;
+  const hasTextChatOverlay = modalStack.some((modal) => modal.type === 'ai-text-overlay');
   const navigateTo = useNavigationStore((state) => state.navigateTo);
   const goBack = useNavigationStore((state) => state.goBack);
   const openAIWithCommand = useNavigationStore((state) => state.openAIWithCommand);
@@ -448,12 +450,14 @@ export function VoiceFirstCompanionLayer() {
         />
       ) : null}
 
-      <VoicePendingConfirmModal
-        pendingActions={chat.pendingActions}
-        onConfirm={chat.confirmAction}
-        onCancel={chat.cancelAction}
-        onUpdate={chat.updatePendingAction}
-      />
+      {!hasTextChatOverlay ? (
+        <VoicePendingConfirmModal
+          pendingActions={chat.pendingActions}
+          onConfirm={chat.confirmAction}
+          onCancel={chat.cancelAction}
+          onUpdate={chat.updatePendingAction}
+        />
+      ) : null}
 
       {showFloatingCompanion ? <VoiceKeyboardEntry /> : null}
 

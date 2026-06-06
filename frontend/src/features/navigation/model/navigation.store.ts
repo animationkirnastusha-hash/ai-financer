@@ -8,6 +8,7 @@ export type AppScreen =
   | 'analytics'
   | 'goals'
   | 'obligations'
+  | 'spending-limits'
   | 'companion'
   | 'settings'
   | 'store'

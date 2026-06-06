@@ -646,3 +646,60 @@
   background: rgba(251, 191, 36, .10);
   color: rgba(255, 241, 190, .95);
 }
+
+.store-card-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.store-card {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 28px;
+  background: rgba(255,255,255,.055);
+  padding: 18px;
+}
+
+.store-card--premium {
+  background: radial-gradient(circle at top right, rgba(168,85,247,.18), transparent 42%), rgba(255,255,255,.055);
+}
+
+.store-card--business {
+  background: radial-gradient(circle at top right, rgba(59,130,246,.18), transparent 42%), rgba(255,255,255,.055);
+}
+
+.store-card--referral {
+  background: radial-gradient(circle at top right, rgba(52,211,153,.16), transparent 42%), rgba(255,255,255,.055);
+}
+
+.store-card h2 {
+  margin: 6px 0 0;
+  font-size: 22px;
+}
+
+.store-card p,
+.store-trial-card p {
+  margin: 10px 0 0;
+  color: rgba(255,255,255,.62);
+  line-height: 1.45;
+}
+
+.store-card ul {
+  display: grid;
+  gap: 8px;
+  margin: 14px 0;
+  padding: 0;
+  list-style: none;
+}
+
+.store-card li {
+  color: rgba(255,255,255,.76);
+  font-size: 14px;
+}
+
+.store-card li::before {
+  content: "•";
+  margin-right: 8px;
+  color: rgba(52,211,153,.95);
+}

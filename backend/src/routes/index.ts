@@ -20,6 +20,7 @@ import adminRoutes from '../modules/admin/routes';
 import analyticsRoutes from '../modules/analytics/routes';
 import obligationRoutes from '../modules/obligations/routes';
 import reportRoutes from '../modules/reports/routes';
+import spendingLimitRoutes from '../modules/spending-limits/routes';
 const router = Router();
 
 router.use('/auth', authRoutes);
@@ -42,5 +43,6 @@ router.use('/goals', goalRoutes);
 router.use('/analytics', analyticsRoutes);
 router.use('/obligations', obligationRoutes);
 router.use('/reports', reportRoutes);
+router.use('/spending-limits', spendingLimitRoutes);
 router.use('/admin', adminRoutes);
 export default router;

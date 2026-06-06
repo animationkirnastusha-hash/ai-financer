@@ -41,7 +41,11 @@ export type AIToolName =
   | 'delete_obligation'
   | 'mark_obligation_paid'
   | 'show_obligations'
-  | 'create_obligation_reminder';
+  | 'create_obligation_reminder'
+  | 'create_spending_limit'
+  | 'update_spending_limit'
+  | 'delete_spending_limit'
+  | 'show_spending_limits';
 
 export interface AIToolCall<TInput extends Record<string, unknown> = Record<string, unknown>> {
   tool: AIToolName;
@@ -81,8 +85,8 @@ export interface AIValidatedPlan {
 }
 
 export interface AIClarificationRequest {
-  type: 'account' | 'goal' | 'category' | 'section' | 'transaction' | 'obligation';
-  field: 'account' | 'goal' | 'category' | 'section' | 'transaction' | 'obligation' | string;
+  type: 'account' | 'goal' | 'category' | 'section' | 'transaction' | 'obligation' | 'spending_limit';
+  field: 'account' | 'goal' | 'category' | 'section' | 'transaction' | 'obligation' | 'spending_limit' | string;
   actionIndex: number;
   question: string;
   createdAt: string;

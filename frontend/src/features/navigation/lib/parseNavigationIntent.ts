@@ -25,6 +25,7 @@ function detectScreen(input: string): AppScreen | null {
   if (includesAny(input, ['ии бухгалтер', 'бухгалтер', 'бухгалтерия', 'фина бухгалтер', 'самозанятый', 'ип', 'малый бизнес'])) return 'business-accountant';
   if (includesAny(input, ['аналитика', 'аналитику', 'анализ', 'analytics', 'статистика', 'отчет', 'отчеты', 'операции', 'история', 'платежи'])) return 'analytics';
   if (includesAny(input, ['цели', 'цель', 'копилка', 'копилки', 'goals'])) return 'goals';
+  if (includesAny(input, ['лимит', 'лимиты', 'ограничения трат', 'контроль трат', 'spending limits', 'limits'])) return 'spending-limits';
   if (includesAny(input, ['companion', 'компаньон', 'компаньона', 'спутник'])) return 'companion';
   if (includesAny(input, ['категории', 'категорию', 'разделы', 'раздел', 'taxonomy', 'таксономия'])) return 'sections';
   if (includesAny(input, ['настройки', 'settings', 'параметры', 'профиль'])) return 'settings';
@@ -50,6 +51,7 @@ function isBareNavigationTarget(input: string, screen: AppScreen) {
     accounts: ['счета', 'счет', 'мои счета', 'кошельки', 'карты'],
     analytics: ['аналитика', 'анализ', 'статистика', 'отчеты', 'операции', 'история'],
     goals: ['цели', 'цель', 'копилки', 'копилка'],
+    'spending-limits': ['лимиты', 'лимит', 'контроль трат'],
     settings: ['настройки', 'параметры', 'профиль'],
     sections: ['категории', 'разделы', 'категории и разделы', 'разделы и категории'],
     companion: ['компаньон', 'фина', 'помощник'],

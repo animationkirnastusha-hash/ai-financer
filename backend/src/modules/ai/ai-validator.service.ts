@@ -50,21 +50,36 @@ interface LoanLite {
   accountId: string | null;
 }
 
+interface SpendingLimitLite {
+  id: string;
+  targetType: string;
+  accountId: string | null;
+  categoryId: string | null;
+  amount: number;
+  period: string;
+  isActive: boolean;
+  account?: { id: string; name: string } | null;
+  category?: { id: string; name: string; type: string } | null;
+}
+
 const ACCOUNT_TYPES: AIAccountType[] = ['cash', 'card', 'savings', 'investment'];
 const CURRENCIES: AICurrency[] = ['RUB', 'USD', 'EUR', 'VND'];
 const DEFAULT_AUTO_TRANSACTION_LIMIT = 100000;
 const OBLIGATION_TYPES = ['loan', 'mortgage', 'installment', 'subscription', 'other'];
 const OBLIGATION_STATUSES = ['active', 'paused', 'closed'];
+const SPENDING_LIMIT_PERIODS = ['daily', 'weekly', 'monthly'];
+const SPENDING_LIMIT_TARGET_TYPES = ['account', 'category', 'total'];
 
 export class AIValidatorService {
   private readonly entityResolver = new AIEntityResolverService();
   async validate(userId: string, plan: AIActionPlan): Promise<AIValidatedPlan> {
-    const [accounts, categories, sections, goals, loans, transactions, aiSettings] = await Promise.all([
+    const [accounts, categories, sections, goals, loans, spendingLimits, transactions, aiSettings] = await Promise.all([
       prisma.account.findMany({ where: { userId }, orderBy: { createdAt: 'asc' } }),
       prisma.category.findMany({ where: { userId }, orderBy: { createdAt: 'asc' } }),
       prisma.section.findMany({ where: { userId }, orderBy: { createdAt: 'asc' } }),
       prisma.goal.findMany({ where: { userId }, orderBy: { createdAt: 'asc' } }),
       prisma.loan.findMany({ where: { userId }, orderBy: [{ status: 'asc' }, { nextPaymentDate: 'asc' }, { createdAt: 'asc' }] }),
+      prisma.spendingLimit.findMany({ where: { userId }, include: { account: { select: { id: true, name: true } }, category: { select: { id: true, name: true, type: true } } }, orderBy: [{ isActive: 'desc' }, { createdAt: 'desc' }] }),
       prisma.transaction.findMany({
         where: { userId },
         include: {
@@ -622,6 +637,92 @@ export class AIValidatorService {
         input.channel = ['app', 'bot', 'both'].includes(channel) ? channel : 'app';
       }
 
+      if (action.tool === 'show_spending_limits') {
+        // No validation needed.
+      }
+
+      if (action.tool === 'create_spending_limit') {
+        const targetType = this.normalizeSpendingLimitTargetType(input.targetType, input);
+        const amount = normalizeMoneyAmount(input.amount);
+        const period = this.normalizeSpendingLimitPeriod(input.period);
+        const notifyAt = this.optionalPercent(input.notifyAt, 80);
+
+        if (!amount) issues.push({ code: 'missing_spending_limit_amount', message: 'Не хватает суммы лимита.', actionIndex: index, field: 'amount' });
+
+        input.targetType = targetType;
+        input.amount = amount ?? 0;
+        input.period = period;
+        input.notifyAt = notifyAt;
+
+        if (targetType === 'account') {
+          const accountName = this.cleanString(input.account || input.target || input.limit);
+          const account = this.resolveAccount(accounts, accountName);
+          if (!account) {
+            issues.push({ code: 'limit_account_not_found', message: accountName ? `Не нашёл счёт для лимита: ${accountName}` : 'Не хватает счёта для лимита.', actionIndex: index, field: 'account' });
+          } else {
+            resolved.accountId = account.id;
+            input.account = account.name;
+          }
+          input.category = null;
+        }
+
+        if (targetType === 'category') {
+          const categoryName = this.cleanEntityName(input.category || input.target || input.limit);
+          const category = this.findByName(categories.filter((item) => item.type === 'expense'), categoryName);
+          if (!category) {
+            issues.push({ code: 'limit_category_not_found', message: categoryName ? `Не нашёл категорию расходов для лимита: ${categoryName}` : 'Не хватает категории для лимита.', actionIndex: index, field: 'category' });
+          } else {
+            resolved.categoryId = category.id;
+            input.category = category.name;
+          }
+          input.account = null;
+        }
+
+        if (targetType === 'total') {
+          input.account = null;
+          input.category = null;
+        }
+      }
+
+      if (action.tool === 'update_spending_limit' || action.tool === 'delete_spending_limit') {
+        const targetType = this.normalizeSpendingLimitTargetType(input.targetType, input, true);
+        const limit = this.resolveSpendingLimit(spendingLimits as SpendingLimitLite[], this.cleanString(input.limit), targetType, this.cleanString(input.account), this.cleanEntityName(input.category));
+
+        if (!limit) {
+          issues.push({ code: 'spending_limit_not_found', message: 'Не нашёл лимит для изменения.', actionIndex: index, field: 'spending_limit' });
+        } else {
+          resolved.spendingLimitId = limit.id;
+          input.limit = this.spendingLimitLabel(limit);
+        }
+
+        if (action.tool === 'update_spending_limit') {
+          const amount = normalizeMoneyAmount(input.amount);
+          if (amount !== null) input.amount = amount; else delete input.amount;
+          if (input.period !== undefined && input.period !== null && input.period !== '') input.period = this.normalizeSpendingLimitPeriod(input.period); else delete input.period;
+          if (input.notifyAt !== undefined && input.notifyAt !== null && input.notifyAt !== '') input.notifyAt = this.optionalPercent(input.notifyAt, 80); else delete input.notifyAt;
+          if (input.isActive !== undefined && input.isActive !== null) input.isActive = Boolean(input.isActive); else delete input.isActive;
+
+          if (targetType) input.targetType = targetType; else delete input.targetType;
+          const accountName = this.cleanString(input.account);
+          if (accountName) {
+            const account = this.resolveAccount(accounts, accountName);
+            if (!account) issues.push({ code: 'limit_account_not_found', message: `Не нашёл счёт для лимита: ${accountName}`, actionIndex: index, field: 'account' });
+            else { resolved.accountId = account.id; input.account = account.name; input.targetType = 'account'; }
+          } else {
+            delete input.account;
+          }
+
+          const categoryName = this.cleanEntityName(input.category);
+          if (categoryName) {
+            const category = this.findByName(categories.filter((item) => item.type === 'expense'), categoryName);
+            if (!category) issues.push({ code: 'limit_category_not_found', message: `Не нашёл категорию расходов для лимита: ${categoryName}`, actionIndex: index, field: 'category' });
+            else { resolved.categoryId = category.id; input.category = category.name; input.targetType = 'category'; }
+          } else {
+            delete input.category;
+          }
+        }
+      }
+
       if (action.tool === 'show_goals') {
         // No validation needed.
       }
@@ -811,8 +912,8 @@ export class AIValidatorService {
     defaultValue: boolean,
     settings: { autoConfirmExpenseLimit?: number | null; autoConfirmIncomeLimit?: number | null; autoConfirmTransferLimit?: number | null; requireConfirmForAccountActions?: boolean | null },
   ) {
-    if (tool === 'show_accounts' || tool === 'show_transactions' || tool === 'show_ai_settings' || tool === 'show_goals' || tool === 'show_taxonomy' || tool === 'show_obligations') return false;
-    if (tool === 'update_onboarding_state' || tool === 'restart_onboarding') return false;
+    if (tool === 'show_accounts' || tool === 'show_transactions' || tool === 'show_ai_settings' || tool === 'show_goals' || tool === 'show_taxonomy' || tool === 'show_obligations' || tool === 'show_spending_limits') return false;
+    if (tool === 'update_onboarding_state' || tool === 'restart_onboarding' || tool === 'create_spending_limit' || tool === 'update_spending_limit') return false;
 
     if (tool === 'create_account' || tool === 'update_account' || tool === 'update_transaction' || tool === 'delete_account' || tool === 'delete_accounts' || tool === 'set_primary_account' || tool === 'create_category' || tool === 'update_category' || tool === 'delete_category' || tool === 'create_section' || tool === 'update_section' || tool === 'delete_section' || tool === 'assign_category_to_section' || tool === 'create_goal' || tool === 'update_goal' || tool === 'delete_goal') {
       return settings.requireConfirmForAccountActions !== false;
@@ -960,6 +1061,65 @@ export class AIValidatorService {
     return `последний ${type}: ${description}`;
   }
 
+
+
+  private normalizeSpendingLimitTargetType(value: unknown, input: Record<string, unknown>, optional = false) {
+    const raw = this.cleanString(value).toLowerCase();
+    if (SPENDING_LIMIT_TARGET_TYPES.includes(raw)) return raw as 'account' | 'category' | 'total';
+    if (this.cleanString(input.account)) return 'account';
+    if (this.cleanEntityName(input.category)) return 'category';
+    if (optional) return '';
+    return 'total';
+  }
+
+  private normalizeSpendingLimitPeriod(value: unknown) {
+    const raw = this.cleanString(value).toLowerCase();
+    if (SPENDING_LIMIT_PERIODS.includes(raw)) return raw;
+    if (['day', 'день', 'дневной', 'daily'].includes(raw)) return 'daily';
+    if (['week', 'неделя', 'недельный', 'weekly'].includes(raw)) return 'weekly';
+    return 'monthly';
+  }
+
+  private optionalPercent(value: unknown, fallback: number) {
+    if (value === undefined || value === null || value === '') return fallback;
+    const parsed = Math.round(Number(value));
+    if (!Number.isFinite(parsed) || parsed < 1 || parsed > 100) return fallback;
+    return parsed;
+  }
+
+  private resolveSpendingLimit(limits: SpendingLimitLite[], rawName: string, targetType: string, accountName: string, categoryName: string) {
+    if (rawName) {
+      const key = this.key(rawName);
+      const byLabel = limits.find((limit) => this.key(this.spendingLimitLabel(limit)) === key)
+        ?? limits.find((limit) => this.key(this.spendingLimitLabel(limit)).includes(key) || key.includes(this.key(this.spendingLimitLabel(limit))));
+      if (byLabel) return byLabel;
+    }
+
+    if (targetType === 'account' || accountName) {
+      const accountKey = this.key(accountName || rawName);
+      const byAccount = limits.find((limit) => limit.targetType === 'account' && limit.account && (this.key(limit.account.name) === accountKey || this.key(limit.account.name).includes(accountKey) || accountKey.includes(this.key(limit.account.name))));
+      if (byAccount) return byAccount;
+    }
+
+    if (targetType === 'category' || categoryName) {
+      const categoryKey = this.key(categoryName || rawName);
+      const byCategory = limits.find((limit) => limit.targetType === 'category' && limit.category && (this.key(limit.category.name) === categoryKey || this.key(limit.category.name).includes(categoryKey) || categoryKey.includes(this.key(limit.category.name))));
+      if (byCategory) return byCategory;
+    }
+
+    if (targetType === 'total' || this.key(rawName).includes('общ')) {
+      const total = limits.find((limit) => limit.targetType === 'total');
+      if (total) return total;
+    }
+
+    return null;
+  }
+
+  private spendingLimitLabel(limit: SpendingLimitLite) {
+    if (limit.targetType === 'account') return `лимит счёта ${limit.account?.name ?? ''}`.trim();
+    if (limit.targetType === 'category') return `лимит категории ${limit.category?.name ?? ''}`.trim();
+    return 'общий лимит расходов';
+  }
 
   private resolveLoan(loans: LoanLite[], rawName: string) {
     const name = this.key(rawName);

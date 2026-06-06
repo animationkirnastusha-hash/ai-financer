@@ -39,6 +39,10 @@ const TOOL_LABELS: Record<string, string> = {
   mark_obligation_paid: 'отметить платёж',
   show_obligations: 'показать обязательства',
   create_obligation_reminder: 'создать напоминание',
+  create_spending_limit: 'создать лимит',
+  update_spending_limit: 'изменить лимит',
+  delete_spending_limit: 'удалить лимит',
+  show_spending_limits: 'показать лимиты',
 };
 
 export class AIPreviewService {
@@ -184,6 +188,23 @@ export class AIPreviewService {
     }
 
 
+    if (tool === 'create_spending_limit') {
+      return `создать ${this.describeLimitTarget(input)} на ${this.formatAmount(input.amount, input.currency)}${this.describeLimitPeriod(input.period)}`;
+    }
+
+    if (tool === 'update_spending_limit') {
+      const amount = input.amount !== undefined ? ` на ${this.formatAmount(input.amount, input.currency)}` : '';
+      return `изменить ${this.clean(input.limit) || this.describeLimitTarget(input)}${amount}`.trim();
+    }
+
+    if (tool === 'delete_spending_limit') {
+      return `удалить ${this.clean(input.limit) || this.describeLimitTarget(input)}`.trim();
+    }
+
+    if (tool === 'show_spending_limits') {
+      return 'показать лимиты';
+    }
+
     if (tool === 'create_obligation') {
       return `добавить обязательство ${this.clean(input.title) || 'без названия'}${Number(input.monthlyPayment ?? 0) > 0 ? `, платёж ${this.formatAmount(input.monthlyPayment, input.currency)}` : ''}`;
     }
@@ -235,6 +256,20 @@ export class AIPreviewService {
     if (tool === 'show_premium_capabilities') return 'показать возможности Premium';
 
     return TOOL_LABELS[tool] ?? tool;
+  }
+
+
+  private describeLimitTarget(input: Record<string, unknown>) {
+    if (input.targetType === 'account') return `лимит по счёту ${this.clean(input.account) || ''}`.trim();
+    if (input.targetType === 'category') return `лимит по категории ${this.clean(input.category) || ''}`.trim();
+    return 'общий лимит расходов';
+  }
+
+  private describeLimitPeriod(period: unknown) {
+    const value = this.clean(period);
+    if (value === 'daily') return ' в день';
+    if (value === 'weekly') return ' в неделю';
+    return ' в месяц';
   }
 
   private formatAmount(amount: unknown, currency: unknown) {

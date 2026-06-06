@@ -36,6 +36,7 @@ model User {
   transactions      Transaction[]
   goals             Goal[]
   budgets           Budget[]
+  spendingLimits    SpendingLimit[]
   recurringPayments RecurringPayment[]
   notifications     Notification[]
   notificationSettings NotificationSettings?
@@ -89,6 +90,7 @@ model Account {
   recurringPayments RecurringPayment[]
   loans              Loan[]
   goals              Goal[]
+  spendingLimits    SpendingLimit[] @relation("AccountSpendingLimits")
 
   @@index([userId])
   @@index([type])
@@ -110,6 +112,7 @@ model Category {
   section      Section?      @relation(fields: [sectionId], references: [id], onDelete: SetNull)
   transactions Transaction[]
   budgets      Budget[]
+  spendingLimits SpendingLimit[] @relation("CategorySpendingLimits")
 
   @@index([sectionId])
 
@@ -201,6 +204,30 @@ model Budget {
 
   @@unique([userId, categoryId, period])
   @@index([userId])
+  @@index([isActive])
+}
+
+model SpendingLimit {
+  id         String   @id @default(cuid())
+  userId     String
+  targetType String
+  accountId  String?
+  categoryId String?
+  amount     Int
+  period     String   @default("monthly")
+  notifyAt   Int      @default(80)
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  account  Account?  @relation("AccountSpendingLimits", fields: [accountId], references: [id], onDelete: Cascade)
+  category Category? @relation("CategorySpendingLimits", fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([targetType])
+  @@index([accountId])
+  @@index([categoryId])
   @@index([isActive])
 }
 

@@ -23,6 +23,7 @@ const productLinks: NavigationItem[] = [
 const planningLinks: NavigationItem[] = [
   { screen: 'goals', labelKey: 'screen.goals', captionKey: 'nav.goals.caption' },
   { screen: 'obligations', labelKey: 'screen.obligations', captionKey: 'nav.obligations.caption' },
+  { screen: 'spending-limits', labelKey: 'screen.limits', captionKey: 'nav.limits.caption' },
 ];
 
 const growthLinks: NavigationItem[] = [

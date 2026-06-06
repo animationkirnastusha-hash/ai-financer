@@ -7,6 +7,7 @@ const HIGH_RISK_TOOLS = new Set<AIToolName>([
   'delete_section',
   'delete_goal',
   'delete_obligation',
+  'delete_spending_limit',
   'transfer_money',
   'undo_last_action',
 ]);
