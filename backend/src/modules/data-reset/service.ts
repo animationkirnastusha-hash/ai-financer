@@ -75,6 +75,7 @@ export class DataResetService {
         deleted.aiSettings = (await tx.userAISettings.deleteMany({ where: userWhere })).count;
         deleted.onboardingState = (await tx.onboardingState.deleteMany({ where: userWhere })).count;
         deleted.premiumCapabilities = (await tx.aIPremiumCapability.deleteMany({ where: userWhere })).count;
+        deleted.subscriptions = (await tx.subscription.deleteMany({ where: userWhere })).count;
 
         updated.users = (await tx.user.updateMany({
           where: userIdWhere,
@@ -85,6 +86,7 @@ export class DataResetService {
             streakDays: 0,
             referralBalance: 0,
             voiceLimit: 5,
+            tier: 'FREE',
             lastActiveAt: null,
           },
         })).count;

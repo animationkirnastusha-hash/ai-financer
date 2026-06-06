@@ -30,6 +30,13 @@ function formatDate(value: string | null | undefined) {
   return new Intl.DateTimeFormat('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }).format(date);
 }
 
+function formatSubscriptionDate(value: string | null | undefined) {
+  if (!value) return '—';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '—';
+  return new Intl.DateTimeFormat('ru-RU', { day: '2-digit', month: '2-digit', year: '2-digit' }).format(date);
+}
+
 function formatDuration(ms: number) {
   if (!ms) return '—';
   if (ms < 1000) return `${ms} мс`;
@@ -58,6 +65,8 @@ export default function AdminPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<LoadError>({});
   const [resettingUserId, setResettingUserId] = useState<string | null>(null);
+  const [subscriptionBusy, setSubscriptionBusy] = useState<string | null>(null);
+  const [subscriptionDays, setSubscriptionDays] = useState<Record<string, string>>({});
   const [premiumPreviewEnabled, setPremiumPreviewEnabled] = useState(() => localStorage.getItem('ai-financer-premium-preview') === '1');
   const replayOnboarding = useOnboardingStore((state) => state.reset);
 
@@ -127,6 +136,40 @@ export default function AdminPage() {
       if (overview) setOverview(await adminApi.overview());
     } finally {
       setResettingUserId(null);
+    }
+  };
+
+  const handleGrantSubscription = async (userId: string, product: 'premium' | 'business', lifetime = false) => {
+    const days = Number(subscriptionDays[userId] || '30');
+    setSubscriptionBusy(`${userId}:${product}:${lifetime ? 'forever' : 'days'}`);
+    try {
+      if (lifetime) await adminApi.grantLifetimeSubscription(userId, product);
+      else await adminApi.grantSubscription(userId, product, Number.isFinite(days) ? days : 30);
+      await reloadUsers();
+      if (overview) setOverview(await adminApi.overview());
+    } finally {
+      setSubscriptionBusy(null);
+    }
+  };
+
+  const handleRevokeSubscription = async (userId: string, product: 'premium' | 'business') => {
+    setSubscriptionBusy(`${userId}:${product}:revoke`);
+    try {
+      await adminApi.revokeSubscription(userId, product);
+      await reloadUsers();
+      if (overview) setOverview(await adminApi.overview());
+    } finally {
+      setSubscriptionBusy(null);
+    }
+  };
+
+  const handleRestartTrial = async (userId: string) => {
+    setSubscriptionBusy(`${userId}:trial`);
+    try {
+      await adminApi.restartTrial(userId);
+      await reloadUsers();
+    } finally {
+      setSubscriptionBusy(null);
     }
   };
 
@@ -267,6 +310,41 @@ export default function AdminPage() {
                   <div className="rounded-[16px] bg-black/18 p-2">Рефералы<br /><b className="text-white">{item._count.referrals}</b></div>
                 </div>
                 <div className="mt-3 text-xs text-white/38">Создан: {formatDate(item.createdAt)} · активность: {formatDate(item.lastActiveAt)}</div>
+
+                <div className="mt-3 rounded-[20px] border border-white/8 bg-black/18 p-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <div className="text-xs font-semibold text-white/80">Доступ</div>
+                      <div className="mt-1 text-[11px] text-white/40">Premium: {item.subscription?.premiumLifetime ? 'навсегда' : formatSubscriptionDate(item.subscription?.premiumUntil)} · Business: {item.subscription?.businessLifetime ? 'навсегда' : formatSubscriptionDate(item.subscription?.businessUntil)}</div>
+                    </div>
+                    <button
+                      type="button"
+                      className="rounded-2xl border border-white/10 bg-white/[0.055] px-3 py-2 text-[11px] font-semibold text-white/70"
+                      disabled={subscriptionBusy !== null}
+                      onClick={() => handleRestartTrial(item.id)}
+                    >
+                      {subscriptionBusy === `${item.id}:trial` ? 'Включаю…' : 'Триал'}
+                    </button>
+                  </div>
+                  <div className="mt-3 flex items-center gap-2">
+                    <input
+                      value={subscriptionDays[item.id] ?? '30'}
+                      onChange={(event) => setSubscriptionDays((state) => ({ ...state, [item.id]: event.target.value }))}
+                      inputMode="numeric"
+                      className="min-w-0 flex-1 rounded-2xl border border-white/10 bg-white/[0.055] px-3 py-2 text-xs text-white outline-none"
+                    />
+                    <span className="text-[11px] text-white/38">дней</span>
+                  </div>
+                  <div className="mt-2 grid grid-cols-2 gap-2">
+                    <button type="button" className="rounded-2xl border border-emerald-300/20 bg-emerald-400/10 px-3 py-2 text-[11px] font-semibold text-emerald-100" disabled={subscriptionBusy !== null} onClick={() => handleGrantSubscription(item.id, 'premium')}>Premium</button>
+                    <button type="button" className="rounded-2xl border border-sky-300/20 bg-sky-400/10 px-3 py-2 text-[11px] font-semibold text-sky-100" disabled={subscriptionBusy !== null} onClick={() => handleGrantSubscription(item.id, 'business')}>Business</button>
+                    <button type="button" className="rounded-2xl border border-emerald-300/20 bg-emerald-400/10 px-3 py-2 text-[11px] font-semibold text-emerald-100" disabled={subscriptionBusy !== null} onClick={() => handleGrantSubscription(item.id, 'premium', true)}>Premium навсегда</button>
+                    <button type="button" className="rounded-2xl border border-sky-300/20 bg-sky-400/10 px-3 py-2 text-[11px] font-semibold text-sky-100" disabled={subscriptionBusy !== null} onClick={() => handleGrantSubscription(item.id, 'business', true)}>Business навсегда</button>
+                    <button type="button" className="rounded-2xl border border-white/10 bg-white/[0.055] px-3 py-2 text-[11px] font-semibold text-white/60" disabled={subscriptionBusy !== null} onClick={() => handleRevokeSubscription(item.id, 'premium')}>Снять Premium</button>
+                    <button type="button" className="rounded-2xl border border-white/10 bg-white/[0.055] px-3 py-2 text-[11px] font-semibold text-white/60" disabled={subscriptionBusy !== null} onClick={() => handleRevokeSubscription(item.id, 'business')}>Снять Business</button>
+                  </div>
+                </div>
+
                 <div className="mt-3 grid grid-cols-2 gap-2">
                   <button
                     type="button"

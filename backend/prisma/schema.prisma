@@ -58,6 +58,7 @@ model User {
   aiSessionState    AISessionState?
   aiSettings        UserAISettings?
   onboardingState   OnboardingState?
+  subscription      Subscription?
 
 
   @@index([telegramId])
@@ -396,6 +397,25 @@ model ObligationReminder {
   @@index([loanId])
   @@index([remindAt])
   @@index([status])
+}
+
+model Subscription {
+  id                String   @id @default(cuid())
+  userId            String   @unique
+  premiumUntil      DateTime?
+  businessUntil     DateTime?
+  trialStartedAt    DateTime?
+  trialUntil        DateTime?
+  premiumLifetime   Boolean  @default(false)
+  businessLifetime  Boolean  @default(false)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([premiumUntil])
+  @@index([businessUntil])
+  @@index([trialUntil])
 }
 
 model ReferralTransaction {

@@ -1,6 +1,7 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useAuthStore } from '@/features/auth/model/auth.store';
 import { useNavigationStore } from '@/features/navigation/model/navigation.store';
+import { subscriptionApi, type SubscriptionStatusDto } from '@/features/subscription/api/subscription.api';
 import { useI18n, type I18nKey } from '@/shared/lib/i18n';
 import { ScreenTopBar } from '@/shared/ui/ScreenTopBar';
 
@@ -9,6 +10,7 @@ type StoreCard = {
   title: I18nKey;
   caption: I18nKey;
   items: I18nKey[];
+  action: I18nKey;
   tone: 'premium' | 'business' | 'referral';
 };
 
@@ -37,6 +39,7 @@ const cards: StoreCard[] = [
     title: 'store.premium.title',
     caption: 'store.premium.caption',
     items: premiumItems,
+    action: 'store.action.soon',
     tone: 'premium',
   },
   {
@@ -44,6 +47,7 @@ const cards: StoreCard[] = [
     title: 'store.business.title',
     caption: 'store.business.caption',
     items: businessItems,
+    action: 'store.action.business',
     tone: 'business',
   },
   {
@@ -51,9 +55,17 @@ const cards: StoreCard[] = [
     title: 'store.referral.title',
     caption: 'store.referral.caption',
     items: referralItems,
+    action: 'store.action.referral',
     tone: 'referral',
   },
 ];
+
+function formatAccessDate(value: string | null | undefined, fallback: string) {
+  if (!value) return fallback;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return fallback;
+  return new Intl.DateTimeFormat('ru-RU', { day: '2-digit', month: 'long' }).format(date);
+}
 
 export default function PremiumPage() {
   const { t } = useI18n();
@@ -61,6 +73,47 @@ export default function PremiumPage() {
   const navigateTo = useNavigationStore((state) => state.navigateTo);
   const isAdmin = Boolean(user?.isAdmin);
   const name = useMemo(() => user?.firstName || user?.username || t('store.userFallback'), [t, user?.firstName, user?.username]);
+  const [subscription, setSubscription] = useState<SubscriptionStatusDto | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [trialBusy, setTrialBusy] = useState(false);
+
+  const loadSubscription = async () => {
+    setIsLoading(true);
+    try {
+      setSubscription(await subscriptionApi.me());
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    void loadSubscription();
+  }, []);
+
+  const startTrial = async () => {
+    setTrialBusy(true);
+    try {
+      setSubscription(await subscriptionApi.startTrial());
+    } finally {
+      setTrialBusy(false);
+    }
+  };
+
+  const access = subscription?.access;
+  const statusText = access?.hasBusiness
+    ? t('store.status.business')
+    : access?.hasPremium
+      ? t('store.status.premium')
+      : t('store.status.free');
+  const statusCaption = access?.businessLifetime || access?.premiumLifetime
+    ? t('store.status.forever')
+    : access?.businessUntil
+      ? t('store.status.until', { date: formatAccessDate(access.businessUntil, '—') })
+      : access?.premiumUntil
+        ? t('store.status.until', { date: formatAccessDate(access.premiumUntil, '—') })
+        : access?.trialUntil
+          ? t('store.status.trialUntil', { date: formatAccessDate(access.trialUntil, '—') })
+          : t('store.status.freeCaption');
 
   return (
     <div className="app-page premium-admin-page text-white">
@@ -78,6 +131,17 @@ export default function PremiumPage() {
           </div>
         </header>
 
+        <section className="app-card premium-admin-section store-trial-card">
+          <div className="premium-admin-section__head">
+            <div>
+              <div className="app-eyebrow">{t('store.status.eyebrow')}</div>
+              <h2>{isLoading ? t('store.status.loading') : statusText}</h2>
+            </div>
+            <span>{subscription ? `${subscription.limits.voiceCommandsPerDay} ${t('store.status.voiceLimit')}` : '—'}</span>
+          </div>
+          <p>{statusCaption}</p>
+        </section>
+
         <section className="store-card-grid">
           {cards.map((card) => (
             <article key={card.title} className={`store-card store-card--${card.tone}`}>
@@ -87,8 +151,8 @@ export default function PremiumPage() {
               <ul>
                 {card.items.map((item) => <li key={item}>{t(item)}</li>)}
               </ul>
-              <button type="button" className="app-secondary-button" onClick={() => card.tone === 'business' ? navigateTo('business-accountant') : navigateTo('referral')}>
-                {card.tone === 'business' ? t('store.action.business') : card.tone === 'referral' ? t('store.action.referral') : t('store.action.soon')}
+              <button type="button" className="app-secondary-button" onClick={() => card.tone === 'business' ? navigateTo('business-accountant') : card.tone === 'referral' ? navigateTo('referral') : undefined}>
+                {t(card.action)}
               </button>
             </article>
           ))}
@@ -103,6 +167,14 @@ export default function PremiumPage() {
             <span>{t('store.trial.badge')}</span>
           </div>
           <p>{t('store.trial.caption')}</p>
+          <button
+            type="button"
+            className="app-primary-button mt-4 w-full"
+            disabled={trialBusy || Boolean(subscription?.access.trialUsed)}
+            onClick={startTrial}
+          >
+            {subscription?.access.trialUsed ? t('store.trial.used') : trialBusy ? t('store.trial.starting') : t('store.trial.action')}
+          </button>
         </section>
       </div>
     </div>

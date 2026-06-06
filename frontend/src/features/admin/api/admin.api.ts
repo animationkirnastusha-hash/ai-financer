@@ -59,6 +59,13 @@ export type AdminUser = {
   streakDays: number;
   lastActiveAt: string | null;
   createdAt: string;
+  subscription?: {
+    premiumUntil: string | null;
+    businessUntil: string | null;
+    trialUntil: string | null;
+    premiumLifetime: boolean;
+    businessLifetime: boolean;
+  } | null;
   _count: {
     accounts: number;
     transactions: number;
@@ -78,6 +85,7 @@ export type AdminEvent = {
 };
 
 export type AdminResetMode = 'finance' | 'full';
+export type AdminSubscriptionProduct = 'premium' | 'business';
 
 export const adminApi = {
   overview: () => apiClient.get<AdminOverview>('/admin/overview'),
@@ -86,4 +94,11 @@ export const adminApi = {
   monitoring: () => apiClient.get<AdminMonitoring>('/admin/monitoring'),
   resetUser: (userId: string, mode: AdminResetMode) => apiClient.post<{ success: boolean }>('/admin/users/' + userId + '/reset', { mode }),
   resetAll: (mode: AdminResetMode) => apiClient.post<{ success: boolean }>('/admin/reset', { mode }),
+  grantSubscription: (userId: string, product: AdminSubscriptionProduct, days: number) =>
+    apiClient.post<{ success: boolean }>('/admin/users/' + userId + '/subscription/grant', { product, days }),
+  grantLifetimeSubscription: (userId: string, product: AdminSubscriptionProduct) =>
+    apiClient.post<{ success: boolean }>('/admin/users/' + userId + '/subscription/grant', { product, lifetime: true }),
+  revokeSubscription: (userId: string, product: AdminSubscriptionProduct) =>
+    apiClient.post<{ success: boolean }>('/admin/users/' + userId + '/subscription/revoke', { product }),
+  restartTrial: (userId: string) => apiClient.post<{ success: boolean }>('/admin/users/' + userId + '/trial/restart'),
 };

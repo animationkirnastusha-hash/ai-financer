@@ -33,3 +33,25 @@ export const resetAdminAllUsers = asyncHandler(async (req: Request, res: Respons
   const result = await adminService.resetAllUsers(req.body?.mode);
   res.json({ success: true, result });
 });
+
+
+export const grantAdminSubscription = asyncHandler(async (req: Request, res: Response) => {
+  const rawUserId = req.params.userId;
+  const userId = Array.isArray(rawUserId) ? rawUserId[0] : rawUserId;
+  const result = await adminService.grantSubscription(userId, req.body);
+  res.json({ success: true, result });
+});
+
+export const revokeAdminSubscription = asyncHandler(async (req: Request, res: Response) => {
+  const rawUserId = req.params.userId;
+  const userId = Array.isArray(rawUserId) ? rawUserId[0] : rawUserId;
+  const result = await adminService.revokeSubscription(userId, req.body);
+  res.json({ success: true, result });
+});
+
+export const restartAdminTrial = asyncHandler(async (req: Request, res: Response) => {
+  const rawUserId = req.params.userId;
+  const userId = Array.isArray(rawUserId) ? rawUserId[0] : rawUserId;
+  const result = await adminService.restartTrial(userId);
+  res.json({ success: true, result });
+});

@@ -1,6 +1,7 @@
 import { prisma } from '../../lib/prisma';
 import { monitoringService } from '../monitoring/monitoring.instance';
 import { dataResetService } from '../data-reset/service';
+import { subscriptionService } from '../subscription/service';
 
 function startOfDay(daysAgo: number) {
   const date = new Date();
@@ -16,6 +17,34 @@ function parseEventData(data: string | null) {
   } catch {
     return null;
   }
+}
+
+function readStringField(data: Record<string, unknown> | null, key: string, fallback: string) {
+  const value = data?.[key];
+  return typeof value === 'string' && value.trim() ? value : fallback;
+}
+
+function readNumberField(data: Record<string, unknown> | null, key: string, fallback = 0) {
+  const value = data?.[key];
+  return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
+}
+
+function parseSubscriptionBody(input: unknown) {
+  if (!input || typeof input !== 'object') return {};
+  const body = input as { product?: unknown; days?: unknown; lifetime?: unknown };
+  return {
+    product: body.product === 'business' ? 'business' as const : 'premium' as const,
+    days: typeof body.days === 'number' ? body.days : typeof body.days === 'string' ? Number(body.days) : undefined,
+    lifetime: body.lifetime === true,
+  };
+}
+
+function parseRevokeBody(input: unknown) {
+  if (!input || typeof input !== 'object') return {};
+  const body = input as { product?: unknown };
+  return {
+    product: body.product === 'business' ? 'business' as const : 'premium' as const,
+  };
 }
 
 export class AdminService {
@@ -60,15 +89,15 @@ export class AdminService {
     const screens = new Map<string, number>();
     for (const event of screenViews) {
       const data = parseEventData(event.data);
-      const screen = typeof data?.screen === 'string' ? data.screen : 'unknown';
+      const screen = readStringField(data, 'screen', 'unknown');
       screens.set(screen, (screens.get(screen) ?? 0) + 1);
     }
 
     const exits = new Map<string, { exits: number; duration: number }>();
     for (const event of screenLeaves) {
       const data = parseEventData(event.data);
-      const screen = typeof data?.screen === 'string' ? data.screen : 'unknown';
-      const durationMs = typeof data?.durationMs === 'number' && Number.isFinite(data.durationMs) ? data.durationMs : 0;
+      const screen = readStringField(data, 'screen', 'unknown');
+      const durationMs = readNumberField(data, 'durationMs', 0);
       const current = exits.get(screen) ?? { exits: 0, duration: 0 };
       exits.set(screen, { exits: current.exits + 1, duration: current.duration + Math.max(0, durationMs) });
     }
@@ -76,7 +105,7 @@ export class AdminService {
     const sources = new Map<string, number>();
     for (const event of sourceEvents) {
       const data = parseEventData(event.data);
-      const source = typeof data?.source === 'string' && data.source ? data.source : 'direct';
+      const source = readStringField(data, 'source', 'direct');
       sources.set(source, (sources.get(source) ?? 0) + 1);
     }
 
@@ -140,6 +169,15 @@ export class AdminService {
         streakDays: true,
         lastActiveAt: true,
         createdAt: true,
+        subscription: {
+          select: {
+            premiumUntil: true,
+            businessUntil: true,
+            trialUntil: true,
+            premiumLifetime: true,
+            businessLifetime: true,
+          },
+        },
         _count: {
           select: {
             accounts: true,
@@ -189,5 +227,17 @@ export class AdminService {
   async resetAllUsers(mode: unknown) {
     return dataResetService.reset({ allUsers: true }, mode);
   }
-}
 
+  async grantSubscription(userId: string, input: unknown) {
+    return subscriptionService.grant(userId, parseSubscriptionBody(input));
+  }
+
+  async revokeSubscription(userId: string, input: unknown) {
+    const body = parseRevokeBody(input);
+    return subscriptionService.revoke(userId, body.product);
+  }
+
+  async restartTrial(userId: string) {
+    return subscriptionService.restartTrial(userId);
+  }
+}
