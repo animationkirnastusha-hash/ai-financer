@@ -6,6 +6,7 @@ import { aiRateLimitService } from './ai-rate-limit.service';
 import { aiIdempotencyService } from './ai-idempotency.service';
 import { aiResponseNormalizer } from './ai-response-normalizer.service';
 import { aiObservability } from './ai-observability.service';
+import { subscriptionService } from '../subscription/service';
 
 const aiService = new AIService();
 
@@ -79,8 +80,12 @@ async function withIdempotency<T>(
   key: string,
   payload: unknown,
   run: () => Promise<T>,
+  state?: { cached?: boolean },
 ): Promise<T> {
-  if (!key) return run();
+  if (!key) {
+    if (state) state.cached = false;
+    return run();
+  }
 
   const requestHash = aiIdempotencyService.hashPayload(payload);
   const existing = await aiIdempotencyService.get(userId, scope, key, requestHash);
@@ -90,9 +95,11 @@ async function withIdempotency<T>(
   }
 
   if (existing?.response) {
+    if (state) state.cached = true;
     return existing.response as T;
   }
 
+  if (state) state.cached = false;
   const response = await run();
   await aiIdempotencyService.save(userId, scope, key, requestHash, response);
 
@@ -113,10 +120,26 @@ export const parseCommand = asyncHandler(async (req: Request, res: Response) => 
   const voiceSession = readVoiceSession(req.body?.voiceSession);
   const key = readIdempotencyKey(req);
 
+  const isVoiceSource = source === 'voice' || source === 'voice_session';
+  const voiceUsageBefore = isVoiceSource ? await subscriptionService.assertVoiceCommandAllowed(userId) : null;
+
+  const idempotencyState: { cached?: boolean } = {};
   const result = await withIdempotency(userId, 'ai_parse', key, { command, execute, source, voiceSession }, async () => {
     const raw = await aiService.handleCommand(userId, command, { execute, source, voiceSession });
     return aiResponseNormalizer.normalize(raw);
-  });
+  }, idempotencyState);
+
+  let subscriptionUsage = voiceUsageBefore;
+  if (isVoiceSource && !idempotencyState.cached && result.success && (result.executed || result.requiresConfirmation)) {
+    const updatedStatus = await subscriptionService.recordUsage(userId, 'voiceCommands', {
+      source,
+      intent: result.intent,
+      executed: result.executed,
+      requiresConfirmation: result.requiresConfirmation,
+      voiceSessionId: voiceSession?.id,
+    });
+    subscriptionUsage = updatedStatus.usage.voiceCommandsToday;
+  }
 
   await aiObservability.log({
     userId,
@@ -134,7 +157,17 @@ export const parseCommand = asyncHandler(async (req: Request, res: Response) => 
     },
   });
 
-  res.json(result);
+  res.json(subscriptionUsage
+    ? {
+        ...result,
+        meta: {
+          ...(result.meta ?? {}),
+          subscriptionUsage: {
+            voiceCommandsToday: subscriptionUsage,
+          },
+        } as typeof result.meta & Record<string, unknown>,
+      }
+    : result);
 });
 
 export const confirmCommand = asyncHandler(async (req: Request, res: Response) => {

@@ -17,3 +17,11 @@ export const startMyTrial = asyncHandler(async (req: Request, res: Response) => 
   const userId = requireUserId(req);
   res.json(await subscriptionService.startTrial(userId));
 });
+
+
+export const getMyFeatureAccess = asyncHandler(async (req: Request, res: Response) => {
+  const userId = requireUserId(req);
+  const feature = typeof req.params.feature === 'string' ? req.params.feature : '';
+  if (!feature.trim()) throw new BadRequestError('Feature is required');
+  res.json(await subscriptionService.getFeatureAccess(userId, feature.trim()));
+});

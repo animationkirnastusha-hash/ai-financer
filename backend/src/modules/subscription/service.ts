@@ -1,8 +1,15 @@
 import { prisma } from '../../lib/prisma';
-import { BadRequestError, NotFoundError } from '../../shared/core/errors';
+import { BadRequestError, ForbiddenError, NotFoundError } from '../../shared/core/errors';
 
 export type StoreProduct = 'premium' | 'business';
 export type GrantMode = 'days' | 'lifetime';
+export type SubscriptionUsageKind = 'voiceCommands' | 'receiptScans' | 'advancedReports';
+
+type SubscriptionLimits = {
+  voiceCommandsPerDay: number;
+  receiptScansPerMonth: number;
+  advancedReportsPerMonth: number;
+};
 
 type GrantInput = {
   product?: StoreProduct;
@@ -12,6 +19,12 @@ type GrantInput = {
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const TRIAL_DAYS = 7;
+
+const USAGE_EVENT = {
+  voiceCommands: 'subscription.voice_command.used',
+  receiptScans: 'subscription.receipt_scan.used',
+  advancedReports: 'subscription.advanced_report.used',
+} as const;
 
 function asDateOrNull(value: Date | null | undefined) {
   return value ? value.toISOString() : null;
@@ -25,6 +38,20 @@ function addDaysFromBase(base: Date | null | undefined, days: number) {
   const now = new Date();
   const start = base && base.getTime() > now.getTime() ? base : now;
   return new Date(start.getTime() + Math.max(1, Math.round(days)) * DAY_MS);
+}
+
+function startOfDay(date = new Date()) {
+  const value = new Date(date);
+  value.setHours(0, 0, 0, 0);
+  return value;
+}
+
+function startOfMonth(date = new Date()) {
+  return new Date(date.getFullYear(), date.getMonth(), 1);
+}
+
+function clampRemaining(limit: number, used: number) {
+  return Math.max(0, limit - used);
 }
 
 function normalizeProduct(value: unknown): StoreProduct {
@@ -110,12 +137,100 @@ export class SubscriptionService {
     const user = await this.ensureUser(userId);
     const subscription = await this.ensureSubscription(userId);
     const access = this.getAccess(subscription, user.isAdmin);
+    const limits = this.getLimits(access);
 
     return {
       access,
       features: this.getFeatureMap(access),
-      limits: this.getLimits(access),
+      limits,
+      usage: await this.getUsageSnapshot(userId, limits),
       referralBalance: await this.getReferralBalance(userId),
+    };
+  }
+
+  async getUsageSnapshot(userId: string, limitsInput?: SubscriptionLimits) {
+    const limits = limitsInput ?? (await this.getStatus(userId)).limits;
+    const today = startOfDay();
+    const month = startOfMonth();
+
+    const [voiceCommandsToday, receiptScansThisMonth, advancedReportsThisMonth] = await Promise.all([
+      prisma.aIOperationEvent.count({
+        where: {
+          userId,
+          type: USAGE_EVENT.voiceCommands,
+          createdAt: { gte: today },
+        },
+      }),
+      prisma.aIOperationEvent.count({
+        where: {
+          userId,
+          type: USAGE_EVENT.receiptScans,
+          createdAt: { gte: month },
+        },
+      }),
+      prisma.aIOperationEvent.count({
+        where: {
+          userId,
+          type: USAGE_EVENT.advancedReports,
+          createdAt: { gte: month },
+        },
+      }),
+    ]);
+
+    return {
+      voiceCommandsToday: {
+        used: voiceCommandsToday,
+        limit: limits.voiceCommandsPerDay,
+        remaining: clampRemaining(limits.voiceCommandsPerDay, voiceCommandsToday),
+      },
+      receiptScansThisMonth: {
+        used: receiptScansThisMonth,
+        limit: limits.receiptScansPerMonth,
+        remaining: clampRemaining(limits.receiptScansPerMonth, receiptScansThisMonth),
+      },
+      advancedReportsThisMonth: {
+        used: advancedReportsThisMonth,
+        limit: limits.advancedReportsPerMonth,
+        remaining: clampRemaining(limits.advancedReportsPerMonth, advancedReportsThisMonth),
+      },
+    };
+  }
+
+  async assertVoiceCommandAllowed(userId: string) {
+    const status = await this.getStatus(userId);
+    const voice = status.usage.voiceCommandsToday;
+    if (voice.remaining <= 0) {
+      throw new ForbiddenError('Voice command limit reached', {
+        feature: 'voiceCommands',
+        used: voice.used,
+        limit: voice.limit,
+      });
+    }
+    return voice;
+  }
+
+  async recordUsage(userId: string, kind: SubscriptionUsageKind, details?: Record<string, unknown>) {
+    await prisma.aIOperationEvent.create({
+      data: {
+        userId,
+        type: USAGE_EVENT[kind],
+        severity: 'info',
+        scope: kind,
+        message: 'usage_recorded',
+        payload: details ? JSON.stringify(details) : null,
+      },
+    });
+    return this.getStatus(userId);
+  }
+
+  async getFeatureAccess(userId: string, feature: string) {
+    const status = await this.getStatus(userId);
+    return {
+      feature,
+      allowed: Boolean(status.features[feature]),
+      access: status.access,
+      limits: status.limits,
+      usage: status.usage,
     };
   }
 
