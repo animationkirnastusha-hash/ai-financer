@@ -1,5 +1,7 @@
+import { useEffect } from 'react';
 import { useAuthStore } from '@/features/auth/model/auth.store';
 import { useNavigationStore, type AppScreen } from '@/features/navigation/model/navigation.store';
+import { useSubscriptionStore } from '@/features/subscription/model/subscription.store';
 import { useI18n, type I18nKey } from '@/shared/lib/i18n';
 
 type NavigationItem = {
@@ -31,12 +33,15 @@ const growthLinks: NavigationItem[] = [
   { screen: 'referral', labelKey: 'common.referrals', captionKey: 'nav.referral.caption' },
 ];
 
+const businessLinks: NavigationItem[] = [
+  { screen: 'business-accountant', labelKey: 'screen.business', captionKey: 'nav.business.caption' },
+];
+
 const utilityLinks: NavigationItem[] = [
   { screen: 'settings', labelKey: 'common.settings', captionKey: 'nav.settings.caption' },
 ];
 
 const adminLinks: NavigationItem[] = [
-  { screen: 'business-accountant', labelKey: 'screen.business', captionKey: 'nav.business.caption' },
   { screen: 'admin', labelKey: 'screen.admin', captionKey: 'nav.admin.caption' },
 ];
 
@@ -46,7 +51,15 @@ export function AppNavigationSheet() {
   const isOpen = useNavigationStore((state) => state.isNavigationMenuOpen);
   const close = useNavigationStore((state) => state.closeNavigationMenu);
   const navigateTo = useNavigationStore((state) => state.navigateTo);
-  const isAdmin = Boolean(useAuthStore((state) => state.user?.isAdmin));
+  const user = useAuthStore((state) => state.user);
+  const isAdmin = Boolean(user?.isAdmin);
+  const subscription = useSubscriptionStore((state) => state.status);
+  const loadSubscription = useSubscriptionStore((state) => state.load);
+  const hasBusiness = Boolean(isAdmin || subscription?.access.hasBusiness);
+
+  useEffect(() => {
+    if (isOpen && user && !subscription) void loadSubscription();
+  }, [isOpen, loadSubscription, subscription, user]);
 
   if (!isOpen) return null;
 
@@ -54,9 +67,10 @@ export function AppNavigationSheet() {
     { titleKey: 'nav.group.main', items: productLinks },
     { titleKey: 'nav.group.plan', items: planningLinks },
     { titleKey: 'nav.group.growth', items: growthLinks },
-    { titleKey: 'nav.group.more', items: utilityLinks },
   ];
 
+  if (hasBusiness) groups.push({ titleKey: 'nav.group.business', items: businessLinks });
+  groups.push({ titleKey: 'nav.group.more', items: utilityLinks });
   if (isAdmin) groups.push({ titleKey: 'nav.group.admin', items: adminLinks });
 
   const handleNavigate = (screen: AppScreen) => {

@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useAuthStore } from '@/features/auth/model/auth.store';
 import { useNavigationStore } from '@/features/navigation/model/navigation.store';
-import { subscriptionApi, type SubscriptionStatusDto } from '@/features/subscription/api/subscription.api';
+import { useSubscriptionStore } from '@/features/subscription/model/subscription.store';
 import { useI18n, type I18nKey } from '@/shared/lib/i18n';
 import { ScreenTopBar } from '@/shared/ui/ScreenTopBar';
 
@@ -73,30 +73,17 @@ export default function PremiumPage() {
   const navigateTo = useNavigationStore((state) => state.navigateTo);
   const isAdmin = Boolean(user?.isAdmin);
   const name = useMemo(() => user?.firstName || user?.username || t('store.userFallback'), [t, user?.firstName, user?.username]);
-  const [subscription, setSubscription] = useState<SubscriptionStatusDto | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [trialBusy, setTrialBusy] = useState(false);
-
-  const loadSubscription = async () => {
-    setIsLoading(true);
-    try {
-      setSubscription(await subscriptionApi.me());
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  const subscription = useSubscriptionStore((state) => state.status);
+  const isLoading = useSubscriptionStore((state) => state.isLoading);
+  const loadSubscription = useSubscriptionStore((state) => state.load);
+  const startTrial = useSubscriptionStore((state) => state.startTrial);
 
   useEffect(() => {
     void loadSubscription();
-  }, []);
+  }, [loadSubscription]);
 
-  const startTrial = async () => {
-    setTrialBusy(true);
-    try {
-      setSubscription(await subscriptionApi.startTrial());
-    } finally {
-      setTrialBusy(false);
-    }
+  const handleStartTrial = async () => {
+    await startTrial();
   };
 
   const access = subscription?.access;
@@ -170,10 +157,10 @@ export default function PremiumPage() {
           <button
             type="button"
             className="app-primary-button mt-4 w-full"
-            disabled={trialBusy || Boolean(subscription?.access.trialUsed)}
-            onClick={startTrial}
+            disabled={isLoading || Boolean(subscription?.access.trialUsed)}
+            onClick={handleStartTrial}
           >
-            {subscription?.access.trialUsed ? t('store.trial.used') : trialBusy ? t('store.trial.starting') : t('store.trial.action')}
+            {subscription?.access.trialUsed ? t('store.trial.used') : isLoading ? t('store.trial.starting') : t('store.trial.action')}
           </button>
         </section>
       </div>

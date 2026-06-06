@@ -3,49 +3,59 @@ import { apiClient } from '@/shared/api/client';
 export type ReferralUserDto = {
   id: string;
   firstName: string;
-  username: string | null;
-  createdAt?: string;
+  username?: string | null;
+  createdAt: string;
+  actionsCount?: number;
+  activeDays?: number;
+  activated?: boolean;
 };
 
 export type ReferralTransactionDto = {
   id: string;
+  userId: string;
+  fromUserId: string;
   amount: number;
   level: number;
   type: string;
   status: string;
   createdAt: string;
-  fromUser: ReferralUserDto;
+  completedAt?: string | null;
+  fromUser?: ReferralUserDto | null;
 };
 
-export type ReferralInfo = {
+export type ReferralInfoDto = {
   referralCode: string | null;
   referralBalance: number;
-  referrer: ReferralUserDto | null;
+  referrer: { id: string; firstName: string; username?: string | null } | null;
   referrals: ReferralUserDto[];
   referralTransactions: ReferralTransactionDto[];
+  rules?: {
+    activationDaysRequired: number;
+    activationActionsRequired: number;
+    activationPremiumDays: number;
+    purchasePremiumDays: number;
+    purchaseBonusRate: number;
+  };
 };
 
-export type ReferralInfoDto = ReferralInfo;
+type ReferralPayload = { referral: ReferralInfoDto } | ReferralInfoDto;
 
-type ReferralResponse = {
-  referral: ReferralInfo;
-};
-
-function unwrapReferral(payload: ReferralResponse | ReferralInfo): ReferralInfo {
+function unwrapReferral(payload: ReferralPayload): ReferralInfoDto {
   return 'referral' in payload ? payload.referral : payload;
 }
 
 export async function fetchReferralInfo(): Promise<ReferralInfoDto> {
-  const payload = await apiClient.get<ReferralResponse>('/referral');
-  return unwrapReferral(payload);
+  const response = await apiClient.get<{ referral: ReferralInfoDto }>('/referral');
+  return unwrapReferral(response);
 }
 
 export async function applyReferralCode(code: string): Promise<ReferralInfoDto> {
-  const payload = await apiClient.post<ReferralResponse>('/referral/apply', { code });
-  return unwrapReferral(payload);
+  const response = await apiClient.post<{ referral: ReferralInfoDto }>('/referral/apply', { code });
+  return unwrapReferral(response);
 }
 
 export const referralApi = {
-  getInfo: () => apiClient.get<ReferralResponse>('/referral'),
-  applyCode: (code: string) => apiClient.post<ReferralResponse>('/referral/apply', { code }),
+  me: fetchReferralInfo,
+  getInfo: fetchReferralInfo,
+  applyCode: applyReferralCode,
 };

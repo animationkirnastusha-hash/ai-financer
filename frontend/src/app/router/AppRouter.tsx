@@ -1,4 +1,4 @@
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useEffect } from 'react';
 import { AppShell } from '@/shared/ui/AppShell';
 import { useNavigationStore } from '@/features/navigation/model/navigation.store';
 import { AppNavigationSheet } from '@/features/navigation/ui/AppNavigationSheet';
@@ -7,6 +7,7 @@ import { PremiumUpgradeSheet } from '@/features/premium/ui/PremiumUpgradeSheet';
 import { LaunchOnboardingSheet } from '@/features/onboarding/ui/LaunchOnboardingSheet';
 import { ProductAnalyticsTracker } from '@/features/product-analytics/ui/ProductAnalyticsTracker';
 import { useAuthStore } from '@/features/auth/model/auth.store';
+import { useSubscriptionStore } from '@/features/subscription/model/subscription.store';
 import { Spinner } from '@/shared/ui/Spinner';
 
 const AccountsPage = lazy(() => import('@/pages/accounts/AccountsPage'));
@@ -33,8 +34,16 @@ function RouteFallback() {
 
 export function AppRouter() {
   const currentScreen = useNavigationStore((state) => state.currentScreen);
-  const isAdmin = Boolean(useAuthStore((state) => state.user?.isAdmin));
+  const user = useAuthStore((state) => state.user);
+  const isAdmin = Boolean(user?.isAdmin);
   const goBack = useNavigationStore((state) => state.goBack);
+  const subscription = useSubscriptionStore((state) => state.status);
+  const loadSubscription = useSubscriptionStore((state) => state.load);
+  const hasBusiness = Boolean(isAdmin || subscription?.access.hasBusiness);
+
+  useEffect(() => {
+    if (user) void loadSubscription();
+  }, [loadSubscription, user]);
 
   return (
     <AppShell>
@@ -50,10 +59,10 @@ export function AppRouter() {
         {currentScreen === 'settings' && <SettingsPage />}
         {currentScreen === 'store' && <PremiumPage />}
         {currentScreen === 'premium' && <PremiumPage />}
-        {currentScreen === 'business-accountant' && (isAdmin ? <BusinessAccountantPage /> : <DashboardPage />)}
+        {currentScreen === 'business-accountant' && (hasBusiness ? <BusinessAccountantPage /> : <PremiumPage />)}
         {currentScreen === 'sections' && <SectionsPage onBack={goBack} />}
         {currentScreen === 'admin' && (isAdmin ? <AdminPage /> : <DashboardPage />)}
-        {currentScreen === 'referral' && (isAdmin ? <ReferralPage /> : <DashboardPage />)}
+        {currentScreen === 'referral' && <ReferralPage />}
       </Suspense>
 
       <AppNavigationSheet />

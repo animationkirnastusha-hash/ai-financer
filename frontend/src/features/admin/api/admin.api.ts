@@ -101,4 +101,5 @@ export const adminApi = {
   revokeSubscription: (userId: string, product: AdminSubscriptionProduct) =>
     apiClient.post<{ success: boolean }>('/admin/users/' + userId + '/subscription/revoke', { product }),
   restartTrial: (userId: string) => apiClient.post<{ success: boolean }>('/admin/users/' + userId + '/trial/restart'),
+  processReferralRewards: () => apiClient.post<{ success: boolean; result: { referrers: number; checked: number; awarded: number } }>('/admin/referrals/process'),
 };

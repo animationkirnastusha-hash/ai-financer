@@ -6,7 +6,7 @@ import { useNotificationsStore } from '@/features/notifications/model/notificati
 import { useI18n, type I18nKey } from '@/shared/lib/i18n';
 import { SettingsGearIcon } from '@/shared/ui/AppIcons';
 
-type Action = 'back' | 'analytics' | 'history' | 'settings' | 'home' | 'referral' | 'notifications';
+type Action = 'back' | 'analytics' | 'history' | 'settings' | 'home' | 'store' | 'referral' | 'notifications';
 type LeftAction = 'menu' | 'back' | 'none' | { label: string; onClick: () => void };
 
 type Props = {
@@ -46,6 +46,15 @@ function HomeIcon() {
   );
 }
 
+function StoreIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="screen-top-bar__svg">
+      <path d="M6.2 8.2h11.6l-.7 10.1a1.9 1.9 0 0 1-1.9 1.7H8.8a1.9 1.9 0 0 1-1.9-1.7L6.2 8.2Z" />
+      <path d="M8.5 8.2V7.1A3.5 3.5 0 0 1 12 3.6a3.5 3.5 0 0 1 3.5 3.5v1.1h-2V7.1A1.5 1.5 0 0 0 12 5.6a1.5 1.5 0 0 0-1.5 1.5v1.1h-2Z" />
+    </svg>
+  );
+}
+
 function ArrowIcon() {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true" className="screen-top-bar__svg">
@@ -69,6 +78,7 @@ const actionIcon: Record<Action, ReactNode> = {
   history: <ChartIcon />,
   settings: <GearIcon />,
   home: <HomeIcon />,
+  store: <StoreIcon />,
   referral: <ReferralIcon />,
   notifications: <BellIcon />,
 };
@@ -79,6 +89,7 @@ const actionLabelKey: Record<Action, I18nKey> = {
   history: 'common.analytics',
   settings: 'common.settings',
   home: 'common.home',
+  store: 'common.store',
   referral: 'common.referrals',
   notifications: 'common.notifications',
 };
@@ -132,6 +143,7 @@ export function ScreenTopBar({ title, left = 'menu', right = ['notifications', '
     if (action === 'analytics' || action === 'history') navigateTo('analytics');
     if (action === 'settings') navigateTo('settings');
     if (action === 'home') goHome();
+    if (action === 'store') navigateTo('store');
     if (action === 'referral') navigateTo('referral');
     if (action === 'notifications') openModal({ type: 'notifications' });
   };
