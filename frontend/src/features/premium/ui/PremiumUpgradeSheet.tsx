@@ -3,6 +3,7 @@ import { PREMIUM_PLAN } from '../model/premium.catalog';
 import { usePremiumStore } from '../model/premium.store';
 import { useSubscriptionStore } from '@/features/subscription/model/subscription.store';
 import { useNavigationStore } from '@/features/navigation/model/navigation.store';
+import { StorePaymentActions } from '@/features/payments/ui/StorePaymentActions';
 import { useI18n, type I18nKey } from '@/shared/lib/i18n';
 
 const sheetFeatures: I18nKey[] = [
@@ -80,6 +81,10 @@ export function PremiumUpgradeSheet() {
             <div>{PREMIUM_PLAN.price}</div>
             <p>{t('premium.sheet.priceCaption')}</p>
           </div>
+
+          {!hasPremium ? (
+            <StorePaymentActions product="premium" compact />
+          ) : null}
 
           <div className="premium-upgrade-actions">
             {hasPremium ? (

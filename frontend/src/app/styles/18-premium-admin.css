@@ -1010,3 +1010,112 @@
     grid-template-columns: 1fr;
   }
 }
+
+.store-payment-section {
+  overflow: hidden;
+}
+
+.store-payment-grid {
+  display: grid;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+@media (min-width: 720px) {
+  .store-payment-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.store-payment-actions {
+  display: grid;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.store-payment-actions--compact {
+  margin-top: 0;
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 24px;
+  padding: 14px;
+  background: linear-gradient(180deg, rgba(255,255,255,.075), rgba(255,255,255,.035));
+}
+
+.store-payment-actions h3 {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.store-payment-plan-toggle {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.store-payment-plan-toggle button {
+  min-width: 0;
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 18px;
+  padding: 12px;
+  background: rgba(255,255,255,.045);
+  color: inherit;
+  text-align: left;
+  transition: transform .16s ease, border-color .16s ease, background .16s ease;
+}
+
+.store-payment-plan-toggle button:active {
+  transform: scale(.98);
+}
+
+.store-payment-plan-toggle button.is-active {
+  border-color: rgba(109, 241, 194, .5);
+  background: rgba(109, 241, 194, .12);
+}
+
+.store-payment-plan-toggle span,
+.store-payment-plan-toggle strong {
+  display: block;
+}
+
+.store-payment-plan-toggle span {
+  color: rgba(255,255,255,.62);
+  font-size: 12px;
+}
+
+.store-payment-plan-toggle strong {
+  margin-top: 5px;
+  font-size: 16px;
+}
+
+.store-payment-action-row {
+  display: grid;
+  gap: 8px;
+}
+
+@media (min-width: 520px) {
+  .store-payment-action-row {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.store-payment-test-button {
+  width: 100%;
+  border: 1px dashed rgba(255,255,255,.18);
+  border-radius: 16px;
+  padding: 11px 14px;
+  background: rgba(255,255,255,.045);
+  color: rgba(255,255,255,.82);
+  font-weight: 750;
+}
+
+.store-payment-message {
+  margin: 0;
+  border-radius: 16px;
+  padding: 11px 13px;
+  background: rgba(109, 241, 194, .1);
+  color: rgba(255,255,255,.8);
+  font-size: 13px;
+  line-height: 1.35;
+}

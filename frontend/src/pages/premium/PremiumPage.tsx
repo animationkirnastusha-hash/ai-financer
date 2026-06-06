@@ -4,6 +4,7 @@ import { useNavigationStore } from '@/features/navigation/model/navigation.store
 import { usePremiumStore } from '@/features/premium/model/premium.store';
 import { useSubscriptionStore } from '@/features/subscription/model/subscription.store';
 import { useI18n, type I18nKey } from '@/shared/lib/i18n';
+import { StorePaymentActions } from '@/features/payments/ui/StorePaymentActions';
 import { ScreenTopBar } from '@/shared/ui/ScreenTopBar';
 
 type StoreCard = {
@@ -252,6 +253,22 @@ export default function PremiumPage() {
             ))}
           </div>
         </section>
+
+        <section className="app-card premium-admin-section store-payment-section">
+          <div className="premium-admin-section__head">
+            <div>
+              <div className="app-eyebrow">{t('store.payment.eyebrow')}</div>
+              <h2>{t('store.payment.title')}</h2>
+            </div>
+            <span>{t('store.payment.badge')}</span>
+          </div>
+          <p>{t('store.payment.caption')}</p>
+          <div className="store-payment-grid">
+            <StorePaymentActions product="premium" title={t('store.payment.premiumTitle')} compact />
+            <StorePaymentActions product="business" title={t('store.payment.businessTitle')} compact />
+          </div>
+        </section>
+
 
         <section className="app-card premium-admin-section store-trial-card">
           <div className="premium-admin-section__head">
