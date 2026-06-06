@@ -130,6 +130,29 @@ export function useChatController() {
         if (requestSeqRef.current !== requestSeq || controller.signal.aborted) return;
 
         const assistantText = response.message || 'Готово';
+        const responseData = response.parsed && typeof response.parsed === 'object'
+          ? (response.parsed as Record<string, unknown>)
+          : undefined;
+
+        if (response.requiresConfirmation && response.meta?.pendingActionId) {
+          const previewMessage: ChatMessage = {
+            id: crypto.randomUUID(),
+            role: 'assistant',
+            text: assistantText,
+            content: assistantText,
+            createdAt: new Date().toISOString(),
+            kind: 'preview',
+            actionType: response.intent,
+            actionId: response.meta.pendingActionId,
+            auditLogId: response.meta?.auditLogId,
+            data: responseData,
+          };
+
+          setMessages((prev) => appendLocalMessages(prev, previewMessage));
+          await refreshFinanceState();
+          emitPendingSync();
+          return;
+        }
 
         const assistantMessage: ChatMessage = {
           id: crypto.randomUUID(),
@@ -137,23 +160,16 @@ export function useChatController() {
           text: assistantText,
           content: assistantText,
           createdAt: new Date().toISOString(),
-          kind: 'text',
+          kind: response.executed ? 'success' : 'text',
           actionType: response.intent,
-          actionId: response.meta?.pendingActionId || response.meta?.auditLogId,
+          actionId: response.meta?.auditLogId,
           auditLogId: response.meta?.auditLogId,
           canUndo: Boolean(response.meta?.undo?.available && response.meta?.auditLogId),
-          data:
-            response.parsed && typeof response.parsed === 'object'
-              ? (response.parsed as Record<string, unknown>)
-              : undefined,
+          data: responseData,
         };
 
         setMessages((prev) => appendLocalMessages(prev, assistantMessage));
         await refreshFinanceState();
-        if (response.requiresConfirmation && response.meta?.pendingActionId) {
-          setIsPendingOpen(true);
-          emitPendingSync();
-        }
       } catch (error) {
         if (controller.signal.aborted) return;
         console.error('Send message failed', error);

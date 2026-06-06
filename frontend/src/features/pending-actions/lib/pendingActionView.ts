@@ -174,14 +174,14 @@ export function getPendingActionView(item: PendingActionItem): PendingActionView
 
   return {
     title,
-    subtitle: item.command || 'Проверь перед сохранением',
+    subtitle: item.command || 'Проверь детали',
     intentLabel: label,
     riskLabel: riskLabel(item.riskLevel),
     riskTone: riskTone(item.riskLevel),
     amountLabel,
     currency,
     rows,
-    explanation: 'AI подготовил действие. Проверь сумму, счёт и категорию.',
+    explanation: 'Проверь сумму, счёт и категорию.',
     actionCount,
   };
 }

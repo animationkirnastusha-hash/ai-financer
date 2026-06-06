@@ -21,7 +21,7 @@ function getClarification(item: any): Record<string, unknown> | null {
 
 function getClarificationQuestion(item: any) {
   const question = getClarification(item)?.question;
-  return typeof question === 'string' && question.trim() ? question.trim() : 'Нужно уточнение.';
+  return typeof question === 'string' && question.trim() ? question.trim() : 'Нужно уточнить.';
 }
 
 export function VoicePendingConfirmModal({ pendingActions, onConfirm, onCancel, onUpdate }: VoicePendingConfirmModalProps) {
@@ -38,11 +38,11 @@ export function VoicePendingConfirmModal({ pendingActions, onConfirm, onCancel, 
           <div className="app-pending-confirm-head">
             <div>
               <div className="app-eyebrow">{clarification ? 'Уточнение' : 'Проверка'}</div>
-              <h2>{clarification ? 'Фине нужно уточнение' : 'Подтверди действие'}</h2>
+              <h2>{clarification ? 'Нужно уточнить' : 'Подтверди действие'}</h2>
               <p>
                 {clarification
-                  ? 'Ответь голосом после имени Фина или напиши в чате. Новая команда заменит это уточнение.'
-                  : 'Фина выполнит действие после подтверждения.'}
+                  ? 'Ответь голосом или напиши в чате.'
+                  : 'После подтверждения действие будет выполнено.'}
               </p>
             </div>
           </div>
@@ -50,7 +50,7 @@ export function VoicePendingConfirmModal({ pendingActions, onConfirm, onCancel, 
           {clarification ? (
             <div className="voice-clarification-card">
               <div className="voice-clarification-card__question">{getClarificationQuestion(item)}</div>
-              <div className="voice-clarification-card__hint">Например: «Фина, с налички» или «Фина, с карты».</div>
+              <div className="voice-clarification-card__hint">Например: «с налички» или «с карты».</div>
               <button className="app-secondary-button" type="button" onClick={() => onCancel(item.id)}>
                 Отменить
               </button>

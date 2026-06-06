@@ -36,6 +36,7 @@ const TAP_GUARD_MS = 320;
 
 export function VoiceFirstCompanionLayer() {
   const modalStack = useAppModalStore((state) => state.stack);
+  const openModal = useAppModalStore((state) => state.openModal);
   const hasOpenModal = modalStack.length > 0;
   const hasTextChatOverlay = modalStack.some((modal) => modal.type === 'ai-text-overlay');
   const navigateTo = useNavigationStore((state) => state.navigateTo);
@@ -110,7 +111,6 @@ export function VoiceFirstCompanionLayer() {
     recordSessionMs,
     handleTranscript,
     reset: resetVoiceMachine,
-    markHolding,
     markLocked,
     markUploading,
   } = machine;
@@ -251,44 +251,13 @@ export function VoiceFirstCompanionLayer() {
 
     event.preventDefault();
     event.stopPropagation();
-    event.currentTarget.setPointerCapture?.(event.pointerId);
 
-    gestureRef.current = {
-      pointerId: event.pointerId,
-      startX: event.clientX,
-      startY: event.clientY,
-      started: false,
-      releaseAfterStart: false,
-      cancelled: false,
-      mode: 'holding',
-    };
-
-    setGestureMode('holding');
-    markHolding();
-    showThought('Слушаю. Вверх — закрепить, влево — отменить.', 'listening', 4200);
-    logVoiceDebugEvent('manual_voice_pointer_down', { pointerId: event.pointerId });
-
-    void voice.start().then((result) => {
-      const gesture = gestureRef.current;
-      if (gesture.pointerId !== event.pointerId || gesture.cancelled) return;
-
-      if (result !== 'started') {
-        logVoiceDebugEvent('manual_voice_start_failed', { result });
-        resetGesture();
-        resetVoiceMachine();
-        if (result === 'permission-ready') showThought('Разреши микрофон и попробуй ещё раз.', 'warning', 2600);
-        else showThought('Не удалось начать запись.', 'warning', 2600);
-        return;
-      }
-
-      gesture.started = true;
-      logVoiceDebugEvent('manual_voice_recording_started', { pointerId: event.pointerId, mode: gesture.mode });
-
-      if (gesture.releaseAfterStart && gesture.mode === 'holding') {
-        sendManualRecording('release_after_async_start');
-      }
-    });
-  }, [canStartManualRecording, canUseVoice, hasPending, markHolding, resetGesture, resetVoiceMachine, sendManualRecording, showThought, voice.start, voicePermissionReady]);
+    resetGesture();
+    resetVoiceMachine();
+    showThought('Слушаю.', 'listening', 1600);
+    logVoiceDebugEvent('manual_voice_open_overlay', { pointerId: event.pointerId });
+    openModal({ type: 'ai-text-overlay', mode: 'voice', autoStartVoice: true });
+  }, [canStartManualRecording, canUseVoice, hasPending, openModal, resetGesture, resetVoiceMachine, showThought, voicePermissionReady]);
 
   const handlePointerMove = useCallback((event: PointerEvent<HTMLDivElement>) => {
     const gesture = gestureRef.current;
