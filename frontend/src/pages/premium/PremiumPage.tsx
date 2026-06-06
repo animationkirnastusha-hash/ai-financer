@@ -1,11 +1,13 @@
 import { useEffect, useMemo } from 'react';
 import { useAuthStore } from '@/features/auth/model/auth.store';
 import { useNavigationStore } from '@/features/navigation/model/navigation.store';
+import { usePremiumStore } from '@/features/premium/model/premium.store';
 import { useSubscriptionStore } from '@/features/subscription/model/subscription.store';
 import { useI18n, type I18nKey } from '@/shared/lib/i18n';
 import { ScreenTopBar } from '@/shared/ui/ScreenTopBar';
 
 type StoreCard = {
+  id: 'premium' | 'business' | 'referral';
   eyebrow: I18nKey;
   title: I18nKey;
   caption: I18nKey;
@@ -35,14 +37,16 @@ const referralItems: I18nKey[] = [
 
 const cards: StoreCard[] = [
   {
+    id: 'premium',
     eyebrow: 'store.premium.eyebrow',
     title: 'store.premium.title',
     caption: 'store.premium.caption',
     items: premiumItems,
-    action: 'store.action.soon',
+    action: 'store.action.premium',
     tone: 'premium',
   },
   {
+    id: 'business',
     eyebrow: 'store.business.eyebrow',
     title: 'store.business.title',
     caption: 'store.business.caption',
@@ -51,6 +55,7 @@ const cards: StoreCard[] = [
     tone: 'business',
   },
   {
+    id: 'referral',
     eyebrow: 'store.referral.eyebrow',
     title: 'store.referral.title',
     caption: 'store.referral.caption',
@@ -71,6 +76,7 @@ export default function PremiumPage() {
   const { t } = useI18n();
   const user = useAuthStore((state) => state.user);
   const navigateTo = useNavigationStore((state) => state.navigateTo);
+  const openPremium = usePremiumStore((state) => state.openPremium);
   const isAdmin = Boolean(user?.isAdmin);
   const name = useMemo(() => user?.firstName || user?.username || t('store.userFallback'), [t, user?.firstName, user?.username]);
   const subscription = useSubscriptionStore((state) => state.status);
@@ -102,12 +108,37 @@ export default function PremiumPage() {
           ? t('store.status.trialUntil', { date: formatAccessDate(access.trialUntil, '—') })
           : t('store.status.freeCaption');
 
+  const handleCardAction = (card: StoreCard) => {
+    if (card.id === 'referral') {
+      navigateTo('referral');
+      return;
+    }
+
+    if (card.id === 'business') {
+      if (access?.hasBusiness || isAdmin) navigateTo('business-accountant');
+      else openPremium({
+        kind: 'deep_analysis',
+        title: t('store.business.title'),
+        description: t('store.business.caption'),
+        cta: t('store.action.business'),
+      });
+      return;
+    }
+
+    openPremium({
+      kind: 'deep_analysis',
+      title: t('store.premium.title'),
+      description: t('store.premium.caption'),
+      cta: t('store.action.premium'),
+    });
+  };
+
   return (
     <div className="app-page premium-admin-page text-white">
       <div className="app-page__inner space-y-4">
         <ScreenTopBar title={t('screen.store')} left="back" right={['home', 'settings']} />
 
-        <header className="premium-admin-hero store-hero">
+        <header className="premium-admin-hero store-hero store-hero--premium">
           <div className="premium-admin-hero__glow" aria-hidden="true" />
           <div className="premium-admin-kicker">{t('store.hero.eyebrow')}</div>
           <h1>{t('store.hero.title', { name })}</h1>
@@ -118,7 +149,7 @@ export default function PremiumPage() {
           </div>
         </header>
 
-        <section className="app-card premium-admin-section store-trial-card">
+        <section className="app-card premium-admin-section store-trial-card store-access-card">
           <div className="premium-admin-section__head">
             <div>
               <div className="app-eyebrow">{t('store.status.eyebrow')}</div>
@@ -130,19 +161,25 @@ export default function PremiumPage() {
         </section>
 
         <section className="store-card-grid">
-          {cards.map((card) => (
-            <article key={card.title} className={`store-card store-card--${card.tone}`}>
-              <div className="app-eyebrow">{t(card.eyebrow)}</div>
-              <h2>{t(card.title)}</h2>
-              <p>{t(card.caption)}</p>
-              <ul>
-                {card.items.map((item) => <li key={item}>{t(item)}</li>)}
-              </ul>
-              <button type="button" className="app-secondary-button" onClick={() => card.tone === 'business' ? navigateTo('business-accountant') : card.tone === 'referral' ? navigateTo('referral') : undefined}>
-                {t(card.action)}
-              </button>
-            </article>
-          ))}
+          {cards.map((card) => {
+            const active = card.id === 'premium' ? access?.hasPremium : card.id === 'business' ? access?.hasBusiness : false;
+            return (
+              <article key={card.title} className={`store-card store-card--${card.tone}`} data-active={active ? 'true' : 'false'}>
+                <div className="store-card__topline">
+                  <div className="app-eyebrow">{t(card.eyebrow)}</div>
+                  {active ? <span>{t('store.card.active')}</span> : null}
+                </div>
+                <h2>{t(card.title)}</h2>
+                <p>{t(card.caption)}</p>
+                <ul>
+                  {card.items.map((item) => <li key={item}>{t(item)}</li>)}
+                </ul>
+                <button type="button" className={card.id === 'premium' ? 'app-primary-button' : 'app-secondary-button'} onClick={() => handleCardAction(card)}>
+                  {active ? t('store.card.open') : t(card.action)}
+                </button>
+              </article>
+            );
+          })}
         </section>
 
         <section className="app-card premium-admin-section store-trial-card">
