@@ -3,7 +3,14 @@ import { PREMIUM_PLAN } from '../model/premium.catalog';
 import { usePremiumStore } from '../model/premium.store';
 import { useSubscriptionStore } from '@/features/subscription/model/subscription.store';
 import { useNavigationStore } from '@/features/navigation/model/navigation.store';
-import { useI18n } from '@/shared/lib/i18n';
+import { useI18n, type I18nKey } from '@/shared/lib/i18n';
+
+const sheetFeatures: I18nKey[] = [
+  'premium.sheet.feature.forecast',
+  'premium.sheet.feature.reports',
+  'premium.sheet.feature.receipts',
+  'premium.sheet.feature.voice',
+];
 
 export function PremiumUpgradeSheet() {
   const { t } = useI18n();
@@ -29,7 +36,6 @@ export function PremiumUpgradeSheet() {
 
   const hasPremium = Boolean(subscription?.access.hasPremium);
   const trialUsed = Boolean(subscription?.access.trialUsed);
-  const primaryFeatures = PREMIUM_PLAN.featureGroups.flatMap((group) => group.items.slice(0, 2));
 
   const handleStartTrial = async () => {
     await startTrial();
@@ -47,7 +53,7 @@ export function PremiumUpgradeSheet() {
 
         <div className="mx-auto max-w-[560px]">
           <div className="premium-upgrade-hero">
-            <div className="flex items-center justify-between gap-3">
+            <div className="premium-upgrade-hero__top">
               <div className="premium-upgrade-kicker">{t('premium.sheet.eyebrow')}</div>
               <div className="premium-upgrade-badge">{hasPremium ? t('premium.sheet.active') : PREMIUM_PLAN.badge}</div>
             </div>
@@ -61,10 +67,10 @@ export function PremiumUpgradeSheet() {
             </div>
           </div>
 
-          <div className="mt-4 grid gap-3">
-            {primaryFeatures.map((feature) => (
+          <div className="premium-upgrade-feature-grid">
+            {sheetFeatures.map((feature) => (
               <div key={feature} className="premium-upgrade-feature">
-                <div>{feature}</div>
+                <div>{t(feature)}</div>
                 <p>{t('premium.sheet.featureCaption')}</p>
               </div>
             ))}

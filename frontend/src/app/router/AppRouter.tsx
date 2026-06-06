@@ -67,7 +67,7 @@ export function AppRouter() {
 
       <AppNavigationSheet />
       <AppModalManager />
-      {isAdmin ? <PremiumUpgradeSheet /> : null}
+      <PremiumUpgradeSheet />
       <LaunchOnboardingSheet />
     </AppShell>
   );

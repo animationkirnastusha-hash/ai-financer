@@ -1,6 +1,7 @@
 import { useEffect, useMemo } from 'react';
 import { useAuthStore } from '@/features/auth/model/auth.store';
 import { useNavigationStore } from '@/features/navigation/model/navigation.store';
+import { usePremiumStore } from '@/features/premium/model/premium.store';
 import { useSubscriptionStore } from '@/features/subscription/model/subscription.store';
 import { useI18n, type I18nKey } from '@/shared/lib/i18n';
 import { ScreenTopBar } from '@/shared/ui/ScreenTopBar';
@@ -12,6 +13,11 @@ type StoreCard = {
   items: I18nKey[];
   action: I18nKey;
   tone: 'premium' | 'business' | 'referral';
+};
+
+type PremiumFeature = {
+  title: I18nKey;
+  caption: I18nKey;
 };
 
 const premiumItems: I18nKey[] = [
@@ -39,7 +45,7 @@ const cards: StoreCard[] = [
     title: 'store.premium.title',
     caption: 'store.premium.caption',
     items: premiumItems,
-    action: 'store.action.soon',
+    action: 'store.action.premium',
     tone: 'premium',
   },
   {
@@ -60,6 +66,13 @@ const cards: StoreCard[] = [
   },
 ];
 
+const premiumFeatures: PremiumFeature[] = [
+  { title: 'store.features.forecast.title', caption: 'store.features.forecast.caption' },
+  { title: 'store.features.reports.title', caption: 'store.features.reports.caption' },
+  { title: 'store.features.receipts.title', caption: 'store.features.receipts.caption' },
+  { title: 'store.features.voice.title', caption: 'store.features.voice.caption' },
+];
+
 function formatAccessDate(value: string | null | undefined, fallback: string) {
   if (!value) return fallback;
   const date = new Date(value);
@@ -71,6 +84,7 @@ export default function PremiumPage() {
   const { t } = useI18n();
   const user = useAuthStore((state) => state.user);
   const navigateTo = useNavigationStore((state) => state.navigateTo);
+  const openPremium = usePremiumStore((state) => state.openPremium);
   const isAdmin = Boolean(user?.isAdmin);
   const name = useMemo(() => user?.firstName || user?.username || t('store.userFallback'), [t, user?.firstName, user?.username]);
   const subscription = useSubscriptionStore((state) => state.status);
@@ -87,9 +101,11 @@ export default function PremiumPage() {
   };
 
   const access = subscription?.access;
-  const statusText = access?.hasBusiness
+  const hasPremium = Boolean(access?.hasPremium);
+  const hasBusiness = Boolean(access?.hasBusiness);
+  const statusText = hasBusiness
     ? t('store.status.business')
-    : access?.hasPremium
+    : hasPremium
       ? t('store.status.premium')
       : t('store.status.free');
   const statusCaption = access?.businessLifetime || access?.premiumLifetime
@@ -102,6 +118,35 @@ export default function PremiumPage() {
           ? t('store.status.trialUntil', { date: formatAccessDate(access.trialUntil, '—') })
           : t('store.status.freeCaption');
 
+  const handleCardClick = (card: StoreCard) => {
+    if (card.tone === 'referral') {
+      navigateTo('referral');
+      return;
+    }
+
+    if (card.tone === 'business') {
+      if (hasBusiness || isAdmin) {
+        navigateTo('business-accountant');
+        return;
+      }
+
+      openPremium({
+        kind: 'deep_analysis',
+        title: t('store.business.locked.title'),
+        description: t('store.business.locked.caption'),
+        cta: t('store.action.premium'),
+      });
+      return;
+    }
+
+    openPremium({
+      kind: 'deep_analysis',
+      title: t(card.title),
+      description: t(card.caption),
+      cta: t(card.action),
+    });
+  };
+
   return (
     <div className="app-page premium-admin-page text-white">
       <div className="app-page__inner space-y-4">
@@ -113,18 +158,21 @@ export default function PremiumPage() {
           <h1>{t('store.hero.title', { name })}</h1>
           <p>{t('store.hero.caption')}</p>
           <div className="premium-admin-hero__actions">
-            <button type="button" className="app-primary-button" onClick={() => navigateTo('referral')}>{t('store.action.referral')}</button>
+            <button type="button" className="app-primary-button" onClick={() => handleCardClick(cards[0])}>{t('store.action.premium')}</button>
+            <button type="button" className="app-secondary-button" onClick={() => navigateTo('referral')}>{t('store.action.referral')}</button>
             {isAdmin ? <button type="button" className="app-secondary-button" onClick={() => navigateTo('admin')}>{t('store.action.admin')}</button> : null}
           </div>
         </header>
 
-        <section className="app-card premium-admin-section store-trial-card">
+        <section className="app-card premium-admin-section store-status-card">
           <div className="premium-admin-section__head">
             <div>
               <div className="app-eyebrow">{t('store.status.eyebrow')}</div>
               <h2>{isLoading ? t('store.status.loading') : statusText}</h2>
             </div>
-            <span>{subscription ? `${subscription.limits.voiceCommandsPerDay} ${t('store.status.voiceLimit')}` : '—'}</span>
+            <span className={hasBusiness || hasPremium ? 'store-active-badge' : undefined}>
+              {hasBusiness || hasPremium ? t('store.status.active') : subscription ? `${subscription.limits.voiceCommandsPerDay} ${t('store.status.voiceLimit')}` : '—'}
+            </span>
           </div>
           <p>{statusCaption}</p>
         </section>
@@ -156,19 +204,53 @@ export default function PremiumPage() {
         ) : null}
 
         <section className="store-card-grid">
-          {cards.map((card) => (
-            <article key={card.title} className={`store-card store-card--${card.tone}`}>
-              <div className="app-eyebrow">{t(card.eyebrow)}</div>
-              <h2>{t(card.title)}</h2>
-              <p>{t(card.caption)}</p>
-              <ul>
-                {card.items.map((item) => <li key={item}>{t(item)}</li>)}
-              </ul>
-              <button type="button" className="app-secondary-button" onClick={() => card.tone === 'business' ? navigateTo('business-accountant') : card.tone === 'referral' ? navigateTo('referral') : undefined}>
-                {t(card.action)}
+          {cards.map((card) => {
+            const active = card.tone === 'premium' ? hasPremium : card.tone === 'business' ? hasBusiness : false;
+            return (
+              <article key={card.title} className={`store-card store-card--${card.tone}`}>
+                <button type="button" className="store-card__button" onClick={() => handleCardClick(card)} aria-label={t(card.title)}>
+                  <div className="store-card__head">
+                    <div className="app-eyebrow">{t(card.eyebrow)}</div>
+                    {active ? <span>{t('store.status.active')}</span> : null}
+                  </div>
+                  <h2>{t(card.title)}</h2>
+                  <p>{t(card.caption)}</p>
+                  <ul>
+                    {card.items.map((item) => <li key={item}>{t(item)}</li>)}
+                  </ul>
+                  <span className="store-card__action">{t(card.action)}</span>
+                </button>
+              </article>
+            );
+          })}
+        </section>
+
+        <section className="app-card premium-admin-section store-feature-section">
+          <div className="premium-admin-section__head">
+            <div>
+              <div className="app-eyebrow">{t('store.features.eyebrow')}</div>
+              <h2>{t('store.features.title')}</h2>
+            </div>
+            <span>{t('store.features.badge')}</span>
+          </div>
+          <div className="store-feature-grid">
+            {premiumFeatures.map((feature) => (
+              <button
+                type="button"
+                key={feature.title}
+                className="store-feature-card"
+                onClick={() => openPremium({
+                  kind: 'locked_insight',
+                  title: t(feature.title),
+                  description: t(feature.caption),
+                  cta: t('store.action.premium'),
+                })}
+              >
+                <strong>{t(feature.title)}</strong>
+                <span>{t(feature.caption)}</span>
               </button>
-            </article>
-          ))}
+            ))}
+          </div>
         </section>
 
         <section className="app-card premium-admin-section store-trial-card">
