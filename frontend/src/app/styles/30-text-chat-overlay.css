@@ -428,3 +428,43 @@
   0%, 100% { filter: drop-shadow(0 0 0 rgba(110, 231, 183, 0)); }
   50% { filter: drop-shadow(0 0 12px rgba(110, 231, 183, 0.45)); }
 }
+
+.text-chat-overlay__companion--active,
+.text-chat-overlay__orb--active {
+  border-color: rgba(110, 231, 183, 0.46);
+  background:
+    radial-gradient(circle at 50% 20%, rgba(255, 255, 255, 0.22), transparent 36%),
+    rgba(52, 211, 153, 0.18);
+  box-shadow: 0 0 0 6px rgba(52, 211, 153, 0.08), 0 20px 58px rgba(16, 185, 129, 0.24);
+  animation: textChatCompanionGlow 1.25s ease-in-out infinite;
+}
+
+.text-chat-overlay__lock {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.055);
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 20px;
+  line-height: 1;
+}
+
+.text-chat-overlay__lock--active {
+  border-color: rgba(52, 211, 153, 0.34);
+  background: rgba(52, 211, 153, 0.14);
+  color: rgba(209, 250, 229, 0.96);
+  box-shadow: 0 14px 38px rgba(16, 185, 129, 0.16);
+}
+
+.text-chat-overlay__status[data-state='locked'] .text-chat-overlay__dot {
+  background: rgba(110, 231, 183, 0.95);
+  box-shadow: 0 0 22px rgba(110, 231, 183, 0.55);
+}
+
+@keyframes textChatCompanionGlow {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-1px) scale(1.035); }
+}

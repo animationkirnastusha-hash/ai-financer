@@ -256,7 +256,7 @@ export function VoiceFirstCompanionLayer() {
     resetVoiceMachine();
     showThought('Слушаю.', 'listening', 1600);
     logVoiceDebugEvent('manual_voice_open_overlay', { pointerId: event.pointerId });
-    openModal({ type: 'ai-text-overlay', mode: 'voice', autoStartVoice: true });
+    openModal({ type: 'ai-text-overlay', mode: 'voice', autoStartVoice: true, autoCloseOnVoiceResult: true });
   }, [canStartManualRecording, canUseVoice, hasPending, openModal, resetGesture, resetVoiceMachine, showThought, voicePermissionReady]);
 
   const handlePointerMove = useCallback((event: PointerEvent<HTMLDivElement>) => {

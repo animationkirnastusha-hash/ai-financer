@@ -19,6 +19,7 @@ type TextChatOverlayProps = {
   initialCommand?: string | null;
   mode?: 'text' | 'voice';
   autoStartVoice?: boolean;
+  autoCloseOnVoiceResult?: boolean;
   layer?: number;
   onClose: () => void;
 };
@@ -54,11 +55,12 @@ function chooseAccountName(accounts: Array<{ name?: string | null; type?: string
   return preferred?.name?.trim() || '';
 }
 
-export function TextChatOverlay({ open, initialCommand, mode = 'text', autoStartVoice = false, layer = 130, onClose }: TextChatOverlayProps) {
+export function TextChatOverlay({ open, initialCommand, mode = 'text', autoStartVoice = false, autoCloseOnVoiceResult = false, layer = 130, onClose }: TextChatOverlayProps) {
   const { t } = useI18n();
   const [value, setValue] = useState(initialCommand?.trim() ?? '');
   const [showJumpToBottom, setShowJumpToBottom] = useState(false);
   const [isVoicePressed, setIsVoicePressed] = useState(false);
+  const [isVoiceLocked, setIsVoiceLocked] = useState(false);
   const [voiceHint, setVoiceHint] = useState<string | null>(mode === 'voice' ? 'Слушаю' : null);
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
   const listRef = useRef<HTMLDivElement | null>(null);
@@ -66,6 +68,9 @@ export function TextChatOverlay({ open, initialCommand, mode = 'text', autoStart
   const shouldStickToBottomRef = useRef(true);
   const autoStartDoneRef = useRef(false);
   const stopVoiceRef = useRef<(reason?: string) => void>(() => undefined);
+  const lastVoiceSendAtRef = useRef(0);
+  const lastAutoClosedMessageKeyRef = useRef('');
+  const autoCloseTimerRef = useRef<number | null>(null);
 
   const chat = useChatController();
   const accounts = useAccountsStore((state) => state.items);
@@ -90,6 +95,7 @@ export function TextChatOverlay({ open, initialCommand, mode = 'text', autoStart
     const clean = text.trim();
     if (!clean || chat.isSending) return;
     shouldStickToBottomRef.current = true;
+    if (source === 'voice') lastVoiceSendAtRef.current = Date.now();
     await chat.sendMessage({ text: clean, source }, { supersedeInFlight: true });
   }, [chat]);
 
@@ -114,8 +120,9 @@ export function TextChatOverlay({ open, initialCommand, mode = 'text', autoStart
     if (voice.state === 'uploading') return 'Распознаю';
     if (chat.isSending) return t('textChat.status.thinking');
     if (chat.pendingActions.length > 0) return t('textChat.status.confirm', { count: chat.pendingActions.length });
+    if (isVoiceLocked) return t('textChat.status.locked');
     return voiceHint || t('textChat.status.ready');
-  }, [chat.isSending, chat.pendingActions.length, t, voice.state, voiceHint]);
+  }, [chat.isSending, chat.pendingActions.length, isVoiceLocked, t, voice.state, voiceHint]);
 
   const statusState = voice.state === 'recording'
     ? 'listening'
@@ -123,7 +130,9 @@ export function TextChatOverlay({ open, initialCommand, mode = 'text', autoStart
       ? 'thinking'
       : chat.pendingActions.length > 0
         ? 'confirm'
-        : 'ready';
+        : isVoiceLocked
+          ? 'locked'
+          : 'ready';
 
   const contextualPrompts = useMemo(() => {
     const accountName = chooseAccountName(accounts);
@@ -161,9 +170,9 @@ export function TextChatOverlay({ open, initialCommand, mode = 'text', autoStart
     }
     if (reason === 'cancel') {
       voice.cancel();
-      setVoiceHint(null);
+      setVoiceHint(isVoiceLocked ? t('textChat.status.locked') : null);
     }
-  }, [voice]);
+  }, [isVoiceLocked, t, voice]);
 
   stopVoiceRef.current = stopVoice;
 
@@ -252,7 +261,34 @@ export function TextChatOverlay({ open, initialCommand, mode = 'text', autoStart
     return () => window.cancelAnimationFrame(frame);
   }, [chat.messages.length, inlinePendingActions.length, chat.isSending, open, scrollToBottom]);
 
+  useEffect(() => {
+    if (!open || !autoCloseOnVoiceResult || isVoiceLocked || isVoicePressed) return;
+    if (chat.isSending || voice.state !== 'idle' || chat.pendingActions.length > 0) return;
+    if (!lastVoiceSendAtRef.current || Date.now() - lastVoiceSendAtRef.current > 24000) return;
+
+    const lastMessage = chat.messages.at(-1);
+    if (!lastMessage || lastMessage.role !== 'assistant' || lastMessage.kind !== 'success') return;
+
+    const key = `${lastMessage.id}:${lastMessage.createdAt}:${lastMessage.text}`;
+    if (lastAutoClosedMessageKeyRef.current === key) return;
+    lastAutoClosedMessageKeyRef.current = key;
+
+    if (autoCloseTimerRef.current !== null) window.clearTimeout(autoCloseTimerRef.current);
+    autoCloseTimerRef.current = window.setTimeout(() => {
+      autoCloseTimerRef.current = null;
+      onClose();
+    }, 1250);
+
+    return () => {
+      if (autoCloseTimerRef.current !== null) {
+        window.clearTimeout(autoCloseTimerRef.current);
+        autoCloseTimerRef.current = null;
+      }
+    };
+  }, [autoCloseOnVoiceResult, chat.isSending, chat.messages, chat.pendingActions.length, isVoiceLocked, isVoicePressed, onClose, open, voice.state]);
+
   useEffect(() => () => {
+    if (autoCloseTimerRef.current !== null) window.clearTimeout(autoCloseTimerRef.current);
     voice.cancel();
   }, [voice]);
 
@@ -298,8 +334,8 @@ export function TextChatOverlay({ open, initialCommand, mode = 'text', autoStart
           <div className="text-chat-overlay__head-actions">
             <button
               type="button"
-              className={isVoicePressed || voice.state === 'recording' ? 'text-chat-overlay__companion text-chat-overlay__companion--active' : 'text-chat-overlay__companion'}
-              aria-label="Голосовая команда"
+              className={isVoicePressed || voice.state === 'recording' || isVoiceLocked ? 'text-chat-overlay__companion text-chat-overlay__companion--active' : 'text-chat-overlay__companion'}
+              aria-label={t('textChat.voice.hold')}
               onPointerDown={(event) => {
                 event.preventDefault();
                 event.stopPropagation();
@@ -318,6 +354,16 @@ export function TextChatOverlay({ open, initialCommand, mode = 'text', autoStart
             >
               <span className="text-chat-overlay__companion-face"><span /><span /></span>
             </button>
+            {mode === 'voice' ? (
+              <button
+                type="button"
+                className={isVoiceLocked ? 'text-chat-overlay__lock text-chat-overlay__lock--active' : 'text-chat-overlay__lock'}
+                aria-label={isVoiceLocked ? t('textChat.voice.unlock') : t('textChat.voice.lock')}
+                onClick={() => setIsVoiceLocked((locked) => !locked)}
+              >
+                ∞
+              </button>
+            ) : null}
             <button type="button" className="app-icon-button" onClick={onClose} aria-label={t('common.close')}>
               ×
             </button>
@@ -359,8 +405,8 @@ export function TextChatOverlay({ open, initialCommand, mode = 'text', autoStart
             <div className="text-chat-overlay__empty">
               <button
                 type="button"
-                className={isVoicePressed || voice.state === 'recording' ? 'text-chat-overlay__orb text-chat-overlay__orb--active' : 'text-chat-overlay__orb'}
-                aria-label="Голосовая команда"
+                className={isVoicePressed || voice.state === 'recording' || isVoiceLocked ? 'text-chat-overlay__orb text-chat-overlay__orb--active' : 'text-chat-overlay__orb'}
+                aria-label={t('textChat.voice.hold')}
                 onPointerDown={(event) => {
                   event.preventDefault();
                   event.stopPropagation();
