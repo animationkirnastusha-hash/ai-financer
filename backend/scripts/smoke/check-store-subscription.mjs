@@ -47,6 +47,25 @@ await runSmoke('store-subscription', async (context) => {
     throw new Error('Payment catalog does not contain premium and business products');
   }
 
+
+  const premiumPlan = products.find((item) => item.product === 'premium')?.options?.find((option) => option.duration === 'month');
+  const premiumYear = products.find((item) => item.product === 'premium')?.options?.find((option) => option.duration === 'year');
+  const businessPlan = products.find((item) => item.product === 'business')?.options?.find((option) => option.duration === 'month');
+  const businessYear = products.find((item) => item.product === 'business')?.options?.find((option) => option.duration === 'year');
+  if (premiumPlan?.amount !== 56000 || premiumPlan?.baseAmount !== 70000) throw new Error('Premium month price mismatch');
+  if (businessPlan?.amount !== 120000 || businessPlan?.baseAmount !== 150000) throw new Error('Business month price mismatch');
+  if (premiumYear?.amount !== 630000 || premiumYear?.baseAmount !== 840000) throw new Error('Premium year price mismatch');
+  if (businessYear?.amount !== 1350000 || businessYear?.baseAmount !== 1800000) throw new Error('Business year price mismatch');
+  if (!premiumPlan?.starsAmount || !businessPlan?.starsAmount) throw new Error('Stars price is missing');
+
+  const starsOrder = await requestJson(context, '/payments/orders', {
+    method: 'POST',
+    body: { product: 'premium', duration: 'month', provider: 'telegramStars' },
+  });
+  if (starsOrder.payload?.order?.provider !== 'telegramStars') throw new Error('Telegram Stars order provider mismatch');
+  if (starsOrder.payload?.order?.currency !== 'XTR') throw new Error('Telegram Stars order currency mismatch');
+  if (!['ready', 'not_configured'].includes(starsOrder.payload?.checkout?.status)) throw new Error('Telegram Stars checkout status mismatch');
+
   for (const feature of ['store', 'receiptScan', 'advancedReports', 'businessWorkspace']) {
     const featureAccess = await requestJson(context, `/subscription/features/${feature}`);
     if (featureAccess.payload?.feature !== feature) throw new Error(`Feature access mismatch for ${feature}`);

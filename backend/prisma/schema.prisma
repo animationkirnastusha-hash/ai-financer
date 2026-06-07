@@ -447,20 +447,25 @@ model BusinessWorkspace {
 }
 
 model StorePaymentOrder {
-  id          String   @id @default(cuid())
-  userId      String
-  product     String
-  duration    String   @default("month")
-  provider    String
-  status      String   @default("pending")
-  amount      Int
-  currency    String
-  description String
-  payload     String?
-  paidAt      DateTime?
-  expiresAt   DateTime?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id                       String   @id @default(cuid())
+  userId                   String
+  product                  String
+  duration                 String   @default("month")
+  provider                 String
+  status                   String   @default("pending")
+  amount                   Int
+  baseAmount               Int      @default(0)
+  discountPercent          Int      @default(0)
+  currency                 String
+  description              String
+  payload                  String?
+  telegramInvoiceLink      String?
+  telegramPaymentChargeId  String?
+  providerPaymentChargeId  String?
+  paidAt                   DateTime?
+  expiresAt                DateTime?
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -468,6 +473,7 @@ model StorePaymentOrder {
   @@index([status])
   @@index([provider])
   @@index([createdAt])
+  @@index([telegramPaymentChargeId])
 }
 
 model ReferralTransaction {

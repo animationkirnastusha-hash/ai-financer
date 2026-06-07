@@ -1,8 +1,10 @@
 import { Router } from 'express';
 import { authMiddleware } from '../../middleware/auth';
-import { completeMockPaymentOrder, createPaymentOrder, getPaymentCatalog, getPaymentOrder } from './controller';
+import { completeMockPaymentOrder, createPaymentOrder, getPaymentCatalog, getPaymentOrder, telegramPaymentsWebhook } from './controller';
 
 const router = Router();
+
+router.post('/telegram/webhook', telegramPaymentsWebhook);
 
 router.use(authMiddleware);
 router.get('/catalog', getPaymentCatalog);

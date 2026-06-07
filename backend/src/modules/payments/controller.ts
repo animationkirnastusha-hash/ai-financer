@@ -1,11 +1,22 @@
 import { Request, Response } from 'express';
 import { asyncHandler } from '../../shared/utils/asyncHandler';
-import { BadRequestError } from '../../shared/core/errors';
+import { BadRequestError, UnauthorizedError } from '../../shared/core/errors';
 import { paymentService } from './service';
 
 function requireUserId(req: Request) {
   if (!req.userId) throw new BadRequestError('Unauthorized user');
   return req.userId;
+}
+
+function getWebhookSecret() {
+  return process.env.TELEGRAM_PAYMENTS_WEBHOOK_SECRET?.trim() || '';
+}
+
+function assertTelegramWebhook(req: Request) {
+  const expected = getWebhookSecret();
+  if (!expected) return;
+  const received = String(req.header('x-telegram-bot-api-secret-token') || '');
+  if (received !== expected) throw new UnauthorizedError('Invalid Telegram webhook secret');
 }
 
 export const getPaymentCatalog = asyncHandler(async (_req: Request, res: Response) => {
@@ -29,4 +40,9 @@ export const completeMockPaymentOrder = asyncHandler(async (req: Request, res: R
   const orderId = typeof req.params.orderId === 'string' ? req.params.orderId : '';
   if (!orderId.trim()) throw new BadRequestError('Order is required');
   res.json(await paymentService.completeMockOrder(userId, orderId));
+});
+
+export const telegramPaymentsWebhook = asyncHandler(async (req: Request, res: Response) => {
+  assertTelegramWebhook(req);
+  res.json(await paymentService.handleTelegramUpdate(req.body ?? {}));
 });

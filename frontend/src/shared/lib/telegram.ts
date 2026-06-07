@@ -13,6 +13,7 @@ type TelegramWebApp = {
   expand?: () => void;
   enableClosingConfirmation?: () => void;
   disableVerticalSwipes?: () => void;
+  openInvoice?: (url: string, callback?: (status: 'paid' | 'cancelled' | 'failed' | 'pending' | string) => void) => void;
   setHeaderColor?: (color: string) => void;
   setBackgroundColor?: (color: string) => void;
   HapticFeedback?: {
@@ -60,4 +61,12 @@ export function telegramHaptic(type: 'light' | 'medium' | 'heavy' = 'light') {
 
 export function getTelegramUserPreview() {
   return getTelegramWebApp()?.initDataUnsafe?.user ?? null;
+}
+export function openTelegramInvoice(url: string, callback?: (status: string) => void) {
+  const webApp = getTelegramWebApp();
+  if (webApp?.openInvoice) {
+    webApp.openInvoice(url, callback);
+    return true;
+  }
+  return false;
 }

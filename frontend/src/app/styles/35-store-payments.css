@@ -106,3 +106,46 @@
   font-size: 13px;
   line-height: 1.35;
 }
+
+.store-payment-selected-price {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 18px;
+  padding: 12px;
+  background: rgba(0,0,0,.14);
+}
+
+.store-payment-selected-price span {
+  width: 100%;
+  color: rgba(255,255,255,.58);
+  font-size: 12px;
+}
+
+.store-payment-selected-price strong {
+  font-size: 20px;
+  line-height: 1;
+}
+
+.store-payment-selected-price del {
+  color: rgba(255,255,255,.42);
+  font-size: 13px;
+}
+
+.store-payment-selected-price em {
+  border-radius: 999px;
+  padding: 4px 8px;
+  background: rgba(109, 241, 194, .12);
+  color: rgba(180, 255, 226, .92);
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 800;
+}
+
+@media (min-width: 520px) {
+  .store-payment-action-row {
+    grid-template-columns: 1fr;
+  }
+}

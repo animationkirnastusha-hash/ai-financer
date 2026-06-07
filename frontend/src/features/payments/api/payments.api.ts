@@ -12,9 +12,13 @@ export type StorePaymentOrderDto = {
   provider: StorePaymentProvider | string;
   status: 'pending' | 'paid' | 'cancelled' | 'failed' | string;
   amount: number;
+  baseAmount?: number;
+  discountPercent?: number;
   currency: string;
   description: string;
   payload: unknown;
+  telegramInvoiceLink?: string | null;
+  telegramPaymentChargeId?: string | null;
   paidAt: string | null;
   expiresAt: string | null;
   createdAt: string;
@@ -25,8 +29,11 @@ export type StorePaymentCheckoutDto = {
   status: string;
   title: string;
   amount: number;
+  baseAmount?: number;
+  discountPercent?: number;
   currency: string;
   payload?: string;
+  invoiceLink?: string | null;
 };
 
 export type StorePaymentCatalogDto = {
@@ -36,13 +43,18 @@ export type StorePaymentCatalogDto = {
     options: Array<{
       duration: StorePaymentDuration | string;
       amount: number;
+      baseAmount?: number;
+      discountPercent?: number;
       currency: string;
       starsAmount: number;
       starsCurrency: string;
       days: number;
+      monthsCharged?: number;
     }>;
   }>;
   providers: string[];
+  telegramStarsConfigured?: boolean;
+  starsRubRate?: number;
 };
 
 export type CreatePaymentOrderPayload = {
