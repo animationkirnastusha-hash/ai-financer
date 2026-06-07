@@ -1,14 +1,6 @@
 import { spawnSync } from 'node:child_process';
 
 const checks = [
-  ['health/auth', 'scripts/smoke/check-health-auth.mjs'],
-  ['prisma status', 'scripts/smoke/check-prisma-status.mjs'],
-  ['accounts/balances', 'scripts/smoke/check-accounts-balances.mjs'],
-  ['transactions', 'scripts/smoke/check-transactions.mjs'],
-  ['taxonomy', 'scripts/smoke/check-taxonomy.mjs'],
-  ['analytics', 'scripts/smoke/check-analytics.mjs'],
-  ['ai base', 'scripts/smoke/check-ai-base.mjs'],
-  ['reset/admin', 'scripts/smoke/check-reset-admin.mjs'],
   ['store/subscription', 'scripts/smoke/check-store-subscription.mjs'],
   ['business workspace', 'scripts/smoke/check-business-workspace.mjs'],
   ['receipt scans', 'scripts/smoke/check-receipt-scans.mjs'],
@@ -17,7 +9,7 @@ const checks = [
 const started = Date.now();
 const failed = [];
 
-console.log('AI-Financer predeploy smoke');
+console.log('AI-Financer monetization smoke');
 console.log(`Base URL: ${process.env.TEST_BASE_URL || process.env.API_BASE_URL || 'http://localhost:3000/api'}`);
 console.log('');
 
@@ -38,8 +30,8 @@ for (const [name, script] of checks) {
 
 console.log('');
 if (failed.length) {
-  console.error(`Predeploy smoke failed: ${failed.join(', ')}`);
+  console.error(`Monetization smoke failed: ${failed.join(', ')}`);
   process.exit(1);
 }
 
-console.log(`Predeploy smoke passed (${Date.now() - started}ms)`);
+console.log(`Monetization smoke passed (${Date.now() - started}ms)`);
