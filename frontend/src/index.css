@@ -39,3 +39,6 @@
 @import "./app/styles/32-business-workspace.css";
 
 @import "./app/styles/33-receipt-scans.css";
+@import "./app/styles/34-store.css";
+@import "./app/styles/35-store-payments.css";
+@import "./app/styles/36-premium-sheet.css";
