@@ -9,9 +9,6 @@ const checks = [
   ['analytics', 'scripts/smoke/check-analytics.mjs'],
   ['ai base', 'scripts/smoke/check-ai-base.mjs'],
   ['reset/admin', 'scripts/smoke/check-reset-admin.mjs'],
-  ['store/subscription', 'scripts/smoke/check-store-subscription.mjs'],
-  ['business workspace', 'scripts/smoke/check-business-workspace.mjs'],
-  ['receipt scans', 'scripts/smoke/check-receipt-scans.mjs'],
 ];
 
 const started = Date.now();

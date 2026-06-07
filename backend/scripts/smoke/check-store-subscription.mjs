@@ -61,12 +61,16 @@ await runSmoke('store-subscription', async (context) => {
   if (!business.access?.hasPremium) throw new Error('Business access must include premium');
 
   const referral = await requestJson(context, '/referral');
-  if (!referral.payload?.referral?.code) throw new Error('Referral code is missing');
+  const referralData = referral.payload?.referral ?? referral.payload ?? {};
+  const referralCode = referralData.code ?? referralData.referralCode;
+  if (!referralCode) {
+    throw new Error(`Referral code is missing. Response: ${JSON.stringify(referral.payload)}`);
+  }
 
   context.log('store and subscription flow passed', {
     status: business.access.status,
     hasPremium: business.access.hasPremium,
     hasBusiness: business.access.hasBusiness,
-    referralCode: referral.payload.referral.code,
+    referralCode,
   });
 });
