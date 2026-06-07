@@ -230,12 +230,18 @@ export default function PremiumPage() {
                 type="button"
                 key={feature.title}
                 className="store-feature-card"
-                onClick={() => openPremium({
-                  kind: 'locked_insight',
-                  title: t(feature.title),
-                  description: t(feature.caption),
-                  cta: t('store.action.premium'),
-                })}
+                onClick={() => {
+                  if (feature.title === 'store.features.receipts.title') {
+                    navigateTo('receipt-scans');
+                    return;
+                  }
+                  openPremium({
+                    kind: 'locked_insight',
+                    title: t(feature.title),
+                    description: t(feature.caption),
+                    cta: t('store.action.premium'),
+                  });
+                }}
               >
                 <strong>{t(feature.title)}</strong>
                 <span>{t(feature.caption)}</span>

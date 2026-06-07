@@ -30,6 +30,7 @@ const planningLinks: NavigationItem[] = [
 
 const growthLinks: NavigationItem[] = [
   { screen: 'store', labelKey: 'screen.store', captionKey: 'nav.store.caption' },
+  { screen: 'receipt-scans', labelKey: 'screen.receipts', captionKey: 'nav.receipts.caption' },
   { screen: 'referral', labelKey: 'common.referrals', captionKey: 'nav.referral.caption' },
 ];
 

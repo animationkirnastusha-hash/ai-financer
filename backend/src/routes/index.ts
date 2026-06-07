@@ -23,6 +23,7 @@ import obligationRoutes from '../modules/obligations/routes';
 import reportRoutes from '../modules/reports/routes';
 import spendingLimitRoutes from '../modules/spending-limits/routes';
 import paymentsRoutes from '../modules/payments/routes';
+import receiptScanRoutes from '../modules/receipt-scans/routes';
 import businessWorkspaceRoutes from '../modules/business-workspace/routes';
 const router = Router();
 
@@ -49,6 +50,7 @@ router.use('/obligations', obligationRoutes);
 router.use('/reports', reportRoutes);
 router.use('/spending-limits', spendingLimitRoutes);
 router.use('/payments', paymentsRoutes);
+router.use('/receipt-scans', receiptScanRoutes);
 router.use('/business-workspace', businessWorkspaceRoutes);
 router.use('/admin', adminRoutes);
 export default router;

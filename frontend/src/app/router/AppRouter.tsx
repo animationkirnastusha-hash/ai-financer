@@ -19,6 +19,7 @@ const ObligationsPage = lazy(() => import('@/pages/obligations/ObligationsPage')
 const SpendingLimitsPage = lazy(() => import('@/pages/spending-limits/SpendingLimitsPage'));
 const PremiumPage = lazy(() => import('@/pages/premium/PremiumPage'));
 const BusinessAccountantPage = lazy(() => import('@/pages/business-accountant/BusinessAccountantPage'));
+const ReceiptScansPage = lazy(() => import('@/pages/receipt-scans/ReceiptScansPage'));
 const SettingsPage = lazy(() => import('@/pages/settings/SettingsPage'));
 const SectionsPage = lazy(() => import('@/pages/sections/SectionsPage'));
 const AdminPage = lazy(() => import('@/pages/admin/AdminPage'));
@@ -60,6 +61,7 @@ export function AppRouter() {
         {currentScreen === 'store' && <PremiumPage />}
         {currentScreen === 'premium' && <PremiumPage />}
         {currentScreen === 'business-accountant' && (hasBusiness ? <BusinessAccountantPage /> : <PremiumPage />)}
+        {currentScreen === 'receipt-scans' && <ReceiptScansPage />}
         {currentScreen === 'sections' && <SectionsPage onBack={goBack} />}
         {currentScreen === 'admin' && (isAdmin ? <AdminPage /> : <DashboardPage />)}
         {currentScreen === 'referral' && <ReferralPage />}

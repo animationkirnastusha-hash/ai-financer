@@ -61,6 +61,7 @@ model User {
   subscription      Subscription?
   storePaymentOrders StorePaymentOrder[]
   businessWorkspace  BusinessWorkspace?
+  receiptScans      ReceiptScan[]
 
 
   @@index([telegramId])
@@ -753,3 +754,28 @@ model AIOperationEvent {
   @@index([createdAt])
 }
 
+
+
+model ReceiptScan {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  fileName    String
+  mimeType    String
+  sizeBytes   Int
+  status      String   @default("uploaded")
+  merchant    String?
+  totalAmount Int?
+  currency    String   @default("RUB")
+  purchasedAt DateTime?
+  rawText     String?
+  preview     String?
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+}

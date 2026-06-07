@@ -1,0 +1,131 @@
+.receipt-scans-page .app-page__inner {
+  padding-bottom: calc(env(safe-area-inset-bottom) + 104px);
+}
+
+.receipt-hero,
+.receipt-upload-card,
+.receipt-note-card,
+.receipt-empty-card,
+.receipt-preview-card {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: linear-gradient(145deg, rgba(18, 25, 34, 0.94), rgba(9, 13, 20, 0.96));
+  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.22);
+}
+
+.receipt-hero {
+  display: grid;
+  gap: 12px;
+}
+
+.receipt-hero h1 {
+  margin: 0;
+  font-size: 28px;
+  line-height: 1.05;
+  letter-spacing: -0.04em;
+}
+
+.receipt-hero p,
+.receipt-upload-card p,
+.receipt-note-card span,
+.receipt-empty-card span,
+.receipt-preview-card p {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.68);
+  line-height: 1.45;
+}
+
+.receipt-upload-card {
+  display: grid;
+  gap: 14px;
+}
+
+.receipt-upload-card__head,
+.receipt-preview-card__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.receipt-upload-card__head h2 {
+  margin: 4px 0 0;
+  font-size: 20px;
+  letter-spacing: -0.03em;
+}
+
+.receipt-upload-card__head > span,
+.receipt-preview-card__head em {
+  flex-shrink: 0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  padding: 7px 10px;
+  color: rgba(255, 255, 255, 0.76);
+  font-size: 12px;
+  font-style: normal;
+}
+
+.receipt-upload-card__action {
+  width: 100%;
+}
+
+.receipt-list {
+  display: grid;
+  gap: 12px;
+}
+
+.receipt-preview-card {
+  display: grid;
+  gap: 12px;
+  border-radius: 24px;
+  padding: 16px;
+}
+
+.receipt-preview-card__head strong {
+  display: block;
+  font-size: 16px;
+}
+
+.receipt-preview-card__head span {
+  display: block;
+  margin-top: 4px;
+  color: rgba(255, 255, 255, 0.54);
+  font-size: 12px;
+}
+
+.receipt-preview-card__fields {
+  display: grid;
+  gap: 8px;
+}
+
+.receipt-preview-card__fields div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.055);
+  padding: 10px 12px;
+}
+
+.receipt-preview-card__fields span {
+  color: rgba(255, 255, 255, 0.58);
+}
+
+.receipt-preview-card__fields strong {
+  text-align: right;
+}
+
+.receipt-note-card,
+.receipt-empty-card {
+  display: grid;
+  gap: 6px;
+  padding: 16px;
+}
+
+.receipt-inline-error {
+  border: 1px solid rgba(248, 113, 113, 0.28);
+  border-radius: 18px;
+  background: rgba(127, 29, 29, 0.28);
+  padding: 12px 14px;
+  color: rgba(254, 226, 226, 0.92);
+  font-size: 14px;
+}

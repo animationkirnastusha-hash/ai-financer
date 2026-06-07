@@ -14,6 +14,7 @@ export type AppScreen =
   | 'store'
   | 'premium'
   | 'business-accountant'
+  | 'receipt-scans'
   | 'sections'
   | 'admin'
   | 'referral';

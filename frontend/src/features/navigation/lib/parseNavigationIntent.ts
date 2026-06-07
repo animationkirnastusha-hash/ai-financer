@@ -21,6 +21,7 @@ function normalize(input: string) {
 
 function detectScreen(input: string): AppScreen | null {
   if (includesAny(input, ['админ', 'админка', 'admin', 'панель администратора'])) return 'admin';
+  if (includesAny(input, ['чек', 'чеки', 'фото чека', 'скан чека', 'receipt', 'receipts'])) return 'receipt-scans';
   if (includesAny(input, ['магазин', 'store', 'стор', 'тарифы', 'купить премиум', 'premium', 'business'])) return 'store';
   if (includesAny(input, ['ии бухгалтер', 'бухгалтер', 'бухгалтерия', 'фина бухгалтер', 'самозанятый', 'ип', 'малый бизнес'])) return 'business-accountant';
   if (includesAny(input, ['аналитика', 'аналитику', 'анализ', 'analytics', 'статистика', 'отчет', 'отчеты', 'операции', 'история', 'платежи'])) return 'analytics';
@@ -58,6 +59,7 @@ function isBareNavigationTarget(input: string, screen: AppScreen) {
     admin: ['админка', 'админ'],
     store: ['магазин', 'стор', 'тарифы', 'premium', 'премиум'],
     'business-accountant': ['ии бухгалтер', 'бухгалтер', 'бухгалтерия', 'фина бухгалтер'],
+    'receipt-scans': ['чеки', 'чек', 'фото чека', 'скан чека'],
   };
 
   return (bareAliases[screen] ?? []).some((alias) => input === alias || input === `страница ${alias}` || input === `экран ${alias}`);
