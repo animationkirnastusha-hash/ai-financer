@@ -47,6 +47,7 @@ export type StorePaymentCatalogDto = {
       discountPercent?: number;
       currency: string;
       starsAmount: number;
+      starsBaseAmount?: number;
       starsCurrency: string;
       days: number;
       monthsCharged?: number;
@@ -54,7 +55,6 @@ export type StorePaymentCatalogDto = {
   }>;
   providers: string[];
   telegramStarsConfigured?: boolean;
-  starsRubRate?: number;
 };
 
 export type CreatePaymentOrderPayload = {

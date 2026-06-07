@@ -2,7 +2,7 @@ import { prisma } from '../../lib/prisma';
 import { BadRequestError, ForbiddenError, NotFoundError } from '../../shared/core/errors';
 import { subscriptionService, type StoreProduct } from '../subscription/service';
 import { createTelegramStarsInvoiceLink, isTelegramStarsConfigured, answerTelegramPreCheckoutQuery } from './lib/telegram-stars';
-import { getPricePlan, toStarsAmount, type PaymentDuration } from './lib/payment-pricing';
+import { getPricePlan, type PaymentDuration } from './lib/payment-pricing';
 
 export type PaymentProvider = 'telegramStars' | 'crypto' | 'manual' | 'mock';
 
@@ -107,7 +107,6 @@ export class PaymentService {
       ],
       providers: ['telegramStars', 'crypto', 'manual', 'mock'] as PaymentProvider[],
       telegramStarsConfigured: isTelegramStarsConfigured(),
-      starsRubRate: Number(process.env.TELEGRAM_STARS_RUB_RATE || 1),
     };
   }
 
@@ -120,8 +119,9 @@ export class PaymentService {
         baseAmount: plan.baseAmount,
         discountPercent: plan.discountPercent,
         currency: plan.currency,
-        starsAmount: toStarsAmount(plan.amount),
-        starsCurrency: 'XTR',
+        starsAmount: plan.starsAmount,
+        starsBaseAmount: plan.starsBaseAmount,
+        starsCurrency: plan.starsCurrency,
         days: plan.days,
         monthsCharged: plan.monthsCharged,
       };
@@ -136,8 +136,8 @@ export class PaymentService {
     const duration = normalizeDuration(input.duration);
     const provider = normalizeProvider(input.provider);
     const basePlan = getPricePlan(product, duration);
-    const amount = provider === 'telegramStars' ? toStarsAmount(basePlan.amount) : basePlan.amount;
-    const currency = provider === 'telegramStars' ? 'XTR' : basePlan.currency;
+    const amount = provider === 'telegramStars' ? basePlan.starsAmount : basePlan.amount;
+    const currency = provider === 'telegramStars' ? basePlan.starsCurrency : basePlan.currency;
     const expiresAt = new Date(Date.now() + ORDER_TTL_MS);
 
     const payload = {
@@ -158,7 +158,7 @@ export class PaymentService {
         duration,
         provider,
         amount,
-        baseAmount: provider === 'telegramStars' ? toStarsAmount(basePlan.baseAmount) : basePlan.baseAmount,
+        baseAmount: provider === 'telegramStars' ? basePlan.starsBaseAmount : basePlan.baseAmount,
         discountPercent: basePlan.discountPercent,
         currency,
         description: basePlan.title,
