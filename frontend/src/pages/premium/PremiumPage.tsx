@@ -126,17 +126,7 @@ export default function PremiumPage() {
     }
 
     if (card.tone === 'business') {
-      if (hasBusiness || isAdmin) {
-        navigateTo('business-accountant');
-        return;
-      }
-
-      openPremium({
-        kind: 'deep_analysis',
-        title: t('store.business.locked.title'),
-        description: t('store.business.locked.caption'),
-        cta: t('store.action.premium'),
-      });
+      navigateTo('business-accountant');
       return;
     }
 
