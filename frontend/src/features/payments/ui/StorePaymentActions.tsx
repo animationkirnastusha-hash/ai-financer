@@ -29,6 +29,7 @@ export function StorePaymentActions({ product, title, compact = false }: Props) 
   const [catalog, setCatalog] = useState<StorePaymentCatalogDto | null>(null);
   const [duration, setDuration] = useState<StorePaymentDuration>('month');
   const [isBusy, setIsBusy] = useState(false);
+  const [busyProvider, setBusyProvider] = useState<StorePaymentProvider | null>(null);
   const [message, setMessage] = useState<string | null>(null);
 
   useEffect(() => {
@@ -83,7 +84,9 @@ export function StorePaymentActions({ product, title, compact = false }: Props) 
   };
 
   const createOrder = async (provider: StorePaymentProvider) => {
+    if (isBusy) return;
     setIsBusy(true);
+    setBusyProvider(provider);
     setMessage(null);
     try {
       const result = await paymentsApi.createOrder({ product, duration, provider });
@@ -111,6 +114,7 @@ export function StorePaymentActions({ product, title, compact = false }: Props) 
       setMessage(t('store.payment.error'));
     } finally {
       setIsBusy(false);
+      setBusyProvider(null);
       void loadSubscription();
     }
   };
@@ -150,15 +154,26 @@ export function StorePaymentActions({ product, title, compact = false }: Props) 
         </div>
       ) : null}
 
-      <div className="store-payment-action-row">
-        <button type="button" className="app-primary-button" disabled={isBusy || !selected} onClick={() => createOrder('telegramStars')}>
-          {isBusy ? t('store.payment.preparing') : t('store.payment.stars', { price: selectedStarsPrice })}
+      <div className="store-payment-methods" aria-label={t('store.payment.other')}>
+        <button type="button" className="store-payment-method is-active" disabled={isBusy || !selected} onClick={() => createOrder('telegramStars')}>
+          <span>{t('store.payment.starsAvailable')}</span>
+          <strong>{isBusy && busyProvider === 'telegramStars' ? t('store.payment.preparing') : t('store.payment.stars', { price: selectedStarsPrice })}</strong>
+        </button>
+        <button type="button" className="store-payment-method" disabled>
+          <span>{t('store.payment.soon')}</span>
+          <strong>{t('store.payment.cardsSoon')}</strong>
+        </button>
+        <button type="button" className="store-payment-method" disabled>
+          <span>{t('store.payment.soon')}</span>
+          <strong>{t('store.payment.cryptoSoon')}</strong>
         </button>
       </div>
 
+      <p className="store-payment-soon-note">{t('store.payment.soonCaption')}</p>
+
       {isAdmin ? (
         <button type="button" className="store-payment-test-button" disabled={isBusy || !selected} onClick={() => createOrder('mock')}>
-          {t('store.payment.testAccess')}
+          {isBusy && busyProvider === 'mock' ? t('store.payment.preparing') : t('store.payment.testAccess')}
         </button>
       ) : null}
 

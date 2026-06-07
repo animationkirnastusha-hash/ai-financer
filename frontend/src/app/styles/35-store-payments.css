@@ -164,3 +164,49 @@
   font-size: 12px;
   line-height: 1.25;
 }
+
+
+.store-payment-methods {
+  display: grid;
+  gap: 8px;
+}
+
+.store-payment-method {
+  display: grid;
+  gap: 4px;
+  width: 100%;
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 18px;
+  padding: 12px 14px;
+  background: rgba(255,255,255,.045);
+  color: inherit;
+  text-align: left;
+}
+
+.store-payment-method.is-active {
+  border-color: rgba(109, 241, 194, .42);
+  background: linear-gradient(180deg, rgba(109, 241, 194, .16), rgba(109, 241, 194, .07));
+}
+
+.store-payment-method:disabled:not(.is-active) {
+  cursor: default;
+  opacity: .62;
+}
+
+.store-payment-method span {
+  color: rgba(255,255,255,.55);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.store-payment-method strong {
+  font-size: 14px;
+  font-weight: 850;
+}
+
+.store-payment-soon-note {
+  margin: -2px 0 0;
+  color: rgba(255,255,255,.58);
+  font-size: 12px;
+  line-height: 1.35;
+}

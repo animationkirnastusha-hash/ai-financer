@@ -1,3 +1,4 @@
+import { useCallback, useMemo } from 'react';
 import { useSettingsStore } from '@/features/settings/model/settings.store';
 import type { AppLanguage } from '@/features/settings/model/settings.types';
 import { extraRuntimeTextDictionary } from '@/shared/lib/i18n.extra';
@@ -275,6 +276,11 @@ const dictionary = {
     'store.payment.discount': 'выгода {value}%',
     'store.payment.stars': 'Оплатить Stars · {price}',
     'store.payment.other': 'Другой способ',
+    'store.payment.soon': 'Скоро',
+    'store.payment.starsAvailable': 'Доступно сейчас',
+    'store.payment.cardsSoon': 'СБП и карты',
+    'store.payment.cryptoSoon': 'Крипта',
+    'store.payment.soonCaption': 'Добавим после запуска. Сейчас доступ можно подключить через Telegram Stars.',
     'store.payment.priceHint': 'ориентир {price}',
     'store.payment.yearHint': '{price} · 12 месяцев по цене 9',
     'store.payment.testAccess': 'Выдать тестовый доступ',
@@ -711,6 +717,11 @@ const dictionary = {
     'store.payment.discount': '{value}% benefit',
     'store.payment.stars': 'Pay with Stars · {price}',
     'store.payment.other': 'Other method',
+    'store.payment.soon': 'Soon',
+    'store.payment.starsAvailable': 'Available now',
+    'store.payment.cardsSoon': 'SBP and cards',
+    'store.payment.cryptoSoon': 'Crypto',
+    'store.payment.soonCaption': 'Coming after launch. For now, access can be activated with Telegram Stars.',
     'store.payment.priceHint': 'about {price}',
     'store.payment.yearHint': '{price} · 12 months for the price of 9',
     'store.payment.testAccess': 'Grant test access',
@@ -1280,9 +1291,13 @@ export function hasRuntimeTranslation(value: string) {
 
 export function useI18n() {
   const language = useSettingsStore((state) => state.appLanguage);
-  return {
-    language,
-    t: (key: I18nKey, params?: Record<string, string | number>) => translate(language, key, params),
-    rt: (value: string) => translateRuntimeText(language, value),
-  };
+
+  const t = useCallback(
+    (key: I18nKey, params?: Record<string, string | number>) => translate(language, key, params),
+    [language],
+  );
+
+  const rt = useCallback((value: string) => translateRuntimeText(language, value), [language]);
+
+  return useMemo(() => ({ language, t, rt }), [language, t, rt]);
 }

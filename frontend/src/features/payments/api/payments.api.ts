@@ -73,8 +73,33 @@ export type CompleteMockPaymentResult = {
   subscription: SubscriptionStatusDto;
 };
 
+const CATALOG_CACHE_TTL_MS = 5 * 60 * 1000;
+
+let catalogCache: { value: StorePaymentCatalogDto; expiresAt: number } | null = null;
+let catalogRequest: Promise<StorePaymentCatalogDto> | null = null;
+
+async function getPaymentCatalog() {
+  const now = Date.now();
+  if (catalogCache && catalogCache.expiresAt > now) {
+    return catalogCache.value;
+  }
+
+  if (!catalogRequest) {
+    catalogRequest = apiClient.get<StorePaymentCatalogDto>('/payments/catalog')
+      .then((value) => {
+        catalogCache = { value, expiresAt: Date.now() + CATALOG_CACHE_TTL_MS };
+        return value;
+      })
+      .finally(() => {
+        catalogRequest = null;
+      });
+  }
+
+  return catalogRequest;
+}
+
 export const paymentsApi = {
-  catalog: () => apiClient.get<StorePaymentCatalogDto>('/payments/catalog'),
+  catalog: getPaymentCatalog,
   createOrder: (payload: CreatePaymentOrderPayload) => apiClient.post<CreatePaymentOrderResult>('/payments/orders', payload),
   getOrder: (orderId: string) => apiClient.get<StorePaymentOrderDto>(`/payments/orders/${encodeURIComponent(orderId)}`),
   completeMock: (orderId: string) => apiClient.post<CompleteMockPaymentResult>(`/payments/orders/${encodeURIComponent(orderId)}/mock-complete`),
