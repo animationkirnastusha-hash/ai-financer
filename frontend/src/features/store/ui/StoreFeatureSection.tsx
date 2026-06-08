@@ -27,8 +27,8 @@ export function StoreFeatureSection({ features }: Props) {
   };
 
   return (
-    <section className="app-card premium-admin-section store-feature-section">
-      <div className="premium-admin-section__head">
+    <section className="app-card monetization-section store-feature-section">
+      <div className="monetization-section__head">
         <div>
           <div className="app-eyebrow">{t('store.features.eyebrow')}</div>
           <h2>{t('store.features.title')}</h2>

@@ -420,13 +420,13 @@
   align-items: center;
 }
 
-.onboarding-roadmap,
+.onboarding-flow,
 .onboarding-rule-list {
   display: grid;
   gap: 10px;
 }
 
-.onboarding-roadmap div,
+.onboarding-flow div,
 .onboarding-rule-list div,
 .onboarding-live-voice-guide {
   border: 1px solid rgba(255,255,255,.085);
@@ -435,14 +435,14 @@
   padding: 13px 14px;
 }
 
-.onboarding-roadmap div {
+.onboarding-flow div {
   display: grid;
   grid-template-columns: 34px 1fr;
   align-items: center;
   gap: 12px;
 }
 
-.onboarding-roadmap strong {
+.onboarding-flow strong {
   display: grid;
   width: 34px;
   height: 34px;
@@ -454,7 +454,7 @@
   font-weight: 900;
 }
 
-.onboarding-roadmap span,
+.onboarding-flow span,
 .onboarding-rule-list span,
 .onboarding-live-voice-guide span,
 .onboarding-live-voice-guide em {

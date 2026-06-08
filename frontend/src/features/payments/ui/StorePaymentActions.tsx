@@ -172,8 +172,8 @@ export function StorePaymentActions({ product, title, compact = false }: Props) 
       <p className="store-payment-soon-note">{t('store.payment.soonCaption')}</p>
 
       {isAdmin ? (
-        <button type="button" className="store-payment-test-button" disabled={isBusy || !selected} onClick={() => createOrder('mock')}>
-          {isBusy && busyProvider === 'mock' ? t('store.payment.preparing') : t('store.payment.testAccess')}
+        <button type="button" className="store-payment-admin-access-button" disabled={isBusy || !selected} onClick={() => createOrder('mock')}>
+          {isBusy && busyProvider === 'mock' ? t('store.payment.preparing') : t('store.payment.grantAccess')}
         </button>
       ) : null}
 

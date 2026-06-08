@@ -23,7 +23,7 @@
 @import "./fixes/stability-fixes.css";
 @import "./features/voice/voice-session.css";
 @import "./features/chat/chat-input-modal.css";
-@import "./features/premium/premium-admin.css";
+@import "./features/premium/premium-access.css";
 @import "./pages/onboarding-setup.css";
 @import "./pages/obligations.css";
 @import "./foundations/ios-input-zoom-guard.css";

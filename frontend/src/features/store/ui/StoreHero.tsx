@@ -16,12 +16,12 @@ export function StoreHero({ premiumCard, onPremiumOpen }: Props) {
   const name = user?.firstName || user?.username || t('store.userFallback');
 
   return (
-    <header className="premium-admin-hero store-hero">
-      <div className="premium-admin-hero__glow" aria-hidden="true" />
-      <div className="premium-admin-kicker">{t('store.hero.eyebrow')}</div>
+    <header className="monetization-hero store-hero">
+      <div className="monetization-hero__glow" aria-hidden="true" />
+      <div className="monetization-kicker">{t('store.hero.eyebrow')}</div>
       <h1>{t('store.hero.title', { name })}</h1>
       <p>{t('store.hero.caption')}</p>
-      <div className="premium-admin-hero__actions">
+      <div className="monetization-hero__actions">
         <button type="button" className="app-primary-button" onClick={() => onPremiumOpen(premiumCard)}>{t('store.action.premium')}</button>
         <button type="button" className="app-secondary-button" onClick={() => navigateTo('referral')}>{t('store.action.referral')}</button>
         {isAdmin ? <button type="button" className="app-secondary-button" onClick={() => navigateTo('admin')}>{t('store.action.admin')}</button> : null}

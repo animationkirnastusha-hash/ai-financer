@@ -34,8 +34,8 @@ export function StoreStatusCard({ subscription, isLoading }: Props) {
           : t('store.status.freeCaption');
 
   return (
-    <section className="app-card premium-admin-section store-status-card">
-      <div className="premium-admin-section__head">
+    <section className="app-card monetization-section store-status-card">
+      <div className="monetization-section__head">
         <div>
           <div className="app-eyebrow">{t('store.status.eyebrow')}</div>
           <h2>{isLoading ? t('store.status.loading') : statusText}</h2>

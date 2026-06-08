@@ -5,8 +5,8 @@ export function StorePaymentSection() {
   const { t } = useI18n();
 
   return (
-    <section className="app-card premium-admin-section store-payment-section">
-      <div className="premium-admin-section__head">
+    <section className="app-card monetization-section store-payment-section">
+      <div className="monetization-section__head">
         <div>
           <div className="app-eyebrow">{t('store.payment.eyebrow')}</div>
           <h2>{t('store.payment.title')}</h2>

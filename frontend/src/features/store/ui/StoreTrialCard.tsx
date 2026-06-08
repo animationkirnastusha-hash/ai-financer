@@ -12,8 +12,8 @@ export function StoreTrialCard({ subscription, isLoading, onStartTrial }: Props)
   const trialUsed = Boolean(subscription?.access.trialUsed);
 
   return (
-    <section className="app-card premium-admin-section store-trial-card">
-      <div className="premium-admin-section__head">
+    <section className="app-card monetization-section store-trial-card">
+      <div className="monetization-section__head">
         <div>
           <div className="app-eyebrow">{t('store.trial.eyebrow')}</div>
           <h2>{t('store.trial.title')}</h2>

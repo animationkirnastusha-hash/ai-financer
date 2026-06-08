@@ -11,8 +11,8 @@ export function StoreUsageCard({ subscription }: Props) {
   if (!usage) return null;
 
   return (
-    <section className="app-card premium-admin-section store-usage-card">
-      <div className="premium-admin-section__head">
+    <section className="app-card monetization-section store-usage-card">
+      <div className="monetization-section__head">
         <div>
           <div className="app-eyebrow">{t('store.usage.eyebrow')}</div>
           <h2>{t('store.usage.title')}</h2>

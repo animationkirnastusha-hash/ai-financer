@@ -107,7 +107,7 @@ export default function PremiumPage() {
   };
 
   return (
-    <div className="app-page premium-admin-page text-white">
+    <div className="app-page monetization-page text-white">
       <div className="app-page__inner space-y-4">
         <ScreenTopBar title={t('screen.store')} left="back" right={['home', 'settings']} />
         <StoreHero premiumCard={storeCards[0]} onPremiumOpen={handlePremiumOpen} />
