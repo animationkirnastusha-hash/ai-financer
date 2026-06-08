@@ -1,3 +1,4 @@
+import { useI18n } from '@/shared/lib/i18n';
 type Props = {
   open: boolean;
   onClose: () => void;
@@ -13,6 +14,8 @@ export function AIMenuSheet({
   onOpenCommands,
   onOpenVoice,
 }: Props) {
+  const { t } = useI18n();
+
   if (!open) return null;
 
   return (
@@ -23,10 +26,10 @@ export function AIMenuSheet({
         <div className="flex items-center justify-between">
           <div>
             <div className="text-[11px] uppercase tracking-[0.16em] text-white/35">
-              Меню Фины
+              {t('ai.menu.eyebrow')}
             </div>
             <div className="mt-1 text-lg font-semibold text-white">
-              Что сделать?
+              {t('ai.menu.title')}
             </div>
           </div>
 
@@ -35,7 +38,7 @@ export function AIMenuSheet({
             onClick={onClose}
             className="rounded-2xl border border-white/10 bg-white/6 px-3 py-2 text-sm text-white"
           >
-            Закрыть
+            {t('common.close')}
           </button>
         </div>
 
@@ -45,9 +48,9 @@ export function AIMenuSheet({
             onClick={onOpenAI}
             className="w-full rounded-[24px] border border-white/8 bg-white/[0.04] p-4 text-left transition hover:bg-white/[0.06]"
           >
-            <div className="text-sm font-medium text-white">Текстовый ввод</div>
+            <div className="text-sm font-medium text-white">{t('ai.menu.text.title')}</div>
             <div className="mt-1 text-xs text-white/45">
-              Открыть чат, если сейчас неудобно говорить
+              {t('ai.menu.text.caption')}
             </div>
           </button>
 
@@ -56,9 +59,9 @@ export function AIMenuSheet({
             onClick={onOpenCommands}
             className="w-full rounded-[24px] border border-white/8 bg-white/[0.04] p-4 text-left transition hover:bg-white/[0.06]"
           >
-            <div className="text-sm font-medium text-white">Показать команды</div>
+            <div className="text-sm font-medium text-white">{t('ai.menu.commands.title')}</div>
             <div className="mt-1 text-xs text-white/45">
-              Список быстрых команд для навигации
+              {t('ai.menu.commands.caption')}
             </div>
           </button>
 
@@ -67,9 +70,9 @@ export function AIMenuSheet({
             onClick={onOpenVoice}
             className="w-full rounded-[24px] border border-white/8 bg-white/[0.04] p-4 text-left transition hover:bg-white/[0.06]"
           >
-            <div className="text-sm font-medium text-white">Голосовой режим</div>
+            <div className="text-sm font-medium text-white">{t('ai.menu.voice.title')}</div>
             <div className="mt-1 text-xs text-white/45">
-              Открыть текстовый ввод и голосовой режим
+              {t('ai.menu.voice.caption')}
             </div>
           </button>
         </div>

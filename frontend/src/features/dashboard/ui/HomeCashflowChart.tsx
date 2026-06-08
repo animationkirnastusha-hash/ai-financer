@@ -1,7 +1,8 @@
 import type { TransactionDto } from '@/features/transactions/api/transactions.api';
 import type { HomeCashflowMode, HomeCashflowPeriod } from '@/features/dashboard/lib/homeFinanceAnalytics';
-import { buildHomeFinanceAnalytics, conicGradient, modeLabel, periodLabel } from '@/features/dashboard/lib/homeFinanceAnalytics';
+import { buildHomeFinanceAnalytics, conicGradient } from '@/features/dashboard/lib/homeFinanceAnalytics';
 import { formatMoney } from '@/shared/lib/money';
+import { useI18n } from '@/shared/lib/i18n';
 
 type Rates = { usd: number; eur: number };
 
@@ -26,41 +27,44 @@ export function HomeCashflowChart({
   onOpenDetails,
   onCreate,
 }: Props) {
+  const { t } = useI18n();
   const analytics = buildHomeFinanceAnalytics(transactions, mode, period, rates);
   const primary = analytics.categories[0];
   const hasData = analytics.total > 0;
+  const modeTitle = mode === 'expense' ? t('transaction.type.expense') : t('transaction.type.income');
+  const periodTitle = (value: HomeCashflowPeriod) => value === 'day' ? t('analytics.period.day') : value === 'week' ? t('analytics.period.week') : t('analytics.period.month');
 
   return (
     <section className="app-card app-home-cashflow-card">
       <div className="app-home-cashflow-card__head">
         <div>
-          <div className="app-eyebrow">Траты и доходы</div>
-          <h2>{modeLabel(mode)}</h2>
+          <div className="app-eyebrow">{t('dashboard.cashflow.eyebrow')}</div>
+          <h2>{modeTitle}</h2>
         </div>
         <div className="app-home-period-switch" data-no-swipe="true">
           {(['day', 'week', 'month'] as HomeCashflowPeriod[]).map((item) => (
-            <button key={item} type="button" data-active={period === item} onClick={() => onPeriodChange(item)}>{periodLabel(item)}</button>
+            <button key={item} type="button" data-active={period === item} onClick={() => onPeriodChange(item)}>{periodTitle(item)}</button>
           ))}
         </div>
       </div>
 
       <div className="app-home-mode-switch" data-no-swipe="true">
-        <button type="button" data-active={mode === 'expense'} onClick={() => onModeChange('expense')}>Расходы</button>
-        <button type="button" data-active={mode === 'income'} onClick={() => onModeChange('income')}>Доходы</button>
+        <button type="button" data-active={mode === 'expense'} onClick={() => onModeChange('expense')}>{t('transaction.type.expense')}</button>
+        <button type="button" data-active={mode === 'income'} onClick={() => onModeChange('income')}>{t('transaction.type.income')}</button>
       </div>
 
-      <button type="button" className="app-home-chart-preview" onClick={onOpenDetails} aria-label="Открыть диаграмму">
+      <button type="button" className="app-home-chart-preview" onClick={onOpenDetails} aria-label={t('dashboard.cashflow.openChart')}>
         <span className="app-home-donut" style={{ background: conicGradient(analytics.categories) }}>
           <i />
         </span>
         <span className="app-home-chart-preview__text">
-          <b>{hasData ? formatMoney(analytics.total, 'RUB', { sign: mode === 'expense' ? 'minus' : 'plus' }) : 'Пока пусто'}</b>
-          <small>{hasData && primary ? `${primary.name} — ${primary.percent}%` : 'Добавь первую операцию за выбранный период'}</small>
+          <b>{hasData ? formatMoney(analytics.total, 'RUB', { sign: mode === 'expense' ? 'minus' : 'plus' }) : t('dashboard.cashflow.empty')}</b>
+          <small>{hasData && primary ? `${primary.name} — ${primary.percent}%` : t('dashboard.cashflow.emptyCaption')}</small>
         </span>
       </button>
 
       <button type="button" className="app-primary-button app-home-cashflow-card__action" onClick={() => onCreate(mode)}>
-        {mode === 'expense' ? 'Добавить расход' : 'Добавить доход'}
+        {mode === 'expense' ? t('dashboard.cashflow.addExpense') : t('dashboard.cashflow.addIncome')}
       </button>
     </section>
   );

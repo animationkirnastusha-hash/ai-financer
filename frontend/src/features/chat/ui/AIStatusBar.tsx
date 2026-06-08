@@ -1,3 +1,5 @@
+import { useI18n } from '@/shared/lib/i18n';
+
 type Props = {
   pendingCount: number;
   auditCount: number;
@@ -13,6 +15,7 @@ export function AIStatusBar({
   onOpenPending,
   onOpenAudit,
 }: Props) {
+  const { t } = useI18n();
   const hasPending = pendingCount > 0;
 
   return (
@@ -21,12 +24,12 @@ export function AIStatusBar({
         <div className="flex items-center justify-between gap-3">
           <div className="min-w-0">
             <div className="text-[10px] uppercase tracking-[0.16em] text-white/35">
-              AI Core
+              {t('chat.status.eyebrow')}
             </div>
             <div className="mt-1 text-sm text-white/85">
               {hasPending
-                ? `AI подготовил ${pendingCount} ${pendingCount === 1 ? 'действие' : 'действия'} для проверки`
-                : 'AI готов: можно писать расходы, доходы, счета, категории и разделы'}
+                ? t('chat.status.pending', { count: pendingCount })
+                : t('chat.status.ready')}
             </div>
           </div>
 
@@ -45,13 +48,13 @@ export function AIStatusBar({
             className="rounded-2xl border border-amber-400/15 bg-amber-400/10 px-3 py-3 text-left transition active:scale-[0.99]"
           >
             <div className="text-[10px] uppercase tracking-[0.14em] text-amber-200/75">
-              Confirm
+              {t('chat.status.confirm')}
             </div>
             <div className="mt-1 text-sm font-medium text-white">
-              {pendingCount > 0 ? `${pendingCount} на проверке` : 'Нет действий'}
+              {pendingCount > 0 ? t('textChat.pending.caption', { count: pendingCount }) : t('chat.status.confirm.empty')}
             </div>
             <div className="mt-1 text-[11px] text-white/45">
-              Подтверждение и отмена
+              {t('chat.status.confirm.caption')}
             </div>
           </button>
 
@@ -61,13 +64,13 @@ export function AIStatusBar({
             className="rounded-2xl border border-cyan-400/15 bg-cyan-400/10 px-3 py-3 text-left transition active:scale-[0.99]"
           >
             <div className="text-[10px] uppercase tracking-[0.14em] text-cyan-200/75">
-              Audit
+              {t('chat.status.audit')}
             </div>
             <div className="mt-1 text-sm font-medium text-white">
-              {auditCount} событий
+              {t('chat.status.audit.count', { count: auditCount })}
             </div>
             <div className="mt-1 text-[11px] text-white/45">
-              Последнее: {lastAuditTimeLabel}
+              {t('chat.status.audit.last', { time: lastAuditTimeLabel })}
             </div>
           </button>
         </div>

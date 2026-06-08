@@ -3,6 +3,7 @@ import type { AccountDto } from '@/features/accounts/api/accounts.api';
 import type { AppCurrency } from '@/features/settings/model/settings.types';
 import { APP_CURRENCIES, convertCurrency, getCurrencyProfile } from '@/features/currency/lib/currency';
 import { formatMoney } from '@/shared/lib/money';
+import { useI18n } from '@/shared/lib/i18n';
 
 const currencyLabels: Record<AppCurrency, string> = Object.fromEntries(APP_CURRENCIES.map((item) => [item.code, item.label])) as Record<AppCurrency, string>;
 
@@ -49,6 +50,7 @@ export function HomeBalanceCarousel({
   delta,
   onOpenAccounts,
 }: Props) {
+  const { t } = useI18n();
   const [activeIndex, setActiveIndex] = useState(0);
   const [touchX, setTouchX] = useState<number | null>(null);
   const compareCurrency = secondaryCurrencyEnabled ? secondaryCurrency : mainCurrency === 'RUB' ? 'USD' : 'RUB';
@@ -58,10 +60,10 @@ export function HomeBalanceCarousel({
     const total: Slide = {
       kind: 'total',
       id: 'total',
-      name: 'Все деньги',
+      name: t('dashboard.balance.allMoney'),
       amount: fromRub(totalRub, mainCurrency, rates),
       currency: mainCurrency,
-      caption: accounts.length ? `${accounts.length} сч.` : 'счета ещё не созданы',
+      caption: accounts.length ? t('dashboard.balance.accountsShort', { count: accounts.length }) : t('dashboard.balance.noAccounts'),
       conversion: conversionText(fromRub(totalRub, mainCurrency, rates), mainCurrency, compareCurrency, rates),
     };
 
@@ -71,12 +73,12 @@ export function HomeBalanceCarousel({
       name: account.name,
       amount: Number(account.balance) || 0,
       currency: account.currency as AppCurrency,
-      caption: account.type === 'cash' ? 'наличные' : account.type === 'card' ? 'карта' : account.type === 'savings' ? 'накопления' : 'счёт',
+      caption: account.type === 'cash' ? t('dashboard.balance.cash') : account.type === 'card' ? t('dashboard.balance.card') : account.type === 'savings' ? t('dashboard.balance.savings') : t('dashboard.balance.account'),
       conversion: conversionText(Number(account.balance) || 0, account.currency as AppCurrency, compareCurrency, rates),
     }));
 
     return [total, ...accountSlides];
-  }, [accounts, compareCurrency, mainCurrency, rates]);
+  }, [accounts, compareCurrency, mainCurrency, rates, t]);
 
   const safeIndex = activeIndex % Math.max(1, slides.length);
   const active = slides[safeIndex] ?? slides[0];
@@ -99,30 +101,30 @@ export function HomeBalanceCarousel({
     <header className="app-card app-card--hero app-home-balance-card" data-no-swipe="true" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
       <div className="app-home-balance-card__top">
         <div className="min-w-0">
-          <div className="app-eyebrow">Баланс</div>
+          <div className="app-eyebrow">{t('dashboard.balance.eyebrow')}</div>
           <div className="app-home-balance-card__amount">{formatMoney(active.amount, active.currency)}</div>
           <p>{active.kind === 'total' ? currencyLabels[active.currency] : active.name} · {active.caption}</p>
         </div>
         <div className="app-home-balance-card__nav">
-          <button type="button" onClick={() => go(-1)} aria-label="Предыдущий счёт">‹</button>
-          <span>{active.kind === 'total' ? 'Итого' : active.currency}</span>
-          <button type="button" onClick={() => go(1)} aria-label="Следующий счёт">›</button>
+          <button type="button" onClick={() => go(-1)} aria-label={t('dashboard.balance.prev')}>‹</button>
+          <span>{active.kind === 'total' ? t('dashboard.balance.total') : active.currency}</span>
+          <button type="button" onClick={() => go(1)} aria-label={t('dashboard.balance.next')}>›</button>
         </div>
       </div>
 
       <div className="app-home-balance-card__rate">{active.conversion}</div>
 
       <div className="app-home-balance-card__metrics">
-        <div className="app-home-metric"><span>Доходы</span><b>{formatMoney(income, mainCurrency, { sign: 'plus' })}</b></div>
-        <div className="app-home-metric"><span>Расходы</span><b>{formatMoney(expenses, mainCurrency, { sign: 'minus' })}</b></div>
-        <div className="app-home-metric"><span>Итог</span><b>{formatMoney(delta, mainCurrency, { sign: 'auto' })}</b></div>
+        <div className="app-home-metric"><span>{t('dashboard.balance.income')}</span><b>{formatMoney(income, mainCurrency, { sign: 'plus' })}</b></div>
+        <div className="app-home-metric"><span>{t('dashboard.balance.expenses')}</span><b>{formatMoney(expenses, mainCurrency, { sign: 'minus' })}</b></div>
+        <div className="app-home-metric"><span>{t('dashboard.balance.result')}</span><b>{formatMoney(delta, mainCurrency, { sign: 'auto' })}</b></div>
       </div>
 
       <div className="app-home-balance-card__footer">
         <div className="app-home-balance-card__dots" aria-hidden="true">
           {slides.map((slide, index) => <i key={slide.id} data-active={index === safeIndex} />)}
         </div>
-        <button type="button" onClick={onOpenAccounts}>Открыть счета</button>
+        <button type="button" onClick={onOpenAccounts}>{t('dashboard.balance.openAccounts')}</button>
       </div>
     </header>
   );

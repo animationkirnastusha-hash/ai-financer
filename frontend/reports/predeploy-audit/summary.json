@@ -1,7 +1,7 @@
 {
-  "hardcodedRussian": 2072,
-  "technicalWords": 217,
-  "translationKeyLeaks": 15,
+  "hardcodedRussian": 1001,
+  "technicalWords": 0,
+  "translationKeyLeaks": 0,
   "cssStructure": 0,
   "largeFiles": 12,
   "envLeaks": 0

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Button, TextField } from '@/shared/ui';
+import { useI18n } from '@/shared/lib/i18n';
 
 type ComposerProps = {
   onSend: (text: string) => Promise<void>;
@@ -7,6 +8,7 @@ type ComposerProps = {
 };
 
 export function Composer({ onSend, disabled = false }: ComposerProps) {
+  const { t } = useI18n();
   const [value, setValue] = useState('');
 
   const handleSend = async () => {
@@ -23,11 +25,11 @@ export function Composer({ onSend, disabled = false }: ComposerProps) {
         <TextField
           value={value}
           onChange={(event) => setValue(event.target.value)}
-          placeholder="Напиши, что нужно сделать..."
+          placeholder={t('chat.composer.placeholder')}
           rows={1}
         />
         <Button onClick={handleSend} disabled={disabled}>
-          Send
+          {t('chat.composer.send')}
         </Button>
       </div>
     </div>

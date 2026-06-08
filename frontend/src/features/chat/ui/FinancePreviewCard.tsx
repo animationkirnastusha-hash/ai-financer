@@ -2,6 +2,7 @@ import { useState } from 'react';
 
 import { getPreviewFromMessageData } from '@/features/pending-actions/lib/pendingActionView';
 import { cn } from '@/shared/lib/cn';
+import { useI18n } from '@/shared/lib/i18n';
 import { Button, Surface } from '@/shared/ui';
 
 type FinancePreviewCardProps = {
@@ -21,6 +22,7 @@ export function FinancePreviewCard({
   onConfirm,
   onCancel,
 }: FinancePreviewCardProps) {
+  const { t } = useI18n();
   const [isConfirming, setIsConfirming] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
   const view = getPreviewFromMessageData({ title, intent, data });
@@ -54,7 +56,7 @@ export function FinancePreviewCard({
       <div className="p-4">
         <div className="flex flex-wrap items-center gap-2">
           <span className="rounded-full border border-emerald-300/20 bg-emerald-300/10 px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.16em] text-emerald-100/85">
-            Проверь
+            {t('chat.preview.check')}
           </span>
           <span
             className={cn(
@@ -103,16 +105,16 @@ export function FinancePreviewCard({
         {requiresConfirmation ? (
           <div className="mt-4 grid grid-cols-[1.15fr_0.85fr] gap-2">
             <Button fullWidth disabled={isProcessing} onClick={handleConfirm}>
-              {isConfirming ? 'Выполняю...' : 'Подтвердить'}
+              {isConfirming ? t('chat.preview.confirming') : t('chat.preview.confirm')}
             </Button>
 
             <Button fullWidth variant="secondary" disabled={isProcessing} onClick={handleCancel}>
-              {isCancelling ? 'Отменяю...' : 'Отмена'}
+              {isCancelling ? t('chat.preview.cancelling') : t('chat.preview.cancel')}
             </Button>
           </div>
         ) : (
           <div className="mt-4 rounded-2xl border border-emerald-400/15 bg-emerald-400/10 px-3 py-2 text-sm text-emerald-200">
-            Операция выполнена.
+            {t('chat.preview.done')}
           </div>
         )}
       </div>

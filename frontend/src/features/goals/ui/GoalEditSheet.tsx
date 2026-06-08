@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import type { GoalDto } from '@/features/goals/api/goals.api';
 import { Drawer } from '@/shared/ui/Drawer';
 import { Button } from '@/shared/ui/Button';
+import { useI18n } from '@/shared/lib/i18n';
 
 type Props = {
   open: boolean;
@@ -13,6 +14,7 @@ type Props = {
 };
 
 export function GoalEditSheet({ open, goal, isSaving = false, onClose, onSave, onDelete }: Props) {
+  const { t } = useI18n();
   const [title, setTitle] = useState('');
   const [targetAmount, setTargetAmount] = useState('');
   const [currentAmount, setCurrentAmount] = useState('');
@@ -36,7 +38,7 @@ export function GoalEditSheet({ open, goal, isSaving = false, onClose, onSave, o
 
   const submit = async () => {
     if (!canSave) {
-      setError('Укажи название и сумму цели.');
+      setError(t('goal.edit.error.required'));
       return;
     }
     await onSave({
@@ -51,7 +53,7 @@ export function GoalEditSheet({ open, goal, isSaving = false, onClose, onSave, o
 
   const remove = async () => {
     if (!goal || !onDelete) return;
-    if (!window.confirm(`Удалить цель «${goal.title}»?`)) return;
+    if (!window.confirm(t('goal.edit.confirmDelete', { title: goal.title }))) return;
     await onDelete(goal);
     onClose();
   };
@@ -60,32 +62,32 @@ export function GoalEditSheet({ open, goal, isSaving = false, onClose, onSave, o
     <Drawer
       open={open}
       onClose={onClose}
-      title={goal ? 'Цель' : 'Новая цель'}
-      subtitle="Короткая форма. Можно также сказать: “создай цель отпуск 120000”."
+      title={goal ? t('goal.edit.title.edit') : t('goal.edit.title.create')}
+      subtitle={t('goal.edit.subtitle')}
       footer={(
         <div className="grid grid-cols-2 gap-2">
-          {goal && onDelete ? <Button variant="secondary" onClick={remove} disabled={isSaving}>Удалить</Button> : <Button variant="secondary" onClick={onClose} disabled={isSaving}>Отмена</Button>}
-          <Button onClick={submit} disabled={!canSave}>{isSaving ? 'Сохраняю...' : 'Сохранить'}</Button>
+          {goal && onDelete ? <Button variant="secondary" onClick={remove} disabled={isSaving}>{t('goal.edit.delete')}</Button> : <Button variant="secondary" onClick={onClose} disabled={isSaving}>{t('goal.edit.cancel')}</Button>}
+          <Button onClick={submit} disabled={!canSave}>{isSaving ? t('goal.edit.saving') : t('goal.edit.save')}</Button>
         </div>
       )}
     >
       <div className="space-y-3">
         <label className="app-field">
-          <span>Название</span>
-          <input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Например, Отпуск" />
+          <span>{t('goal.edit.name')}</span>
+          <input value={title} onChange={(event) => setTitle(event.target.value)} placeholder={t('goal.edit.namePlaceholder')} />
         </label>
         <div className="grid grid-cols-2 gap-3">
           <label className="app-field">
-            <span>Цель</span>
+            <span>{t('goal.edit.target')}</span>
             <input inputMode="decimal" value={targetAmount} onChange={(event) => setTargetAmount(event.target.value)} placeholder="120000" />
           </label>
           <label className="app-field">
-            <span>Сейчас</span>
+            <span>{t('goal.edit.current')}</span>
             <input inputMode="decimal" value={currentAmount} onChange={(event) => setCurrentAmount(event.target.value)} placeholder="0" />
           </label>
         </div>
         <label className="app-field">
-          <span>Валюта</span>
+          <span>{t('goal.edit.currency')}</span>
           <select value={currency} onChange={(event) => setCurrency(event.target.value)}>
             <option value="RUB">RUB</option>
             <option value="USD">USD</option>
@@ -93,8 +95,8 @@ export function GoalEditSheet({ open, goal, isSaving = false, onClose, onSave, o
           </select>
         </label>
         <label className="app-field">
-          <span>Заметка</span>
-          <textarea value={note} onChange={(event) => setNote(event.target.value)} placeholder="Для чего эта цель" />
+          <span>{t('goal.edit.note')}</span>
+          <textarea value={note} onChange={(event) => setNote(event.target.value)} placeholder={t('goal.edit.notePlaceholder')} />
         </label>
         {error ? <div className="app-error-box">{error}</div> : null}
       </div>

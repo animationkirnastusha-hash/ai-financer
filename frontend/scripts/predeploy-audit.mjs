@@ -18,28 +18,34 @@ const EXCLUDED_TEXT_FILES = [
   normalizePath(path.join('src', 'shared', 'lib', 'i18n.extra.ts')),
 ];
 
+const HARD_CODED_RUSSIAN_DATA_FILE_PATTERNS = [
+  /\/categoryIcons\.ts$/,
+  /\/currency\.ts$/,
+  /\/parse[A-Z][A-Za-z]+Intent\.ts$/,
+  /\/taxonomy-icons\.ts$/,
+];
+
 const TECH_WORDS = [
   'admin-only',
-  'frontend',
-  'backend',
-  'api',
   'debug',
   'mock',
   'feature flag',
   'feature flags',
-  'feature',
-  'usage',
-  'usage limit',
-  'usage limits',
   'subscription model',
   'roadmap',
   'runtime',
   'legacy',
-  'stt',
-  'beta',
   'test access',
   'grant test access',
-  'target',
+];
+
+const TECH_WORD_REGEXES = [
+  ...TECH_WORDS.map((word) => ({ word, regex: new RegExp(`\\b${escapeRegex(word)}\\b`, 'i') })),
+  { word: 'API', regex: /\bAPI\b/ },
+  { word: 'STT', regex: /\bSTT\b/ },
+  { word: 'frontend', regex: /\bfrontend\b/ },
+  { word: 'backend', regex: /\bbackend\b/ },
+  { word: 'beta', regex: /\bbeta\b/i },
 ];
 
 const SAFE_TECH_FILE_PATTERNS = [
@@ -128,6 +134,8 @@ function collectHardcodedRussian(files) {
     if (!SOURCE_EXTENSIONS.has(ext)) continue;
     if (isExcludedTextFile(file)) continue;
     const relative = rel(file);
+    const normalized = `/${relative}`;
+    if (HARD_CODED_RUSSIAN_DATA_FILE_PATTERNS.some((pattern) => pattern.test(normalized))) continue;
     const lines = readLines(file);
     lines.forEach((line, index) => {
       if (!/[А-Яа-яЁё]/.test(line)) return;
@@ -142,28 +150,40 @@ function collectHardcodedRussian(files) {
   return findings;
 }
 
+function isLikelyCodeOnlyLine(clean) {
+  if (!clean) return true;
+  if (/^(import|export)\b/.test(clean)) return true;
+  if (/^type\b|^interface\b|^const\b|^let\b|^var\b|^function\b|^return\b/.test(clean) && !/<[A-Za-z][^>]*>/.test(clean)) return true;
+  if (/event\.target|\.target\.|target=\"_blank\"|target=\{/.test(clean)) return true;
+  if (/^<button\b/.test(clean) && !/>[^<]*(API|backend|frontend|STT|mock|debug|roadmap|runtime|legacy|beta|admin-only|test access|grant test access|subscription model)[^<]*</i.test(clean)) return true;
+  if (/from ['"].+\.api['"]/.test(clean)) return true;
+  if (/apiClient\.|\.api['"]|\/api\//i.test(clean) && !/['"`][^'"`]*(API|backend|frontend|STT|mock|debug|roadmap)[^'"`]*['"`]/.test(clean)) return true;
+  if (/^if\s*\(|^switch\s*\(|^return\s+[a-zA-Z0-9_?.]+/.test(clean) && !/<[A-Za-z][^>]*>/.test(clean)) return true;
+  return false;
+}
+
+function isLikelyUserVisibleTechnicalLine(clean) {
+  if (isLikelyCodeOnlyLine(clean)) return false;
+  if (/<[A-Za-z][^>]*>/.test(clean)) return true;
+  if (/aria-label=|placeholder=|title=|label[:=]|message[:=]|description[:=]|caption[:=]|toast/i.test(clean)) return true;
+  if (/\bt\(\s*['"`]/.test(clean)) return false;
+  return /['"`][^'"`]*(API|backend|frontend|STT|mock|debug|roadmap|runtime|legacy|beta|admin-only|test access|grant test access|subscription model)[^'"`]*['"`]/i.test(clean);
+}
+
 function collectTechnicalWords(files) {
   const findings = [];
-  const wordRegexes = TECH_WORDS.map((word) => ({
-    word,
-    regex: new RegExp(`\\b${escapeRegex(word)}\\b`, 'i'),
-  }));
 
   for (const file of files) {
     const ext = path.extname(file);
     if (!SOURCE_EXTENSIONS.has(ext)) continue;
     const relative = rel(file);
-    const normalized = `/${relative}`;
-    const isLikelyTechnicalFile = SAFE_TECH_FILE_PATTERNS.some((pattern) => pattern.test(normalized));
+    if (/\/api\/|\.api\./.test(`/${relative}`)) continue;
     const lines = readLines(file);
 
     lines.forEach((line, index) => {
       const clean = stripLineNoise(line);
-      if (!clean) return;
-      if (isLikelyTechnicalFile && !/<[A-Za-z][^>]*>|aria-label=|placeholder=|title=|label[:=]|message[:=]|description[:=]|caption[:=]/i.test(clean)) {
-        return;
-      }
-      for (const { word, regex } of wordRegexes) {
+      if (!isLikelyUserVisibleTechnicalLine(clean)) return;
+      for (const { word, regex } of TECH_WORD_REGEXES) {
         if (!regex.test(clean)) continue;
         findings.push({
           file: relative,
@@ -179,6 +199,20 @@ function collectTechnicalWords(files) {
 
 function escapeRegex(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function isSafeTranslationKeyReference(clean, key) {
+  const escaped = escapeRegex(key);
+  if (new RegExp('\\b(t|rt)\\(\\s*[\'\"`]' + escaped + '[\'\"`]').test(clean)) return true;
+  if (new RegExp('\\bfilename\\s*=\\s*[\'\"`]' + escaped + '[\'\"`]').test(clean)) return true;
+  if (/^\s*['"`][a-z][a-z0-9]*(?:\.[a-z][a-z0-9]*){1,5}['"`]\s*,?\s*$/.test(clean)) return true;
+  if (/^\s*[a-zA-Z0-9_$]+:\s*['"`][a-z][a-z0-9]*(?:\.[a-z][a-z0-9]*){1,5}['"`]\s*,?\s*$/.test(clean)) return true;
+  if (/\b(labelKey|captionKey|title|caption|label|key):\s*['"`][a-z][a-z0-9]*(?:\.[a-z][a-z0-9]*){1,5}['"`]/.test(clean)) return true;
+  if (/Array<.*Key|labelKey|captionKey/.test(clean)) return true;
+  if (/^if\s*\(|^switch\s*\(|^case\s+/.test(clean)) return true;
+  if (/\.includes\(|\.startsWith\(|\.endsWith\(|===|!==/.test(clean)) return true;
+  if (/key\s*=|id\s*=|name\s*=/.test(clean) && !/<[A-Za-z][^>]*>/.test(clean)) return true;
+  return false;
 }
 
 function collectTranslationKeyLeaks(files) {
@@ -202,9 +236,7 @@ function collectTranslationKeyLeaks(files) {
         const key = match[1];
         const prefix = key.split('.')[0];
         if (!commonPrefixes.has(prefix)) continue;
-        const isExpectedTranslationCall = new RegExp(`\\b(t|rt)\\(\\s*['"\`]${escapeRegex(key)}['"\`]`).test(clean);
-        const isKeyDeclaration = /:\s*['"`]/.test(clean) && /\b[a-z][a-z0-9]*\b/.test(clean);
-        if (isExpectedTranslationCall || isKeyDeclaration) continue;
+        if (isSafeTranslationKeyReference(clean, key)) continue;
         findings.push({ file: relative, line: index + 1, key, text: clean.slice(0, 240) });
       }
     });

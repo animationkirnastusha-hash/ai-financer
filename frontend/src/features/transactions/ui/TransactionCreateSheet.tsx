@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useAccountsStore } from '@/features/accounts/model/accounts.store';
 import { Drawer } from '@/shared/ui/Drawer';
 import { Button } from '@/shared/ui/Button';
+import { useI18n } from '@/shared/lib/i18n';
 
 type TransactionType = 'income' | 'expense' | 'transfer';
 
@@ -25,6 +26,7 @@ type Props = {
 };
 
 export function TransactionCreateSheet({ open, isSaving = false, initialType = 'expense', modalLayer, onClose, onSave }: Props) {
+  const { t } = useI18n();
   const accounts = useAccountsStore((state) => state.items);
   const loadAccounts = useAccountsStore((state) => state.loadAccounts);
 
@@ -58,19 +60,19 @@ export function TransactionCreateSheet({ open, isSaving = false, initialType = '
   const submit = async () => {
     setError(null);
     if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) {
-      setError('Введи сумму больше нуля.');
+      setError(t('transaction.create.error.amount'));
       return;
     }
     if (!accountId) {
-      setError('Выбери счёт.');
+      setError(t('transaction.create.error.account'));
       return;
     }
     if (type !== 'transfer' && title.trim().length < 2) {
-      setError('Напиши название операции. По нему Фина подберёт категорию и иконку.');
+      setError(t('transaction.create.error.title'));
       return;
     }
     if (type === 'transfer' && (!toAccountId || toAccountId === accountId)) {
-      setError('Для перевода нужен другой счёт получателя.');
+      setError(t('transaction.create.error.transferAccount'));
       return;
     }
 
@@ -94,13 +96,13 @@ export function TransactionCreateSheet({ open, isSaving = false, initialType = '
     <Drawer
       open={open}
       onClose={onClose}
-      title="Новая операция"
-      subtitle="Укажи название и сумму. Категорию, раздел, цвет и иконку Фина подберёт автоматически."
+      title={t('transaction.create.title')}
+      subtitle={t('transaction.create.subtitle')}
       layer={modalLayer}
       footer={(
         <div className="grid grid-cols-2 gap-2">
-          <Button variant="secondary" onClick={onClose} disabled={isSaving}>Отмена</Button>
-          <Button onClick={submit} disabled={!canSave}>{isSaving ? 'Сохраняю...' : 'Сохранить'}</Button>
+          <Button variant="secondary" onClick={onClose} disabled={isSaving}>{t('goal.edit.cancel')}</Button>
+          <Button onClick={submit} disabled={!canSave}>{isSaving ? t('goal.edit.saving') : t('goal.edit.save')}</Button>
         </div>
       )}
     >
@@ -108,48 +110,48 @@ export function TransactionCreateSheet({ open, isSaving = false, initialType = '
         <div className="grid grid-cols-3 gap-2">
           {(['expense', 'income', 'transfer'] as const).map((item) => (
             <button key={item} type="button" onClick={() => { setType(item); setToAccountId(null); }} className={type === item ? 'app-choice app-choice--active' : 'app-choice'}>
-              {item === 'expense' ? 'Расход' : item === 'income' ? 'Доход' : 'Перевод'}
+              {item === 'expense' ? t('transaction.type.expense') : item === 'income' ? t('transaction.type.income') : t('transaction.type.transfer')}
             </button>
           ))}
         </div>
 
         {type !== 'transfer' ? (
           <label className="app-field">
-            <span>Название</span>
-            <input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Например: колбаса" autoFocus />
+            <span>{t('transaction.create.name')}</span>
+            <input value={title} onChange={(event) => setTitle(event.target.value)} placeholder={t('transaction.create.namePlaceholder')} autoFocus />
           </label>
         ) : null}
 
         <label className="app-field">
-          <span>Сумма</span>
+          <span>{t('transaction.create.amount')}</span>
           <input inputMode="decimal" value={amount} onChange={(event) => setAmount(event.target.value)} placeholder="350" />
         </label>
 
         {type !== 'transfer' ? (
           <label className="app-field">
-            <span>Описание</span>
-            <textarea value={description} onChange={(event) => setDescription(event.target.value)} placeholder="Необязательно: магазин, детали покупки, комментарий" />
+            <span>{t('transaction.create.description')}</span>
+            <textarea value={description} onChange={(event) => setDescription(event.target.value)} placeholder={t('transaction.create.descriptionPlaceholder')} />
           </label>
         ) : null}
 
         <label className="app-field">
-          <span>Счёт</span>
+          <span>{t('transaction.create.account')}</span>
           <select value={accountId} onChange={(event) => setAccountId(event.target.value)}>
-            <option value="">Выбери счёт</option>
+            <option value="">{t('transaction.create.selectAccount')}</option>
             {accounts.map((account) => <option key={account.id} value={account.id}>{account.name} · {account.currency}</option>)}
           </select>
         </label>
 
         {type === 'transfer' ? (
           <label className="app-field">
-            <span>Куда</span>
+            <span>{t('transaction.create.toAccount')}</span>
             <select value={toAccountId ?? ''} onChange={(event) => setToAccountId(event.target.value || null)}>
-              <option value="">Выбери счёт</option>
+              <option value="">{t('transaction.create.selectAccount')}</option>
               {accounts.filter((account) => account.id !== accountId).map((account) => <option key={account.id} value={account.id}>{account.name} · {account.currency}</option>)}
             </select>
           </label>
         ) : (
-          <div className="app-inline-hint">Категория и раздел появятся автоматически после сохранения.</div>
+          <div className="app-inline-hint">{t('transaction.create.autoCategoryHint')}</div>
         )}
 
         {error ? <div className="app-error-box">{error}</div> : null}

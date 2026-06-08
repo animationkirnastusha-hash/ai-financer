@@ -1,12 +1,12 @@
 # Predeploy audit report
 
-Generated: 2026-06-08T19:55:05.628Z
+Generated: 2026-06-08T20:31:38.358Z
 
 ## Summary
 
-- Hardcoded Russian candidates: 2072
-- Technical/user-visible word candidates: 217
-- Translation key leak candidates: 15
+- Hardcoded Russian candidates: 1001
+- Technical/user-visible word candidates: 0
+- Translation key leak candidates: 0
 - CSS structure findings: 0
 - Large files: 12
 - Env leaks: 0
@@ -16,9 +16,6 @@ Generated: 2026-06-08T19:55:05.628Z
 | --- | --- | --- |
 | src/features/ai-core/ui/AIAssistantDock.tsx | 28 | aria-label="Открыть Фину" |
 | src/features/ai-core/ui/AICoreOrb.tsx | 101 | <CompanionButton size="lg" mood={moodFromState(state, isActive, isVoiceLocked)} label="Фина" tabIndex={-1} /> |
-| src/features/ai-core/ui/AIMenuSheet.tsx | 48 | <div className="text-sm font-medium text-white">Текстовый ввод</div> |
-| src/features/ai-core/ui/AIMenuSheet.tsx | 59 | <div className="text-sm font-medium text-white">Показать команды</div> |
-| src/features/ai-core/ui/AIMenuSheet.tsx | 70 | <div className="text-sm font-medium text-white">Голосовой режим</div> |
 | src/features/audit-log/lib/formatAuditLogItem.ts | 18 | return `Выполнено AI-действие${categoryName ? ` · ${categoryName}` : ''}${amount ? ` · ${amount}` : ''}`; |
 | src/features/audit-log/lib/formatAuditLogItem.ts | 20 | return 'AI выполнил действие'; |
 | src/features/audit-log/lib/formatAuditLogItem.ts | 25 | return `Ожидает подтверждения${categoryName ? ` · ${categoryName}` : ''}${amount ? ` · ${amount}` : ''}`; |
@@ -51,13 +48,7 @@ Generated: 2026-06-08T19:55:05.628Z
 | src/features/chat/model/useChatController.ts | 271 | const assistantText = response?.message \|\| '↩️ Операция отменена.'; |
 | src/features/chat/model/useChatController.ts | 294 | text: 'Не удалось отменить операцию. Возможно, она уже отменена или изменена.', |
 | src/features/chat/model/useChatController.ts | 295 | content: 'Не удалось отменить операцию. Возможно, она уже отменена или изменена.', |
-| src/features/chat/ui/AIStatusBar.tsx | 28 | ? `AI подготовил ${pendingCount} ${pendingCount === 1 ? 'действие' : 'действия'} для проверки` |
-| src/features/chat/ui/AIStatusBar.tsx | 29 | : 'AI готов: можно писать расходы, доходы, счета, категории и разделы'} |
-| src/features/chat/ui/AIStatusBar.tsx | 51 | {pendingCount > 0 ? `${pendingCount} на проверке` : 'Нет действий'} |
 | src/features/chat/ui/ChatScreen.tsx | 56 | : 'нет событий'; |
-| src/features/chat/ui/Composer.tsx | 26 | placeholder="Напиши, что нужно сделать..." |
-| src/features/chat/ui/FinancePreviewCard.tsx | 106 | {isConfirming ? 'Выполняю...' : 'Подтвердить'} |
-| src/features/chat/ui/FinancePreviewCard.tsx | 110 | {isCancelling ? 'Отменяю...' : 'Отмена'} |
 | src/features/chat/ui/TextChatOverlay.tsx | 39 | const cleanName = normalizeForWake(companionName \|\| 'Фина'); |
 | src/features/chat/ui/TextChatOverlay.tsx | 40 | const aliases = Array.from(new Set([cleanName, 'фина', 'финна', 'фину', 'фине', 'финой', 'fina'].filter(Boolean))); |
 | src/features/chat/ui/TextChatOverlay.tsx | 70 | ?? accounts.find((account) => String(account.name ?? '').toLowerCase().includes('нал')) |
@@ -153,16 +144,6 @@ Generated: 2026-06-08T19:55:05.628Z
 | src/features/companion/ui/CompanionPresence.tsx | 59 | <span>Уровень {level}</span> |
 | src/features/companion/ui/CompanionPresence.tsx | 64 | <div className="app-xp-panel__future">Скоро XP станет ресурсом</div> |
 | src/features/companion/ui/CompanionPresence.tsx | 70 | <button type="button" onClick={() => navigateTo('companion')} className="app-secondary-button">Открыть прогресс</button> |
-| src/features/currency/lib/currency.ts | 11 | { code: 'RUB', label: 'Российский рубль', symbol: '₽', countries: ['RU'] }, |
-| src/features/currency/lib/currency.ts | 12 | { code: 'USD', label: 'Доллар США', symbol: '$', countries: ['US'] }, |
-| src/features/currency/lib/currency.ts | 13 | { code: 'EUR', label: 'Евро', symbol: '€', countries: ['DE', 'FR', 'ES', 'IT', 'FI', 'NL', 'PT', 'AT', 'BE', 'IE', 'LV', 'LT', 'EE'] }, |
-| src/features/currency/lib/currency.ts | 14 | { code: 'KZT', label: 'Казахстанский тенге', symbol: '₸', countries: ['KZ'] }, |
-| src/features/currency/lib/currency.ts | 15 | { code: 'UZS', label: 'Узбекский сум', symbol: 'soʻm', countries: ['UZ'] }, |
-| src/features/currency/lib/currency.ts | 16 | { code: 'KGS', label: 'Кыргызский сом', symbol: 'с', countries: ['KG'] }, |
-| src/features/currency/lib/currency.ts | 17 | { code: 'AMD', label: 'Армянский драм', symbol: '֏', countries: ['AM'] }, |
-| src/features/currency/lib/currency.ts | 18 | { code: 'GEL', label: 'Грузинский лари', symbol: '₾', countries: ['GE'] }, |
-| src/features/currency/lib/currency.ts | 19 | { code: 'AZN', label: 'Азербайджанский манат', symbol: '₼', countries: ['AZ'] }, |
-| src/features/currency/lib/parseCurrencyIntent.ts | 9 | return text.toLowerCase().replace(/[ё]/g, 'е').replace(/[^a-zа-я0-9\s$€₽]/gi, ' ').replace(/\s+/g, ' ').trim(); |
 | src/features/dashboard/lib/homeFinanceAnalytics.ts | 61 | if (period === 'day') return 'День'; |
 | src/features/dashboard/lib/homeFinanceAnalytics.ts | 62 | if (period === 'week') return 'Неделя'; |
 | src/features/dashboard/lib/homeFinanceAnalytics.ts | 63 | return 'Месяц'; |
@@ -171,24 +152,6 @@ Generated: 2026-06-08T19:55:05.628Z
 | src/features/dashboard/lib/homeFinanceAnalytics.ts | 102 | const sectionName = item.category?.section?.name?.trim() \|\| item.section?.name?.trim() \|\| 'Без раздела'; |
 | src/features/dashboard/lib/homeFinanceAnalytics.ts | 119 | const categoryName = item.category?.name?.trim() \|\| (mode === 'expense' ? 'Без категории' : 'Доходы'); |
 | src/features/dashboard/lib/homeFinanceAnalytics.ts | 120 | const sectionName = item.category?.section?.name?.trim() \|\| item.section?.name?.trim() \|\| 'Без раздела'; |
-| src/features/dashboard/ui/HomeBalanceCarousel.tsx | 61 | name: 'Все деньги', |
-| src/features/dashboard/ui/HomeBalanceCarousel.tsx | 64 | caption: accounts.length ? `${accounts.length} сч.` : 'счета ещё не созданы', |
-| src/features/dashboard/ui/HomeBalanceCarousel.tsx | 74 | caption: account.type === 'cash' ? 'наличные' : account.type === 'card' ? 'карта' : account.type === 'savings' ? 'накопления' : 'счёт', |
-| src/features/dashboard/ui/HomeBalanceCarousel.tsx | 102 | <div className="app-eyebrow">Баланс</div> |
-| src/features/dashboard/ui/HomeBalanceCarousel.tsx | 107 | <button type="button" onClick={() => go(-1)} aria-label="Предыдущий счёт">‹</button> |
-| src/features/dashboard/ui/HomeBalanceCarousel.tsx | 108 | <span>{active.kind === 'total' ? 'Итого' : active.currency}</span> |
-| src/features/dashboard/ui/HomeBalanceCarousel.tsx | 109 | <button type="button" onClick={() => go(1)} aria-label="Следующий счёт">›</button> |
-| src/features/dashboard/ui/HomeBalanceCarousel.tsx | 116 | <div className="app-home-metric"><span>Доходы</span><b>{formatMoney(income, mainCurrency, { sign: 'plus' })}</b></div> |
-| src/features/dashboard/ui/HomeBalanceCarousel.tsx | 117 | <div className="app-home-metric"><span>Расходы</span><b>{formatMoney(expenses, mainCurrency, { sign: 'minus' })}</b></div> |
-| src/features/dashboard/ui/HomeBalanceCarousel.tsx | 118 | <div className="app-home-metric"><span>Итог</span><b>{formatMoney(delta, mainCurrency, { sign: 'auto' })}</b></div> |
-| src/features/dashboard/ui/HomeBalanceCarousel.tsx | 125 | <button type="button" onClick={onOpenAccounts}>Открыть счета</button> |
-| src/features/dashboard/ui/HomeCashflowChart.tsx | 37 | <div className="app-eyebrow">Траты и доходы</div> |
-| src/features/dashboard/ui/HomeCashflowChart.tsx | 48 | <button type="button" data-active={mode === 'expense'} onClick={() => onModeChange('expense')}>Расходы</button> |
-| src/features/dashboard/ui/HomeCashflowChart.tsx | 49 | <button type="button" data-active={mode === 'income'} onClick={() => onModeChange('income')}>Доходы</button> |
-| src/features/dashboard/ui/HomeCashflowChart.tsx | 52 | <button type="button" className="app-home-chart-preview" onClick={onOpenDetails} aria-label="Открыть диаграмму"> |
-| src/features/dashboard/ui/HomeCashflowChart.tsx | 57 | <b>{hasData ? formatMoney(analytics.total, 'RUB', { sign: mode === 'expense' ? 'minus' : 'plus' }) : 'Пока пусто'}</b> |
-| src/features/dashboard/ui/HomeCashflowChart.tsx | 58 | <small>{hasData && primary ? `${primary.name} — ${primary.percent}%` : 'Добавь первую операцию за выбранный период'}</small> |
-| src/features/dashboard/ui/HomeCashflowChart.tsx | 63 | {mode === 'expense' ? 'Добавить расход' : 'Добавить доход'} |
 | src/features/dashboard/ui/HomeCategoryOperationsModal.tsx | 7 | return transaction.title \|\| transaction.description \|\| transaction.category?.name \|\| 'Операция'; |
 | src/features/dashboard/ui/HomeCategoryOperationsModal.tsx | 39 | <p>{sorted.length} опер. · {formatMoney(total \|\| group.amount, 'RUB')}</p> |
 | src/features/dashboard/ui/HomeCategoryOperationsModal.tsx | 41 | <button type="button" className="app-icon-button" onClick={onClose} aria-label="Закрыть">×</button> |
@@ -200,243 +163,63 @@ Generated: 2026-06-08T19:55:05.628Z
 | src/features/dashboard/ui/HomeChartDetailsModal.tsx | 43 | <button type="button" onClick={(event) => { event.stopPropagation(); onOpenReport(); }}>Скачать отчёт</button> |
 | src/features/dashboard/ui/HomeChartDetailsModal.tsx | 48 | <div className="app-empty-button">Добавь первую операцию — здесь появится разбор по категориям.</div> |
 | src/features/dashboard/ui/HomeChartDetailsModal.tsx | 54 | <small>{group.sectionName} · {group.count} опер.</small> |
-| src/features/dashboard/ui/HomeFinanceInsight.tsx | 18 | ? `${modeLabel(mode)} за период “${periodLabel(period).toLowerCase()}”: ${formatMoney(analytics.total, 'RUB')}. Больше всего — ${first.name}.` |
-| src/features/dashboard/ui/HomeFinanceInsight.tsx | 19 | : `За выбранный период пока нет ${mode === 'expense' ? 'расходов' : 'доходов'}.`; |
-| src/features/dashboard/ui/HomeFinanceInsight.tsx | 23 | <div className="app-eyebrow">Вывод Фины</div> |
-| src/features/goals/ui/GoalEditSheet.tsx | 39 | setError('Укажи название и сумму цели.'); |
-| src/features/goals/ui/GoalEditSheet.tsx | 54 | if (!window.confirm(`Удалить цель «${goal.title}»?`)) return; |
-| src/features/goals/ui/GoalEditSheet.tsx | 63 | title={goal ? 'Цель' : 'Новая цель'} |
-| src/features/goals/ui/GoalEditSheet.tsx | 64 | subtitle="Короткая форма. Можно также сказать: “создай цель отпуск 120000”." |
-| src/features/goals/ui/GoalEditSheet.tsx | 67 | {goal && onDelete ? <Button variant="secondary" onClick={remove} disabled={isSaving}>Удалить</Button> : <Button variant="secondary" onClick={onClose} disabled={isSaving}>Отмена</Button>} |
-| src/features/goals/ui/GoalEditSheet.tsx | 68 | <Button onClick={submit} disabled={!canSave}>{isSaving ? 'Сохраняю...' : 'Сохранить'}</Button> |
-| src/features/goals/ui/GoalEditSheet.tsx | 74 | <span>Название</span> |
-| src/features/goals/ui/GoalEditSheet.tsx | 75 | <input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Например, Отпуск" /> |
-| src/features/goals/ui/GoalEditSheet.tsx | 79 | <span>Цель</span> |
-| src/features/goals/ui/GoalEditSheet.tsx | 83 | <span>Сейчас</span> |
-| src/features/goals/ui/GoalEditSheet.tsx | 88 | <span>Валюта</span> |
+| src/features/insights/lib/buildInsights.ts | 37 | title: `AI ждёт подтверждения: ${pendingActions.length}`, |
+| src/features/insights/lib/buildInsights.ts | 40 | ? 'Есть одно действие, требующее внимания.' |
+| src/features/insights/lib/buildInsights.ts | 41 | : 'Есть несколько AI-действий, требующих внимания.', |
+| src/features/insights/lib/buildInsights.ts | 42 | ctaLabel: 'Открыть pending', |
+| src/features/insights/lib/buildInsights.ts | 51 | title: `AI выполнил действий: ${executedCount}`, |
+| src/features/insights/lib/buildInsights.ts | 52 | description: 'AI уже провёл операции и сохранил их в аудит-логе.', |
+| src/features/insights/lib/buildInsights.ts | 53 | ctaLabel: 'Открыть audit', |
+| src/features/insights/lib/buildInsights.ts | 62 | title: `AI подготовил черновиков: ${previewedCount}`, |
+| src/features/insights/lib/buildInsights.ts | 63 | description: 'AI распознаёт команды и собирает структурированные операции.', |
+| src/features/insights/lib/buildInsights.ts | 72 | title: `Ожидают подтверждения: ${pendingAuditCount}`, |
+| src/features/insights/lib/buildInsights.ts | 73 | description: 'В аудите есть действия, которые пока не завершены.', |
+| src/features/insights/lib/buildInsights.ts | 74 | ctaLabel: 'Проверить', |
+| src/features/insights/lib/buildInsights.ts | 83 | title: 'AI готов к работе', |
+| src/features/insights/lib/buildInsights.ts | 85 | 'Начни с команды вроде «кофе 350», «+50000 зарплата» или «перевёл 10000».', |
+| src/features/modals/ui/ObligationModals.tsx | 31 | const confirmed = window.confirm(`Удалить «${loan.title}»? Платежи и напоминания по нему тоже будут удалены.`); |
+| src/features/modals/ui/UtilityModals.tsx | 40 | <div className="app-eyebrow">Счета</div> |
+| src/features/modals/ui/UtilityModals.tsx | 41 | <h2 className="mt-2 text-2xl font-semibold tracking-[-0.045em] text-white">Правила кошелька</h2> |
+| src/features/modals/ui/UtilityModals.tsx | 42 | <p className="mt-2 text-sm leading-6 text-white/50">Выбери основную валюту и быстро проверь важные счета.</p> |
+| src/features/modals/ui/UtilityModals.tsx | 46 | <div className="text-xs text-white/42">Основная валюта</div> |
+| src/features/modals/ui/UtilityModals.tsx | 55 | <div className="app-settings-tile"><small>Главный счёт</small><b>{accounts.find((item) => item.id === primaryAccountId)?.name \|\| 'Не выбран'}</b></div> |
+| src/features/modals/ui/UtilityModals.tsx | 56 | <div className="app-settings-tile"><small>Доходы</small><b>{accounts.find((item) => item.id === incomeAccountId)?.name \|\| 'Не выбран'}</b></div> |
+| src/features/modals/ui/UtilityModals.tsx | 60 | <button type="button" onClick={() => closeModal('accounts-tools')} className="app-secondary-button w-full">Готово</button> |
+| src/features/modals/ui/UtilityModals.tsx | 72 | <div className="app-eyebrow">Категории</div> |
+| src/features/modals/ui/UtilityModals.tsx | 73 | <h2 className="mt-2 text-2xl font-semibold tracking-[-0.045em] text-white">Порядок для расходов и доходов</h2> |
+| src/features/modals/ui/UtilityModals.tsx | 74 | <p className="mt-2 text-sm leading-6 text-white/50">Разделы объединяют категории и помогают видеть, куда уходят деньги.</p> |
+| src/features/modals/ui/UtilityModals.tsx | 79 | <button type="button" onClick={() => closeModal('taxonomy-tools')} className="app-secondary-button">Закрыть</button> |
+| src/features/modals/ui/UtilityModals.tsx | 80 | <button type="button" onClick={() => openModal({ type: 'section-edit', section: null })} className="app-primary-button">Новый раздел</button> |
+| src/features/modals/ui/UtilityModals.tsx | 98 | <div className="app-eyebrow">Категории</div> |
+| src/features/modals/ui/UtilityModals.tsx | 99 | <h2 className="mt-2 text-2xl font-semibold tracking-[-0.045em] text-white">{section === 'ungrouped' ? 'Без раздела' : section.name}</h2> |
+| src/features/modals/ui/UtilityModals.tsx | 101 | {section === 'ungrouped' ? null : <button type="button" onClick={() => openModal({ type: 'section-edit', section })} className="app-secondary-button">Править</button>} |
+| src/features/modals/ui/UtilityModals.tsx | 104 | {modalCategories.length === 0 ? <div className="app-empty-inline">Категорий пока нет.</div> : null} |
+| src/features/modals/ui/UtilityModals.tsx | 108 | <small>{category.type === 'income' ? 'Доходы' : category.type === 'both' ? 'Расходы и доходы' : 'Расходы'}</small> |
+| src/features/modals/ui/UtilityModals.tsx | 115 | <button type="button" onClick={() => closeModal('taxonomy-section')} className="app-secondary-button">Закрыть</button> |
+| src/features/modals/ui/UtilityModals.tsx | 116 | <button type="button" onClick={() => openModal({ type: 'category-edit', sectionId: section === 'ungrouped' ? null : section.id })} className="app-primary-button">Категория</button> |
+| src/features/notifications/model/notifications.store.ts | 44 | set({ error: error instanceof Error ? error.message : 'Не удалось загрузить уведомления.' }); |
+| src/features/notifications/model/notifications.store.ts | 64 | set({ error: error instanceof Error ? error.message : 'Не удалось загрузить настройки уведомлений.' }); |
+| src/features/notifications/model/notifications.store.ts | 106 | set({ error: error instanceof Error ? error.message : 'Не удалось сохранить настройки.' }); |
+| src/features/notifications/ui/NotificationSheet.tsx | 82 | <div className="app-eyebrow">Уведомления</div> |
+| src/features/notifications/ui/NotificationSheet.tsx | 83 | <h2>Что важно</h2> |
+| src/features/notifications/ui/NotificationSheet.tsx | 84 | <p>{unreadCount > 0 ? `${unreadCount} непрочитанных` : 'Новых уведомлений нет'}</p> |
+| src/features/notifications/ui/NotificationSheet.tsx | 90 | aria-label="Настройки уведомлений" |
+| src/features/notifications/ui/NotificationSheet.tsx | 98 | <button type="button" className="notification-sheet__icon-button notification-sheet__icon-button--close" onClick={onClose} aria-label="Закрыть">×</button> |
+| src/features/notifications/ui/NotificationSheet.tsx | 114 | <div className="notification-empty">Загружаю уведомления…</div> |
+| src/features/notifications/ui/NotificationSheet.tsx | 117 | <b>Пока пусто</b> |
+| src/features/notifications/ui/NotificationSheet.tsx | 118 | <span>Здесь появятся платежи, просрочки и важные события.</span> |
+| src/features/obligations/model/obligations.store.ts | 29 | return error instanceof Error ? error.message : 'Не удалось выполнить действие'; |
+| src/features/obligations/ui/HomeObligationsWidget.tsx | 47 | if (!nearest?.nextPaymentDate) return 'дата не указана'; |
+| src/features/obligations/ui/HomeObligationsWidget.tsx | 50 | if (days < 0) return `${base} · просрочено`; |
+| src/features/obligations/ui/HomeObligationsWidget.tsx | 51 | if (days === 0) return `${base} · сегодня`; |
+| src/features/obligations/ui/HomeObligationsWidget.tsx | 52 | if (days === 1) return `${base} · завтра`; |
+| src/features/obligations/ui/HomeObligationsWidget.tsx | 53 | return `${base} · через ${days} дн.`; |
 
 ## Technical/user-visible word candidates
-| file | line | word | text |
-| --- | --- | --- | --- |
-| src/app/providers/AuthBootstrap.tsx | 3 | api | import { authApi, type FallbackInfoResponse } from '@/features/chat/api/auth.api'; |
-| src/app/providers/AuthBootstrap.tsx | 111 | target | target="_blank" |
-| src/app/providers/AuthBootstrap.tsx | 127 | target | onChange={(event) => setCode(event.target.value)} |
-| src/features/accounts/ui/AccountDetailsSheet.tsx | 2 | api | import type { AccountDto } from '@/features/accounts/api/accounts.api'; |
-| src/features/accounts/ui/AccountTransferSheet.tsx | 3 | api | import type { AccountDto } from '@/features/accounts/api/accounts.api'; |
-| src/features/accounts/ui/AccountTransferSheet.tsx | 137 | target | onChange={(event) => setAmount(event.target.value)} |
-| src/features/accounts/ui/AccountTransferSheet.tsx | 147 | target | onChange={(event) => setDescription(event.target.value)} |
-| src/features/accounts/ui/CreateAccountSheet.tsx | 93 | target | <input value={draft.name} disabled={isSubmitting} onChange={(event) => updateDraft({ name: event.target.value })} placeholder={t('accounts.create.namePlaceholder')} /> |
-| src/features/accounts/ui/CreateAccountSheet.tsx | 120 | target | <input inputMode="decimal" value={draft.initialBalance} disabled={isSubmitting} onChange={(event) => updateDraft({ initialBalance: event.target.value })} placeholder="0" /> |
-| src/features/accounts/ui/EditAccountModal.tsx | 2 | api | import type { AccountDto, UpdateAccountPayload } from '@/features/accounts/api/accounts.api'; |
-| src/features/accounts/ui/EditAccountModal.tsx | 83 | target | <input value={name} onChange={(e) => setName(e.target.value)} className="w-full bg-transparent text-base outline-none" /> |
-| src/features/accounts/ui/EditAccountModal.tsx | 88 | target | <select value={type} onChange={(e) => setType(e.target.value)} className="w-full bg-transparent text-base outline-none"> |
-| src/features/accounts/ui/EditAccountModal.tsx | 93 | target | <select value={currency} onChange={(e) => setCurrency(e.target.value)} className="w-full bg-transparent text-base outline-none"> |
-| src/features/accounts/ui/EditAccountModal.tsx | 100 | target | <input inputMode="numeric" value={balance} onChange={(e) => setBalance(e.target.value)} className="w-full bg-transparent text-base outline-none" /> |
-| src/features/business-workspace/ui/BusinessSetupCard.tsx | 2 | api | import type { BusinessWorkspaceAccountDto, BusinessWorkspaceDto, BusinessProfileType } from '@/features/business-workspace/api/businessWorkspace.api'; |
-| src/features/business-workspace/ui/BusinessSetupCard.tsx | 78 | target | <input value={displayName} onChange={(event) => setDisplayName(event.target.value)} placeholder={t('business.setup.namePlaceholder')} /> |
-| src/features/business-workspace/ui/BusinessSetupCard.tsx | 82 | target | <input value={taxMode} onChange={(event) => setTaxMode(event.target.value)} placeholder={t('business.setup.taxPlaceholder')} /> |
-| src/features/business-workspace/ui/BusinessSetupCard.tsx | 86 | target | <select value={incomeAccountId} onChange={(event) => setIncomeAccountId(event.target.value)} disabled={!hasAccounts}> |
-| src/features/business-workspace/ui/BusinessSetupCard.tsx | 93 | target | <select value={expenseAccountId} onChange={(event) => setExpenseAccountId(event.target.value)} disabled={!hasAccounts}> |
-| src/features/business-workspace/ui/BusinessSetupCard.tsx | 100 | target | <input inputMode="numeric" value={monthlyIncomePlan} onChange={(event) => setMonthlyIncomePlan(event.target.value)} placeholder="150000" /> |
-| src/features/business-workspace/ui/BusinessSetupCard.tsx | 104 | target | <input inputMode="numeric" value={monthlyExpensePlan} onChange={(event) => setMonthlyExpensePlan(event.target.value)} placeholder="70000" /> |
-| src/features/business-workspace/ui/BusinessSetupCard.tsx | 108 | target | <input inputMode="numeric" value={reminderDay} onChange={(event) => setReminderDay(event.target.value)} placeholder="25" /> |
-| src/features/business-workspace/ui/BusinessSummaryCards.tsx | 1 | api | import type { BusinessWorkspaceSummaryDto } from '@/features/business-workspace/api/businessWorkspace.api'; |
-| src/features/chat/ui/ChatScreen.tsx | 11 | api | import type { TransactionDto } from '@/features/transactions/api/transactions.api'; |
-| src/features/chat/ui/Composer.tsx | 25 | target | onChange={(event) => setValue(event.target.value)} |
-| src/features/chat/ui/TextChatOverlay.tsx | 564 | target | <input ref={receiptCameraInputRef} type="file" accept={RECEIPT_ACCEPTED_TYPES} capture="environment" className="sr-only" onChange={(event) => void handleReceiptFile(event.target.files?.[0] ?? null)} /> |
-| src/features/chat/ui/TextChatOverlay.tsx | 565 | target | <input ref={receiptFileInputRef} type="file" accept={RECEIPT_ACCEPTED_TYPES} className="sr-only" onChange={(event) => void handleReceiptFile(event.target.files?.[0] ?? null)} /> |
-| src/features/chat/ui/TextChatOverlay.tsx | 571 | target | onChange={(event) => setValue(event.target.value)} |
-| src/features/companion/ui/CompanionPresence.tsx | 3 | api | import { companionApi, type CompanionStateDto } from '@/shared/api/companion.api'; |
-| src/features/dashboard/ui/HomeBalanceCarousel.tsx | 2 | api | import type { AccountDto } from '@/features/accounts/api/accounts.api'; |
-| src/features/dashboard/ui/HomeBalanceCarousel.tsx | 35 | target | function conversionText(amount: number, from: AppCurrency, target: AppCurrency, rates: Rates) { |
-| src/features/dashboard/ui/HomeBalanceCarousel.tsx | 36 | target | if (from === target) return getCurrencyProfile(from).label; |
-| src/features/dashboard/ui/HomeBalanceCarousel.tsx | 38 | target | return `≈ ${formatMoney(fromRub(rub, target, rates), target)}`; |
-| src/features/dashboard/ui/HomeCashflowChart.tsx | 1 | api | import type { TransactionDto } from '@/features/transactions/api/transactions.api'; |
-| src/features/dashboard/ui/HomeCategoryOperationsModal.tsx | 1 | api | import type { TransactionDto } from '@/features/transactions/api/transactions.api'; |
-| src/features/dashboard/ui/HomeChartDetailsModal.tsx | 1 | api | import type { TransactionDto } from '@/features/transactions/api/transactions.api'; |
-| src/features/dashboard/ui/HomeFinanceInsight.tsx | 1 | api | import type { TransactionDto } from '@/features/transactions/api/transactions.api'; |
-| src/features/goals/ui/GoalEditSheet.tsx | 2 | api | import type { GoalDto } from '@/features/goals/api/goals.api'; |
-| src/features/goals/ui/GoalEditSheet.tsx | 75 | target | <input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Например, Отпуск" /> |
-| src/features/goals/ui/GoalEditSheet.tsx | 80 | target | <input inputMode="decimal" value={targetAmount} onChange={(event) => setTargetAmount(event.target.value)} placeholder="120000" /> |
-| src/features/goals/ui/GoalEditSheet.tsx | 84 | target | <input inputMode="decimal" value={currentAmount} onChange={(event) => setCurrentAmount(event.target.value)} placeholder="0" /> |
-| src/features/goals/ui/GoalEditSheet.tsx | 89 | target | <select value={currency} onChange={(event) => setCurrency(event.target.value)}> |
-| src/features/goals/ui/GoalEditSheet.tsx | 97 | target | <textarea value={note} onChange={(event) => setNote(event.target.value)} placeholder="Для чего эта цель" /> |
-| src/features/modals/ui/AccountModals.tsx | 5 | api | import type { AccountDto, UpdateAccountPayload } from '@/features/accounts/api/accounts.api'; |
-| src/features/modals/ui/FinanceEntityModals.tsx | 1 | api | import { goalsApi } from '@/features/goals/api/goals.api'; |
-| src/features/modals/ui/FinanceEntityModals.tsx | 5 | api | import type { CategoryDto, SectionDto } from '@/features/sections/api/sections.api'; |
-| src/features/modals/ui/FinanceEntityModals.tsx | 9 | api | import type { DeleteTransactionBalanceMode, TransactionDto } from '@/features/transactions/api/transactions.api'; |
-| src/features/modals/ui/HomeFinanceModals.tsx | 4 | api | import type { TransactionDto } from '@/features/transactions/api/transactions.api'; |
-| src/features/modals/ui/ObligationModals.tsx | 1 | api | import type { AccountDto } from '@/features/accounts/api/accounts.api'; |
-| src/features/modals/ui/ObligationModals.tsx | 4 | api | import type { CreateLoanPayload, LoanDto, UpdateLoanPayload } from '@/features/obligations/api/obligations.api'; |
-| src/features/modals/ui/UtilityModals.tsx | 1 | api | import type { AccountDto } from '@/features/accounts/api/accounts.api'; |
-| src/features/modals/ui/UtilityModals.tsx | 2 | api | import type { CategoryDto } from '@/features/sections/api/sections.api'; |
-| src/features/obligations/ui/LoanEditSheet.tsx | 3 | api | import type { AccountDto } from '@/features/accounts/api/accounts.api'; |
-| src/features/obligations/ui/LoanEditSheet.tsx | 4 | api | import type { CreateLoanPayload, LoanDto, LoanType } from '@/features/obligations/api/obligations.api'; |
-| src/features/obligations/ui/LoanEditSheet.tsx | 178 | target | onChange={(event) => setTitle(event.target.value)} |
-| src/features/obligations/ui/LoanEditSheet.tsx | 188 | target | onChange={(event) => setCreditor(event.target.value)} |
-| src/features/obligations/ui/LoanEditSheet.tsx | 195 | target | <select value={currency} onChange={(event) => setCurrency(event.target.value)}> |
-| src/features/obligations/ui/LoanEditSheet.tsx | 236 | target | <input type="checkbox" checked={autoCreateExpense} onChange={(event) => setAutoCreateExpense(event.target.checked)} /> |
-| src/features/obligations/ui/LoanEditSheet.tsx | 254 | target | <input inputMode="numeric" value={currentDebt} onChange={(event) => setCurrentDebt(event.target.value)} placeholder="500000" /> |
-| src/features/obligations/ui/LoanEditSheet.tsx | 260 | target | <input inputMode="numeric" value={monthlyPayment} onChange={(event) => setMonthlyPayment(event.target.value)} placeholder={isSubscription ? '899' : '18000'} /> |
-| src/features/obligations/ui/LoanEditSheet.tsx | 266 | target | <input inputMode="numeric" value={principalAmount} onChange={(event) => setPrincipalAmount(event.target.value)} placeholder="700000" /> |
-| src/features/obligations/ui/LoanEditSheet.tsx | 282 | target | <input inputMode="decimal" value={interestRate} onChange={(event) => setInterestRate(event.target.value)} placeholder="12.9" /> |
-| src/features/obligations/ui/LoanEditSheet.tsx | 288 | target | <input inputMode="numeric" value={termMonths} onChange={(event) => setTermMonths(event.target.value)} placeholder="36" /> |
-| src/features/obligations/ui/LoanEditSheet.tsx | 293 | target | <input inputMode="numeric" value={paidMonths} onChange={(event) => setPaidMonths(event.target.value)} placeholder="4" /> |
-| src/features/obligations/ui/LoanEditSheet.tsx | 307 | target | <input inputMode="numeric" value={paymentDay} onChange={(event) => setPaymentDay(event.target.value)} placeholder="15" /> |
-| src/features/obligations/ui/LoanEditSheet.tsx | 312 | target | <input type="date" value={nextPaymentDate} onChange={(event) => setNextPaymentDate(event.target.value)} /> |
-| src/features/obligations/ui/LoanEditSheet.tsx | 317 | target | <input inputMode="numeric" value={reminderDaysBefore} onChange={(event) => setReminderDaysBefore(event.target.value)} placeholder="1" /> |
-| src/features/obligations/ui/LoanEditSheet.tsx | 324 | target | <textarea value={note} onChange={(event) => setNote(event.target.value)} placeholder="Например: гасить досрочно при возможности" /> |
-| src/features/onboarding/ui/LaunchOnboardingSheet.tsx | 4 | api | import { goalsApi } from '@/features/goals/api/goals.api'; |
-| src/features/onboarding/ui/steps/AccountsStep.tsx | 97 | target | onChange={(event) => setAccount(account.id, { enabled: event.target.checked })} |
-| src/features/onboarding/ui/steps/AccountsStep.tsx | 104 | target | <input value={account.name} onChange={(event) => setAccount(account.id, { name: event.target.value })} /> |
-| src/features/onboarding/ui/steps/AccountsStep.tsx | 114 | target | onChange={(event) => setAccount(account.id, { balance: Number(event.target.value) \|\| 0 })} |
-| src/features/onboarding/ui/steps/GoalsStep.tsx | 33 | target | <input value={goal.title} onChange={(event) => patchGoal({ title: event.target.value })} /> |
-| src/features/onboarding/ui/steps/GoalsStep.tsx | 38 | target | <input type="number" min="0" inputMode="decimal" value={goal.targetAmount} onChange={(event) => patchGoal({ targetAmount: Number(event.target.value) \|\| 0 })} /> |
-| src/features/onboarding/ui/steps/LoansStep.tsx | 43 | target | <input value={loan.title} onChange={(event) => patchLoan({ title: event.target.value })} /> |
-| src/features/onboarding/ui/steps/LoansStep.tsx | 49 | target | <input type="number" min="0" inputMode="decimal" value={loan.remainingAmount} onChange={(event) => patchLoan({ remainingAmount: Number(event.target.value) \|\| 0 })} /> |
-| src/features/onboarding/ui/steps/LoansStep.tsx | 53 | target | <input type="number" min="0" inputMode="decimal" value={loan.monthlyPayment} onChange={(event) => patchLoan({ monthlyPayment: Number(event.target.value) \|\| 0 })} /> |
-| src/features/onboarding/ui/steps/LoansStep.tsx | 60 | target | <input type="number" min="1" max="31" inputMode="numeric" value={loan.paymentDay} onChange={(event) => patchLoan({ paymentDay: Math.max(1, Math.min(31, Number(event.target.value) \|\| 1)) })} /> |
-| src/features/onboarding/ui/steps/LoansStep.tsx | 64 | target | <input type="number" min="0" inputMode="decimal" value={loan.rate ?? ''} onChange={(event) => patchLoan({ rate: Number(event.target.value) \|\| undefined })} /> |
-| src/features/onboarding/ui/steps/PremiumTrialStep.tsx | 21 | feature | <div className="onboarding-feature-list"> |
-| src/features/onboarding/ui/steps/RemindersStep.tsx | 45 | target | onChange={(event) => patchReminders({ [key]: event.target.checked })} |
-| src/features/onboarding/ui/steps/VoiceSandboxStep.tsx | 16 | target | <input type="checkbox" checked={voice.voiceEnabled} onChange={(event) => patchVoice({ voiceEnabled: event.target.checked })} /> |
-| src/features/onboarding/ui/steps/VoiceSandboxStep.tsx | 20 | target | <input type="checkbox" checked={voice.textFallbackEnabled} onChange={(event) => patchVoice({ textFallbackEnabled: event.target.checked })} /> |
-| src/features/payments/api/payments.api.ts | 105 | mock | completeMock: (orderId: string) => apiClient.post<CompleteMockPaymentResult>(`/payments/orders/${encodeURIComponent(orderId)}/mock-complete`), |
-| src/features/payments/ui/StorePaymentActions.tsx | 3 | api | import { paymentsApi, type StorePaymentCatalogDto, type StorePaymentDuration, type StorePaymentProduct, type StorePaymentProvider } from '@/features/payments/api/payments.api'; |
-| src/features/payments/ui/StorePaymentActions.tsx | 93 | mock | if (provider === 'mock') { |
-| src/features/payments/ui/StorePaymentActions.tsx | 175 | mock | <button type="button" className="store-payment-admin-access-button" disabled={isBusy \|\| !selected} onClick={() => createOrder('mock')}> |
-| src/features/payments/ui/StorePaymentActions.tsx | 176 | mock | {isBusy && busyProvider === 'mock' ? t('store.payment.preparing') : t('store.payment.grantAccess')} |
-| src/features/pending-actions/ui/PendingActionCard.tsx | 245 | target | onChange={(event) => updateActionField(index, field, event.target.value)} |
-| src/features/premium/ui/PremiumFeatureGate.tsx | 7 | feature | feature: string; |
-| src/features/premium/ui/PremiumFeatureGate.tsx | 14 | feature | export function PremiumFeatureGate({ feature, title, caption, children, className }: Props) { |
-| src/features/premium/ui/PremiumFeatureGate.tsx | 18 | feature | const isAllowed = Boolean(subscription?.features?.[feature] \|\| subscription?.access.hasPremium \|\| subscription?.access.hasBusiness); |
-| src/features/premium/ui/PremiumFeatureGate.tsx | 25 | feature | className={`premium-feature-gate ${className ?? ''}`.trim()} |
-| src/features/premium/ui/PremiumFeatureGate.tsx | 33 | feature | <span className="premium-feature-gate__badge">{t('premium.gate.badge')}</span> |
-| src/features/premium/ui/PremiumUpgradeSheet.tsx | 10 | feature | 'premium.sheet.feature.forecast', |
-| src/features/premium/ui/PremiumUpgradeSheet.tsx | 11 | feature | 'premium.sheet.feature.reports', |
-| src/features/premium/ui/PremiumUpgradeSheet.tsx | 12 | feature | 'premium.sheet.feature.receipts', |
-| src/features/premium/ui/PremiumUpgradeSheet.tsx | 13 | feature | 'premium.sheet.feature.voice', |
-| src/features/premium/ui/PremiumUpgradeSheet.tsx | 71 | feature | <div className="premium-upgrade-feature-grid"> |
-| src/features/premium/ui/PremiumUpgradeSheet.tsx | 72 | feature | {sheetFeatures.map((feature) => ( |
-| src/features/premium/ui/PremiumUpgradeSheet.tsx | 73 | feature | <div key={feature} className="premium-upgrade-feature"> |
-| src/features/premium/ui/PremiumUpgradeSheet.tsx | 74 | feature | <div>{t(feature)}</div> |
-| src/features/product-analytics/ui/ProductAnalyticsTracker.tsx | 4 | api | import { productAnalyticsApi } from '@/features/product-analytics/api/productAnalytics.api'; |
-| src/features/receipt-scans/ui/ReceiptPreviewCard.tsx | 1 | api | import type { ReceiptScanDto } from '@/features/receipt-scans/api/receiptScans.api'; |
-| src/features/receipt-scans/ui/ReceiptQuickAction.tsx | 29 | usage | const remaining = subscription?.usage?.receiptScansThisMonth?.remaining; |
-| src/features/receipt-scans/ui/ReceiptQuickAction.tsx | 64 | target | <input ref={cameraInputRef} type="file" accept={RECEIPT_ACCEPTED_TYPES} capture="environment" className="sr-only" onChange={(event) => void handleReceiptFile(event.target.files?.[0] ?? null)} /> |
-| src/features/receipt-scans/ui/ReceiptQuickAction.tsx | 65 | target | <input ref={fileInputRef} type="file" accept={RECEIPT_ACCEPTED_TYPES} className="sr-only" onChange={(event) => void handleReceiptFile(event.target.files?.[0] ?? null)} /> |
-| src/features/receipt-scans/ui/ReceiptScanList.tsx | 1 | api | import type { ReceiptScanDto } from '@/features/receipt-scans/api/receiptScans.api'; |
-| src/features/receipt-scans/ui/ReceiptUploadCard.tsx | 46 | target | onChange={(event) => void handleFile(event.target.files?.[0] ?? null)} |
-| src/features/sections/ui/CategoryEditSheet.tsx | 2 | api | import type { CategoryDto, SectionDto } from '@/features/sections/api/sections.api'; |
-| src/features/sections/ui/CategoryEditSheet.tsx | 74 | target | <input value={name} onChange={(event) => setName(event.target.value)} placeholder="Например, Кофе" autoFocus /> |
-| src/features/sections/ui/CategoryEditSheet.tsx | 79 | target | <select value={sectionId ?? ''} onChange={(event) => setSectionId(event.target.value \|\| null)}> |
-| src/features/sections/ui/CreateSectionSheet.tsx | 70 | target | onChange={(event) => setIcon(event.target.value)} |
-| src/features/sections/ui/CreateSectionSheet.tsx | 78 | target | onChange={(event) => setName(event.target.value)} |
-| src/features/sections/ui/CreateSectionSheet.tsx | 89 | target | onChange={(event) => setDescription(event.target.value)} |
-| src/features/sections/ui/SectionCard.tsx | 1 | api | import type { SectionDto, CategoryDto } from '@/features/sections/api/sections.api'; |
-| src/features/sections/ui/SectionEditSheet.tsx | 2 | api | import type { SectionDto } from '@/features/sections/api/sections.api'; |
-| src/features/sections/ui/SectionEditSheet.tsx | 61 | target | <input value={name} onChange={(event) => setName(event.target.value)} placeholder="Например, Дом" autoFocus /> |
-| src/features/sections/ui/TaxonomySettingsPanel.tsx | 153 | target | onChange={(event) => setSectionIcon(event.target.value)} |
-| src/features/sections/ui/TaxonomySettingsPanel.tsx | 160 | target | onChange={(event) => setSectionName(event.target.value)} |
-| src/features/sections/ui/TaxonomySettingsPanel.tsx | 182 | target | onChange={(event) => setCategoryIcon(event.target.value)} |
-| src/features/sections/ui/TaxonomySettingsPanel.tsx | 189 | target | onChange={(event) => setCategoryName(event.target.value)} |
-| src/features/settings/ui/PlanCard.tsx | 49 | feature | {features.map((feature) => ( |
-| src/features/settings/ui/PlanCard.tsx | 50 | feature | <div key={feature} className="text-sm text-white/75"> |
-| src/features/settings/ui/PlanCard.tsx | 51 | feature | • {feature} |
-| src/features/store/ui/StoreFeatureSection.tsx | 15 | feature | const handleFeatureClick = (feature: StoreFeature) => { |
-| src/features/store/ui/StoreFeatureSection.tsx | 16 | feature | if (feature.title === 'store.features.receipts.title') { |
-| src/features/store/ui/StoreFeatureSection.tsx | 23 | feature | title: t(feature.title), |
-| src/features/store/ui/StoreFeatureSection.tsx | 24 | feature | description: t(feature.caption), |
-| src/features/store/ui/StoreFeatureSection.tsx | 30 | feature | <section className="app-card monetization-section store-feature-section"> |
-| src/features/store/ui/StoreFeatureSection.tsx | 38 | feature | <div className="store-feature-grid"> |
-| src/features/store/ui/StoreFeatureSection.tsx | 39 | feature | {features.map((feature) => ( |
-| src/features/store/ui/StoreFeatureSection.tsx | 40 | feature | <button type="button" key={feature.title} className="store-feature-card" onClick={() => handleFeatureClick(feature)}> |
-| src/features/store/ui/StoreFeatureSection.tsx | 41 | feature | <strong>{t(feature.title)}</strong> |
-| src/features/store/ui/StoreFeatureSection.tsx | 42 | feature | <span>{t(feature.caption)}</span> |
-| src/features/store/ui/StoreStatusCard.tsx | 1 | api | import type { SubscriptionStatusDto } from '@/features/subscription/api/subscription.api'; |
-| src/features/store/ui/StoreTrialCard.tsx | 1 | api | import type { SubscriptionStatusDto } from '@/features/subscription/api/subscription.api'; |
-| src/features/store/ui/StoreUsageCard.tsx | 1 | api | import type { SubscriptionStatusDto } from '@/features/subscription/api/subscription.api'; |
-| src/features/store/ui/StoreUsageCard.tsx | 10 | usage | const usage = subscription?.usage; |
-| src/features/store/ui/StoreUsageCard.tsx | 11 | usage | if (!usage) return null; |
-| src/features/store/ui/StoreUsageCard.tsx | 14 | usage | <section className="app-card monetization-section store-usage-card"> |
-| src/features/store/ui/StoreUsageCard.tsx | 17 | usage | <div className="app-eyebrow">{t('store.usage.eyebrow')}</div> |
-| src/features/store/ui/StoreUsageCard.tsx | 18 | usage | <h2>{t('store.usage.title')}</h2> |
-| src/features/store/ui/StoreUsageCard.tsx | 20 | usage | <span>{t('store.usage.today')}</span> |
-| src/features/store/ui/StoreUsageCard.tsx | 22 | usage | <div className="store-usage-grid"> |
-| src/features/store/ui/StoreUsageCard.tsx | 24 | usage | <strong>{usage.voiceCommandsToday.remaining}</strong> |
-| src/features/store/ui/StoreUsageCard.tsx | 25 | usage | <span>{t('store.usage.voiceLeft', { limit: usage.voiceCommandsToday.limit })}</span> |
-| src/features/store/ui/StoreUsageCard.tsx | 28 | usage | <strong>{usage.receiptScansThisMonth.remaining}</strong> |
-| src/features/store/ui/StoreUsageCard.tsx | 29 | usage | <span>{t('store.usage.receiptsLeft', { limit: usage.receiptScansThisMonth.limit })}</span> |
-| src/features/store/ui/StoreUsageCard.tsx | 32 | usage | <strong>{usage.advancedReportsThisMonth.remaining}</strong> |
-| src/features/store/ui/StoreUsageCard.tsx | 33 | usage | <span>{t('store.usage.reportsLeft', { limit: usage.advancedReportsThisMonth.limit })}</span> |
-| src/features/subscription/api/subscription.api.ts | 49 | feature | feature: (feature: string) => apiClient.get<SubscriptionFeatureAccessDto>(`/subscription/features/${encodeURIComponent(feature)}`), |
-| src/features/transactions/ui/EditTransactionModal.tsx | 2 | api | import type { TransactionDto } from '@/features/transactions/api/transactions.api'; |
-| src/features/transactions/ui/EditTransactionModal.tsx | 50 | target | onChange={(event) => setAmount(event.target.value)} |
-| src/features/transactions/ui/EditTransactionModal.tsx | 60 | target | onChange={(event) => setDescription(event.target.value)} |
-| src/features/transactions/ui/LastTransactionCard.tsx | 1 | api | import type { TransactionDto } from '@/features/transactions/api/transactions.api'; |
-| src/features/transactions/ui/MonthlyStatsCard.tsx | 1 | api | import type { MonthlyStatsDto } from '@/features/transactions/api/transactions.api'; |
-| src/features/transactions/ui/TimelineEventCard.tsx | 1 | api | import type { TransactionDto } from '@/features/transactions/api/transactions.api'; |
-| src/features/transactions/ui/TransactionCreateSheet.tsx | 119 | target | <input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Например: колбаса" autoFocus /> |
-| src/features/transactions/ui/TransactionCreateSheet.tsx | 125 | target | <input inputMode="decimal" value={amount} onChange={(event) => setAmount(event.target.value)} placeholder="350" /> |
-| src/features/transactions/ui/TransactionCreateSheet.tsx | 131 | target | <textarea value={description} onChange={(event) => setDescription(event.target.value)} placeholder="Необязательно: магазин, детали покупки, комментарий" /> |
-| src/features/transactions/ui/TransactionCreateSheet.tsx | 137 | target | <select value={accountId} onChange={(event) => setAccountId(event.target.value)}> |
-| src/features/transactions/ui/TransactionCreateSheet.tsx | 146 | target | <select value={toAccountId ?? ''} onChange={(event) => setToAccountId(event.target.value \|\| null)}> |
-| src/features/transactions/ui/TransactionDetailsSheet.tsx | 1 | api | import type { TransactionDto } from '@/features/transactions/api/transactions.api'; |
-| src/features/transactions/ui/TransactionEditSheet.tsx | 5 | api | import type { DeleteTransactionBalanceMode, TransactionDto } from '@/features/transactions/api/transactions.api'; |
-| src/features/transactions/ui/TransactionEditSheet.tsx | 223 | target | <input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Например: колбаса" /> |
-| src/features/transactions/ui/TransactionEditSheet.tsx | 229 | target | <input inputMode="decimal" value={amount} onChange={(event) => setAmount(event.target.value)} placeholder="Например 350" /> |
-| src/features/transactions/ui/TransactionEditSheet.tsx | 235 | target | <textarea value={description} onChange={(event) => setDescription(event.target.value)} placeholder="Необязательно: магазин, детали покупки, комментарий" /> |
-| src/features/transactions/ui/TransactionEditSheet.tsx | 241 | target | <input type="date" value={date} onChange={(event) => setDate(event.target.value)} className="[color-scheme:dark]" /> |
-| src/features/transactions/ui/TransactionsHistoryDrawer.tsx | 1 | api | import type { TransactionDto } from '@/features/transactions/api/transactions.api'; |
-| src/features/transactions/ui/TransactionsTimeline.tsx | 1 | api | import type { TransactionDto } from '@/features/transactions/api/transactions.api'; |
-| src/features/voice/ui/VoiceFirstCompanionLayer.tsx | 6 | api | import { logVoiceDebugEvent } from '@/features/voice/api/voice.api'; |
-| src/features/voice/ui/VoiceFirstCompanionLayer.tsx | 541 | target | className="voice-first-companion__press-target" |
-| src/pages/accounts/AccountsPage.tsx | 3 | api | import type { AccountDto } from '@/features/accounts/api/accounts.api'; |
-| src/pages/admin/AdminPage.tsx | 2 | api | import { adminApi, type AdminEvent, type AdminOverview, type AdminUser } from '@/features/admin/api/admin.api'; |
-| src/pages/admin/AdminPage.tsx | 6 | api | import { HttpError } from '@/shared/api/http'; |
-| src/pages/admin/AdminPage.tsx | 332 | target | onChange={(event) => setSubscriptionDays((state) => ({ ...state, [item.id]: event.target.value }))} |
-| src/pages/companion/CompanionPage.tsx | 3 | api | import { companionApi, type CompanionStateDto } from '@/shared/api/companion.api'; |
-| src/pages/companion/CompanionPage.tsx | 95 | target | <input type="checkbox" checked={voiceRepliesEnabled} onChange={(event) => setVoiceRepliesEnabled(event.target.checked)} /> |
-| src/pages/companion/CompanionPage.tsx | 99 | target | <input type="checkbox" checked={textInputEnabled} onChange={(event) => setTextInputEnabled(event.target.checked)} /> |
-| src/pages/goals/GoalsPage.tsx | 2 | api | import { goalsApi, type GoalDto } from '@/features/goals/api/goals.api'; |
-| src/pages/goals/GoalsPage.tsx | 39 | target | acc.target += Number(goal.targetAmount) \|\| 0; |
-| src/pages/goals/GoalsPage.tsx | 41 | target | }, { current: 0, target: 0 }), [activeGoals]); |
-| src/pages/goals/GoalsPage.tsx | 42 | target | const totalProgress = clampProgress((totals.current / Math.max(totals.target, 1)) * 100); |
-| src/pages/goals/GoalsPage.tsx | 62 | target | <div><strong>{formatMoney(Math.max(totals.target - totals.current, 0), 'RUB')}</strong><small>осталось</small></div> |
-| src/pages/receipt-scans/ReceiptScansPage.tsx | 35 | feature | feature="receiptScan" |
-| src/pages/referral/ReferralPage.tsx | 2 | api | import { referralApi, type ReferralInfoDto, type ReferralTransactionDto } from '@/features/referral/api/referral.api'; |
-| src/pages/referral/ReferralPage.tsx | 121 | target | <input value={code} onChange={(event) => setCode(event.target.value)} placeholder={t('referral.apply.placeholder')} /> |
-| src/pages/sections/SectionsPage.tsx | 4 | api | import type { CategoryDto } from '@/features/sections/api/sections.api'; |
-| src/pages/settings/SettingsPage.tsx | 7 | api | import { dataResetApi, type DataResetMode } from '@/features/data-reset/api/dataReset.api'; |
-| src/pages/settings/SettingsPage.tsx | 50 | target | <input type="checkbox" checked={checked} onChange={(event) => onChange(event.target.checked)} /> |
-| src/pages/settings/SettingsPage.tsx | 248 | target | <input className="app-currency-rate-input" inputMode="decimal" value={usdDraft} onChange={(event) => setUsdDraft(event.target.value)} onBlur={saveUsdRate} /> |
-| src/pages/settings/SettingsPage.tsx | 253 | target | <input className="app-currency-rate-input" inputMode="decimal" value={eurDraft} onChange={(event) => setEurDraft(event.target.value)} onBlur={saveEurRate} /> |
-| src/pages/spending-limits/SpendingLimitsPage.tsx | 2 | api | import { fetchAccounts, type AccountDto } from '@/features/accounts/api/accounts.api'; |
-| src/pages/spending-limits/SpendingLimitsPage.tsx | 3 | api | import { fetchCategories, type CategoryDto } from '@/features/sections/api/sections.api'; |
-| src/pages/spending-limits/SpendingLimitsPage.tsx | 12 | api | } from '@/features/spending-limits/api/spendingLimits.api'; |
-| src/pages/spending-limits/SpendingLimitsPage.tsx | 189 | target | <span>{t('limits.form.target')}</span> |
-| src/pages/spending-limits/SpendingLimitsPage.tsx | 190 | target | <select value={form.targetType} onChange={(event) => setForm({ ...form, targetType: event.target.value as SpendingLimitTargetType })}> |
-| src/pages/spending-limits/SpendingLimitsPage.tsx | 191 | target | <option value="account">{t('limits.target.account')}</option> |
-| src/pages/spending-limits/SpendingLimitsPage.tsx | 192 | target | <option value="category">{t('limits.target.category')}</option> |
+Нет найденных проблем.
 
 ## Translation key leak candidates
-| file | line | key | text |
-| --- | --- | --- | --- |
-| src/features/premium/ui/PremiumUpgradeSheet.tsx | 10 | premium.sheet.feature.forecast | 'premium.sheet.feature.forecast', |
-| src/features/premium/ui/PremiumUpgradeSheet.tsx | 11 | premium.sheet.feature.reports | 'premium.sheet.feature.reports', |
-| src/features/premium/ui/PremiumUpgradeSheet.tsx | 12 | premium.sheet.feature.receipts | 'premium.sheet.feature.receipts', |
-| src/features/premium/ui/PremiumUpgradeSheet.tsx | 13 | premium.sheet.feature.voice | 'premium.sheet.feature.voice', |
-| src/features/store/model/storeCatalog.ts | 25 | store.premium.item.analytics | 'store.premium.item.analytics', |
-| src/features/store/model/storeCatalog.ts | 26 | store.premium.item.reports | 'store.premium.item.reports', |
-| src/features/store/model/storeCatalog.ts | 27 | store.premium.item.receipts | 'store.premium.item.receipts', |
-| src/features/store/model/storeCatalog.ts | 28 | store.premium.item.voice | 'store.premium.item.voice', |
-| src/features/store/model/storeCatalog.ts | 38 | store.business.item.workspace | 'store.business.item.workspace', |
-| src/features/store/model/storeCatalog.ts | 39 | store.business.item.reports | 'store.business.item.reports', |
-| src/features/store/model/storeCatalog.ts | 50 | store.referral.item.invite | 'store.referral.item.invite', |
-| src/features/store/model/storeCatalog.ts | 51 | store.referral.item.purchase | 'store.referral.item.purchase', |
-| src/features/store/model/storeCatalog.ts | 52 | store.referral.item.balance | 'store.referral.item.balance', |
-| src/features/store/ui/StoreFeatureSection.tsx | 16 | store.features.receipts.title | if (feature.title === 'store.features.receipts.title') { |
-| src/features/voice/api/voice.api.ts | 131 | voice.webm | filename = 'voice.webm', |
+Нет найденных проблем.
 
 ## CSS structure findings
 Нет найденных проблем.
@@ -445,7 +228,7 @@ Generated: 2026-06-08T19:55:05.628Z
 | file | lines | threshold |
 | --- | --- | --- |
 | src/features/sections/lib/categoryIcons.ts | 2028 | 420 |
-| src/shared/lib/i18n.ts | 1605 | 420 |
+| src/shared/lib/i18n.ts | 1775 | 420 |
 | src/app/styles/pages/dashboard.css | 670 | 420 |
 | src/app/styles/pages/obligations.css | 669 | 420 |
 | src/features/voice/model/useVoiceRecorder.ts | 615 | 420 |

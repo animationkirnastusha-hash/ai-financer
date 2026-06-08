@@ -38,3 +38,5 @@
 @import "./features/store/payments.css";
 @import "./features/store/premium-sheet.css";
 @import "./pages/product-polish.css";
+
+@import "./screens/motion-polish.css";
