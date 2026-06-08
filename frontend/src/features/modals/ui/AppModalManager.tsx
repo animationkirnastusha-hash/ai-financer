@@ -117,8 +117,8 @@ export function AppModalManager() {
 
   useEffect(() => {
     const handler = (event: Event) => {
-      const detail = (event as CustomEvent<{ command?: string | null; mode?: 'text' | 'voice'; autoStartVoice?: boolean; autoCloseOnVoiceResult?: boolean }>).detail;
-      openModal({ type: 'ai-text-overlay', initialCommand: detail?.command ?? null, mode: detail?.mode ?? 'text', autoStartVoice: Boolean(detail?.autoStartVoice), autoCloseOnVoiceResult: Boolean(detail?.autoCloseOnVoiceResult) });
+      const detail = (event as CustomEvent<{ command?: string | null; mode?: 'text' | 'voice'; autoStartVoice?: boolean; autoCloseOnVoiceResult?: boolean; autoSubmitInitialCommand?: boolean }>).detail;
+      openModal({ type: 'ai-text-overlay', initialCommand: detail?.command ?? null, mode: detail?.mode ?? 'text', autoStartVoice: Boolean(detail?.autoStartVoice), autoCloseOnVoiceResult: Boolean(detail?.autoCloseOnVoiceResult), autoSubmitInitialCommand: Boolean(detail?.autoSubmitInitialCommand) });
     };
 
     window.addEventListener('ai-financer:open-text-chat', handler);
@@ -270,6 +270,7 @@ export function AppModalManager() {
           mode={modal.mode ?? 'text'}
           autoStartVoice={Boolean(modal.autoStartVoice)}
           autoCloseOnVoiceResult={Boolean(modal.autoCloseOnVoiceResult)}
+          autoSubmitInitialCommand={Boolean(modal.autoSubmitInitialCommand)}
           layer={layer}
           onClose={() => closeModal('ai-text-overlay')}
         />

@@ -11,7 +11,6 @@ import { VOICE_BUBBLE_TIMEOUT_MS } from '@/features/voice/model/voiceConstants';
 import type { VoiceCompanionMood, VoiceThought, VoiceBubbleTone } from '@/features/voice/model/voiceSession.types';
 import { compactVoiceBubble } from '@/features/voice/model/voiceText';
 import { VoicePendingConfirmModal } from '@/features/voice/ui/VoicePendingConfirmModal';
-import { VoiceKeyboardEntry } from '@/features/voice/ui/VoiceKeyboardEntry';
 import { VoiceLockActions } from '@/features/voice/ui/VoiceLockActions';
 import { VoicePermissionIntro } from '@/features/voice/ui/VoicePermissionIntro';
 import { VoiceStatusPill } from '@/features/voice/ui/VoiceStatusPill';
@@ -33,6 +32,7 @@ type GestureRuntime = {
 const SWIPE_LOCK_PX = 48;
 const SWIPE_CANCEL_PX = 58;
 const TAP_GUARD_MS = 320;
+const HOLD_TO_VOICE_MS = 210;
 
 export function VoiceFirstCompanionLayer() {
   const modalStack = useAppModalStore((state) => state.stack);
@@ -62,6 +62,7 @@ export function VoiceFirstCompanionLayer() {
   const lastThoughtRef = useRef<{ text: string; tone: VoiceBubbleTone; at: number }>({ text: '', tone: 'neutral', at: 0 });
   const lastAssistantMessageKeyRef = useRef('');
   const lastPointerDownAtRef = useRef(0);
+  const holdTimerRef = useRef<number | null>(null);
   const handleTextRef = useRef<(text: string) => Promise<void> | void>(() => undefined);
   const voiceCancelRef = useRef<() => void>(() => undefined);
   const resetVoiceMachineRef = useRef<() => void>(() => undefined);
@@ -109,10 +110,8 @@ export function VoiceFirstCompanionLayer() {
     isDispatching,
     cooldownUntil,
     recordSessionMs,
-    handleTranscript,
     reset: resetVoiceMachine,
     markLocked,
-    markUploading,
   } = machine;
 
   const voice = useVoiceInput({
@@ -150,10 +149,25 @@ export function VoiceFirstCompanionLayer() {
 
   useEffect(() => {
     handleTextRef.current = async (text: string) => {
-      markUploading();
-      await handleTranscript(text);
+      const command = text.trim();
+      if (!command) {
+        showThought('Не расслышала команду.', 'warning', 2200);
+        resetVoiceMachine();
+        return;
+      }
+
+      resetVoiceMachine();
+      showThought('Думаю.', 'neutral', 1400);
+      openModal({
+        type: 'ai-text-overlay',
+        initialCommand: command,
+        mode: 'voice',
+        autoStartVoice: false,
+        autoCloseOnVoiceResult: true,
+        autoSubmitInitialCommand: true,
+      });
     };
-  }, [handleTranscript, markUploading]);
+  }, [openModal, resetVoiceMachine, showThought]);
 
   useEffect(() => {
     resetVoiceMachineRef.current = resetVoiceMachine;
@@ -186,15 +200,66 @@ export function VoiceFirstCompanionLayer() {
     showThought('Отменено.', 'neutral', 1600);
   }, [resetGesture, resetVoiceMachine, showThought, voice]);
 
-  const sendManualRecording = useCallback((reason: string) => {
-    const gesture = gestureRef.current;
-    logVoiceDebugEvent('manual_voice_send_requested', { reason, mode: gesture.mode, voiceState: voice.state });
-    if (voice.state === 'recording') {
-      voice.stop();
-      showThought('Распознаю...', 'thinking', 2200);
+  const clearHoldTimer = useCallback(() => {
+    if (holdTimerRef.current !== null) {
+      window.clearTimeout(holdTimerRef.current);
+      holdTimerRef.current = null;
     }
-    resetGesture();
-  }, [resetGesture, showThought, voice]);
+  }, []);
+
+  const openTextOverlay = useCallback(() => {
+    openModal({ type: 'ai-text-overlay', mode: 'text', autoStartVoice: false, autoCloseOnVoiceResult: false });
+  }, [openModal]);
+
+  const explainVoiceUnavailable = useCallback(() => {
+    if (!canUseVoice) showThought('Голос недоступен.', 'warning', 2400);
+    else if (!voicePermissionReady) {
+      setPermissionIntroOpen(true);
+      setPermissionIntroDismissed(false);
+      showThought('Сначала разреши микрофон.', 'warning', 2400);
+    } else if (hasPending) showThought('Сначала закрой действие.', 'warning', 2400);
+  }, [canUseVoice, hasPending, showThought, voicePermissionReady]);
+
+  const startHoldRecording = useCallback(async () => {
+    if (!canStartManualRecording) {
+      explainVoiceUnavailable();
+      return false;
+    }
+
+    resetVoiceMachine();
+    showThought('Слушаю.', 'listening', 1600);
+    const result = await voice.start();
+
+    if (result === 'started') return true;
+
+    if (result === 'permission-ready') {
+      try {
+        const ready = await voice.primePermission();
+        if (ready) {
+          setVoicePermissionPrompted(true);
+          const secondTry = await voice.start();
+          if (secondTry === 'started') return true;
+        }
+      } catch {
+        // Permission errors are handled below.
+      }
+    }
+
+    explainVoiceUnavailable();
+    return false;
+  }, [canStartManualRecording, explainVoiceUnavailable, resetVoiceMachine, setVoicePermissionPrompted, showThought, voice]);
+
+  const openLockedVoiceOverlay = useCallback(() => {
+    if (!canStartManualRecording) {
+      explainVoiceUnavailable();
+      return false;
+    }
+
+    resetVoiceMachine();
+    showThought('Слушаю. Сессия открыта.', 'listening', 1600);
+    openModal({ type: 'ai-text-overlay', mode: 'voice', autoStartVoice: true, autoCloseOnVoiceResult: false });
+    return true;
+  }, [canStartManualRecording, explainVoiceUnavailable, openModal, resetVoiceMachine, showThought]);
 
   const primeVoicePermission = useCallback(async () => {
     setIsPriming(true);
@@ -221,27 +286,6 @@ export function VoiceFirstCompanionLayer() {
   }, [setVoicePermissionPrompted, showThought, voice.primePermission]);
 
   const handlePointerDown = useCallback((event: PointerEvent<HTMLDivElement>) => {
-    const lockedGesture = gestureRef.current;
-    if (lockedGesture.mode === 'locked') {
-      event.preventDefault();
-      event.stopPropagation();
-      sendManualRecording('locked_companion_press');
-      return;
-    }
-
-    if (!canStartManualRecording) {
-      if (!canUseVoice) {
-        showThought('Голос недоступен.', 'warning', 2400);
-      } else if (!voicePermissionReady) {
-        setPermissionIntroOpen(true);
-        setPermissionIntroDismissed(false);
-        showThought('Сначала разреши микрофон.', 'warning', 2400);
-      } else if (hasPending) {
-        showThought('Сначала закрой действие.', 'warning', 2400);
-      }
-      return;
-    }
-
     const now = Date.now();
     if (now - lastPointerDownAtRef.current < TAP_GUARD_MS) {
       logVoiceDebugEvent('manual_voice_pointer_down_ignored_guard');
@@ -251,13 +295,43 @@ export function VoiceFirstCompanionLayer() {
 
     event.preventDefault();
     event.stopPropagation();
+    event.currentTarget.setPointerCapture?.(event.pointerId);
 
+    clearHoldTimer();
     resetGesture();
-    resetVoiceMachine();
-    showThought('Слушаю.', 'listening', 1600);
-    logVoiceDebugEvent('manual_voice_open_overlay', { pointerId: event.pointerId });
-    openModal({ type: 'ai-text-overlay', mode: 'voice', autoStartVoice: true, autoCloseOnVoiceResult: true });
-  }, [canStartManualRecording, canUseVoice, hasPending, openModal, resetGesture, resetVoiceMachine, showThought, voicePermissionReady]);
+    gestureRef.current = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      started: false,
+      releaseAfterStart: false,
+      cancelled: false,
+      mode: 'holding',
+    };
+    setGestureMode('holding');
+
+    holdTimerRef.current = window.setTimeout(() => {
+      const gesture = gestureRef.current;
+      if (gesture.pointerId !== event.pointerId || gesture.cancelled || gesture.started) return;
+      gesture.started = true;
+      void startHoldRecording().then((started) => {
+        const currentGesture = gestureRef.current;
+        if (!started) {
+          resetGesture();
+          logVoiceDebugEvent('manual_voice_hold_recording_started', { pointerId: event.pointerId, started });
+          return;
+        }
+
+        if (currentGesture.releaseAfterStart) {
+          showThought('Распознаю.', 'neutral', 1800);
+          voice.stop();
+          resetGesture();
+        }
+
+        logVoiceDebugEvent('manual_voice_hold_recording_started', { pointerId: event.pointerId, started, releaseAfterStart: currentGesture.releaseAfterStart });
+      });
+    }, HOLD_TO_VOICE_MS);
+  }, [clearHoldTimer, resetGesture, showThought, startHoldRecording, voice]);
 
   const handlePointerMove = useCallback((event: PointerEvent<HTMLDivElement>) => {
     const gesture = gestureRef.current;
@@ -268,19 +342,23 @@ export function VoiceFirstCompanionLayer() {
 
     if (dx <= -SWIPE_CANCEL_PX && Math.abs(dx) > Math.abs(dy)) {
       event.preventDefault();
+      clearHoldTimer();
       cancelManualRecording('swipe_left');
       return;
     }
 
     if (dy <= -SWIPE_LOCK_PX && Math.abs(dy) > Math.abs(dx) * 0.8) {
       event.preventDefault();
+      clearHoldTimer();
       gesture.mode = 'locked';
+      gesture.started = true;
       setGestureMode('locked');
       markLocked();
-      showThought('Запись закреплена. Нажми Фину, когда закончишь.', 'listening', 3600);
-      logVoiceDebugEvent('manual_voice_locked', { pointerId: event.pointerId, dy: Math.round(dy) });
+      const opened = openLockedVoiceOverlay();
+      if (!opened) resetGesture();
+      logVoiceDebugEvent('manual_voice_locked_overlay_opened', { pointerId: event.pointerId, dy: Math.round(dy) });
     }
-  }, [cancelManualRecording, markLocked, showThought]);
+  }, [cancelManualRecording, clearHoldTimer, markLocked, openLockedVoiceOverlay, resetGesture]);
 
   const handlePointerUp = useCallback((event: PointerEvent<HTMLDivElement>) => {
     const gesture = gestureRef.current;
@@ -289,6 +367,7 @@ export function VoiceFirstCompanionLayer() {
     event.preventDefault();
     event.stopPropagation();
     event.currentTarget.releasePointerCapture?.(event.pointerId);
+    clearHoldTimer();
 
     if (gesture.cancelled) {
       resetGesture();
@@ -297,22 +376,33 @@ export function VoiceFirstCompanionLayer() {
 
     if (gesture.mode === 'locked') {
       gesture.pointerId = null;
-      logVoiceDebugEvent('manual_voice_pointer_up_locked', { pointerId: event.pointerId });
+      logVoiceDebugEvent('manual_voice_pointer_up_locked_overlay', { pointerId: event.pointerId });
       return;
     }
 
     if (!gesture.started) {
-      gesture.releaseAfterStart = true;
-      logVoiceDebugEvent('manual_voice_release_before_start', { pointerId: event.pointerId });
+      resetGesture();
+      openTextOverlay();
+      logVoiceDebugEvent('manual_voice_tap_text_overlay_opened', { pointerId: event.pointerId });
       return;
     }
 
-    sendManualRecording('pointer_up');
-  }, [resetGesture, sendManualRecording]);
+    if (voice.state === 'recording') {
+      showThought('Распознаю.', 'neutral', 1800);
+      voice.stop();
+      resetGesture();
+      logVoiceDebugEvent('manual_voice_hold_released_recording_stopped', { pointerId: event.pointerId, voiceState: voice.state });
+      return;
+    }
+
+    gesture.releaseAfterStart = true;
+    logVoiceDebugEvent('manual_voice_hold_release_waiting_recorder_start', { pointerId: event.pointerId, voiceState: voice.state });
+  }, [clearHoldTimer, openTextOverlay, resetGesture, showThought, voice]);
 
   const handlePointerCancel = useCallback((event: PointerEvent<HTMLDivElement>) => {
     const gesture = gestureRef.current;
     if (gesture.pointerId !== event.pointerId) return;
+    clearHoldTimer();
 
     if (gesture.mode === 'locked') {
       gesture.pointerId = null;
@@ -321,7 +411,7 @@ export function VoiceFirstCompanionLayer() {
     }
 
     cancelManualRecording('pointer_cancel');
-  }, [cancelManualRecording]);
+  }, [cancelManualRecording, clearHoldTimer]);
 
   useEffect(() => {
     if (!voice.error) return;
@@ -385,6 +475,7 @@ export function VoiceFirstCompanionLayer() {
 
   useEffect(() => () => {
     if (bubbleTimerRef.current !== null) window.clearTimeout(bubbleTimerRef.current);
+    if (holdTimerRef.current !== null) window.clearTimeout(holdTimerRef.current);
     resetVoiceMachineRef.current();
     voiceCancelRef.current();
   }, []);
@@ -428,7 +519,6 @@ export function VoiceFirstCompanionLayer() {
         />
       ) : null}
 
-      {showFloatingCompanion ? <VoiceKeyboardEntry /> : null}
 
       {showFloatingCompanion ? (
         <div className={isLocked ? 'voice-first-companion voice-first-companion--locked' : 'voice-first-companion'} data-no-swipe="true">

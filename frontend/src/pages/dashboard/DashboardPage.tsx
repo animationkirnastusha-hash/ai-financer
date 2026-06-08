@@ -4,6 +4,9 @@ import { HomeBalanceCarousel } from '@/features/dashboard/ui/HomeBalanceCarousel
 import { HomeCashflowChart } from '@/features/dashboard/ui/HomeCashflowChart';
 import { HomeFinanceInsight } from '@/features/dashboard/ui/HomeFinanceInsight';
 import { HomeObligationsWidget } from '@/features/obligations/ui/HomeObligationsWidget';
+import { ReceiptQuickAction } from '@/features/receipt-scans/ui/ReceiptQuickAction';
+import { useSubscriptionStore } from '@/features/subscription/model/subscription.store';
+import { useI18n } from '@/shared/lib/i18n';
 import type { HomeCashflowMode, HomeCashflowPeriod } from '@/features/dashboard/lib/homeFinanceAnalytics';
 import { useNavigationStore } from '@/features/navigation/model/navigation.store';
 import { useAppModalStore } from '@/features/modals/model/appModal.store';
@@ -28,12 +31,15 @@ function fromRub(amount: number, currency: AppCurrency, rates: { usd: number; eu
 }
 
 export default function DashboardPage() {
+  const { t } = useI18n();
   const navigateTo = useNavigationStore((state) => state.navigateTo);
   const openModal = useAppModalStore((state) => state.openModal);
   const accounts = useAccountsStore((state) => state.items);
   const loadAccounts = useAccountsStore((state) => state.loadAccounts);
   const transactions = useTransactionsStore((state) => state.items);
   const loadTransactions = useTransactionsStore((state) => state.loadTransactions);
+  const subscription = useSubscriptionStore((state) => state.status);
+  const loadSubscription = useSubscriptionStore((state) => state.load);
 
   const [cashflowMode, setCashflowMode] = useState<HomeCashflowMode>('expense');
   const [cashflowPeriod, setCashflowPeriod] = useState<HomeCashflowPeriod>('month');
@@ -45,10 +51,11 @@ export default function DashboardPage() {
   const rubToEurRate = useSettingsStore((state) => state.rubToEurRate);
 
   useEffect(() => {
-    void Promise.allSettled([loadAccounts(), loadTransactions()]);
-  }, [loadAccounts, loadTransactions]);
+    void Promise.allSettled([loadAccounts(), loadTransactions(), loadSubscription()]);
+  }, [loadAccounts, loadSubscription, loadTransactions]);
 
   const rates = useMemo(() => ({ usd: rubToUsdRate || 90, eur: rubToEurRate || 100 }), [rubToEurRate, rubToUsdRate]);
+  const hasBusiness = Boolean(subscription?.access?.hasBusiness);
 
   const month = useMemo(() => {
     const currentMonth = transactions.filter((item) => isCurrentMonth(item.date));
@@ -64,6 +71,16 @@ export default function DashboardPage() {
       <div className="app-page__inner app-home-layout">
         <ScreenTopBar title="Главная" right={['notifications', 'analytics', 'settings']} />
 
+        {hasBusiness ? (
+          <section className="home-workspace-switch app-card">
+            <div>
+              <span>{t('dashboard.workspace.label')}</span>
+              <strong>{t('dashboard.workspace.personal')}</strong>
+            </div>
+            <button type="button" onClick={() => navigateTo('business-accountant')}>{t('dashboard.workspace.business')}</button>
+          </section>
+        ) : null}
+
         <HomeBalanceCarousel
           accounts={accounts}
           mainCurrency={mainCurrency}
@@ -75,6 +92,8 @@ export default function DashboardPage() {
           delta={month.delta}
           onOpenAccounts={() => navigateTo('accounts')}
         />
+
+        <ReceiptQuickAction />
 
         <HomeObligationsWidget />
 

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent } from 'react';
 
 import { useAccountsStore } from '@/features/accounts/model/accounts.store';
 import { AuditLogDrawer } from '@/features/audit-log/ui/AuditLogDrawer';
@@ -6,6 +6,8 @@ import { FinancePreviewCard } from '@/features/chat/ui/FinancePreviewCard';
 import { MessageCard } from '@/features/chat/ui/MessageCard';
 import { useChatController } from '@/features/chat/model/useChatController';
 import { useSettingsStore } from '@/features/settings/model/settings.store';
+import { useReceiptScansStore } from '@/features/receipt-scans/model/receiptScans.store';
+import { useSubscriptionStore } from '@/features/subscription/model/subscription.store';
 import { useTransactionsStore } from '@/features/transactions/model/transactions.store';
 import { useVoiceInput } from '@/features/voice/model/useVoiceInput';
 import { VOICE_MANUAL_SESSION_MS } from '@/features/voice/model/voiceConstants';
@@ -13,6 +15,9 @@ import { normalizeForWake, normalizeVoiceText, shouldIgnoreVoiceCommand } from '
 import { useI18n } from '@/shared/lib/i18n';
 
 const SCROLL_BOTTOM_THRESHOLD_PX = 120;
+const OVERLAY_DISMISS_DRAG_PX = 82;
+const RECEIPT_MAX_FILE_BYTES = 8 * 1024 * 1024;
+const RECEIPT_ACCEPTED_TYPES = 'image/jpeg,image/png,image/webp,image/heic,image/heif,application/pdf';
 
 type TextChatOverlayProps = {
   open: boolean;
@@ -20,6 +25,7 @@ type TextChatOverlayProps = {
   mode?: 'text' | 'voice';
   autoStartVoice?: boolean;
   autoCloseOnVoiceResult?: boolean;
+  autoSubmitInitialCommand?: boolean;
   layer?: number;
   onClose: () => void;
 };
@@ -47,6 +53,18 @@ function formatAmount(value: number | string | null | undefined) {
   return new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 0 }).format(amount);
 }
 
+
+function pickRotatingStatus(t: (key: string, params?: Record<string, string | number>) => string, group: 'listening' | 'thinking' | 'ready' | 'confirm', seed = 0) {
+  const variants = group === 'listening'
+    ? ['textChat.status.listening.a', 'textChat.status.listening.b', 'textChat.status.listening.c']
+    : group === 'thinking'
+      ? ['textChat.status.thinking.a', 'textChat.status.thinking.b', 'textChat.status.thinking.c']
+      : group === 'confirm'
+        ? ['textChat.status.confirm.a', 'textChat.status.confirm.b', 'textChat.status.confirm.c']
+        : ['textChat.status.ready.a', 'textChat.status.ready.b', 'textChat.status.ready.c'];
+  return t(variants[Math.abs(seed) % variants.length]);
+}
+
 function chooseAccountName(accounts: Array<{ name?: string | null; type?: string | null }>) {
   const preferred = accounts.find((account) => String(account.type).toLowerCase() === 'cash')
     ?? accounts.find((account) => String(account.name ?? '').toLowerCase().includes('нал'))
@@ -55,7 +73,7 @@ function chooseAccountName(accounts: Array<{ name?: string | null; type?: string
   return preferred?.name?.trim() || '';
 }
 
-export function TextChatOverlay({ open, initialCommand, mode = 'text', autoStartVoice = false, autoCloseOnVoiceResult = false, layer = 130, onClose }: TextChatOverlayProps) {
+export function TextChatOverlay({ open, initialCommand, mode = 'text', autoStartVoice = false, autoCloseOnVoiceResult = false, autoSubmitInitialCommand = false, layer = 130, onClose }: TextChatOverlayProps) {
   const { t } = useI18n();
   const [value, setValue] = useState(initialCommand?.trim() ?? '');
   const [showJumpToBottom, setShowJumpToBottom] = useState(false);
@@ -67,14 +85,24 @@ export function TextChatOverlay({ open, initialCommand, mode = 'text', autoStart
   const initialCommandRef = useRef<string | null>(null);
   const shouldStickToBottomRef = useRef(true);
   const autoStartDoneRef = useRef(false);
+  const autoSubmittedInitialCommandRef = useRef<string | null>(null);
   const stopVoiceRef = useRef<(reason?: string) => void>(() => undefined);
   const lastVoiceSendAtRef = useRef(0);
   const lastAutoClosedMessageKeyRef = useRef('');
   const autoCloseTimerRef = useRef<number | null>(null);
+  const dragStartYRef = useRef<number | null>(null);
+  const [dragOffset, setDragOffset] = useState(0);
+  const receiptCameraInputRef = useRef<HTMLInputElement | null>(null);
+  const receiptFileInputRef = useRef<HTMLInputElement | null>(null);
+  const [receiptHint, setReceiptHint] = useState<string | null>(null);
 
   const chat = useChatController();
   const accounts = useAccountsStore((state) => state.items);
   const transactions = useTransactionsStore((state) => state.items);
+  const subscription = useSubscriptionStore((state) => state.status);
+  const loadSubscription = useSubscriptionStore((state) => state.load);
+  const uploadReceipt = useReceiptScansStore((state) => state.upload);
+  const isReceiptUploading = useReceiptScansStore((state) => state.isUploading);
   const companionName = useSettingsStore((state) => state.companionName || 'Фина');
   const appLanguage = useSettingsStore((state) => state.appLanguage);
   const voicePermissionPrompted = useSettingsStore((state) => state.voicePermissionPrompted);
@@ -90,6 +118,9 @@ export function TextChatOverlay({ open, initialCommand, mode = 'text', autoStart
     () => chat.pendingActions.filter((action) => action?.id && !pendingActionIdsInMessages.has(action.id)),
     [chat.pendingActions, pendingActionIdsInMessages],
   );
+
+
+  const hasReceiptAccess = Boolean(subscription?.access?.hasPremium || subscription?.access?.hasBusiness || subscription?.features?.receiptScan);
 
   const sendText = useCallback(async (text: string, source: 'text' | 'voice' = 'text') => {
     const clean = text.trim();
@@ -116,13 +147,14 @@ export function TextChatOverlay({ open, initialCommand, mode = 'text', autoStart
   });
 
   const statusText = useMemo(() => {
-    if (voice.state === 'recording') return 'Слушаю';
-    if (voice.state === 'uploading') return 'Распознаю';
-    if (chat.isSending) return t('textChat.status.thinking');
-    if (chat.pendingActions.length > 0) return t('textChat.status.confirm', { count: chat.pendingActions.length });
+    const seed = chat.messages.length + inlinePendingActions.length;
+    if (voice.state === 'recording') return pickRotatingStatus(t, 'listening', seed);
+    if (voice.state === 'uploading') return pickRotatingStatus(t, 'thinking', seed + 1);
+    if (chat.isSending) return pickRotatingStatus(t, 'thinking', seed + 2);
+    if (chat.pendingActions.length > 0) return pickRotatingStatus(t, 'confirm', seed);
     if (isVoiceLocked) return t('textChat.status.locked');
-    return voiceHint || t('textChat.status.ready');
-  }, [chat.isSending, chat.pendingActions.length, isVoiceLocked, t, voice.state, voiceHint]);
+    return voiceHint || pickRotatingStatus(t, 'ready', seed);
+  }, [chat.isSending, chat.messages.length, chat.pendingActions.length, inlinePendingActions.length, isVoiceLocked, t, voice.state, voiceHint]);
 
   const statusState = voice.state === 'recording'
     ? 'listening'
@@ -210,6 +242,12 @@ export function TextChatOverlay({ open, initialCommand, mode = 'text', autoStart
     void voice.refreshPermissionState?.();
   }, [open, voice.refreshPermissionState]);
 
+
+  useEffect(() => {
+    if (!open || subscription) return;
+    void loadSubscription();
+  }, [loadSubscription, open, subscription]);
+
   useEffect(() => {
     if (!open || mode !== 'voice' || !autoStartVoice || autoStartDoneRef.current) return;
     autoStartDoneRef.current = true;
@@ -235,8 +273,20 @@ export function TextChatOverlay({ open, initialCommand, mode = 'text', autoStart
     const command = initialCommand?.trim() ?? '';
     if (!command || initialCommandRef.current === command) return;
     initialCommandRef.current = command;
+
+    if (autoSubmitInitialCommand) {
+      const cleanCommand = stripOptionalCompanionName(command, companionName);
+      if (cleanCommand && autoSubmittedInitialCommandRef.current !== cleanCommand) {
+        autoSubmittedInitialCommandRef.current = cleanCommand;
+        setValue('');
+        setVoiceHint('Думаю');
+        void sendText(cleanCommand, 'voice').finally(() => setVoiceHint(null));
+      }
+      return;
+    }
+
     setValue(command);
-  }, [initialCommand, open]);
+  }, [autoSubmitInitialCommand, companionName, initialCommand, open, sendText]);
 
   useEffect(() => {
     if (!open || mode === 'voice') return;
@@ -287,6 +337,47 @@ export function TextChatOverlay({ open, initialCommand, mode = 'text', autoStart
     };
   }, [autoCloseOnVoiceResult, chat.isSending, chat.messages, chat.pendingActions.length, isVoiceLocked, isVoicePressed, onClose, open, voice.state]);
 
+
+  const closeOverlay = useCallback(() => {
+    if (chat.pendingActions.length > 0) {
+      setVoiceHint(t('textChat.close.pending'));
+      return;
+    }
+    if (voice.state === 'recording' || voice.state === 'uploading') voice.cancel();
+    onClose();
+  }, [chat.pendingActions.length, onClose, t, voice]);
+
+  const handleDragPointerDown = useCallback((event: PointerEvent<HTMLButtonElement>) => {
+    dragStartYRef.current = event.clientY;
+    setDragOffset(0);
+    event.currentTarget.setPointerCapture?.(event.pointerId);
+  }, []);
+
+  const handleDragPointerMove = useCallback((event: PointerEvent<HTMLButtonElement>) => {
+    if (dragStartYRef.current === null) return;
+    const dy = Math.max(0, event.clientY - dragStartYRef.current);
+    setDragOffset(Math.min(150, dy));
+  }, []);
+
+  const handleDragPointerEnd = useCallback(() => {
+    if (dragOffset >= OVERLAY_DISMISS_DRAG_PX) closeOverlay();
+    dragStartYRef.current = null;
+    setDragOffset(0);
+  }, [closeOverlay, dragOffset]);
+
+  const handleReceiptFile = useCallback(async (file: File | null) => {
+    if (!file || !hasReceiptAccess || isReceiptUploading) return;
+    if (file.size > RECEIPT_MAX_FILE_BYTES) {
+      setReceiptHint(t('receipts.upload.tooLarge'));
+      return;
+    }
+    setReceiptHint(t('textChat.receipt.uploading'));
+    const scan = await uploadReceipt(file);
+    setReceiptHint(scan ? t('textChat.receipt.success') : t('textChat.receipt.error'));
+    if (receiptCameraInputRef.current) receiptCameraInputRef.current.value = '';
+    if (receiptFileInputRef.current) receiptFileInputRef.current.value = '';
+  }, [hasReceiptAccess, isReceiptUploading, t, uploadReceipt]);
+
   useEffect(() => () => {
     if (autoCloseTimerRef.current !== null) window.clearTimeout(autoCloseTimerRef.current);
     voice.cancel();
@@ -323,9 +414,23 @@ export function TextChatOverlay({ open, initialCommand, mode = 'text', autoStart
       data-no-swipe="true"
       data-ai-core-modal="true"
       style={{ zIndex: layer }}
-      onClick={onClose}
     >
-      <div className="text-chat-overlay__stage" onClick={(event) => event.stopPropagation()}>
+      <div
+        className="text-chat-overlay__stage"
+        style={{ transform: dragOffset ? `translateY(${dragOffset}px)` : undefined }}
+        onClick={(event) => event.stopPropagation()}
+      >
+        <button
+          type="button"
+          className="text-chat-overlay__handle"
+          aria-label={t('common.close')}
+          onPointerDown={handleDragPointerDown}
+          onPointerMove={handleDragPointerMove}
+          onPointerUp={handleDragPointerEnd}
+          onPointerCancel={handleDragPointerEnd}
+        >
+          <span />
+        </button>
         <header className="text-chat-overlay__head text-chat-overlay__head--compact">
           <div className="text-chat-overlay__status" data-state={statusState}>
             <span className="text-chat-overlay__dot" />
@@ -364,7 +469,7 @@ export function TextChatOverlay({ open, initialCommand, mode = 'text', autoStart
                 ∞
               </button>
             ) : null}
-            <button type="button" className="app-icon-button" onClick={onClose} aria-label={t('common.close')}>
+            <button type="button" className="app-icon-button" onClick={closeOverlay} aria-label={t('common.close')}>
               ×
             </button>
           </div>
@@ -433,6 +538,8 @@ export function TextChatOverlay({ open, initialCommand, mode = 'text', autoStart
           )}
         </div>
 
+        {receiptHint ? <div className="text-chat-overlay__receipt-hint">{receiptHint}</div> : null}
+
         {showJumpToBottom ? (
           <button type="button" className="text-chat-overlay__jump" onClick={() => scrollToBottom()} aria-label={t('textChat.jumpToBottom')}>
             ↓
@@ -446,6 +553,18 @@ export function TextChatOverlay({ open, initialCommand, mode = 'text', autoStart
             void submit();
           }}
         >
+          {hasReceiptAccess ? (
+            <div className="text-chat-overlay__receipt-actions">
+              <button type="button" className="text-chat-overlay__receipt-main" disabled={isReceiptUploading} onClick={() => receiptFileInputRef.current?.click()}>
+                {t('textChat.receipt.action')}
+              </button>
+              <button type="button" className="text-chat-overlay__receipt-mini" disabled={isReceiptUploading} onClick={() => receiptCameraInputRef.current?.click()} aria-label={t('textChat.receipt.camera')}>
+                ◉
+              </button>
+              <input ref={receiptCameraInputRef} type="file" accept={RECEIPT_ACCEPTED_TYPES} capture="environment" className="sr-only" onChange={(event) => void handleReceiptFile(event.target.files?.[0] ?? null)} />
+              <input ref={receiptFileInputRef} type="file" accept={RECEIPT_ACCEPTED_TYPES} className="sr-only" onChange={(event) => void handleReceiptFile(event.target.files?.[0] ?? null)} />
+            </div>
+          ) : null}
           <textarea
             ref={inputRef}
             value={value}

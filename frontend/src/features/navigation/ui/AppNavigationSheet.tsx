@@ -38,10 +38,6 @@ const businessLinks: NavigationItem[] = [
   { screen: 'business-accountant', labelKey: 'screen.business', captionKey: 'nav.business.caption' },
 ];
 
-const utilityLinks: NavigationItem[] = [
-  { screen: 'settings', labelKey: 'common.settings', captionKey: 'nav.settings.caption' },
-];
-
 const adminLinks: NavigationItem[] = [
   { screen: 'admin', labelKey: 'screen.admin', captionKey: 'nav.admin.caption' },
 ];
@@ -71,7 +67,6 @@ export function AppNavigationSheet() {
   ];
 
   if (hasBusiness) groups.push({ titleKey: 'nav.group.business', items: businessLinks });
-  groups.push({ titleKey: 'nav.group.more', items: utilityLinks });
   if (isAdmin) groups.push({ titleKey: 'nav.group.admin', items: adminLinks });
 
   const handleNavigate = (screen: AppScreen) => {

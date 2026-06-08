@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { BusinessHero } from '@/features/business-workspace/ui/BusinessHero';
 import { BusinessModuleList } from '@/features/business-workspace/ui/BusinessModuleList';
 import { BusinessSetupCard } from '@/features/business-workspace/ui/BusinessSetupCard';
@@ -11,6 +11,9 @@ import { StorePaymentActions } from '@/features/payments/ui/StorePaymentActions'
 import { useI18n } from '@/shared/lib/i18n';
 import { ScreenTopBar } from '@/shared/ui/ScreenTopBar';
 import { Spinner } from '@/shared/ui/Spinner';
+import { formatMoney } from '@/shared/lib/money';
+
+type BusinessTab = 'overview' | 'money' | 'accounts' | 'settings';
 
 function BusinessLockedFallback() {
   const { t } = useI18n();
@@ -36,6 +39,7 @@ function BusinessLockedFallback() {
 
 export default function BusinessAccountantPage() {
   const { t } = useI18n();
+  const [tab, setTab] = useState<BusinessTab>('overview');
   const isAdmin = Boolean(useAuthStore((state) => state.user?.isAdmin));
   const subscription = useSubscriptionStore((state) => state.status);
   const loadSubscription = useSubscriptionStore((state) => state.load);
@@ -58,16 +62,75 @@ export default function BusinessAccountantPage() {
 
   if (!hasBusiness) return <BusinessLockedFallback />;
 
+  const tabs: Array<{ id: BusinessTab; label: string }> = [
+    { id: 'overview', label: t('business.tab.overview') },
+    { id: 'money', label: t('business.tab.money') },
+    { id: 'accounts', label: t('business.tab.accounts') },
+    { id: 'settings', label: t('business.tab.settings') },
+  ];
+
   return (
     <div className="app-page business-workspace-page text-white">
       <div className="app-page__inner space-y-4">
         <ScreenTopBar title={t('screen.business')} left="back" right={['home', 'settings']} />
-        <BusinessHero />
-        {isLoading && !workspace ? <div className="business-loading"><Spinner /></div> : null}
-        {error ? <div className="business-error-card">{t('business.error.load')}</div> : null}
-        <BusinessSummaryCards summary={summary} />
-        <BusinessSetupCard workspace={workspace} accounts={accounts} />
-        <BusinessModuleList />
+        <div className="business-mini-app-shell">
+          <BusinessHero />
+
+          <nav className="business-tabbar" aria-label={t('business.tabs.label')}>
+            {tabs.map((item) => (
+              <button key={item.id} type="button" className={tab === item.id ? 'is-active' : undefined} onClick={() => setTab(item.id)}>
+                {item.label}
+              </button>
+            ))}
+          </nav>
+
+          {isLoading && !workspace ? <div className="business-loading"><Spinner /></div> : null}
+          {error ? <div className="business-error-card">{t('business.error.load')}</div> : null}
+
+          {tab === 'overview' ? (
+            <>
+              <BusinessSummaryCards summary={summary} />
+              <BusinessModuleList />
+            </>
+          ) : null}
+
+          {tab === 'money' ? (
+            <section className="app-card business-money-card">
+              <div className="business-section-head">
+                <div>
+                  <div className="app-eyebrow">{t('business.money.eyebrow')}</div>
+                  <h2>{t('business.money.title')}</h2>
+                </div>
+              </div>
+              <div className="business-money-grid">
+                <article><span>{t('business.summary.income')}</span><strong>{formatMoney(summary?.monthIncome ?? 0)}</strong></article>
+                <article><span>{t('business.summary.expense')}</span><strong>{formatMoney(summary?.monthExpense ?? 0)}</strong></article>
+                <article><span>{t('business.summary.profit')}</span><strong>{formatMoney(summary?.profit ?? 0, 'RUB', { sign: 'auto' })}</strong></article>
+              </div>
+            </section>
+          ) : null}
+
+          {tab === 'accounts' ? (
+            <section className="app-card business-accounts-card">
+              <div className="business-section-head">
+                <div>
+                  <div className="app-eyebrow">{t('business.accounts.eyebrow')}</div>
+                  <h2>{t('business.accounts.title')}</h2>
+                </div>
+              </div>
+              <div className="business-account-list">
+                {accounts.length ? accounts.map((account) => (
+                  <article key={account.id}>
+                    <span>{account.name}</span>
+                    <strong>{formatMoney(account.balance, account.currency)}</strong>
+                  </article>
+                )) : <p>{t('business.accounts.empty')}</p>}
+              </div>
+            </section>
+          ) : null}
+
+          {tab === 'settings' ? <BusinessSetupCard workspace={workspace} accounts={accounts} /> : null}
+        </div>
       </div>
     </div>
   );

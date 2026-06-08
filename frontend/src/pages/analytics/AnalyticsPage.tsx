@@ -1,16 +1,11 @@
 import { useEffect, useMemo } from 'react';
-import { useTransactionsStore } from '@/features/transactions/model/transactions.store';
+import { useAppModalStore } from '@/features/modals/model/appModal.store';
 import { useNavigationStore } from '@/features/navigation/model/navigation.store';
 import { useAuthStore } from '@/features/auth/model/auth.store';
-import { useAppModalStore } from '@/features/modals/model/appModal.store';
-import { ScreenTopBar } from '@/shared/ui/ScreenTopBar';
+import { useTransactionsStore } from '@/features/transactions/model/transactions.store';
 import { formatMoney } from '@/shared/lib/money';
-
-const questions = [
-  'на что я трачу больше всего?',
-  'сравни этот месяц с прошлым',
-  'какие траты можно сократить?',
-];
+import { useI18n } from '@/shared/lib/i18n';
+import { ScreenTopBar } from '@/shared/ui/ScreenTopBar';
 
 function isCurrentMonth(value: string) {
   const date = new Date(value);
@@ -18,11 +13,27 @@ function isCurrentMonth(value: string) {
   return date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth();
 }
 
+function RingChart({ value }: { value: number }) {
+  const radius = 42;
+  const stroke = 11;
+  const normalized = Math.min(Math.max(value, 0), 100);
+  const circumference = 2 * Math.PI * radius;
+  const offset = circumference - (normalized / 100) * circumference;
+
+  return (
+    <svg className="analytics-ring" viewBox="0 0 110 110" aria-hidden="true">
+      <circle cx="55" cy="55" r={radius} strokeWidth={stroke} />
+      <circle cx="55" cy="55" r={radius} strokeWidth={stroke} strokeDasharray={circumference} strokeDashoffset={offset} />
+      <text x="55" y="60" textAnchor="middle">{Math.round(normalized)}%</text>
+    </svg>
+  );
+}
+
 export default function AnalyticsPage() {
+  const { t } = useI18n();
+  const openModal = useAppModalStore((state) => state.openModal);
   const navigateTo = useNavigationStore((state) => state.navigateTo);
   const isAdmin = Boolean(useAuthStore((state) => state.user?.isAdmin));
-  const openAIWithCommand = useNavigationStore((state) => state.openAIWithCommand);
-  const openModal = useAppModalStore((state) => state.openModal);
   const transactions = useTransactionsStore((state) => state.items);
   const loadTransactions = useTransactionsStore((state) => state.loadTransactions);
 
@@ -36,95 +47,102 @@ export default function AnalyticsPage() {
     const totalIncome = income.reduce((sum, item) => sum + Number(item.amount || 0), 0);
     const top = Object.entries(
       expenses.reduce<Record<string, number>>((acc, item) => {
-        const key = item.category?.name || 'Без категории';
+        const key = item.category?.name || t('analytics.uncategorized');
         acc[key] = (acc[key] || 0) + Number(item.amount || 0);
         return acc;
       }, {}),
     ).sort((a, b) => b[1] - a[1]).slice(0, 5);
+    const incomeTop = Object.entries(
+      income.reduce<Record<string, number>>((acc, item) => {
+        const key = item.category?.name || t('analytics.uncategorized');
+        acc[key] = (acc[key] || 0) + Number(item.amount || 0);
+        return acc;
+      }, {}),
+    ).sort((a, b) => b[1] - a[1]).slice(0, 4);
     const operationsCount = monthTransactions.length;
     const balance = totalIncome - totalExpenses;
-    return { totalExpenses, totalIncome, top, operationsCount, balance };
-  }, [transactions]);
+    const expenseShare = totalIncome > 0 ? (totalExpenses / totalIncome) * 100 : totalExpenses > 0 ? 100 : 0;
+    return { totalExpenses, totalIncome, top, incomeTop, operationsCount, balance, expenseShare };
+  }, [t, transactions]);
 
   const mainInsight = data.operationsCount === 0
-    ? 'Когда появятся операции, Фина покажет основные расходы и динамику месяца.'
+    ? t('analytics.insight.empty')
     : data.balance >= 0
-      ? 'Месяц выглядит устойчиво: доходы выше расходов. Следующий шаг — найти регулярные траты.'
-      : 'Расходы выше доходов. Стоит проверить верхние категории и повторяющиеся покупки.';
+      ? t('analytics.insight.positive')
+      : t('analytics.insight.negative');
 
   return (
     <div className="app-page app-analytics-page text-white">
       <div className="app-page__inner space-y-4">
-        <ScreenTopBar title="Аналитика" right={['notifications', 'settings']} />
+        <ScreenTopBar title={t('common.analytics')} right={['notifications', 'settings']} />
 
-        <header className="app-card app-card--hero">
-          <div className="app-eyebrow">Аналитика</div>
-          <div className="app-analytics-hero__top mt-3">
-            <div className="min-w-0">
-              <h1 className="app-hero-title">Картина месяца</h1>
-              <p className="app-hero-caption">Коротко: сколько пришло, сколько ушло и где главный расход.</p>
+        <header className="app-card app-card--hero analytics-hero-card">
+          <div className="app-eyebrow">{t('analytics.hero.eyebrow')}</div>
+          <div className="analytics-hero-card__grid">
+            <div>
+              <h1 className="app-hero-title">{t('analytics.hero.title')}</h1>
+              <p className="app-hero-caption">{t('analytics.hero.caption')}</p>
             </div>
-            <button type="button" className="app-secondary-button shrink-0" onClick={() => openModal({ type: 'report-export', mode: 'base' })}>Экспорт</button>
+            <RingChart value={data.expenseShare} />
           </div>
-          <div className="mt-5 grid grid-cols-2 gap-3">
-            <div className="app-stat-card">
-              <div className="app-stat-card__label">Доходы</div>
-              <div className="app-stat-card__money app-stat-card__money--positive">{formatMoney(data.totalIncome, 'RUB', { sign: 'plus' })}</div>
-            </div>
-            <div className="app-stat-card">
-              <div className="app-stat-card__label">Расходы</div>
-              <div className="app-stat-card__money">{formatMoney(data.totalExpenses, 'RUB', { sign: 'minus' })}</div>
-            </div>
-          </div>
-          <div className="app-analytics-summary">
-            <div><strong>{data.operationsCount}</strong><small>операций</small></div>
-            <div><strong>{formatMoney(data.balance, 'RUB', { sign: 'auto' })}</strong><small>итог</small></div>
-            <div><strong>{data.top[0]?.[0] || '—'}</strong><small>главный расход</small></div>
+          <div className="analytics-kpi-grid">
+            <article><span>{t('analytics.kpi.income')}</span><strong>{formatMoney(data.totalIncome, 'RUB', { sign: 'plus' })}</strong></article>
+            <article><span>{t('analytics.kpi.expense')}</span><strong>{formatMoney(data.totalExpenses, 'RUB', { sign: 'minus' })}</strong></article>
+            <article><span>{t('analytics.kpi.result')}</span><strong>{formatMoney(data.balance, 'RUB', { sign: 'auto' })}</strong></article>
           </div>
         </header>
 
-        <section className="app-operations-insight">
-          <b>Вывод</b>
-          <span>{mainInsight}</span>
+        <section className="analytics-fina-card app-card">
+          <div className="analytics-fina-card__avatar" aria-hidden="true"><span /><span /></div>
+          <div><b>{t('analytics.fina.title')}</b><span>{mainInsight}</span></div>
         </section>
 
-        <section className="app-card">
-          <div className="app-section-title">Спросить Фину</div>
-          <div className="mt-3 grid gap-2">
-            {questions.map((question) => (
-              <button key={question} type="button" onClick={() => openAIWithCommand(question)} className="app-list-button">
-                <span>{question}</span>
-                <small>Открыть разбор</small>
-              </button>
+        <section className="app-card analytics-section-card">
+          <div className="analytics-section-card__head">
+            <div><div className="app-eyebrow">{t('analytics.expenses.eyebrow')}</div><h2>{t('analytics.expenses.title')}</h2></div>
+            <button type="button" className="app-secondary-button app-secondary-button--compact" onClick={() => openModal({ type: 'report-export', mode: 'base' })}>{t('analytics.report.action')}</button>
+          </div>
+          <div className="analytics-bars">
+            {data.top.length === 0 ? <div className="analytics-empty-line">{t('analytics.empty.expenses')}</div> : data.top.map(([name, value]) => (
+              <div key={name} className="analytics-bar-row">
+                <div><span>{name}</span><strong>{formatMoney(value, 'RUB')}</strong></div>
+                <i><b style={{ width: `${Math.max(8, Math.min(100, data.totalExpenses ? (value / data.totalExpenses) * 100 : 0))}%` }} /></i>
+              </div>
             ))}
           </div>
         </section>
 
-        <section className="app-card">
-          <div className="app-section-title">Категории</div>
-          <div className="app-analytics-bars mt-4">
-            {data.top.length === 0 ? (
-              <div className="text-sm text-white/45">Добавь расходы — здесь появится структура.</div>
-            ) : data.top.map(([name, value]) => (
-              <div key={name} className="app-analytics-row">
-                <div className="app-analytics-row__top"><span>{name}</span><span>{formatMoney(value, 'RUB')}</span></div>
-                <div className="app-analytics-bar"><span style={{ width: `${Math.max(8, Math.min(100, data.totalExpenses ? (value / data.totalExpenses) * 100 : 0))}%` }} /></div>
-              </div>
+        <section className="app-card analytics-section-card">
+          <div className="analytics-section-card__head">
+            <div><div className="app-eyebrow">{t('analytics.income.eyebrow')}</div><h2>{t('analytics.income.title')}</h2></div>
+          </div>
+          <div className="analytics-income-grid">
+            {data.incomeTop.length === 0 ? <div className="analytics-empty-line">{t('analytics.empty.income')}</div> : data.incomeTop.map(([name, value]) => (
+              <article key={name}><span>{name}</span><strong>{formatMoney(value, 'RUB')}</strong></article>
             ))}
+          </div>
+        </section>
+
+        <section className="app-card analytics-section-card">
+          <div className="analytics-section-card__head">
+            <div><div className="app-eyebrow">{t('analytics.actions.eyebrow')}</div><h2>{t('analytics.actions.title')}</h2></div>
+          </div>
+          <div className="analytics-action-grid">
+            <button type="button" onClick={() => openModal({ type: 'ai-text-overlay', initialCommand: t('analytics.ask.topExpense'), autoSubmitInitialCommand: true })}>{t('analytics.ask.topExpense')}</button>
+            <button type="button" onClick={() => openModal({ type: 'ai-text-overlay', initialCommand: t('analytics.ask.reduce'), autoSubmitInitialCommand: true })}>{t('analytics.ask.reduce')}</button>
+            <button type="button" onClick={() => navigateTo('dashboard')}>{t('analytics.action.home')}</button>
           </div>
         </section>
 
         {isAdmin ? (
-          <section className="app-card">
-            <div className="flex items-center justify-between gap-3">
-              <div className="min-w-0">
-                <div className="app-section-title">Глубже</div>
-                <p className="mt-2 text-sm text-white/46">Прогнозы, месячные отчёты и более глубокие выводы для Premium.</p>
-              </div>
-              <div className="flex gap-2 shrink-0">
-                <button type="button" onClick={() => openModal({ type: 'report-export', mode: 'premium' })} className="app-secondary-button">Отчёт</button>
-                <button type="button" onClick={() => navigateTo('premium')} className="app-secondary-button">Премиум</button>
-              </div>
+          <section className="app-card analytics-section-card">
+            <div className="analytics-section-card__head">
+              <div><div className="app-eyebrow">{t('analytics.premium.eyebrow')}</div><h2>{t('analytics.premium.title')}</h2></div>
+            </div>
+            <p>{t('analytics.premium.caption')}</p>
+            <div className="analytics-action-grid analytics-action-grid--two">
+              <button type="button" onClick={() => openModal({ type: 'report-export', mode: 'premium' })}>{t('analytics.report.premium')}</button>
+              <button type="button" onClick={() => navigateTo('store')}>{t('analytics.action.store')}</button>
             </div>
           </section>
         ) : null}

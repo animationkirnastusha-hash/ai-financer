@@ -1,8 +1,7 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigationStore } from '@/features/navigation/model/navigation.store';
 import { usePremiumStore } from '@/features/premium/model/premium.store';
 import { storeCards, storeFeatures, type StoreCard } from '@/features/store/model/storeCatalog';
-import { StoreCardGrid } from '@/features/store/ui/StoreCardGrid';
 import { StoreFeatureSection } from '@/features/store/ui/StoreFeatureSection';
 import { StoreHero } from '@/features/store/ui/StoreHero';
 import { StorePaymentSection } from '@/features/store/ui/StorePaymentSection';
@@ -13,6 +12,54 @@ import { useSubscriptionStore } from '@/features/subscription/model/subscription
 import { useI18n } from '@/shared/lib/i18n';
 import { ScreenTopBar } from '@/shared/ui/ScreenTopBar';
 
+function StoreProductShowcase({ selected, cards, hasPremium, hasBusiness, onSelect, onOpen }: {
+  selected: StoreCard;
+  cards: StoreCard[];
+  hasPremium: boolean;
+  hasBusiness: boolean;
+  onSelect: (card: StoreCard) => void;
+  onOpen: (card: StoreCard) => void;
+}) {
+  const { t } = useI18n();
+  const selectedActive = selected.tone === 'premium' ? hasPremium : selected.tone === 'business' ? hasBusiness : false;
+
+  return (
+    <section className="store-showcase app-card">
+      <div className="store-showcase__head">
+        <div>
+          <div className="app-eyebrow">{t('store.showcase.eyebrow')}</div>
+          <h2>{t('store.showcase.title')}</h2>
+        </div>
+      </div>
+
+      <div className="store-product-tabs" role="tablist" aria-label={t('store.showcase.tabs')}>
+        {cards.map((card) => (
+          <button key={card.title} type="button" className={card.title === selected.title ? 'is-active' : undefined} onClick={() => onSelect(card)}>
+            <span>{t(card.eyebrow)}</span>
+            {(card.tone === 'premium' && hasPremium) || (card.tone === 'business' && hasBusiness) ? <small>{t('store.status.active')}</small> : null}
+          </button>
+        ))}
+      </div>
+
+      <article className={`store-product-detail store-product-detail--${selected.tone}`}>
+        <div className="store-product-detail__copy">
+          <div className="app-eyebrow">{t(selected.eyebrow)}</div>
+          <h3>{t(selected.title)}</h3>
+          <p>{t(selected.caption)}</p>
+          <ul>
+            {selected.items.map((item) => <li key={item}>{t(item)}</li>)}
+          </ul>
+        </div>
+        <div className="store-product-detail__side">
+          <span>{selectedActive ? t('store.status.active') : t('store.showcase.price')}</span>
+          <strong>{selected.tone === 'business' ? t('store.showcase.businessPrice') : selected.tone === 'premium' ? t('store.showcase.premiumPrice') : t('store.showcase.referralPrice')}</strong>
+          <button type="button" className="app-primary-button" onClick={() => onOpen(selected)}>{t(selected.action)}</button>
+        </div>
+      </article>
+    </section>
+  );
+}
+
 export default function PremiumPage() {
   const { t } = useI18n();
   const navigateTo = useNavigationStore((state) => state.navigateTo);
@@ -21,6 +68,7 @@ export default function PremiumPage() {
   const isLoading = useSubscriptionStore((state) => state.isLoading);
   const loadSubscription = useSubscriptionStore((state) => state.load);
   const startTrial = useSubscriptionStore((state) => state.startTrial);
+  const [selectedTone, setSelectedTone] = useState<StoreCard['tone']>('premium');
   const access = subscription?.access;
   const hasPremium = Boolean(access?.hasPremium);
   const hasBusiness = Boolean(access?.hasBusiness);
@@ -29,20 +77,13 @@ export default function PremiumPage() {
     void loadSubscription();
   }, [loadSubscription]);
 
+  const selectedCard = useMemo(() => storeCards.find((card) => card.tone === selectedTone) ?? storeCards[0], [selectedTone]);
+
   const handleStartTrial = async () => {
     await startTrial();
   };
 
   const handlePremiumOpen = (card: StoreCard) => {
-    openPremium({
-      kind: 'deep_analysis',
-      title: t(card.title),
-      description: t(card.caption),
-      cta: t(card.action),
-    });
-  };
-
-  const handleCardClick = (card: StoreCard) => {
     if (card.tone === 'referral') {
       navigateTo('referral');
       return;
@@ -53,7 +94,12 @@ export default function PremiumPage() {
       return;
     }
 
-    handlePremiumOpen(card);
+    openPremium({
+      kind: 'deep_analysis',
+      title: t(card.title),
+      description: t(card.caption),
+      cta: t(card.action),
+    });
   };
 
   return (
@@ -61,9 +107,16 @@ export default function PremiumPage() {
       <div className="app-page__inner space-y-4">
         <ScreenTopBar title={t('screen.store')} left="back" right={['home', 'settings']} />
         <StoreHero premiumCard={storeCards[0]} onPremiumOpen={handlePremiumOpen} />
+        <StoreProductShowcase
+          cards={storeCards}
+          selected={selectedCard}
+          hasPremium={hasPremium}
+          hasBusiness={hasBusiness}
+          onSelect={(card) => setSelectedTone(card.tone)}
+          onOpen={handlePremiumOpen}
+        />
         <StoreStatusCard subscription={subscription} isLoading={isLoading} />
         <StoreUsageCard subscription={subscription} />
-        <StoreCardGrid cards={storeCards} hasPremium={hasPremium} hasBusiness={hasBusiness} onCardClick={handleCardClick} />
         <StoreFeatureSection features={storeFeatures} />
         <StorePaymentSection />
         <StoreTrialCard subscription={subscription} isLoading={isLoading} onStartTrial={handleStartTrial} />
