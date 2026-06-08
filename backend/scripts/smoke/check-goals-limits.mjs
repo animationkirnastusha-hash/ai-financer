@@ -47,7 +47,7 @@ await runSmoke('goals-limits', async (context) => {
       targetType: 'account',
       accountId,
       amount: 10000,
-      period: 'month',
+      period: 'monthly',
       notifyAt: 80,
       isActive: true,
     },
@@ -64,7 +64,7 @@ await runSmoke('goals-limits', async (context) => {
 
   const updatedLimit = await requestJson(context, `/spending-limits/${limit.id}`, {
     method: 'PUT',
-    body: { amount: 12000, period: 'month', notifyAt: 75, isActive: true },
+    body: { amount: 12000, period: 'monthly', notifyAt: 75, isActive: true },
   });
   if (Number(updatedLimit.payload?.limit?.amount) !== 12000) {
     throw new Error(`Spending limit was not updated: ${updatedLimit.payload?.limit?.amount}`);
