@@ -1,0 +1,92 @@
+[
+  {
+    "file": "src/features/premium/ui/PremiumUpgradeSheet.tsx",
+    "line": 10,
+    "key": "premium.sheet.feature.forecast",
+    "text": "'premium.sheet.feature.forecast',"
+  },
+  {
+    "file": "src/features/premium/ui/PremiumUpgradeSheet.tsx",
+    "line": 11,
+    "key": "premium.sheet.feature.reports",
+    "text": "'premium.sheet.feature.reports',"
+  },
+  {
+    "file": "src/features/premium/ui/PremiumUpgradeSheet.tsx",
+    "line": 12,
+    "key": "premium.sheet.feature.receipts",
+    "text": "'premium.sheet.feature.receipts',"
+  },
+  {
+    "file": "src/features/premium/ui/PremiumUpgradeSheet.tsx",
+    "line": 13,
+    "key": "premium.sheet.feature.voice",
+    "text": "'premium.sheet.feature.voice',"
+  },
+  {
+    "file": "src/features/store/model/storeCatalog.ts",
+    "line": 25,
+    "key": "store.premium.item.analytics",
+    "text": "'store.premium.item.analytics',"
+  },
+  {
+    "file": "src/features/store/model/storeCatalog.ts",
+    "line": 26,
+    "key": "store.premium.item.reports",
+    "text": "'store.premium.item.reports',"
+  },
+  {
+    "file": "src/features/store/model/storeCatalog.ts",
+    "line": 27,
+    "key": "store.premium.item.receipts",
+    "text": "'store.premium.item.receipts',"
+  },
+  {
+    "file": "src/features/store/model/storeCatalog.ts",
+    "line": 28,
+    "key": "store.premium.item.voice",
+    "text": "'store.premium.item.voice',"
+  },
+  {
+    "file": "src/features/store/model/storeCatalog.ts",
+    "line": 38,
+    "key": "store.business.item.workspace",
+    "text": "'store.business.item.workspace',"
+  },
+  {
+    "file": "src/features/store/model/storeCatalog.ts",
+    "line": 39,
+    "key": "store.business.item.reports",
+    "text": "'store.business.item.reports',"
+  },
+  {
+    "file": "src/features/store/model/storeCatalog.ts",
+    "line": 50,
+    "key": "store.referral.item.invite",
+    "text": "'store.referral.item.invite',"
+  },
+  {
+    "file": "src/features/store/model/storeCatalog.ts",
+    "line": 51,
+    "key": "store.referral.item.purchase",
+    "text": "'store.referral.item.purchase',"
+  },
+  {
+    "file": "src/features/store/model/storeCatalog.ts",
+    "line": 52,
+    "key": "store.referral.item.balance",
+    "text": "'store.referral.item.balance',"
+  },
+  {
+    "file": "src/features/store/ui/StoreFeatureSection.tsx",
+    "line": 16,
+    "key": "store.features.receipts.title",
+    "text": "if (feature.title === 'store.features.receipts.title') {"
+  },
+  {
+    "file": "src/features/voice/api/voice.api.ts",
+    "line": 131,
+    "key": "voice.webm",
+    "text": "filename = 'voice.webm',"
+  }
+]

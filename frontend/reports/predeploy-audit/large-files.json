@@ -1,0 +1,62 @@
+[
+  {
+    "file": "src/features/sections/lib/categoryIcons.ts",
+    "lines": 2028,
+    "threshold": 420
+  },
+  {
+    "file": "src/shared/lib/i18n.ts",
+    "lines": 1605,
+    "threshold": 420
+  },
+  {
+    "file": "src/app/styles/pages/dashboard.css",
+    "lines": 670,
+    "threshold": 420
+  },
+  {
+    "file": "src/app/styles/pages/obligations.css",
+    "lines": 669,
+    "threshold": 420
+  },
+  {
+    "file": "src/features/voice/model/useVoiceRecorder.ts",
+    "lines": 615,
+    "threshold": 420
+  },
+  {
+    "file": "src/app/styles/features/chat/text-chat-overlay.css",
+    "lines": 612,
+    "threshold": 420
+  },
+  {
+    "file": "src/app/styles/pages/onboarding-setup.css",
+    "lines": 607,
+    "threshold": 420
+  },
+  {
+    "file": "src/features/chat/ui/TextChatOverlay.tsx",
+    "lines": 591,
+    "threshold": 360
+  },
+  {
+    "file": "src/features/voice/ui/VoiceFirstCompanionLayer.tsx",
+    "lines": 569,
+    "threshold": 360
+  },
+  {
+    "file": "src/app/styles/components/buttons-controls.css",
+    "lines": 528,
+    "threshold": 420
+  },
+  {
+    "file": "src/app/styles/screens/product-screens.css",
+    "lines": 462,
+    "threshold": 420
+  },
+  {
+    "file": "src/pages/admin/AdminPage.tsx",
+    "lines": 461,
+    "threshold": 360
+  }
+]

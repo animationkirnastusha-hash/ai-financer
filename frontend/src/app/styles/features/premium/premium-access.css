@@ -1,5 +1,5 @@
-/* Monetization and access screen styles. Keep order through app/styles/index.css. */
-.monetization-page,
+/* moved from app/styles/18-premium-admin.css. Keep order through app/styles/index.css. */
+.premium-admin-page,
 .referral-admin-page {
   background:
     radial-gradient(circle at 18% 0%, rgba(251, 191, 36, 0.1), transparent 34%),
@@ -7,7 +7,7 @@
     var(--app-bg, #050b10);
 }
 
-.monetization-hero,
+.premium-admin-hero,
 .referral-admin-hero {
   position: relative;
   overflow: hidden;
@@ -20,7 +20,7 @@
   box-shadow: 0 22px 70px rgba(0,0,0,0.26);
 }
 
-.monetization-hero__glow {
+.premium-admin-hero__glow {
   position: absolute;
   inset: auto -40px -90px auto;
   width: 210px;
@@ -31,7 +31,7 @@
   pointer-events: none;
 }
 
-.monetization-kicker,
+.premium-admin-kicker,
 .referral-admin-hero .app-eyebrow {
   width: max-content;
   max-width: 100%;
@@ -45,7 +45,7 @@
   text-transform: uppercase;
 }
 
-.monetization-hero h1,
+.premium-admin-hero h1,
 .referral-admin-hero h1 {
   position: relative;
   margin-top: 16px;
@@ -56,7 +56,7 @@
   font-weight: 760;
 }
 
-.monetization-hero p,
+.premium-admin-hero p,
 .referral-admin-hero p {
   position: relative;
   margin-top: 14px;
@@ -66,7 +66,7 @@
   line-height: 1.65;
 }
 
-.monetization-hero__actions {
+.premium-admin-hero__actions {
   position: relative;
   display: flex;
   flex-wrap: wrap;
@@ -74,33 +74,33 @@
   margin-top: 18px;
 }
 
-.monetization-plan-grid {
+.premium-admin-plan-grid {
   display: grid;
   grid-template-columns: 1fr;
   gap: 12px;
 }
 
 @media (min-width: 720px) {
-  .monetization-plan-grid {
+  .premium-admin-plan-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
-.monetization-plan-card {
+.premium-admin-plan-card {
   border-radius: 30px;
   border: 1px solid rgba(255, 255, 255, 0.1);
   padding: 18px;
   background: rgba(255,255,255,0.045);
 }
 
-.monetization-plan-card--premium {
+.premium-admin-plan-card--premium {
   border-color: rgba(251, 191, 36, 0.18);
   background:
     radial-gradient(circle at top right, rgba(251, 191, 36, 0.12), transparent 44%),
     rgba(255,255,255,0.045);
 }
 
-.monetization-plan-card__label {
+.premium-admin-plan-card__label {
   width: max-content;
   border-radius: 999px;
   background: rgba(255,255,255,0.08);
@@ -111,8 +111,8 @@
   text-transform: uppercase;
 }
 
-.monetization-plan-card h2,
-.monetization-section h2,
+.premium-admin-plan-card h2,
+.premium-admin-section h2,
 .referral-admin-section h2 {
   margin-top: 12px;
   font-size: 20px;
@@ -121,14 +121,14 @@
   font-weight: 700;
 }
 
-.monetization-plan-card p {
+.premium-admin-plan-card p {
   margin-top: 9px;
   color: rgba(255,255,255,0.52);
   font-size: 13px;
   line-height: 1.55;
 }
 
-.monetization-plan-card ul {
+.premium-admin-plan-card ul {
   display: grid;
   gap: 8px;
   margin-top: 14px;
@@ -136,7 +136,7 @@
   list-style: none;
 }
 
-.monetization-plan-card li {
+.premium-admin-plan-card li {
   position: relative;
   padding-left: 20px;
   color: rgba(255,255,255,0.72);
@@ -144,7 +144,7 @@
   line-height: 1.45;
 }
 
-.monetization-plan-card li::before {
+.premium-admin-plan-card li::before {
   content: '';
   position: absolute;
   left: 0;
@@ -156,7 +156,7 @@
   box-shadow: 0 0 14px rgba(110, 231, 183, 0.45);
 }
 
-.monetization-section__head,
+.premium-admin-section__head,
 .referral-admin-section__head {
   display: flex;
   align-items: flex-start;
@@ -164,7 +164,7 @@
   gap: 14px;
 }
 
-.monetization-section__head > span {
+.premium-admin-section__head > span {
   flex-shrink: 0;
   border-radius: 999px;
   border: 1px solid rgba(255,255,255,0.1);
@@ -174,13 +174,13 @@
   font-size: 11px;
 }
 
-.monetization-feature-list {
+.premium-admin-feature-list {
   display: grid;
   gap: 10px;
   margin-top: 16px;
 }
 
-.monetization-feature-card {
+.premium-admin-feature-card {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
@@ -191,19 +191,19 @@
   padding: 14px;
 }
 
-.monetization-feature-card h3 {
+.premium-admin-feature-card h3 {
   font-size: 15px;
   font-weight: 650;
 }
 
-.monetization-feature-card p {
+.premium-admin-feature-card p {
   margin-top: 5px;
   color: rgba(255,255,255,0.5);
   font-size: 13px;
   line-height: 1.45;
 }
 
-.monetization-badge {
+.premium-admin-badge {
   shrink: 0;
   white-space: nowrap;
   border-radius: 999px;
@@ -211,32 +211,32 @@
   font-size: 11px;
 }
 
-.monetization-badge--available {
+.premium-admin-badge--ready-ui {
   background: rgba(110,231,183,0.12);
   color: rgb(187,247,208);
 }
 
-.monetization-badge--planned {
+.premium-admin-badge--backend-later {
   background: rgba(251,191,36,0.12);
   color: rgb(253,230,138);
 }
 
-.monetization-badge--soon {
+.premium-admin-badge--payments-later {
   background: rgba(96,165,250,0.12);
   color: rgb(191,219,254);
 }
 
-.monetization-trial-card,
-.referral-rules,
-.referral-rules-grid,
-.monetization-feature-grid {
+.premium-admin-trial-card,
+.referral-admin-rules,
+.referral-admin-roadmap,
+.premium-admin-roadmap {
   display: grid;
   gap: 10px;
   margin-top: 16px;
 }
 
-.monetization-trial-card div,
-.referral-rules article {
+.premium-admin-trial-card div,
+.referral-admin-rules article {
   display: flex;
   align-items: center;
   gap: 12px;
@@ -245,7 +245,7 @@
   padding: 12px;
 }
 
-.monetization-trial-card strong {
+.premium-admin-trial-card strong {
   display: grid;
   place-items: center;
   width: 30px;
@@ -255,20 +255,20 @@
   color: rgb(187,247,208);
 }
 
-.monetization-trial-card span,
-.referral-rules span {
+.premium-admin-trial-card span,
+.referral-admin-rules span {
   color: rgba(255,255,255,0.68);
   font-size: 13px;
   line-height: 1.4;
 }
 
-.monetization-feature-grid,
-.referral-rules-grid {
+.premium-admin-roadmap,
+.referral-admin-roadmap {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
-.monetization-feature-grid span,
-.referral-rules-grid span {
+.premium-admin-roadmap span,
+.referral-admin-roadmap span {
   border-radius: 18px;
   background: rgba(255,255,255,0.055);
   padding: 11px 12px;
@@ -276,7 +276,7 @@
   font-size: 12px;
 }
 
-.referral-code-card-legacy {
+.referral-admin-code-card {
   display: grid;
   gap: 16px;
   border-radius: 32px;
@@ -287,14 +287,14 @@
   padding: 18px;
 }
 
-.referral-code-card-legacy span,
-.referral-code-card-legacy small {
+.referral-admin-code-card span,
+.referral-admin-code-card small {
   display: block;
   color: rgba(255,255,255,0.46);
   font-size: 12px;
 }
 
-.referral-code-card-legacy strong {
+.referral-admin-code-card strong {
   display: block;
   margin-top: 8px;
   overflow-wrap: anywhere;
@@ -304,11 +304,11 @@
   letter-spacing: 0.08em;
 }
 
-.referral-code-card-legacy small {
+.referral-admin-code-card small {
   margin-top: 8px;
 }
 
-.referral-code-card-legacy__actions {
+.referral-admin-code-card__actions {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
