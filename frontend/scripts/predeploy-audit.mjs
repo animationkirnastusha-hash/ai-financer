@@ -18,6 +18,10 @@ const EXCLUDED_TEXT_FILES = [
   normalizePath(path.join('src', 'shared', 'lib', 'i18n.extra.ts')),
 ];
 
+const EXCLUDED_TEXT_PATH_PREFIXES = [
+  normalizePath(path.join('src', 'shared', 'lib', 'i18n', 'locales')) + '/',
+];
+
 const HARD_CODED_RUSSIAN_DATA_FILE_PATTERNS = [
   /\/categoryIcons\.ts$/,
   /\/currency\.ts$/,
@@ -98,7 +102,7 @@ function ensureReportDir() {
 
 function isExcludedTextFile(filePath) {
   const relative = rel(filePath);
-  return EXCLUDED_TEXT_FILES.includes(relative);
+  return EXCLUDED_TEXT_FILES.includes(relative) || EXCLUDED_TEXT_PATH_PREFIXES.some((prefix) => relative.startsWith(prefix));
 }
 
 function stripLineNoise(line) {
