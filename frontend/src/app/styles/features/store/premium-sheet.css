@@ -1,0 +1,186 @@
+/* moved from app/styles/36-premium-sheet.css. Keep order through app/styles/index.css. */
+.premium-feature-gate {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 22px;
+  background: rgba(0, 0, 0, 0.16);
+  padding: 14px;
+  color: inherit;
+  text-align: left;
+}
+
+.premium-feature-gate strong {
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 14px;
+  line-height: 1.15;
+}
+
+.premium-feature-gate small {
+  color: rgba(255, 255, 255, 0.58);
+  font-size: 12px;
+  line-height: 1.42;
+}
+
+.premium-feature-gate__badge {
+  width: max-content;
+  max-width: 100%;
+  border-radius: 999px;
+  background: rgba(251, 191, 36, 0.13);
+  padding: 5px 8px;
+  color: rgb(253, 230, 138);
+  font-size: 10px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
+.premium-feature-gate em {
+  width: max-content;
+  max-width: 100%;
+  margin-top: 4px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  padding: 7px 10px;
+  color: rgba(255, 255, 255, 0.86);
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 650;
+}
+
+.premium-upgrade-hero {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 28px;
+  background:
+    radial-gradient(circle at top right, rgba(251, 191, 36, 0.18), transparent 42%),
+    rgba(255, 255, 255, 0.055);
+  padding: 18px;
+}
+
+.premium-upgrade-hero__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.premium-upgrade-kicker,
+.premium-upgrade-badge {
+  width: max-content;
+  max-width: 100%;
+  border-radius: 999px;
+  padding: 6px 9px;
+  font-size: 11px;
+}
+
+.premium-upgrade-kicker {
+  border: 1px solid rgba(251, 191, 36, 0.2);
+  background: rgba(251, 191, 36, 0.1);
+  color: rgb(253, 230, 138);
+  letter-spacing: .16em;
+  text-transform: uppercase;
+}
+
+.premium-upgrade-badge {
+  flex-shrink: 0;
+  border: 1px solid rgba(110, 231, 183, .24);
+  background: rgba(110, 231, 183, .11);
+  color: rgb(187, 247, 208);
+}
+
+.premium-upgrade-hero h2 {
+  margin-top: 14px;
+  font-size: clamp(26px, 7vw, 38px);
+  line-height: .98;
+  letter-spacing: -.055em;
+  font-weight: 780;
+}
+
+.premium-upgrade-hero > p,
+.premium-upgrade-trigger p,
+.premium-upgrade-price p {
+  color: rgba(255, 255, 255, .6);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.premium-upgrade-hero > p {
+  margin-top: 12px;
+}
+
+.premium-upgrade-trigger {
+  margin-top: 14px;
+  border-radius: 22px;
+  border: 1px solid rgba(255, 255, 255, .1);
+  background: rgba(0, 0, 0, .18);
+  padding: 13px;
+}
+
+.premium-upgrade-trigger div {
+  font-weight: 700;
+}
+
+.premium-upgrade-feature-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.premium-upgrade-feature {
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, .09);
+  background: rgba(255, 255, 255, .045);
+  padding: 12px;
+}
+
+.premium-upgrade-feature div {
+  font-size: 14px;
+  font-weight: 680;
+}
+
+.premium-upgrade-feature p {
+  margin-top: 6px;
+  color: rgba(255, 255, 255, .52);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.premium-upgrade-price {
+  margin-top: 12px;
+  border-radius: 24px;
+  border: 1px solid rgba(251, 191, 36, .18);
+  background: rgba(251, 191, 36, .08);
+  padding: 14px;
+}
+
+.premium-upgrade-price div {
+  color: rgba(255, 255, 255, .94);
+  font-size: 24px;
+  line-height: 1;
+  letter-spacing: -.04em;
+  font-weight: 760;
+}
+
+.premium-upgrade-actions {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.premium-upgrade-later {
+  min-height: 40px;
+  border: 0;
+  background: transparent;
+  color: rgba(255, 255, 255, .52);
+  font-size: 13px;
+}
+
+@media (max-width: 430px) {
+  .store-feature-grid,
+  .premium-upgrade-feature-grid {
+    grid-template-columns: 1fr;
+  }
+}

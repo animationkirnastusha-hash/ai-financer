@@ -1,0 +1,199 @@
+/* moved from app/styles/34-store.css. Keep order through app/styles/index.css. */
+.store-card-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.store-card {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 28px;
+  background: rgba(255,255,255,.055);
+  padding: 18px;
+}
+
+.store-card--premium {
+  background: radial-gradient(circle at top right, rgba(168,85,247,.18), transparent 42%), rgba(255,255,255,.055);
+}
+
+.store-card--business {
+  background: radial-gradient(circle at top right, rgba(59,130,246,.18), transparent 42%), rgba(255,255,255,.055);
+}
+
+.store-card--referral {
+  background: radial-gradient(circle at top right, rgba(52,211,153,.16), transparent 42%), rgba(255,255,255,.055);
+}
+
+.store-card h2 {
+  margin: 6px 0 0;
+  font-size: 22px;
+}
+
+.store-card p,
+.store-trial-card p {
+  margin: 10px 0 0;
+  color: rgba(255,255,255,.62);
+  line-height: 1.45;
+}
+
+.store-card ul {
+  display: grid;
+  gap: 8px;
+  margin: 14px 0;
+  padding: 0;
+  list-style: none;
+}
+
+.store-card li {
+  color: rgba(255,255,255,.76);
+  font-size: 14px;
+}
+
+.store-card li::before {
+  content: "•";
+  margin-right: 8px;
+  color: rgba(52,211,153,.95);
+}
+
+
+.store-usage-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.store-usage-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.store-usage-grid > div {
+  min-width: 0;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.055);
+  border-radius: 18px;
+  padding: 12px;
+}
+
+.store-usage-grid strong {
+  display: block;
+  font-size: 22px;
+  line-height: 1;
+  letter-spacing: -0.03em;
+}
+
+.store-usage-grid span {
+  display: block;
+  margin-top: 6px;
+  color: rgba(255, 255, 255, 0.68);
+  font-size: 11px;
+  line-height: 1.25;
+}
+
+@media (max-width: 390px) {
+  .store-usage-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Pack 45: Premium visual polish and soft gates. */
+.premium-admin-badge {
+  flex-shrink: 0;
+}
+
+.store-status-card,
+.store-feature-section,
+.store-trial-card {
+  border-color: rgba(255, 255, 255, 0.1);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.04));
+}
+
+.store-active-badge,
+.store-card__head span {
+  border: 1px solid rgba(110, 231, 183, 0.24);
+  background: rgba(110, 231, 183, 0.11);
+  color: rgb(187, 247, 208);
+}
+
+.store-card {
+  padding: 0;
+  transition: transform .18s ease, border-color .18s ease, background .18s ease;
+}
+
+.store-card:active {
+  transform: scale(.992);
+}
+
+.store-card__button {
+  display: block;
+  width: 100%;
+  min-height: 100%;
+  padding: 18px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.store-card__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.store-card__head span {
+  flex-shrink: 0;
+  border-radius: 999px;
+  padding: 6px 9px;
+  font-size: 11px;
+  line-height: 1;
+}
+
+.store-card__action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 38px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.075);
+  padding: 0 14px;
+  color: rgba(255, 255, 255, 0.86);
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.store-feature-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.store-feature-card {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 22px;
+  background: rgba(0, 0, 0, 0.16);
+  padding: 14px;
+  color: inherit;
+  text-align: left;
+}
+
+.store-feature-card strong {
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 14px;
+  line-height: 1.15;
+}
+
+.store-feature-card span {
+  color: rgba(255, 255, 255, 0.58);
+  font-size: 12px;
+  line-height: 1.42;
+}

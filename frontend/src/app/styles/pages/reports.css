@@ -1,0 +1,262 @@
+/* moved from app/styles/29-reports.css. Keep order through app/styles/index.css. */
+.report-export-sheet {
+  display: grid;
+  gap: 14px;
+}
+
+.report-export-hero {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 24px;
+  padding: 18px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.035));
+}
+
+.report-export-hero--premium {
+  background: linear-gradient(135deg, rgba(255, 214, 102, 0.18), rgba(255, 255, 255, 0.04));
+}
+
+.report-export-hero--business {
+  background: linear-gradient(135deg, rgba(86, 145, 255, 0.18), rgba(255, 255, 255, 0.04));
+}
+
+.report-export-hero span,
+.report-export-label {
+  display: block;
+  color: rgba(255, 255, 255, 0.52);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.report-export-hero h2 {
+  margin: 8px 0 6px;
+  font-size: 22px;
+  line-height: 1.05;
+  font-weight: 850;
+}
+
+.report-export-hero p,
+.report-export-note {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.report-export-section {
+  display: grid;
+  gap: 10px;
+}
+
+.report-export-segment,
+.report-export-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.report-export-segment button,
+.report-export-chips button {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 999px;
+  padding: 9px 12px;
+  background: rgba(255, 255, 255, 0.055);
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 13px;
+  font-weight: 750;
+}
+
+.report-export-segment button.is-active,
+.report-export-chips button.is-active {
+  border-color: rgba(255, 255, 255, 0.32);
+  background: rgba(255, 255, 255, 0.16);
+  color: #fff;
+}
+
+.report-export-dates {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.report-export-dates label {
+  display: grid;
+  gap: 6px;
+  color: rgba(255, 255, 255, 0.54);
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.report-export-dates input {
+  width: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  padding: 11px 12px;
+  background: rgba(255, 255, 255, 0.07);
+  color: #fff;
+  font-size: 16px;
+}
+
+.report-export-preview {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.report-export-metric {
+  min-width: 0;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 18px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.report-export-metric span {
+  display: block;
+  color: rgba(255, 255, 255, 0.48);
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.report-export-metric strong {
+  display: block;
+  margin-top: 5px;
+  overflow: hidden;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 850;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.report-export-note {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 18px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.045);
+}
+
+.report-export-error {
+  border: 1px solid rgba(255, 99, 99, 0.25);
+  border-radius: 16px;
+  padding: 11px 12px;
+  background: rgba(255, 71, 87, 0.12);
+  color: rgba(255, 220, 220, 0.95);
+  font-size: 13px;
+}
+
+.report-export-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  padding-top: 2px;
+}
+
+.business-report-card {
+  border: 1px solid rgba(112, 166, 255, 0.16);
+  border-radius: 26px;
+  padding: 18px;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.16), rgba(255, 255, 255, 0.04));
+}
+
+.business-report-card h2 {
+  margin: 8px 0 6px;
+  font-size: 20px;
+  font-weight: 850;
+}
+
+.business-report-card p {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.business-report-card__actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+
+/* pack-33b: report sheet polish */
+.report-export-sheet {
+  gap: 13px !important;
+}
+
+.report-export-hero {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  overflow: hidden;
+}
+
+.report-export-hero--clickable {
+  cursor: pointer;
+  user-select: none;
+}
+
+.report-export-hero--clickable:active {
+  transform: scale(0.992);
+}
+
+.report-export-hero > i {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 26px;
+  font-style: normal;
+  line-height: 1;
+}
+
+.report-export-hero small {
+  display: inline-flex;
+  width: max-content;
+  margin-top: 11px;
+  color: rgba(129, 239, 208, 0.86);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.report-export-hero--premium small {
+  color: rgba(255, 224, 138, 0.92);
+}
+
+.report-export-section {
+  gap: 8px !important;
+}
+
+.report-export-label {
+  font-size: 10px !important;
+  letter-spacing: 0.16em !important;
+}
+
+.report-export-chips,
+.report-export-segment {
+  gap: 7px !important;
+}
+
+.report-export-chips button,
+.report-export-segment button {
+  min-height: 40px !important;
+  padding: 0 13px !important;
+  font-size: 13px !important;
+}
+
+.report-export-note {
+  font-size: 13px !important;
+}
+
+.report-export-actions {
+  position: sticky;
+  bottom: 0;
+  padding-top: 6px !important;
+  background: linear-gradient(180deg, transparent, rgba(6, 10, 17, 0.88) 45%, rgba(6, 10, 17, 0.96));
+}

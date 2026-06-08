@@ -1,0 +1,72 @@
+/* moved from app/styles/08-navigation-and-swipe.css. Keep order through app/styles/index.css. */
+/* 05-navigation-swipe.css: generated CSS layer. */
+
+
+/* from swipe.css */
+body.ai-screen-dragging .telegram-app-content {
+  transform: translate3d(var(--ai-swipe-drag-x), 0, 0) scale(.998);
+  opacity: .99;
+  transition: none !important;
+  will-change: transform;
+}
+
+body.ai-screen-snap-back .telegram-app-content {
+  transform: translate3d(0,0,0) scale(1);
+  transition: transform 190ms cubic-bezier(.16,1,.25,1), opacity 190ms ease !important;
+}
+
+.ai-screen-transition {
+  animation: aiScreenEnter 210ms cubic-bezier(.16,1,.25,1) both;
+  will-change: transform, opacity;
+}
+
+body.ai-screen-slide-left .ai-screen-transition {
+  animation: aiPageSwipeLeft 240ms cubic-bezier(.16,1,.25,1) both !important;
+}
+body.ai-screen-slide-right .ai-screen-transition {
+  animation: aiPageSwipeRight 240ms cubic-bezier(.16,1,.25,1) both !important;
+}
+
+.app-card,
+.app-stat-card,
+.app-nav-card,
+.ai-page-card-compact,
+.app-bottom-sheet,
+[data-ai-core-modal="true"] > * {
+  animation: aiSoftEnter 160ms cubic-bezier(.2,.9,.2,1) both;
+}
+
+@keyframes aiScreenEnter {
+  from { opacity: .90; transform: translate3d(0, 4px, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+@keyframes aiPageSwipeLeft {
+  from { opacity: .90; transform: translate3d(12px, 0, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+@keyframes aiPageSwipeRight {
+  from { opacity: .90; transform: translate3d(-12px, 0, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+@keyframes aiSoftEnter {
+  from { opacity: 0; transform: translate3d(0, 5px, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ai-screen-transition,
+  body.ai-screen-slide-left .ai-screen-transition,
+  body.ai-screen-slide-right .ai-screen-transition,
+  body.ai-screen-dragging .telegram-app-content,
+  .app-card,
+  .app-stat-card,
+  .app-nav-card,
+  .ai-page-card-compact,
+  .app-bottom-sheet,
+  [data-ai-core-modal="true"] > * {
+    animation: none !important;
+    transition: none !important;
+    transform: none !important;
+  }
+}
+

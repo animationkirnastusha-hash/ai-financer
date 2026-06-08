@@ -1,5 +1,0 @@
-/* Transaction editing and details. */
-.app-transaction-ai-advice { border:1px solid rgba(129,239,208,.16); background: linear-gradient(135deg, rgba(129,239,208,.10), rgba(255,255,255,.035)); border-radius:24px; padding:16px; }
-.app-transaction-ai-advice__title { margin-top:7px; color:white; font-size:15px; font-weight:720; letter-spacing:-.015em; }
-.app-transaction-ai-advice p { margin-top:8px; color:rgba(255,255,255,.52); font-size:13px; line-height:1.55; }
-
