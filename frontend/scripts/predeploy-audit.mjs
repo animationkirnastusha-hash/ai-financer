@@ -27,6 +27,7 @@ const HARD_CODED_RUSSIAN_DATA_FILE_PATTERNS = [
   /\/currency\.ts$/,
   /\/parse[A-Z][A-Za-z]+Intent\.ts$/,
   /\/taxonomy-icons\.ts$/,
+  /\/features\/sections\/lib\/taxonomy\/rules\/.*\.ts$/,
 ];
 
 const TECH_WORDS = [

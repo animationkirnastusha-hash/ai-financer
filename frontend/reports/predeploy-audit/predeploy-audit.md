@@ -1,6 +1,6 @@
 # Predeploy audit report
 
-Generated: 2026-06-08T20:31:38.358Z
+Generated: 2026-06-08T21:39:25.832Z
 
 ## Summary
 
@@ -8,7 +8,7 @@ Generated: 2026-06-08T20:31:38.358Z
 - Technical/user-visible word candidates: 0
 - Translation key leak candidates: 0
 - CSS structure findings: 0
-- Large files: 12
+- Large files: 10
 - Env leaks: 0
 
 ## Hardcoded Russian candidates
@@ -227,8 +227,6 @@ Generated: 2026-06-08T20:31:38.358Z
 ## Large files
 | file | lines | threshold |
 | --- | --- | --- |
-| src/features/sections/lib/categoryIcons.ts | 2028 | 420 |
-| src/shared/lib/i18n.ts | 1775 | 420 |
 | src/app/styles/pages/dashboard.css | 670 | 420 |
 | src/app/styles/pages/obligations.css | 669 | 420 |
 | src/features/voice/model/useVoiceRecorder.ts | 615 | 420 |

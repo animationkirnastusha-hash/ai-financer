@@ -1,15 +1,5 @@
 [
   {
-    "file": "src/features/sections/lib/categoryIcons.ts",
-    "lines": 2028,
-    "threshold": 420
-  },
-  {
-    "file": "src/shared/lib/i18n.ts",
-    "lines": 1775,
-    "threshold": 420
-  },
-  {
     "file": "src/app/styles/pages/dashboard.css",
     "lines": 670,
     "threshold": 420
