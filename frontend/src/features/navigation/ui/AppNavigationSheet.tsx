@@ -18,7 +18,6 @@ type NavigationGroup = {
 const productLinks: NavigationItem[] = [
   { screen: 'dashboard', labelKey: 'screen.dashboard', captionKey: 'nav.dashboard.caption' },
   { screen: 'accounts', labelKey: 'screen.accounts', captionKey: 'nav.accounts.caption' },
-  { screen: 'analytics', labelKey: 'common.analytics', captionKey: 'nav.analytics.caption' },
   { screen: 'sections', labelKey: 'screen.sections', captionKey: 'nav.sections.caption' },
 ];
 

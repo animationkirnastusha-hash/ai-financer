@@ -76,6 +76,14 @@ export default function BusinessAccountantPage() {
         <div className="business-mini-app-shell">
           <BusinessHero />
 
+          <section className="app-card business-mode-note">
+            <div>
+              <span>{t('business.mode.eyebrow')}</span>
+              <strong>{t('business.mode.title')}</strong>
+            </div>
+            <p>{t('business.mode.caption')}</p>
+          </section>
+
           <nav className="business-tabbar" aria-label={t('business.tabs.label')}>
             {tabs.map((item) => (
               <button key={item.id} type="button" className={tab === item.id ? 'is-active' : undefined} onClick={() => setTab(item.id)}>

@@ -26,6 +26,8 @@ export default function ReferralPage() {
   const [error, setError] = useState<string | null>(null);
 
   const inviteText = useMemo(() => t('referral.inviteText', { code: info?.referralCode || '—' }), [info?.referralCode, t]);
+  const friendsCount = info?.referrals.length ?? 0;
+  const rewardsCount = info?.referralTransactions.length ?? 0;
 
   const load = async () => {
     setBusy(true);
@@ -43,11 +45,15 @@ export default function ReferralPage() {
     void load();
   }, []);
 
+  const showCopied = () => {
+    setCopied(true);
+    window.setTimeout(() => setCopied(false), 1600);
+  };
+
   const copy = async () => {
     if (!info?.referralCode) return;
     await navigator.clipboard?.writeText(info.referralCode);
-    setCopied(true);
-    window.setTimeout(() => setCopied(false), 1600);
+    showCopied();
   };
 
   const share = async () => {
@@ -56,8 +62,7 @@ export default function ReferralPage() {
       return;
     }
     await navigator.clipboard?.writeText(inviteText);
-    setCopied(true);
-    window.setTimeout(() => setCopied(false), 1600);
+    showCopied();
   };
 
   const apply = async () => {
@@ -76,51 +81,43 @@ export default function ReferralPage() {
   };
 
   return (
-    <div className="app-page referral-admin-page text-white">
+    <div className="app-page referral-page text-white">
       <div className="app-page__inner space-y-4">
         <ScreenTopBar title={t('common.referrals')} left="back" right={['home', 'store']} />
 
-        <header className="referral-admin-hero">
-          <div className="app-eyebrow">{t('referral.hero.eyebrow')}</div>
-          <h1>{t('referral.hero.title')}</h1>
-          <p>{t('referral.hero.caption')}</p>
+        <header className="referral-hero app-card app-card--hero">
+          <div>
+            <div className="app-eyebrow">{t('referral.hero.eyebrow')}</div>
+            <h1>{t('referral.hero.title')}</h1>
+            <p>{t('referral.hero.caption')}</p>
+          </div>
+          <div className="referral-hero__stats" aria-label={t('referral.stats.label')}>
+            <article><strong>{friendsCount}</strong><span>{t('referral.stats.friends')}</span></article>
+            <article><strong>{rewardsCount}</strong><span>{t('referral.stats.rewards')}</span></article>
+            <article><strong>{formatBonus(info?.referralBalance ?? 0)}</strong><span>{t('referral.stats.balance')}</span></article>
+          </div>
         </header>
 
-        <section className="referral-admin-code-card">
-          <div>
+        <section className="referral-code-panel app-card">
+          <div className="referral-code-panel__main">
             <span>{t('referral.code.label')}</span>
             <strong>{busy && !info ? '—' : info?.referralCode || '—'}</strong>
             <small>{copied ? t('referral.copied') : t('referral.code.caption')}</small>
           </div>
-          <div className="referral-admin-code-card__actions">
+          <div className="referral-code-panel__actions">
             <button type="button" className="app-secondary-button" onClick={copy} disabled={!info?.referralCode}>{t('referral.copy')}</button>
             <button type="button" className="app-primary-button" onClick={share} disabled={!info?.referralCode}>{t('referral.share')}</button>
           </div>
         </section>
 
-        <section className="app-card referral-admin-section">
-          <div className="referral-admin-section__head">
-            <div>
-              <div className="app-eyebrow">{t('referral.balance.eyebrow')}</div>
-              <h2>{formatBonus(info?.referralBalance ?? 0)}</h2>
-            </div>
-          </div>
-          <p>{t('referral.balance.caption')}</p>
-          <div className="referral-admin-code-card__actions mt-4">
-            <button type="button" className="app-secondary-button" disabled>{t('referral.balance.withdrawSoon')}</button>
-            <button type="button" className="app-primary-button" disabled>{t('referral.balance.paySoon')}</button>
-          </div>
-        </section>
-
         {!info?.referrer ? (
-          <section className="app-card referral-admin-section">
-            <div className="referral-admin-section__head">
-              <div>
-                <div className="app-eyebrow">{t('referral.apply.eyebrow')}</div>
-                <h2>{t('referral.apply.title')}</h2>
-              </div>
+          <section className="referral-apply-card app-card">
+            <div>
+              <div className="app-eyebrow">{t('referral.apply.eyebrow')}</div>
+              <h2>{t('referral.apply.title')}</h2>
+              <p>{t('referral.apply.caption')}</p>
             </div>
-            <div className="app-form-row">
+            <div className="referral-apply-card__form">
               <input value={code} onChange={(event) => setCode(event.target.value)} placeholder={t('referral.apply.placeholder')} />
               <button type="button" className="app-primary-button" onClick={apply} disabled={busy || !code.trim()}>{t('referral.apply.action')}</button>
             </div>
@@ -129,56 +126,64 @@ export default function ReferralPage() {
 
         {error ? <div className="app-card app-card--danger">{error}</div> : null}
 
-        <section className="app-card referral-admin-section">
-          <div className="referral-admin-section__head">
-            <div>
-              <div className="app-eyebrow">{t('referral.rules.eyebrow')}</div>
-              <h2>{t('referral.rules.title')}</h2>
-            </div>
-          </div>
-          <div className="referral-admin-rules">
-            <article>
-              <b>{t('referral.rule.activation.title')}</b>
-              <span>{t('referral.rule.activation.caption')}</span>
-            </article>
-            <article>
-              <b>{t('referral.rule.purchase.title')}</b>
-              <span>{t('referral.rule.purchase.caption')}</span>
-            </article>
-            <article>
-              <b>{t('referral.rule.balance.title')}</b>
-              <span>{t('referral.rule.balance.caption')}</span>
-            </article>
-          </div>
+        <section className="referral-benefits-grid">
+          <article className="app-card referral-benefit-card">
+            <b>{t('referral.rule.activation.title')}</b>
+            <span>{t('referral.rule.activation.caption')}</span>
+          </article>
+          <article className="app-card referral-benefit-card">
+            <b>{t('referral.rule.purchase.title')}</b>
+            <span>{t('referral.rule.purchase.caption')}</span>
+          </article>
+          <article className="app-card referral-benefit-card">
+            <b>{t('referral.rule.balance.title')}</b>
+            <span>{t('referral.rule.balance.caption')}</span>
+          </article>
         </section>
 
-        <section className="app-card referral-admin-section">
-          <div className="referral-admin-section__head">
+        <section className="app-card referral-list-card">
+          <div className="referral-section-head">
             <div>
               <div className="app-eyebrow">{t('referral.friends.eyebrow')}</div>
               <h2>{t('referral.friends.title')}</h2>
             </div>
-            <span>{info?.referrals.length ?? 0}</span>
+            <span>{friendsCount}</span>
           </div>
-          <div className="referral-admin-roadmap">
+          <div className="referral-list">
             {(info?.referrals ?? []).length ? info!.referrals.map((friend) => (
-              <span key={friend.id}>{friend.firstName || friend.username || t('referral.friendFallback')} · {friend.activated ? t('referral.friendActivated') : t('referral.friendPending')}</span>
-            )) : <span>{t('referral.friends.empty')}</span>}
+              <article key={friend.id}>
+                <b>{friend.firstName || friend.username || t('referral.friendFallback')}</b>
+                <span>{friend.activated ? t('referral.friendActivated') : t('referral.friendPending')}</span>
+              </article>
+            )) : <div className="referral-empty">{t('referral.friends.empty')}</div>}
           </div>
         </section>
 
-        <section className="app-card referral-admin-section">
-          <div className="referral-admin-section__head">
+        <section className="app-card referral-list-card">
+          <div className="referral-section-head">
             <div>
               <div className="app-eyebrow">{t('referral.history.eyebrow')}</div>
               <h2>{t('referral.history.title')}</h2>
             </div>
+            <span>{rewardsCount}</span>
           </div>
-          <div className="referral-admin-roadmap">
+          <div className="referral-list">
             {(info?.referralTransactions ?? []).length ? info!.referralTransactions.map((item) => (
-              <span key={item.id}>{transactionText(item)} · {item.fromUser?.firstName || item.fromUser?.username || t('referral.friendFallback')}</span>
-            )) : <span>{t('referral.history.empty')}</span>}
+              <article key={item.id}>
+                <b>{transactionText(item)}</b>
+                <span>{item.fromUser?.firstName || item.fromUser?.username || t('referral.friendFallback')}</span>
+              </article>
+            )) : <div className="referral-empty">{t('referral.history.empty')}</div>}
           </div>
+        </section>
+
+        <section className="app-card referral-balance-card">
+          <div>
+            <div className="app-eyebrow">{t('referral.balance.eyebrow')}</div>
+            <h2>{formatBonus(info?.referralBalance ?? 0)}</h2>
+            <p>{t('referral.balance.caption')}</p>
+          </div>
+          <button type="button" className="app-secondary-button" disabled>{t('referral.balance.withdrawSoon')}</button>
         </section>
 
         {user?.isAdmin ? <button type="button" className="app-secondary-button w-full" onClick={load}>{t('referral.refresh')}</button> : null}

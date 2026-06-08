@@ -4,9 +4,9 @@ import { usePremiumStore } from '@/features/premium/model/premium.store';
 import { storeCards, storeFeatures, type StoreCard } from '@/features/store/model/storeCatalog';
 import { StoreFeatureSection } from '@/features/store/ui/StoreFeatureSection';
 import { StoreHero } from '@/features/store/ui/StoreHero';
-import { StorePaymentSection } from '@/features/store/ui/StorePaymentSection';
 import { StoreStatusCard } from '@/features/store/ui/StoreStatusCard';
 import { StoreTrialCard } from '@/features/store/ui/StoreTrialCard';
+import { StorePaymentActions } from '@/features/payments/ui/StorePaymentActions';
 import { StoreUsageCard } from '@/features/store/ui/StoreUsageCard';
 import { useSubscriptionStore } from '@/features/subscription/model/subscription.store';
 import { useI18n } from '@/shared/lib/i18n';
@@ -53,7 +53,11 @@ function StoreProductShowcase({ selected, cards, hasPremium, hasBusiness, onSele
         <div className="store-product-detail__side">
           <span>{selectedActive ? t('store.status.active') : t('store.showcase.price')}</span>
           <strong>{selected.tone === 'business' ? t('store.showcase.businessPrice') : selected.tone === 'premium' ? t('store.showcase.premiumPrice') : t('store.showcase.referralPrice')}</strong>
-          <button type="button" className="app-primary-button" onClick={() => onOpen(selected)}>{t(selected.action)}</button>
+          {selected.tone === 'premium' || selected.tone === 'business' ? (
+            <StorePaymentActions product={selected.tone} compact />
+          ) : (
+            <button type="button" className="app-primary-button" onClick={() => onOpen(selected)}>{t(selected.action)}</button>
+          )}
         </div>
       </article>
     </section>
@@ -118,7 +122,6 @@ export default function PremiumPage() {
         <StoreStatusCard subscription={subscription} isLoading={isLoading} />
         <StoreUsageCard subscription={subscription} />
         <StoreFeatureSection features={storeFeatures} />
-        <StorePaymentSection />
         <StoreTrialCard subscription={subscription} isLoading={isLoading} onStartTrial={handleStartTrial} />
       </div>
     </div>

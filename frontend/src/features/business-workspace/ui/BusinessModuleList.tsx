@@ -1,6 +1,6 @@
 import { useI18n, type I18nKey } from '@/shared/lib/i18n';
 
-type ModuleState = 'ready' | 'soon' | 'premium';
+type ModuleState = 'ready' | 'soon';
 
 type BusinessModule = {
   title: I18nKey;
@@ -13,12 +13,10 @@ const modules: BusinessModule[] = [
   { title: 'business.module.reports.title', caption: 'business.module.reports.caption', state: 'ready' },
   { title: 'business.module.taxes.title', caption: 'business.module.taxes.caption', state: 'soon' },
   { title: 'business.module.docs.title', caption: 'business.module.docs.caption', state: 'soon' },
-  { title: 'business.module.bank.title', caption: 'business.module.bank.caption', state: 'premium' },
 ];
 
 function stateLabel(state: ModuleState, t: (key: string) => string) {
   if (state === 'ready') return t('business.badge.available');
-  if (state === 'premium') return t('business.badge.business');
   return t('business.badge.soon');
 }
 

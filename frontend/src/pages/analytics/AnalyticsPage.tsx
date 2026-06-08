@@ -13,7 +13,7 @@ function isCurrentMonth(value: string) {
   return date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth();
 }
 
-function RingChart({ value }: { value: number }) {
+function RingChart({ value, label }: { value: number; label: string }) {
   const radius = 42;
   const stroke = 11;
   const normalized = Math.min(Math.max(value, 0), 100);
@@ -21,11 +21,20 @@ function RingChart({ value }: { value: number }) {
   const offset = circumference - (normalized / 100) * circumference;
 
   return (
-    <svg className="analytics-ring" viewBox="0 0 110 110" aria-hidden="true">
+    <svg className="analytics-ring" viewBox="0 0 110 110" aria-label={label} role="img">
       <circle cx="55" cy="55" r={radius} strokeWidth={stroke} />
       <circle cx="55" cy="55" r={radius} strokeWidth={stroke} strokeDasharray={circumference} strokeDashoffset={offset} />
       <text x="55" y="60" textAnchor="middle">{Math.round(normalized)}%</text>
     </svg>
+  );
+}
+
+function BarRow({ name, value, total }: { name: string; value: number; total: number }) {
+  return (
+    <div className="analytics-bar-row">
+      <div><span>{name}</span><strong>{formatMoney(value, 'RUB')}</strong></div>
+      <i><b style={{ width: `${Math.max(8, Math.min(100, total ? (value / total) * 100 : 0))}%` }} /></i>
+    </div>
   );
 }
 
@@ -51,7 +60,7 @@ export default function AnalyticsPage() {
         acc[key] = (acc[key] || 0) + Number(item.amount || 0);
         return acc;
       }, {}),
-    ).sort((a, b) => b[1] - a[1]).slice(0, 5);
+    ).sort((a, b) => b[1] - a[1]).slice(0, 6);
     const incomeTop = Object.entries(
       income.reduce<Record<string, number>>((acc, item) => {
         const key = item.category?.name || t('analytics.uncategorized');
@@ -62,7 +71,8 @@ export default function AnalyticsPage() {
     const operationsCount = monthTransactions.length;
     const balance = totalIncome - totalExpenses;
     const expenseShare = totalIncome > 0 ? (totalExpenses / totalIncome) * 100 : totalExpenses > 0 ? 100 : 0;
-    return { totalExpenses, totalIncome, top, incomeTop, operationsCount, balance, expenseShare };
+    const mainCategory = top[0]?.[0] ?? t('analytics.empty.noCategory');
+    return { totalExpenses, totalIncome, top, incomeTop, operationsCount, balance, expenseShare, mainCategory };
   }, [t, transactions]);
 
   const mainInsight = data.operationsCount === 0
@@ -76,14 +86,19 @@ export default function AnalyticsPage() {
       <div className="app-page__inner space-y-4">
         <ScreenTopBar title={t('common.analytics')} right={['notifications', 'settings']} />
 
-        <header className="app-card app-card--hero analytics-hero-card">
-          <div className="app-eyebrow">{t('analytics.hero.eyebrow')}</div>
+        <header className="app-card app-card--hero analytics-hero-card analytics-hero-card--final">
           <div className="analytics-hero-card__grid">
             <div>
+              <div className="app-eyebrow">{t('analytics.hero.eyebrow')}</div>
               <h1 className="app-hero-title">{t('analytics.hero.title')}</h1>
               <p className="app-hero-caption">{t('analytics.hero.caption')}</p>
+              <div className="analytics-period-chipline" aria-label={t('analytics.period.label')}>
+                <span className="is-active">{t('analytics.period.month')}</span>
+                <span>{t('analytics.period.week')}</span>
+                <span>{t('analytics.period.day')}</span>
+              </div>
             </div>
-            <RingChart value={data.expenseShare} />
+            <RingChart value={data.expenseShare} label={t('analytics.ring.label')} />
           </div>
           <div className="analytics-kpi-grid">
             <article><span>{t('analytics.kpi.income')}</span><strong>{formatMoney(data.totalIncome, 'RUB', { sign: 'plus' })}</strong></article>
@@ -92,22 +107,35 @@ export default function AnalyticsPage() {
           </div>
         </header>
 
-        <section className="analytics-fina-card app-card">
+        <section className="analytics-fina-card app-card analytics-fina-card--floating">
           <div className="analytics-fina-card__avatar" aria-hidden="true"><span /><span /></div>
-          <div><b>{t('analytics.fina.title')}</b><span>{mainInsight}</span></div>
+          <div>
+            <b>{t('analytics.fina.title')}</b>
+            <span>{mainInsight}</span>
+          </div>
         </section>
 
-        <section className="app-card analytics-section-card">
+        <section className="analytics-grid-two">
+          <article className="app-card analytics-mini-card">
+            <span>{t('analytics.mini.operations')}</span>
+            <strong>{data.operationsCount}</strong>
+            <small>{t('analytics.mini.operationsCaption')}</small>
+          </article>
+          <article className="app-card analytics-mini-card">
+            <span>{t('analytics.mini.mainCategory')}</span>
+            <strong>{data.mainCategory}</strong>
+            <small>{t('analytics.mini.mainCategoryCaption')}</small>
+          </article>
+        </section>
+
+        <section className="app-card analytics-section-card analytics-section-card--primary">
           <div className="analytics-section-card__head">
             <div><div className="app-eyebrow">{t('analytics.expenses.eyebrow')}</div><h2>{t('analytics.expenses.title')}</h2></div>
             <button type="button" className="app-secondary-button app-secondary-button--compact" onClick={() => openModal({ type: 'report-export', mode: 'base' })}>{t('analytics.report.action')}</button>
           </div>
           <div className="analytics-bars">
             {data.top.length === 0 ? <div className="analytics-empty-line">{t('analytics.empty.expenses')}</div> : data.top.map(([name, value]) => (
-              <div key={name} className="analytics-bar-row">
-                <div><span>{name}</span><strong>{formatMoney(value, 'RUB')}</strong></div>
-                <i><b style={{ width: `${Math.max(8, Math.min(100, data.totalExpenses ? (value / data.totalExpenses) * 100 : 0))}%` }} /></i>
-              </div>
+              <BarRow key={name} name={name} value={value} total={data.totalExpenses} />
             ))}
           </div>
         </section>
@@ -123,7 +151,7 @@ export default function AnalyticsPage() {
           </div>
         </section>
 
-        <section className="app-card analytics-section-card">
+        <section className="app-card analytics-section-card analytics-section-card--actions">
           <div className="analytics-section-card__head">
             <div><div className="app-eyebrow">{t('analytics.actions.eyebrow')}</div><h2>{t('analytics.actions.title')}</h2></div>
           </div>
