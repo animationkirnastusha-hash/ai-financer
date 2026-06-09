@@ -56,7 +56,7 @@ function resolveTelegramOpenUrl() {
 }
 
 function shouldDeliverToTelegram(type: string) {
-  return ['obligation_due', 'obligation_due_today', 'obligation_overdue', 'payment_marked'].includes(type);
+  return ['obligation_due', 'obligation_due_today', 'obligation_overdue', 'recurring_due', 'recurring_due_today', 'recurring_overdue', 'payment_marked'].includes(type);
 }
 
 export class NotificationService {
@@ -96,15 +96,22 @@ export class NotificationService {
     if (!settings.inAppEnabled && !settings.telegramEnabled) return;
 
     const today = new Date();
-    const loans = await prisma.loan.findMany({
-      where: {
-        userId,
-        status: 'active',
-        nextPaymentDate: { not: null },
-      },
-      include: { account: true },
-      orderBy: { nextPaymentDate: 'asc' },
-    });
+    const [loans, recurringPayments] = await Promise.all([
+      prisma.loan.findMany({
+        where: {
+          userId,
+          status: 'active',
+          nextPaymentDate: { not: null },
+        },
+        include: { account: true },
+        orderBy: { nextPaymentDate: 'asc' },
+      }),
+      prisma.recurringPayment.findMany({
+        where: { userId, isActive: true },
+        include: { account: true },
+        orderBy: { nextDate: 'asc' },
+      }),
+    ]);
 
     for (const loan of loans) {
       if (!loan.nextPaymentDate) continue;
@@ -152,25 +159,87 @@ export class NotificationService {
         });
       }
     }
+
+    for (const payment of recurringPayments) {
+      const days = daysBetween(today, payment.nextDate);
+      const accountText = payment.account?.name ? ` Счёт: ${payment.account.name}.` : '';
+      const amount = formatMoney(payment.amount, payment.account?.currency || 'RUB');
+      const advanceDays = Math.max(0, Math.min(30, Number(settings.remindDaysBefore ?? 1)));
+
+      if (days === advanceDays && advanceDays > 0) {
+        await this.createOnce(userId, {
+          type: 'recurring_due',
+          title: 'Скоро списание',
+          message: `Через ${advanceDays} дн. регулярный платёж: ${payment.name} — ${amount}.${accountText}`,
+          severity: 'info',
+          relatedEntityType: 'recurring_payment',
+          relatedEntityId: payment.id,
+          action: 'open_recurring',
+          dueAt: payment.nextDate,
+        });
+      }
+
+      if (days === 0 && settings.remindOnDueDate) {
+        await this.createOnce(userId, {
+          type: 'recurring_due_today',
+          title: 'Сегодня списание',
+          message: `${payment.name}: ${amount}.${accountText}`,
+          severity: 'warning',
+          relatedEntityType: 'recurring_payment',
+          relatedEntityId: payment.id,
+          action: 'open_recurring',
+          dueAt: payment.nextDate,
+        });
+      }
+
+      if (days < 0 && settings.remindOverdue) {
+        await this.createOnce(userId, {
+          type: 'recurring_overdue',
+          title: 'Списание просрочено',
+          message: `${payment.name}: ${amount}. Проверь регулярный платёж.${accountText}`,
+          severity: 'danger',
+          relatedEntityType: 'recurring_payment',
+          relatedEntityId: payment.id,
+          action: 'open_recurring',
+          dueAt: payment.nextDate,
+        });
+      }
+    }
   }
 
   async syncObligationNotificationsForAllUsers() {
-    const rows = await prisma.loan.findMany({
-      where: {
-        status: 'active',
-        nextPaymentDate: { not: null },
-      },
-      select: { userId: true },
-      distinct: ['userId'],
-    });
+    const [loanRows, recurringRows] = await Promise.all([
+      prisma.loan.findMany({
+        where: { status: 'active', nextPaymentDate: { not: null } },
+        select: { userId: true },
+        distinct: ['userId'],
+      }),
+      prisma.recurringPayment.findMany({
+        where: { isActive: true },
+        select: { userId: true },
+        distinct: ['userId'],
+      }),
+    ]);
 
-    let users = 0;
-    for (const row of rows) {
-      await this.syncObligationNotifications(row.userId);
-      users += 1;
+    const userIds = new Set([...loanRows, ...recurringRows].map((row) => row.userId));
+    for (const userId of userIds) {
+      await this.syncObligationNotifications(userId);
     }
 
-    return { users };
+    return { users: userIds.size };
+  }
+
+  async createPaymentMarkedNotification(userId: string, input: { title: string; amount: number; currency: string; entityType: string; entityId: string; dueAt?: Date }) {
+    return this.createOnce(userId, {
+      type: 'payment_marked',
+      title: 'Платёж отмечен',
+      message: `${input.title}: ${formatMoney(input.amount, input.currency)}.`,
+      severity: 'success',
+      relatedEntityType: input.entityType,
+      relatedEntityId: input.entityId,
+      action: 'open_obligation',
+      dueAt: input.dueAt,
+    });
   }
 
   private async createOnce(userId: string, input: CreateNotificationInput) {
@@ -296,7 +365,7 @@ export class NotificationService {
     const notifications = await prisma.notification.findMany({
       where: {
         archivedAt: null,
-        type: { in: ['obligation_due', 'obligation_due_today', 'obligation_overdue', 'payment_marked'] },
+        type: { in: ['obligation_due', 'obligation_due_today', 'obligation_overdue', 'recurring_due', 'recurring_due_today', 'recurring_overdue', 'payment_marked'] },
         deliveries: {
           none: {
             channel: 'telegram',

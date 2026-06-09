@@ -1,26 +1,17 @@
 import { Request, Response } from 'express';
 import { asyncHandler } from '../../shared/utils/asyncHandler';
 import { BadRequestError } from '../../shared/core/errors';
-import { RecurringService } from './service';
-
-const recurringService = new RecurringService();
+import { recurringService } from './service';
 
 function getStringParam(value: unknown, fieldName: string): string {
-  if (typeof value !== 'string' || !value.trim()) {
-    throw new BadRequestError(`${fieldName} must be a non-empty string`);
-  }
-
+  if (typeof value !== 'string' || !value.trim()) throw new BadRequestError(`${fieldName} must be a non-empty string`);
   return value;
 }
 
 function parseOptionalDate(value: unknown) {
   if (value === undefined || value === null || value === '') return undefined;
   const parsed = new Date(String(value));
-
-  if (Number.isNaN(parsed.getTime())) {
-    throw new BadRequestError(`Invalid date: ${String(value)}`);
-  }
-
+  if (Number.isNaN(parsed.getTime())) throw new BadRequestError(`Invalid date: ${String(value)}`);
   return parsed;
 }
 
@@ -32,7 +23,6 @@ export const getRecurringPayments = asyncHandler(async (req: Request, res: Respo
 export const getRecurringPayment = asyncHandler(async (req: Request, res: Response) => {
   const recurringId = getStringParam(req.params.id, 'Recurring payment id');
   const recurringPayment = await recurringService.getRecurringPaymentById(req.userId!, recurringId);
-
   res.json({ recurringPayment });
 });
 
@@ -47,15 +37,11 @@ export const createRecurringPayment = asyncHandler(async (req: Request, res: Res
     isActive: req.body.isActive,
   });
 
-  res.status(201).json({
-    message: 'Recurring payment created successfully',
-    recurringPayment,
-  });
+  res.status(201).json({ recurringPayment });
 });
 
 export const updateRecurringPayment = asyncHandler(async (req: Request, res: Response) => {
   const recurringId = getStringParam(req.params.id, 'Recurring payment id');
-
   const recurringPayment = await recurringService.updateRecurringPayment(req.userId!, recurringId, {
     name: req.body.name,
     amount: req.body.amount !== undefined ? Number(req.body.amount) : undefined,
@@ -66,18 +52,21 @@ export const updateRecurringPayment = asyncHandler(async (req: Request, res: Res
     isActive: req.body.isActive,
   });
 
-  res.json({
-    message: 'Recurring payment updated successfully',
-    recurringPayment,
+  res.json({ recurringPayment });
+});
+
+export const markRecurringPaid = asyncHandler(async (req: Request, res: Response) => {
+  const recurringId = getStringParam(req.params.id, 'Recurring payment id');
+  const recurringPayment = await recurringService.markPaid(req.userId!, recurringId, {
+    paidAt: parseOptionalDate(req.body.paidAt),
+    advance: req.body.advance,
   });
+
+  res.json({ recurringPayment });
 });
 
 export const deleteRecurringPayment = asyncHandler(async (req: Request, res: Response) => {
   const recurringId = getStringParam(req.params.id, 'Recurring payment id');
   const recurringPayment = await recurringService.deleteRecurringPayment(req.userId!, recurringId);
-
-  res.json({
-    message: 'Recurring payment deleted successfully',
-    recurringPayment,
-  });
+  res.json({ recurringPayment });
 });

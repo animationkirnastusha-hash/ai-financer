@@ -409,7 +409,6 @@ export class AIExecutorService {
       const categoryId = this.requireString(resolved.categoryId, 'categoryId');
       const category = await tx.category.findFirst({ where: { id: categoryId, userId } });
       if (!category) throw new NotFoundError('Category not found');
-      await tx.budget.deleteMany({ where: { userId, categoryId } });
       await tx.transaction.updateMany({ where: { userId, categoryId }, data: { categoryId: null } });
       await tx.category.delete({ where: { id: categoryId } });
       return { tool, category };

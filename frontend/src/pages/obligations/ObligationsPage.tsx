@@ -47,6 +47,7 @@ export default function ObligationsPage() {
   const activeLoans = useMemo(() => loans.filter((loan) => loan.status !== 'closed'), [loans]);
   const closedLoans = useMemo(() => loans.filter((loan) => loan.status === 'closed'), [loans]);
   const scheduledReminders = reminders.filter((reminder) => reminder.status === 'scheduled');
+  const recurringPayments = summary?.recurringPayments ?? [];
 
   const handleCreate = () => openModal({ type: 'obligation-edit', loan: null });
   const handleEdit = (loan: typeof loans[number]) => openModal({ type: 'obligation-edit', loan });
@@ -69,6 +70,7 @@ export default function ObligationsPage() {
             <div><strong>{summary?.activeLoansCount ?? activeLoans.length}</strong><small>активных</small></div>
             <div><strong>{formatMoney(summary?.monthlyPaymentTotal ?? 0, 'RUB')}</strong><small>в месяц</small></div>
             <div><strong>{formatMoney(summary?.totalDebt ?? 0, 'RUB')}</strong><small>остаток</small></div>
+            <div><strong>{recurringPayments.length}</strong><small>регулярных</small></div>
           </div>
         </header>
 
@@ -87,6 +89,29 @@ export default function ObligationsPage() {
             <div className="app-next-payment-card__actions">
               <button type="button" className="app-secondary-button" onClick={() => handleEdit(summary.nearest!)}>Изменить</button>
               <button type="button" className="app-primary-button" disabled={isMutating} onClick={() => markPaid(summary.nearest!.id)}>Оплатил</button>
+            </div>
+          </section>
+        ) : null}
+
+        {recurringPayments.length > 0 ? (
+          <section className="app-card app-recurring-card">
+            <div className="app-recurring-card__head">
+              <div>
+                <div className="app-eyebrow">Регулярные платежи</div>
+                <h2>Списания и подписки</h2>
+              </div>
+              <strong>{formatMoney(summary?.recurringPaymentTotal ?? 0, 'RUB')}</strong>
+            </div>
+            <div className="app-recurring-list">
+              {recurringPayments.map((payment) => (
+                <div key={payment.id} className="app-recurring-row">
+                  <div>
+                    <strong>{payment.name}</strong>
+                    <small>{payment.account?.name ? `${payment.account.name} · ` : ''}{formatTransactionDate(payment.nextDate)} · {daysLabel(payment.daysUntilPayment)}</small>
+                  </div>
+                  <span>{formatMoney(payment.amount, payment.account?.currency ?? 'RUB')}</span>
+                </div>
+              ))}
             </div>
           </section>
         ) : null}

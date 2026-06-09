@@ -2,6 +2,8 @@ import { Prisma } from '@prisma/client';
 import { prisma } from '../../lib/prisma';
 import { BadRequestError, NotFoundError } from '../../shared/core/errors';
 import { TransactionService } from '../transactions/service';
+import { recurringService } from '../recurring/service';
+import { notificationService } from '../notifications/service';
 
 export type LoanType = 'loan' | 'mortgage' | 'installment' | 'subscription' | 'other';
 export type LoanStatus = 'active' | 'paused' | 'closed';
@@ -144,12 +146,13 @@ export class ObligationService {
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
     const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
 
-    const [loans, upcomingReminders] = await Promise.all([
+    const [loans, recurringPayments, upcomingReminders] = await Promise.all([
       prisma.loan.findMany({
         where: { userId, status: 'active' },
         include: loanInclude,
         orderBy: [{ nextPaymentDate: 'asc' }, { createdAt: 'asc' }],
       }),
+      recurringService.getActiveUpcoming(userId, 8),
       prisma.obligationReminder.findMany({
         where: {
           userId,
@@ -162,7 +165,8 @@ export class ObligationService {
       }),
     ]);
 
-    const monthlyPaymentTotal = loans.reduce((sum, loan) => sum + loan.monthlyPayment, 0);
+    const recurringPaymentTotal = recurringPayments.reduce((sum, payment) => sum + payment.amount, 0);
+    const monthlyPaymentTotal = loans.reduce((sum, loan) => sum + loan.monthlyPayment, 0) + recurringPaymentTotal;
     const totalDebt = loans.reduce((sum, loan) => sum + loan.currentDebt, 0);
     const dueThisMonth = loans.filter((loan) => loan.nextPaymentDate && loan.nextPaymentDate >= monthStart && loan.nextPaymentDate <= monthEnd);
     const nearestLoan = loans.find((loan) => loan.nextPaymentDate) ?? loans[0] ?? null;
@@ -174,6 +178,8 @@ export class ObligationService {
       totalDebt,
       dueThisMonthCount: dueThisMonth.length,
       nearest: nearestLoan ? this.serializeLoan(nearestLoan) : null,
+      recurringPayments,
+      recurringPaymentTotal,
       upcomingReminders,
     };
   }
@@ -328,6 +334,14 @@ export class ObligationService {
 
     const updated = await this.getLoan(userId, loanId);
     await this.rebuildLoanReminder(userId, loanId);
+    await notificationService.createPaymentMarkedNotification(userId, {
+      title: loan.title,
+      amount,
+      currency: loan.currency,
+      entityType: 'obligation',
+      entityId: loan.id,
+      dueAt: input.paidAt ?? new Date(),
+    });
 
     return { loan: updated, transactionId };
   }

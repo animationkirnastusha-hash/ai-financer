@@ -38,6 +38,21 @@ export type ObligationReminderDto = {
   loan?: Pick<LoanDto, 'id' | 'title' | 'type' | 'monthlyPayment' | 'currency'> | null;
 };
 
+export type RecurringPaymentDto = {
+  id: string;
+  userId: string;
+  accountId: string;
+  account?: (ObligationAccountDto & { balance?: number }) | null;
+  name: string;
+  amount: number;
+  category: string;
+  period: 'weekly' | 'monthly' | 'yearly' | 'custom' | string;
+  nextDate: string;
+  isActive: boolean;
+  createdAt: string;
+  daysUntilPayment?: number | null;
+};
+
 export type LoanDto = {
   id: string;
   userId: string;
@@ -74,6 +89,8 @@ export type ObligationSummaryDto = {
   totalDebt: number;
   dueThisMonthCount: number;
   nearest: LoanDto | null;
+  recurringPayments?: RecurringPaymentDto[];
+  recurringPaymentTotal?: number;
   upcomingReminders: ObligationReminderDto[];
 };
 

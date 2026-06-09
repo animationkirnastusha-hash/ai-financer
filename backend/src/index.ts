@@ -2,7 +2,6 @@ import { createApp } from './app';
 import { env } from './config/env';
 import { prisma } from './lib/prisma';
 import cron from 'node-cron';
-import { BudgetService } from './modules/budgets/service';
 import { ensureProductAnalyticsSchema } from './modules/analytics/bootstrap';
 import { aiCleanupService } from './modules/ai/ai-cleanup.service';
 import { notificationService } from './modules/notifications/service';
@@ -14,17 +13,6 @@ async function bootstrap() {
   const app = createApp();
 
   if (env.enableCron) {
-    cron.schedule('0 * * * *', async () => {
-      try {
-        console.log('🔄 Checking budgets...');
-        const budgetService = new BudgetService();
-        await budgetService.checkAndNotifyBudgets();
-        console.log('✅ Budgets checked');
-      } catch (error) {
-        console.error('❌ Budget cron failed:', error);
-      }
-    });
-
     cron.schedule('*/15 * * * *', async () => {
       try {
         const result = await notificationService.deliverTelegramNotifications();

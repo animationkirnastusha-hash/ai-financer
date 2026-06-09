@@ -50,7 +50,6 @@ async function main() {
 
     await safeDel('notifications', () => tx.notification.deleteMany({ where: byUser }));
     await safeDel('recurringPayments', () => tx.recurringPayment.deleteMany({ where: byUser }));
-    await safeDel('budgets', () => tx.budget.deleteMany({ where: byUser }));
     await safeDel('transactions', () => tx.transaction.deleteMany({ where: byUser }));
     await safeDel('goals', () => tx.goal.deleteMany({ where: byUser }));
     await safeDel('categories', () => tx.category.deleteMany({ where: byUser }));
