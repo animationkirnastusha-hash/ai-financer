@@ -92,17 +92,26 @@ export default function ReferralPage() {
             <p>{t('referral.hero.caption')}</p>
           </div>
           <div className="referral-hero__stats" aria-label={t('referral.stats.label')}>
-            <article><strong>{friendsCount}</strong><span>{t('referral.stats.friends')}</span></article>
-            <article><strong>{rewardsCount}</strong><span>{t('referral.stats.rewards')}</span></article>
-            <article><strong>{formatBonus(info?.referralBalance ?? 0)}</strong><span>{t('referral.stats.balance')}</span></article>
+            <article>
+              <strong>{friendsCount}</strong>
+              <span>{t('referral.stats.friends')}</span>
+            </article>
+            <article>
+              <strong>{rewardsCount}</strong>
+              <span>{t('referral.stats.rewards')}</span>
+            </article>
+            <article>
+              <strong>{formatBonus(info?.referralBalance ?? 0)}</strong>
+              <span>{t('referral.stats.balance')}</span>
+            </article>
           </div>
         </header>
 
         <section className="referral-code-panel app-card">
           <div className="referral-code-panel__main">
-            <span>{t('referral.code.label')}</span>
-            <strong>{busy && !info ? '—' : info?.referralCode || '—'}</strong>
-            <small>{copied ? t('referral.copied') : t('referral.code.caption')}</small>
+            <span className="referral-code-panel__label">{t('referral.code.label')}</span>
+            <strong className="referral-code-panel__code">{busy && !info ? '—' : info?.referralCode || '—'}</strong>
+            <small className="referral-code-panel__caption">{copied ? t('referral.copied') : t('referral.code.caption')}</small>
           </div>
           <div className="referral-code-panel__actions">
             <button type="button" className="app-secondary-button" onClick={copy} disabled={!info?.referralCode}>{t('referral.copy')}</button>

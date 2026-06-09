@@ -1,10 +1,11 @@
-/* Spending limits page. Keep page-specific layout here only. */
+/* Spending limits page. Page-specific layout only. */
 .spending-limits-page .app-page__inner {
   display: grid;
   gap: 16px;
-  padding-bottom: calc(var(--app-bottom-safe, 24px) + 112px);
+  padding-bottom: calc(var(--app-bottom-safe, 24px) + 120px);
 }
 
+.spending-limits-page .app-card,
 .limits-hero,
 .limits-form-card,
 .limits-guide-card,
@@ -14,23 +15,26 @@
 }
 
 .limits-hero {
-  position: relative;
-  overflow: hidden;
   display: grid;
   gap: 14px;
+  overflow: hidden;
 }
 
 .limits-hero h1,
 .limits-form-card h2,
-.limits-list-section h2 {
+.limits-list-section h2,
+.limits-card h3 {
+  display: block;
   margin: 0;
-  line-height: 1.05;
-  overflow-wrap: anywhere;
+  line-height: 1.08;
+  word-break: normal;
+  overflow-wrap: normal;
 }
 
 .limits-hero p {
+  display: block;
   margin: 0;
-  max-width: 34rem;
+  max-width: 36rem;
   color: rgba(255,255,255,.62);
   line-height: 1.45;
 }
@@ -45,9 +49,9 @@
 .limits-hero__stats article,
 .limits-guide-card {
   display: grid;
-  gap: 5px;
+  gap: 6px;
   min-width: 0;
-  border: 1px solid rgba(255,255,255,.1);
+  border: 1px solid rgba(255,255,255,.10);
   border-radius: 20px;
   background: rgba(255,255,255,.055);
   padding: 12px;
@@ -59,8 +63,10 @@
 .limits-card__amounts span {
   display: block;
   min-width: 0;
-  overflow-wrap: anywhere;
-  line-height: 1.05;
+  color: rgba(255,255,255,.92);
+  line-height: 1.15;
+  word-break: normal;
+  overflow-wrap: break-word;
 }
 
 .limits-hero__stats span,
@@ -68,9 +74,13 @@
 .limits-card__type,
 .limits-card__footer small,
 .limits-card__amounts small {
+  display: block;
+  min-width: 0;
   color: rgba(255,255,255,.56);
   font-size: 12px;
   line-height: 1.35;
+  word-break: normal;
+  overflow-wrap: break-word;
 }
 
 .limits-section-head {
@@ -79,6 +89,12 @@
   justify-content: space-between;
   gap: 14px;
   margin-bottom: 14px;
+}
+
+.limits-section-head > div {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
 }
 
 .limits-form {
@@ -99,18 +115,16 @@
   width: 100%;
   min-width: 0;
   min-height: 46px;
-  border: 1px solid rgba(255,255,255,.1);
+  border: 1px solid rgba(255,255,255,.10);
   border-radius: 18px;
   background: rgba(255,255,255,.06);
   color: #fff;
   padding: 0 14px;
   outline: none;
-  font-size: 15px;
+  font-size: 16px;
 }
 
-.limits-form select option {
-  color: #0b1016;
-}
+.limits-form select option { color: #0b1016; }
 
 .limits-form__row {
   display: grid;
@@ -127,7 +141,8 @@
   font-size: 13px;
 }
 
-.limits-list {
+.limits-list,
+.limits-list-section {
   display: grid;
   gap: 12px;
 }
@@ -137,9 +152,7 @@
   gap: 12px;
 }
 
-.limits-card[data-inactive="true"] {
-  opacity: .62;
-}
+.limits-card[data-inactive="true"] { opacity: .62; }
 
 .limits-card__top,
 .limits-card__amounts,
@@ -150,11 +163,16 @@
   gap: 12px;
 }
 
+.limits-card__top > div,
+.limits-card__amounts > span,
+.limits-card__amounts > small,
+.limits-card__footer > small {
+  min-width: 0;
+}
+
 .limits-card__top h3 {
-  margin: 4px 0 0;
+  margin-top: 4px;
   font-size: 18px;
-  line-height: 1.15;
-  overflow-wrap: anywhere;
 }
 
 .limits-card__badge {
@@ -162,7 +180,7 @@
   align-items: center;
   justify-content: center;
   max-width: 100%;
-  border: 1px solid rgba(255,255,255,.1);
+  border: 1px solid rgba(255,255,255,.10);
   border-radius: 999px;
   background: rgba(255,255,255,.06);
   padding: 7px 10px;
@@ -194,7 +212,7 @@
 
 .limits-card__footer button {
   min-height: 34px;
-  border: 1px solid rgba(255,255,255,.1);
+  border: 1px solid rgba(255,255,255,.10);
   border-radius: 999px;
   background: rgba(255,255,255,.06);
   color: rgba(255,255,255,.82);

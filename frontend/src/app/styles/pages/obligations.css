@@ -725,3 +725,59 @@
     text-align: left;
   }
 }
+
+/* Pack 74: obligations page layout repair after CSS split. */
+.app-obligations-page .app-page__inner,
+.app-obligations-page .app-card,
+.app-obligations-hero,
+.app-next-payment-card,
+.app-loan-card,
+.app-reminders-card {
+  min-width: 0;
+}
+
+.app-obligations-hero__top {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 14px;
+}
+
+.app-obligations-hero__top > div {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.app-obligations-hero .app-hero-title {
+  display: block;
+  max-width: 100%;
+  margin: 0;
+  line-height: 1.02;
+  word-break: normal;
+  overflow-wrap: normal;
+}
+
+.app-obligations-hero .app-hero-caption {
+  display: block;
+  margin: 0;
+  word-break: normal;
+  overflow-wrap: normal;
+}
+
+.app-obligations-hero__top .app-primary-button {
+  width: auto;
+  min-width: 148px;
+  white-space: nowrap;
+}
+
+@media (max-width: 560px) {
+  .app-obligations-hero__top {
+    grid-template-columns: 1fr;
+  }
+
+  .app-obligations-hero__top .app-primary-button {
+    width: 100%;
+    min-width: 0;
+  }
+}

@@ -119,20 +119,23 @@ export default function AnalyticsPage() {
 
         <section className="analytics-grid-two">
           <article className="app-card analytics-mini-card">
-            <span>{t('analytics.mini.operations')}</span>
-            <strong>{data.operationsCount}</strong>
-            <small>{t('analytics.mini.operationsCaption')}</small>
+            <span className="analytics-mini-card__label">{t('analytics.mini.operations')}</span>
+            <strong className="analytics-mini-card__value">{data.operationsCount}</strong>
+            <small className="analytics-mini-card__caption">{t('analytics.mini.operationsCaption')}</small>
           </article>
           <article className="app-card analytics-mini-card">
-            <span>{t('analytics.mini.mainCategory')}</span>
-            <strong>{data.mainCategory}</strong>
-            <small>{t('analytics.mini.mainCategoryCaption')}</small>
+            <span className="analytics-mini-card__label">{t('analytics.mini.mainCategory')}</span>
+            <strong className="analytics-mini-card__value">{data.mainCategory}</strong>
+            <small className="analytics-mini-card__caption">{t('analytics.mini.mainCategoryCaption')}</small>
           </article>
         </section>
 
         <section className="app-card analytics-section-card analytics-section-card--primary">
           <div className="analytics-section-card__head">
-            <div><div className="app-eyebrow">{t('analytics.expenses.eyebrow')}</div><h2>{t('analytics.expenses.title')}</h2></div>
+            <div className="analytics-section-card__title">
+              <div className="app-eyebrow">{t('analytics.expenses.eyebrow')}</div>
+              <h2>{t('analytics.expenses.title')}</h2>
+            </div>
             <button type="button" className="app-secondary-button app-secondary-button--compact" onClick={() => openModal({ type: 'report-export', mode: 'base' })}>{t('analytics.report.action')}</button>
           </div>
           <div className="analytics-bars">
@@ -144,7 +147,10 @@ export default function AnalyticsPage() {
 
         <section className="app-card analytics-section-card">
           <div className="analytics-section-card__head">
-            <div><div className="app-eyebrow">{t('analytics.income.eyebrow')}</div><h2>{t('analytics.income.title')}</h2></div>
+            <div className="analytics-section-card__title">
+              <div className="app-eyebrow">{t('analytics.income.eyebrow')}</div>
+              <h2>{t('analytics.income.title')}</h2>
+            </div>
           </div>
           <div className="analytics-income-grid">
             {data.incomeTop.length === 0 ? <div className="analytics-empty-line">{t('analytics.empty.income')}</div> : data.incomeTop.map(([name, value]) => (
@@ -155,7 +161,10 @@ export default function AnalyticsPage() {
 
         <section className="app-card analytics-section-card analytics-section-card--actions">
           <div className="analytics-section-card__head">
-            <div><div className="app-eyebrow">{t('analytics.actions.eyebrow')}</div><h2>{t('analytics.actions.title')}</h2></div>
+            <div className="analytics-section-card__title">
+              <div className="app-eyebrow">{t('analytics.actions.eyebrow')}</div>
+              <h2>{t('analytics.actions.title')}</h2>
+            </div>
           </div>
           <div className="analytics-action-grid">
             <button type="button" onClick={() => openModal({ type: 'ai-text-overlay', initialCommand: t('analytics.ask.topExpense'), autoSubmitInitialCommand: true })}>{t('analytics.ask.topExpense')}</button>
@@ -167,7 +176,10 @@ export default function AnalyticsPage() {
         {canShowPremiumAnalytics ? (
           <section className="app-card analytics-section-card">
             <div className="analytics-section-card__head">
-              <div><div className="app-eyebrow">{t('analytics.premium.eyebrow')}</div><h2>{t('analytics.premium.title')}</h2></div>
+              <div className="analytics-section-card__title">
+                <div className="app-eyebrow">{t('analytics.premium.eyebrow')}</div>
+                <h2>{t('analytics.premium.title')}</h2>
+              </div>
             </div>
             <p>{t('analytics.premium.caption')}</p>
             <div className="analytics-action-grid analytics-action-grid--two">

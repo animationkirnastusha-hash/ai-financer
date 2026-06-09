@@ -163,16 +163,27 @@ export default function SpendingLimitsPage() {
           <h1>{t('limits.hero.title')}</h1>
           <p>{t('limits.hero.caption')}</p>
           <div className="limits-hero__stats">
-            <span>{t('limits.hero.active', { count: activeLimits })}</span>
-            <span>{t('limits.hero.mode')}</span>
+            <article>
+              <strong>{t('limits.hero.active', { count: activeLimits })}</strong>
+              <span>{t('limits.hero.mode')}</span>
+            </article>
           </div>
         </header>
 
 
         <section className="limits-guide-grid">
-          <article className="app-card limits-guide-card"><b>{t('limits.guide.account.title')}</b><span>{t('limits.guide.account.caption')}</span></article>
-          <article className="app-card limits-guide-card"><b>{t('limits.guide.category.title')}</b><span>{t('limits.guide.category.caption')}</span></article>
-          <article className="app-card limits-guide-card"><b>{t('limits.guide.total.title')}</b><span>{t('limits.guide.total.caption')}</span></article>
+          <article className="app-card limits-guide-card">
+            <b>{t('limits.guide.account.title')}</b>
+            <span>{t('limits.guide.account.caption')}</span>
+          </article>
+          <article className="app-card limits-guide-card">
+            <b>{t('limits.guide.category.title')}</b>
+            <span>{t('limits.guide.category.caption')}</span>
+          </article>
+          <article className="app-card limits-guide-card">
+            <b>{t('limits.guide.total.title')}</b>
+            <span>{t('limits.guide.total.caption')}</span>
+          </article>
         </section>
 
         <section className="app-card limits-form-card">
