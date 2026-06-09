@@ -1,16 +1,6 @@
-/* Final safety layer only. Page-specific rules live in logical files. */
-.app-page,
-.app-page__inner,
-.app-card,
-.app-modal-sheet,
-.app-drawer,
-.bottom-sheet {
-  min-width: 0;
-}
-
+/* Small shared safety layer only. Page-specific fixes live in pages/* or features/*. */
 .app-page__inner {
   width: min(100%, 760px);
-  margin-inline: auto;
 }
 
 .app-card,
@@ -20,69 +10,55 @@
 .app-goal-card,
 .app-loan-card,
 .notification-card,
-.receipt-preview-card,
-.business-summary-card,
-.business-module-card,
-.store-showcase,
-.store-feature-card,
-.limits-card {
+.receipt-preview-card {
   position: relative;
-  overflow: hidden;
-}
-
-.app-card::after,
-.app-stat-card::after,
-.app-action-card::after,
-.app-account-card::after,
-.app-goal-card::after,
-.app-loan-card::after,
-.notification-card::after,
-.receipt-preview-card::after,
-.business-summary-card::after,
-.business-module-card::after,
-.store-showcase::after,
-.store-feature-card::after,
-.limits-card::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  border-radius: inherit;
-  background: linear-gradient(135deg, rgba(255,255,255,.075), transparent 42%);
-  opacity: .5;
+  min-width: 0;
 }
 
 .app-card > *,
 .app-stat-card > *,
-.app-action-card > *,
-.store-showcase > *,
-.store-feature-card > *,
-.limits-card > * {
-  position: relative;
-  z-index: 1;
+.app-action-card > * {
+  min-width: 0;
 }
 
 .app-primary-button,
 .app-secondary-button,
-.store-card__button,
-.notification-card__action {
+.app-icon-button {
   min-height: 42px;
 }
 
+.app-primary-button,
+.app-secondary-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  max-width: 100%;
+  white-space: normal;
+  text-align: center;
+}
+
 .app-icon-button,
-.app-icon-action {
+.notification-sheet__icon-button {
+  display: inline-grid;
+  place-items: center;
   flex: 0 0 auto;
 }
 
-.app-page h1,
-.app-page h2,
-.app-page h3,
-.app-page p,
-.app-page span,
-.app-page small,
-.app-page strong,
-.app-page b {
-  min-width: 0;
+.app-page__inner {
+  padding-bottom: max(112px, calc(env(safe-area-inset-bottom) + 92px));
+}
+
+.app-hero-title,
+.app-card--hero h1 {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  text-wrap: balance;
+}
+
+.app-hero-caption,
+.app-card--hero p {
+  max-width: 58ch;
 }
 
 .notification-sheet,
@@ -92,22 +68,13 @@
   overscroll-behavior: contain;
 }
 
-body:has(input:focus) .voice-first-companion,
-body:has(textarea:focus) .voice-first-companion,
-body:has(select:focus) .voice-first-companion {
-  opacity: 0;
-  pointer-events: none;
-}
-
 @media (max-width: 560px) {
   .app-page__inner {
     padding-inline: 14px;
   }
 
   .app-primary-button,
-  .app-secondary-button,
-  .store-card__button,
-  .notification-card__action {
+  .app-secondary-button {
     width: 100%;
   }
 }

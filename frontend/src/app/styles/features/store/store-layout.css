@@ -1,42 +1,147 @@
-/* Store page layout. Product cards and Store-only blocks live here. */
-.monetization-page,
-.monetization-page * {
-  box-sizing: border-box;
-}
-
+/* Store page layout and product showcase. */
 .monetization-page .app-page__inner {
-  width: min(100%, 760px);
-  padding-inline: 16px;
-  padding-bottom: max(120px, calc(env(safe-area-inset-bottom) + 96px));
+  display: grid;
+  gap: 16px;
+  padding-bottom: calc(var(--app-bottom-safe, 24px) + 112px);
 }
 
-.store-hero,
+.monetization-hero,
+.store-card,
 .store-showcase,
 .store-status-card,
-.store-feature-section,
 .store-trial-card,
 .store-usage-card,
 .store-payment-section,
-.store-card,
+.store-feature-section,
+.store-product-detail,
 .store-feature-card {
   min-width: 0;
 }
 
-.monetization-hero__actions,
-.store-showcase__head,
-.monetization-section__head,
-.store-card__head {
+.monetization-hero {
+  display: grid;
+  gap: 14px;
+}
+
+.monetization-hero h1,
+.store-showcase h2,
+.monetization-section h2,
+.store-product-detail h3,
+.store-card h2 {
+  margin: 0;
+  line-height: 1.08;
+  overflow-wrap: anywhere;
+}
+
+.monetization-hero p,
+.store-card p,
+.store-product-detail p,
+.store-trial-card p {
+  color: rgba(255,255,255,.62);
+  line-height: 1.45;
+}
+
+.monetization-hero__actions {
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-start;
-  justify-content: space-between;
   gap: 10px;
 }
 
-.store-showcase__head > div,
-.monetization-section__head > div,
-.store-card__head > div {
+.monetization-hero__actions > * {
+  flex: 1 1 150px;
+}
+
+.store-card-grid,
+.store-feature-grid,
+.store-usage-grid,
+.store-payment-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.store-card,
+.store-feature-card,
+.store-usage-grid > div {
   min-width: 0;
+}
+
+.store-card__button {
+  width: 100%;
+  min-height: 100%;
+  display: grid;
+  gap: 12px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+}
+
+.store-card__head,
+.store-showcase__head,
+.monetization-section__head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 12px;
+}
+
+.store-card__head span,
+.store-active-badge,
+.monetization-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  max-width: 100%;
+  border: 1px solid rgba(255,255,255,.11);
+  border-radius: 999px;
+  background: rgba(255,255,255,.075);
+  color: rgba(255,255,255,.76);
+  padding: 6px 9px;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.store-card ul,
+.store-product-detail ul {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.store-card li,
+.store-product-detail li {
+  color: rgba(255,255,255,.74);
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.store-card li::before,
+.store-product-detail li::before {
+  content: '•';
+  color: rgba(134,239,172,.9);
+  margin-right: 8px;
+}
+
+.store-card__action,
+.store-card__button .store-card__action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 38px;
+  border-radius: 16px;
+  background: rgba(255,255,255,.1);
+  color: white;
+  font-weight: 750;
+  padding: 0 12px;
+}
+
+.store-showcase {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
 }
 
 .store-product-tabs {
@@ -53,129 +158,80 @@
 
 .store-product-tabs button {
   flex: 0 0 auto;
+  min-width: 112px;
   display: grid;
   gap: 3px;
-  min-width: 112px;
-  max-width: 178px;
-  white-space: normal;
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 18px;
+  background: rgba(255,255,255,.07);
+  color: rgba(255,255,255,.9);
+  padding: 10px 12px;
   text-align: left;
 }
 
-.store-product-tabs small,
-.store-product-tabs span,
-.store-card p,
-.store-feature-card span,
-.store-product-detail p,
-.store-product-detail li,
-.store-usage-grid span {
-  line-height: 1.35;
+.store-product-tabs button.is-active {
+  background: rgba(255,255,255,.17);
+  border-color: rgba(255,255,255,.24);
+}
+
+.store-product-tabs small {
+  color: rgba(142,255,196,.85);
+  font-size: 11px;
 }
 
 .store-product-detail {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(142px, auto);
+  grid-template-columns: minmax(0, 1fr) minmax(150px, auto);
   gap: 14px;
   align-items: stretch;
+  padding: 16px;
+  border-radius: 26px;
+  border: 1px solid rgba(255,255,255,.1);
+  background: rgba(255,255,255,.055);
 }
 
-.store-product-detail__copy,
 .store-product-detail__side {
-  min-width: 0;
+  min-width: 150px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 10px;
+  border-radius: 22px;
+  padding: 12px;
+  background: rgba(0,0,0,.16);
 }
 
-.store-product-detail h3,
-.store-product-detail p,
-.store-product-detail li,
 .store-product-detail__side span,
+.store-usage-grid span {
+  color: rgba(255,255,255,.56);
+  font-size: 12px;
+}
+
 .store-product-detail__side strong,
-.store-card h2,
-.store-card p,
-.store-card li,
-.store-feature-card strong,
-.store-feature-card span {
-  max-width: 100%;
-  overflow-wrap: anywhere;
-}
-
-.store-product-detail__side {
-  display: grid;
-  align-content: space-between;
-  gap: 10px;
-}
-
-.store-card-grid,
-.store-feature-grid,
-.store-payment-grid,
-.store-usage-grid {
-  display: grid;
-  gap: 10px;
-}
-
-.store-card-grid,
-.store-feature-grid {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-.store-payment-grid {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-
-.store-usage-grid {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-
-.store-card__button,
-.store-feature-card,
-.store-payment-grid > *,
-.store-usage-grid > * {
+.store-usage-grid strong {
+  display: block;
   min-width: 0;
+  overflow-wrap: anywhere;
+  line-height: 1.1;
 }
 
-.store-card__button {
-  display: grid;
-  gap: 12px;
-  width: 100%;
-  text-align: left;
-}
-
-.store-card__action,
-.store-card__head span {
-  flex: 0 0 auto;
-  white-space: nowrap;
-}
-
-@media (max-width: 620px) {
+@media (max-width: 560px) {
   .store-card-grid,
   .store-feature-grid,
-  .store-payment-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
-@media (max-width: 520px) {
+  .store-usage-grid,
+  .store-payment-grid,
   .store-product-detail,
-  .store-usage-grid {
+  .store-card__head,
+  .store-showcase__head,
+  .monetization-section__head {
     grid-template-columns: 1fr;
   }
 
-  .monetization-hero__actions,
-  .store-showcase__head,
-  .monetization-section__head,
-  .store-card__head {
-    align-items: stretch;
-    flex-direction: column;
+  .store-product-detail__side {
+    min-width: 0;
   }
 
-  .monetization-hero__actions > *,
-  .store-showcase__head .app-primary-button,
-  .store-showcase__head .app-secondary-button,
-  .monetization-section__head .app-primary-button,
-  .monetization-section__head .app-secondary-button {
-    width: 100%;
-  }
-
-  .store-card__action,
-  .store-card__head span {
-    width: fit-content;
+  .monetization-hero__actions > * {
+    flex-basis: 100%;
   }
 }

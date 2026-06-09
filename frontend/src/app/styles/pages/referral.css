@@ -1,38 +1,39 @@
-/* Referral page layout. Keep referral styles out of global final-pass files. */
-.referral-page,
-.referral-page * {
-  box-sizing: border-box;
-}
-
+/* Referral page layout. */
 .referral-page .app-page__inner {
-  width: min(100%, 760px);
-  padding-inline: 16px;
-  padding-bottom: max(120px, calc(env(safe-area-inset-bottom) + 96px));
+  display: grid;
+  gap: 16px;
+  padding-bottom: calc(var(--app-bottom-safe, 24px) + 112px);
 }
 
 .referral-hero,
 .referral-code-panel,
 .referral-apply-card,
-.referral-balance-card,
-.referral-list-card,
 .referral-benefit-card,
-.referral-empty {
+.referral-list-card,
+.referral-balance-card {
   min-width: 0;
 }
 
+.referral-hero {
+  display: grid;
+  gap: 16px;
+}
+
 .referral-hero h1,
-.referral-hero p,
-.referral-code-panel b,
-.referral-code-panel span,
-.referral-code-panel code,
-.referral-balance-card strong,
-.referral-balance-card span,
+.referral-apply-card h2,
 .referral-list-card h2,
-.referral-list-card span,
-.referral-benefit-card b,
-.referral-benefit-card span {
-  max-width: 100%;
+.referral-balance-card h2 {
+  margin: 0;
+  line-height: 1.08;
   overflow-wrap: anywhere;
+}
+
+.referral-hero p,
+.referral-apply-card p,
+.referral-balance-card p {
+  margin: 8px 0 0;
+  color: rgba(255,255,255,.62);
+  line-height: 1.45;
 }
 
 .referral-hero__stats,
@@ -45,81 +46,99 @@
 .referral-hero__stats article,
 .referral-benefit-card {
   display: grid;
-  gap: 6px;
+  gap: 5px;
   min-width: 0;
-  border: 1px solid rgba(255,255,255,.09);
+  border: 1px solid rgba(255,255,255,.1);
   border-radius: 20px;
   background: rgba(255,255,255,.055);
   padding: 12px;
 }
 
-.referral-hero__stats strong {
-  display: block;
-  color: rgba(255,255,255,.94);
-  font-size: 18px;
-  line-height: 1.05;
+.referral-hero__stats strong,
+.referral-benefit-card b,
+.referral-code-panel__main strong,
+.referral-list article b,
+.referral-balance-card h2 {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .referral-hero__stats span,
 .referral-benefit-card span,
-.referral-code-panel span,
-.referral-balance-card span {
-  display: block;
+.referral-code-panel__main span,
+.referral-code-panel__main small,
+.referral-list article span {
   color: rgba(255,255,255,.58);
   font-size: 12px;
   line-height: 1.35;
 }
 
 .referral-code-panel,
-.referral-apply-card,
-.referral-balance-card,
-.referral-list-card {
+.referral-balance-card {
   display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
   gap: 14px;
 }
 
 .referral-code-panel__main {
   display: grid;
-  gap: 8px;
+  gap: 5px;
   min-width: 0;
 }
 
-.referral-code-panel code {
-  display: block;
-  width: 100%;
-  border: 1px solid rgba(255,255,255,.1);
-  border-radius: 18px;
-  background: rgba(0,0,0,.18);
-  padding: 12px;
-  color: rgba(255,255,255,.92);
-  font-size: 14px;
-  line-height: 1.25;
-  white-space: normal;
-  word-break: break-word;
+.referral-code-panel__main strong {
+  font-size: clamp(22px, 6vw, 32px);
+  letter-spacing: .04em;
 }
 
 .referral-code-panel__actions,
-.referral-apply-card__form,
-.referral-section-head {
+.referral-apply-card__form {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
   gap: 10px;
 }
 
-.referral-section-head {
-  justify-content: space-between;
+.referral-code-panel__actions > *,
+.referral-apply-card__form > *,
+.referral-balance-card > button {
+  flex: 1 1 136px;
 }
 
-.referral-section-head > div,
-.referral-code-panel__actions > *,
-.referral-apply-card__form > * {
-  min-width: 0;
+.referral-apply-card {
+  display: grid;
+  gap: 14px;
 }
 
 .referral-apply-card__form input {
-  flex: 1 1 180px;
+  flex: 2 1 180px;
   min-width: 0;
+  min-height: 46px;
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 18px;
+  background: rgba(255,255,255,.06);
+  color: white;
+  padding: 0 14px;
+  outline: none;
+}
+
+.referral-section-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.referral-section-head > span {
+  min-width: 34px;
+  min-height: 34px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 999px;
+  background: rgba(255,255,255,.08);
+  color: rgba(255,255,255,.84);
+  font-weight: 800;
 }
 
 .referral-list {
@@ -127,30 +146,31 @@
   gap: 10px;
 }
 
+.referral-list article,
 .referral-empty {
+  min-width: 0;
   border: 1px solid rgba(255,255,255,.08);
-  border-radius: 22px;
+  border-radius: 18px;
   background: rgba(255,255,255,.045);
-  padding: 14px;
-  color: rgba(255,255,255,.58);
-  line-height: 1.4;
+  padding: 12px;
 }
 
-@media (max-width: 520px) {
+.referral-list article {
+  display: grid;
+  gap: 4px;
+}
+
+@media (max-width: 560px) {
   .referral-hero__stats,
-  .referral-benefits-grid {
+  .referral-benefits-grid,
+  .referral-code-panel,
+  .referral-balance-card {
     grid-template-columns: 1fr;
   }
 
-  .referral-section-head,
-  .referral-code-panel__actions,
-  .referral-apply-card__form {
-    align-items: stretch;
-    flex-direction: column;
-  }
-
   .referral-code-panel__actions > *,
-  .referral-apply-card__form > * {
-    width: 100%;
+  .referral-apply-card__form > *,
+  .referral-balance-card > button {
+    flex-basis: 100%;
   }
 }

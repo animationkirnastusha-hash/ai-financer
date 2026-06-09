@@ -1,41 +1,76 @@
-/* moved from app/styles/31-spending-limits.css. Keep order through app/styles/index.css. */
+/* Spending limits page. Keep page-specific layout here only. */
 .spending-limits-page .app-page__inner {
-  padding-bottom: calc(var(--app-bottom-safe, 24px) + 104px);
+  display: grid;
+  gap: 16px;
+  padding-bottom: calc(var(--app-bottom-safe, 24px) + 112px);
+}
+
+.limits-hero,
+.limits-form-card,
+.limits-guide-card,
+.limits-card,
+.limits-empty {
+  min-width: 0;
 }
 
 .limits-hero {
   position: relative;
   overflow: hidden;
+  display: grid;
+  gap: 14px;
 }
 
 .limits-hero h1,
 .limits-form-card h2,
 .limits-list-section h2 {
   margin: 0;
+  line-height: 1.05;
+  overflow-wrap: anywhere;
 }
 
 .limits-hero p {
-  margin: 10px 0 0;
+  margin: 0;
   max-width: 34rem;
   color: rgba(255,255,255,.62);
   line-height: 1.45;
 }
 
-.limits-hero__stats {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 16px;
+.limits-hero__stats,
+.limits-guide-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.limits-hero__stats article,
+.limits-guide-card {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 20px;
+  background: rgba(255,255,255,.055);
+  padding: 12px;
+}
+
+.limits-hero__stats strong,
+.limits-guide-card b,
+.limits-card__amounts strong,
+.limits-card__amounts span {
+  display: block;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  line-height: 1.05;
 }
 
 .limits-hero__stats span,
-.limits-card__badge {
-  border: 1px solid rgba(255,255,255,.1);
-  border-radius: 999px;
-  background: rgba(255,255,255,.06);
-  padding: 7px 10px;
-  color: rgba(255,255,255,.72);
+.limits-guide-card span,
+.limits-card__type,
+.limits-card__footer small,
+.limits-card__amounts small {
+  color: rgba(255,255,255,.56);
   font-size: 12px;
+  line-height: 1.35;
 }
 
 .limits-section-head {
@@ -54,13 +89,15 @@
 .limits-form label {
   display: grid;
   gap: 7px;
-  color: rgba(255,255,255,.5);
+  min-width: 0;
+  color: rgba(255,255,255,.56);
   font-size: 12px;
 }
 
 .limits-form input,
 .limits-form select {
   width: 100%;
+  min-width: 0;
   min-height: 46px;
   border: 1px solid rgba(255,255,255,.1);
   border-radius: 18px;
@@ -77,7 +114,7 @@
 
 .limits-form__row {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
 }
 
@@ -95,10 +132,6 @@
   gap: 12px;
 }
 
-.limits-empty {
-  color: rgba(255,255,255,.58);
-}
-
 .limits-card {
   display: grid;
   gap: 12px;
@@ -109,29 +142,33 @@
 }
 
 .limits-card__top,
-.limits-card__footer,
-.limits-card__amounts {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
+.limits-card__amounts,
+.limits-card__footer {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
   gap: 12px;
 }
 
 .limits-card__top h3 {
   margin: 4px 0 0;
   font-size: 18px;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
 }
 
-.limits-card__type,
-.limits-card__footer small,
-.limits-card__amounts small {
-  color: rgba(255,255,255,.46);
+.limits-card__badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  max-width: 100%;
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 999px;
+  background: rgba(255,255,255,.06);
+  padding: 7px 10px;
+  color: rgba(255,255,255,.76);
   font-size: 12px;
-}
-
-.limits-card__amounts span {
-  font-size: 22px;
-  font-weight: 750;
+  white-space: nowrap;
 }
 
 .limits-progress {
@@ -156,6 +193,7 @@
 }
 
 .limits-card__footer button {
+  min-height: 34px;
   border: 1px solid rgba(255,255,255,.1);
   border-radius: 999px;
   background: rgba(255,255,255,.06);
@@ -164,126 +202,18 @@
   font-size: 12px;
 }
 
-@media (max-width: 420px) {
+@media (max-width: 560px) {
+  .limits-hero__stats,
+  .limits-guide-grid,
   .limits-form__row,
   .limits-card__top,
-  .limits-card__footer,
-  .limits-card__amounts {
+  .limits-card__amounts,
+  .limits-card__footer {
     grid-template-columns: 1fr;
+  }
+
+  .limits-section-head {
     flex-direction: column;
-  }
-  .limits-card__footer div {
-    justify-content: flex-start;
-  }
-}
-
-/* Pack 72: page-owned layout repair after CSS split. */
-.spending-limits-page,
-.spending-limits-page * {
-  box-sizing: border-box;
-}
-
-.spending-limits-page .app-page__inner {
-  width: min(100%, 760px);
-  padding-inline: 16px;
-}
-
-.limits-guide-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
-}
-
-.limits-guide-card {
-  display: grid;
-  gap: 7px;
-  min-width: 0;
-  padding: 14px;
-}
-
-.limits-guide-card b,
-.limits-guide-card span {
-  display: block;
-  min-width: 0;
-  overflow-wrap: anywhere;
-}
-
-.limits-guide-card b {
-  color: rgba(255,255,255,.9);
-  font-size: 14px;
-  line-height: 1.18;
-}
-
-.limits-guide-card span {
-  color: rgba(255,255,255,.56);
-  font-size: 12px;
-  line-height: 1.35;
-}
-
-.limits-hero__stats {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: stretch;
-}
-
-.limits-hero__stats span,
-.limits-card__badge {
-  display: inline-flex;
-  align-items: center;
-  min-width: 0;
-  max-width: 100%;
-  line-height: 1.2;
-  white-space: normal;
-}
-
-.limits-section-head,
-.limits-card__top,
-.limits-card__footer,
-.limits-card__amounts {
-  min-width: 0;
-}
-
-.limits-section-head > div,
-.limits-card__top > div,
-.limits-card__footer > div,
-.limits-card__amounts > div {
-  min-width: 0;
-}
-
-.limits-card__top h3,
-.limits-card__amounts strong,
-.limits-card__amounts span,
-.limits-card__type,
-.limits-card__footer small {
-  display: block;
-  min-width: 0;
-  max-width: 100%;
-  overflow-wrap: anywhere;
-  white-space: normal;
-}
-
-.limits-card__amounts {
-  align-items: flex-end;
-}
-
-.limits-form-card,
-.limits-list-section,
-.limits-card {
-  min-width: 0;
-}
-
-@media (max-width: 520px) {
-  .limits-guide-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .limits-section-head,
-  .limits-card__top,
-  .limits-card__footer,
-  .limits-card__amounts {
-    display: grid;
-    grid-template-columns: 1fr;
-    justify-items: stretch;
   }
 
   .limits-card__footer div {
