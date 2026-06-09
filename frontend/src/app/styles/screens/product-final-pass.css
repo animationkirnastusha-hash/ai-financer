@@ -1,21 +1,30 @@
-/* Final product pass: shared visual consistency for the pre-test build. */
+/* Final safety layer only. Page-specific rules live in logical files. */
+.app-page,
+.app-page__inner,
+.app-card,
+.app-modal-sheet,
+.app-drawer,
+.bottom-sheet {
+  min-width: 0;
+}
+
 .app-page__inner {
   width: min(100%, 760px);
+  margin-inline: auto;
 }
 
 .app-card,
 .app-stat-card,
 .app-action-card,
-.store-showcase,
-.store-feature-card,
-.business-summary-card,
-.business-module-card,
-.receipt-preview-card,
-.receipt-empty-card,
-.notification-card,
 .app-account-card,
 .app-goal-card,
 .app-loan-card,
+.notification-card,
+.receipt-preview-card,
+.business-summary-card,
+.business-module-card,
+.store-showcase,
+.store-feature-card,
 .limits-card {
   position: relative;
   overflow: hidden;
@@ -24,258 +33,56 @@
 .app-card::after,
 .app-stat-card::after,
 .app-action-card::after,
-.store-showcase::after,
-.business-summary-card::after,
-.receipt-preview-card::after,
 .app-account-card::after,
 .app-goal-card::after,
 .app-loan-card::after,
+.notification-card::after,
+.receipt-preview-card::after,
+.business-summary-card::after,
+.business-module-card::after,
+.store-showcase::after,
+.store-feature-card::after,
 .limits-card::after {
   content: "";
   position: absolute;
   inset: 0;
   pointer-events: none;
   border-radius: inherit;
-  background: linear-gradient(135deg, rgba(255,255,255,0.08), transparent 42%);
-  opacity: 0.55;
+  background: linear-gradient(135deg, rgba(255,255,255,.075), transparent 42%);
+  opacity: .5;
 }
 
-.app-card--hero,
-.app-accounts-hero,
-.app-taxonomy-hero,
-.app-obligations-hero,
-.limits-hero,
-.referral-hero,
-.receipt-hero,
-.analytics-hero-card {
-  padding: clamp(18px, 5vw, 26px);
-}
-
-.app-hero-title,
-.app-card--hero h1,
-.referral-hero h1,
-.receipt-hero h1,
-.monetization-hero h1 {
-  max-width: 100%;
-  text-wrap: balance;
-}
-
-.app-hero-caption,
-.app-card--hero p,
-.referral-hero p,
-.receipt-hero p,
-.monetization-hero p {
-  max-width: 58ch;
-}
-
-.app-eyebrow {
-  letter-spacing: 0.16em;
-}
-
-.app-primary-button,
-.app-secondary-button,
-.app-icon-button,
-.store-card__button,
-.notification-card__action,
-.app-home-cashflow-card__action {
-  min-height: 42px;
+.app-card > *,
+.app-stat-card > *,
+.app-action-card > *,
+.store-showcase > *,
+.store-feature-card > *,
+.limits-card > * {
+  position: relative;
+  z-index: 1;
 }
 
 .app-primary-button,
 .app-secondary-button,
 .store-card__button,
 .notification-card__action {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  white-space: nowrap;
+  min-height: 42px;
 }
 
-.app-icon-button {
+.app-icon-button,
+.app-icon-action {
   flex: 0 0 auto;
 }
 
-.app-dashboard-page .app-page__inner,
-.app-accounts-page .app-page__inner,
-.app-taxonomy-page .app-page__inner,
-.app-obligations-page .app-page__inner,
-.monetization-page .app-page__inner,
-.receipt-scans-page .app-page__inner,
-.referral-page .app-page__inner,
-.spending-limits-page .app-page__inner,
-.business-workspace-page .app-page__inner {
-  padding-bottom: max(120px, calc(env(safe-area-inset-bottom) + 96px));
-}
-
-.app-home-balance-card {
-  min-height: 236px;
-}
-
-.app-home-balance-card__top,
-.app-home-cashflow-card__head,
-.receipt-history-card__head,
-.referral-section-head,
-.app-next-payment-card__body,
-.app-loan-card__head,
-.limits-card__top {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 14px;
-}
-
-.app-home-balance-card__amount,
-.app-accounts-summary-card__value,
-.business-money-card strong,
-.limits-card__amounts strong {
-  overflow-wrap: anywhere;
-  line-height: 0.92;
-}
-
-.app-home-balance-card__metrics,
-.referral-hero__stats,
-.limits-hero__stats,
-.business-summary-grid,
-.store-card-grid,
-.referral-benefits-grid {
-  display: grid;
-  gap: 10px;
-}
-
-.app-home-balance-card__metrics,
-.referral-hero__stats,
-.limits-hero__stats {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-
-.app-home-metric,
-.referral-hero__stats article,
-.limits-hero__stats article,
-.app-settings-tile,
-.app-xp-hero__stat {
+.app-page h1,
+.app-page h2,
+.app-page h3,
+.app-page p,
+.app-page span,
+.app-page small,
+.app-page strong,
+.app-page b {
   min-width: 0;
-  border-radius: 18px;
-  background: rgba(255,255,255,0.055);
-  border: 1px solid rgba(255,255,255,0.075);
-}
-
-.app-home-metric b,
-.referral-hero__stats strong,
-.limits-hero__stats strong,
-.app-settings-tile b,
-.app-xp-hero__stat b {
-  overflow-wrap: anywhere;
-}
-
-.app-home-chart-preview,
-.analytics-section-card,
-.receipt-history-card,
-.referral-list-card,
-.app-reminders-card,
-.app-closed-loans-card,
-.limits-form-card {
-  border-color: rgba(255,255,255,0.08);
-}
-
-.app-empty-button,
-.app-empty-inline,
-.referral-empty,
-.notification-empty,
-.receipt-empty-card,
-.limits-empty,
-.app-card--danger,
-.receipt-inline-error,
-.business-error-card {
-  border-radius: 22px;
-}
-
-.referral-code-panel,
-.referral-apply-card,
-.referral-balance-card,
-.store-status-card,
-.store-trial-card,
-.store-usage-card,
-.store-payment-section,
-.business-setup-card,
-.business-module-section {
-  display: grid;
-  gap: 16px;
-}
-
-.referral-code-panel__actions,
-.referral-apply-card__form,
-.monetization-hero__actions,
-.app-next-payment-card__actions,
-.app-loan-card__actions,
-.limits-card__footer,
-.receipt-upload-card__head,
-.receipt-preview-card__head {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-
-.referral-code-panel__actions > *,
-.referral-apply-card__form > *,
-.monetization-hero__actions > *,
-.app-next-payment-card__actions > *,
-.app-loan-card__actions > *,
-.limits-card__footer > * {
-  flex: 1 1 140px;
-}
-
-.referral-apply-card__form input,
-.limits-form-card input,
-.limits-form-card select,
-.limits-form-card textarea,
-.app-settings-language select,
-.app-settings-user input,
-.receipt-upload-card input,
-.receipt-upload-card textarea {
-  min-height: 46px;
-  border-radius: 18px;
-}
-
-.app-account-card,
-.app-goal-card,
-.app-loan-card,
-.limits-card,
-.notification-card,
-.receipt-preview-card,
-.store-feature-card,
-.business-module-card {
-  transition: transform 180ms ease, border-color 180ms ease, background 180ms ease;
-}
-
-@media (hover: hover) {
-  .app-account-card:hover,
-  .app-goal-card:hover,
-  .app-loan-card:hover,
-  .limits-card:hover,
-  .notification-card:hover,
-  .receipt-preview-card:hover,
-  .store-feature-card:hover,
-  .business-module-card:hover {
-    transform: translateY(-1px);
-    border-color: rgba(255,255,255,0.14);
-  }
-}
-
-.app-settings-nav,
-.app-accounts-actions,
-.app-taxonomy-actions,
-.app-obligation-type-grid,
-.app-obligation-account-picker,
-.limits-guide-card,
-.business-module-grid {
-  gap: 10px;
-}
-
-.app-settings-nav .app-action-card,
-.app-accounts-actions .app-action-card,
-.app-taxonomy-actions .app-action-card {
-  min-height: 72px;
 }
 
 .notification-sheet,
@@ -285,25 +92,11 @@
   overscroll-behavior: contain;
 }
 
-.notification-sheet__icon-button,
-.app-icon-button {
-  display: inline-grid;
-  place-items: center;
-}
-
-.monetization-section,
-.store-feature-section,
-.store-payment-section,
-.store-status-card,
-.store-trial-card,
-.store-usage-card {
-  scroll-margin-top: 24px;
-}
-
-.premium-upgrade-hero,
-.store-hero,
-.business-workspace-hero {
-  isolation: isolate;
+body:has(input:focus) .voice-first-companion,
+body:has(textarea:focus) .voice-first-companion,
+body:has(select:focus) .voice-first-companion {
+  opacity: 0;
+  pointer-events: none;
 }
 
 @media (max-width: 560px) {
@@ -311,262 +104,10 @@
     padding-inline: 14px;
   }
 
-  .app-home-balance-card__metrics,
-  .referral-hero__stats,
-  .limits-hero__stats {
-    grid-template-columns: 1fr;
-  }
-
-  .app-home-balance-card__top,
-  .app-home-cashflow-card__head,
-  .receipt-history-card__head,
-  .referral-section-head,
-  .app-next-payment-card__body,
-  .app-loan-card__head,
-  .limits-card__top {
-    align-items: stretch;
-    flex-direction: column;
-  }
-
-  .referral-code-panel__actions > *,
-  .referral-apply-card__form > *,
-  .monetization-hero__actions > *,
-  .app-next-payment-card__actions > *,
-  .app-loan-card__actions > *,
-  .limits-card__footer > * {
-    flex-basis: 100%;
-  }
-
-  .app-home-balance-card {
-    min-height: 220px;
-  }
-
   .app-primary-button,
   .app-secondary-button,
   .store-card__button,
   .notification-card__action {
     width: 100%;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .app-account-card,
-  .app-goal-card,
-  .app-loan-card,
-  .limits-card,
-  .notification-card,
-  .receipt-preview-card,
-  .store-feature-card,
-  .business-module-card {
-    transition: none;
-  }
-}
-
-/* Pack 69: layout recovery after CSS split.
-   Keeps fixes scoped to broken production screens instead of changing the whole system. */
-.app-modal-backdrop {
-  width: 100vw !important;
-  height: 100dvh !important;
-  min-height: 100dvh !important;
-  padding: 0 !important;
-  overflow: hidden !important;
-  align-items: flex-end !important;
-  justify-content: center !important;
-  overscroll-behavior: contain !important;
-  touch-action: none;
-}
-
-.app-modal-sheet {
-  width: min(100vw, 620px) !important;
-  max-width: 100vw !important;
-  max-height: min(88dvh, 760px) !important;
-  margin: 0 !important;
-  contain: layout paint;
-}
-
-.app-modal-body {
-  min-height: 0 !important;
-  overflow-y: auto !important;
-  overscroll-behavior: contain !important;
-  -webkit-overflow-scrolling: touch;
-}
-
-body.ai-any-modal-open .telegram-app-content,
-body.ai-core-modal-open .telegram-app-content,
-body.ai-modal-open .telegram-app-content {
-  overflow: hidden !important;
-}
-
-/* Text should not collapse into a single inline line inside cards. */
-.limits-guide-card,
-.analytics-mini-card,
-.referral-benefit-card,
-.referral-code-panel__main,
-.referral-list article,
-.referral-balance-card,
-.analytics-income-grid article,
-.business-money-grid article,
-.business-account-list article {
-  display: grid !important;
-  gap: 7px !important;
-  align-content: start;
-}
-
-.limits-guide-card > b,
-.limits-guide-card > span,
-.analytics-mini-card > span,
-.analytics-mini-card > strong,
-.analytics-mini-card > small,
-.referral-benefit-card > b,
-.referral-benefit-card > span,
-.referral-code-panel__main > span,
-.referral-code-panel__main > strong,
-.referral-code-panel__main > small,
-.referral-list article > b,
-.referral-list article > span,
-.referral-balance-card h2,
-.referral-balance-card p,
-.analytics-income-grid article > span,
-.analytics-income-grid article > strong,
-.business-money-grid article > span,
-.business-money-grid article > strong,
-.business-account-list article > span,
-.business-account-list article > strong {
-  display: block !important;
-  min-width: 0;
-  max-width: 100%;
-  overflow-wrap: normal;
-  word-break: normal;
-}
-
-.limits-guide-card > span,
-.analytics-mini-card > small,
-.referral-benefit-card > span,
-.referral-code-panel__main > small,
-.referral-list article > span,
-.referral-balance-card p,
-.analytics-income-grid article > span,
-.business-money-grid article > span,
-.business-account-list article > span {
-  color: rgba(255,255,255,.52);
-  line-height: 1.38;
-}
-
-.referral-code-panel__main > strong {
-  overflow-wrap: anywhere;
-  font-size: clamp(18px, 5.6vw, 26px);
-  line-height: 1.06;
-}
-
-.referral-hero__stats article,
-.limits-hero__stats span {
-  display: grid !important;
-  gap: 3px !important;
-  align-content: center;
-  min-height: 40px;
-}
-
-.referral-hero__stats strong,
-.referral-hero__stats span,
-.limits-hero__stats span {
-  display: block !important;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-/* Hero action buttons must not squeeze titles into one-letter columns. */
-.app-obligations-hero__top {
-  display: grid !important;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: start;
-}
-
-.app-obligations-hero__top .app-hero-title,
-.app-obligations-hero__top h1,
-.app-obligations-hero__top p,
-.analytics-section-card h2,
-.analytics-mini-card strong,
-.limits-guide-card b {
-  overflow-wrap: normal !important;
-  word-break: normal !important;
-  hyphens: none !important;
-}
-
-.app-obligations-hero__top .app-primary-button,
-.analytics-section-card__head .app-secondary-button,
-.receipt-history-card__head .app-secondary-button,
-.referral-section-head .app-secondary-button,
-.limits-section-head .app-secondary-button,
-.app-next-payment-card__actions .app-primary-button,
-.app-next-payment-card__actions .app-secondary-button,
-.app-loan-card__actions .app-primary-button,
-.app-loan-card__actions .app-secondary-button {
-  width: auto !important;
-  flex: 0 0 auto !important;
-}
-
-/* Form blocks: no inline label/value merging. */
-.limits-form label,
-.app-obligation-field,
-.app-field {
-  display: grid !important;
-  gap: 7px !important;
-}
-
-.limits-form label > span,
-.app-obligation-field > span,
-.app-field > span {
-  display: block !important;
-  min-width: 0;
-  line-height: 1.2;
-}
-
-/* Fina should not cover inputs and CTAs on dense forms. */
-.spending-limits-page .voice-first-companion,
-.app-obligations-page .voice-first-companion,
-.referral-page .voice-first-companion,
-.app-analytics-page .voice-first-companion {
-  opacity: .72;
-}
-
-.spending-limits-page:focus-within .voice-first-companion,
-.app-obligations-page:focus-within .voice-first-companion,
-.referral-page:focus-within .voice-first-companion,
-.app-analytics-page:focus-within .voice-first-companion {
-  display: none !important;
-}
-
-@media (max-width: 560px) {
-  .app-obligations-hero__top {
-    grid-template-columns: 1fr !important;
-    gap: 14px !important;
-  }
-
-  .app-obligations-hero__top .app-primary-button {
-    width: 100% !important;
-  }
-
-  .analytics-section-card__head,
-  .receipt-history-card__head,
-  .referral-section-head,
-  .limits-section-head {
-    display: grid !important;
-    grid-template-columns: 1fr !important;
-    align-items: start !important;
-  }
-
-  .analytics-section-card__head .app-secondary-button,
-  .receipt-history-card__head .app-secondary-button,
-  .limits-section-head .app-secondary-button {
-    width: 100% !important;
-  }
-
-  .limits-guide-grid,
-  .analytics-grid-two,
-  .referral-benefits-grid,
-  .analytics-income-grid {
-    grid-template-columns: 1fr !important;
   }
 }

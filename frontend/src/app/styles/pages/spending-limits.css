@@ -176,3 +176,157 @@
     justify-content: flex-start;
   }
 }
+/* Pack 71: logical layout fix for spending limits page. */
+.spending-limits-page {
+  overflow-x: hidden;
+}
+
+.spending-limits-page .app-page__inner {
+  width: min(100%, 760px);
+  margin-inline: auto;
+  padding-inline: clamp(14px, 4vw, 22px);
+}
+
+.spending-limits-page .app-card,
+.limits-hero,
+.limits-form-card,
+.limits-card,
+.limits-empty,
+.limits-guide-card {
+  min-width: 0;
+}
+
+.limits-hero,
+.limits-form-card,
+.limits-card,
+.limits-empty {
+  padding: clamp(18px, 5vw, 26px);
+}
+
+.limits-hero h1,
+.limits-hero h2,
+.limits-form-card h2,
+.limits-list-section h2,
+.limits-guide-card b,
+.limits-card__top h3 {
+  overflow-wrap: normal;
+  word-break: normal;
+  line-height: 1.12;
+}
+
+.limits-hero p,
+.limits-guide-card span,
+.limits-card__type,
+.limits-card__footer small,
+.limits-card__amounts small {
+  line-height: 1.42;
+}
+
+.limits-hero__stats {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.limits-hero__stats span,
+.limits-card__badge {
+  display: inline-flex;
+  width: fit-content;
+  max-width: 100%;
+  align-items: center;
+  white-space: normal;
+}
+
+.limits-guide-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.limits-guide-card {
+  display: grid;
+  gap: 8px;
+  padding: 18px;
+}
+
+.limits-guide-card b,
+.limits-guide-card span,
+.limits-card__top h3,
+.limits-card__type,
+.limits-card__amounts span,
+.limits-card__amounts small,
+.limits-card__footer small {
+  display: block;
+}
+
+.limits-guide-card b {
+  color: rgba(255,255,255,.94);
+  font-size: 17px;
+  line-height: 1.2;
+}
+
+.limits-guide-card span {
+  color: rgba(255,255,255,.6);
+  font-size: 14px;
+}
+
+.limits-form label > span {
+  display: block;
+  margin-bottom: 7px;
+}
+
+.limits-form input,
+.limits-form select,
+.limits-form textarea {
+  display: block;
+  width: 100%;
+}
+
+.limits-card__top,
+.limits-card__amounts,
+.limits-card__footer {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.limits-card__top > div,
+.limits-card__footer > small {
+  min-width: 0;
+}
+
+.limits-card__amounts {
+  align-items: baseline;
+}
+
+.limits-card__amounts span,
+.limits-card__amounts small {
+  overflow-wrap: anywhere;
+}
+
+.limits-card__footer div {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 7px;
+}
+
+@media (max-width: 560px) {
+  .limits-guide-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .limits-card__top,
+  .limits-card__amounts,
+  .limits-card__footer,
+  .limits-section-head {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .limits-card__footer div {
+    justify-content: flex-start;
+  }
+}
