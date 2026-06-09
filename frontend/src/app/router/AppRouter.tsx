@@ -8,6 +8,7 @@ import { LaunchOnboardingSheet } from '@/features/onboarding/ui/LaunchOnboarding
 import { ProductAnalyticsTracker } from '@/features/product-analytics/ui/ProductAnalyticsTracker';
 import { useAuthStore } from '@/features/auth/model/auth.store';
 import { useSubscriptionStore } from '@/features/subscription/model/subscription.store';
+import { canShowMonetization, hasBusinessAccess } from '@/features/subscription/lib/entitlements';
 import { Spinner } from '@/shared/ui/Spinner';
 
 const AccountsPage = lazy(() => import('@/pages/accounts/AccountsPage'));
@@ -40,7 +41,8 @@ export function AppRouter() {
   const goBack = useNavigationStore((state) => state.goBack);
   const subscription = useSubscriptionStore((state) => state.status);
   const loadSubscription = useSubscriptionStore((state) => state.load);
-  const hasBusiness = Boolean(subscription?.access.hasBusiness);
+  const hasBusiness = hasBusinessAccess(subscription);
+  const showMonetization = canShowMonetization(subscription);
 
   useEffect(() => {
     if (user) void loadSubscription();
@@ -58,8 +60,8 @@ export function AppRouter() {
         {currentScreen === 'spending-limits' && <SpendingLimitsPage />}
         {currentScreen === 'companion' && <CompanionPage />}
         {currentScreen === 'settings' && <SettingsPage />}
-        {currentScreen === 'store' && <PremiumPage />}
-        {currentScreen === 'premium' && <PremiumPage />}
+        {currentScreen === 'store' && (showMonetization ? <PremiumPage /> : <DashboardPage />)}
+        {currentScreen === 'premium' && (showMonetization ? <PremiumPage /> : <DashboardPage />)}
         {currentScreen === 'business-accountant' && (hasBusiness ? <BusinessAccountantPage /> : <DashboardPage />)}
         {currentScreen === 'receipt-scans' && <ReceiptScansPage />}
         {currentScreen === 'sections' && <SectionsPage onBack={goBack} />}
@@ -69,7 +71,7 @@ export function AppRouter() {
 
       <AppNavigationSheet />
       <AppModalManager />
-      <PremiumUpgradeSheet />
+      {showMonetization ? <PremiumUpgradeSheet /> : null}
       <LaunchOnboardingSheet />
     </AppShell>
   );

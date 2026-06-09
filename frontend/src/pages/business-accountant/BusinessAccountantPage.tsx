@@ -6,7 +6,7 @@ import { BusinessSummaryCards } from '@/features/business-workspace/ui/BusinessS
 import { useBusinessWorkspaceStore } from '@/features/business-workspace/model/businessWorkspace.store';
 import { useNavigationStore } from '@/features/navigation/model/navigation.store';
 import { useSubscriptionStore } from '@/features/subscription/model/subscription.store';
-import { StorePaymentActions } from '@/features/payments/ui/StorePaymentActions';
+import { hasBusinessAccess } from '@/features/subscription/lib/entitlements';
 import { useI18n } from '@/shared/lib/i18n';
 import { ScreenTopBar } from '@/shared/ui/ScreenTopBar';
 import { Spinner } from '@/shared/ui/Spinner';
@@ -27,9 +27,8 @@ function BusinessLockedFallback() {
           <h1 className="app-hero-title">{t('business.locked.title')}</h1>
           <p className="app-hero-caption">{t('business.locked.caption')}</p>
           <div className="business-locked-actions">
-            <button type="button" className="app-primary-button" onClick={() => navigateTo('store')}>{t('business.locked.action')}</button>
+            <button type="button" className="app-primary-button" onClick={() => navigateTo('dashboard')}>{t('common.back')}</button>
           </div>
-          <StorePaymentActions product="business" compact />
         </section>
       </div>
     </div>
@@ -52,7 +51,7 @@ export default function BusinessAccountantPage() {
     void loadSubscription();
   }, [loadSubscription]);
 
-  const hasBusiness = Boolean(subscription?.access.hasBusiness);
+  const hasBusiness = hasBusinessAccess(subscription);
 
   useEffect(() => {
     if (hasBusiness) void loadWorkspace();

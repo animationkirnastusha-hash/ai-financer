@@ -9,6 +9,7 @@ import { StoreTrialCard } from '@/features/store/ui/StoreTrialCard';
 import { StorePaymentActions } from '@/features/payments/ui/StorePaymentActions';
 import { StoreUsageCard } from '@/features/store/ui/StoreUsageCard';
 import { useSubscriptionStore } from '@/features/subscription/model/subscription.store';
+import { canShowBusiness, canShowMonetization } from '@/features/subscription/lib/entitlements';
 import { useI18n } from '@/shared/lib/i18n';
 import { ScreenTopBar } from '@/shared/ui/ScreenTopBar';
 
@@ -76,13 +77,14 @@ export default function PremiumPage() {
   const access = subscription?.access;
   const hasPremium = Boolean(access?.hasPremium);
   const hasBusiness = Boolean(access?.hasBusiness);
+  const showMonetization = canShowMonetization(subscription);
 
   useEffect(() => {
     void loadSubscription();
   }, [loadSubscription]);
 
-  const visibleStoreCards = useMemo(() => storeCards.filter((card) => card.tone !== 'business' || hasBusiness), [hasBusiness]);
-  const selectedCard = useMemo(() => visibleStoreCards.find((card) => card.tone === selectedTone) ?? visibleStoreCards[0] ?? storeCards[0], [selectedTone, visibleStoreCards]);
+  const visibleCards = useMemo(() => storeCards.filter((card) => card.tone !== 'business' || canShowBusiness(subscription)), [subscription]);
+  const selectedCard = useMemo(() => visibleCards.find((card) => card.tone === selectedTone) ?? visibleCards[0] ?? storeCards[0], [selectedTone, visibleCards]);
 
   const handleStartTrial = async () => {
     await startTrial();
@@ -107,13 +109,25 @@ export default function PremiumPage() {
     });
   };
 
+  if (!showMonetization) {
+    return (
+      <div className="app-page monetization-page text-white">
+        <div className="app-page__inner space-y-4">
+          <ScreenTopBar title={t('screen.store')} left="back" right={['home', 'settings']} />
+          <StoreStatusCard subscription={subscription} isLoading={isLoading} />
+          <StoreUsageCard subscription={subscription} />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="app-page monetization-page text-white">
       <div className="app-page__inner space-y-4">
         <ScreenTopBar title={t('screen.store')} left="back" right={['home', 'settings']} />
-        <StoreHero premiumCard={storeCards[0]} onPremiumOpen={handlePremiumOpen} />
+        <StoreHero premiumCard={visibleCards[0] ?? storeCards[0]} onPremiumOpen={handlePremiumOpen} />
         <StoreProductShowcase
-          cards={visibleStoreCards}
+          cards={visibleCards}
           selected={selectedCard}
           hasPremium={hasPremium}
           hasBusiness={hasBusiness}

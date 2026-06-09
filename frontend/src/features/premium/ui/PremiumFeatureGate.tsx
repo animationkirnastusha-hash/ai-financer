@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { usePremiumStore } from '@/features/premium/model/premium.store';
 import { useSubscriptionStore } from '@/features/subscription/model/subscription.store';
+import { canShowMonetization } from '@/features/subscription/lib/entitlements';
 import { useI18n, type I18nKey } from '@/shared/lib/i18n';
 
 type Props = {
@@ -16,8 +17,10 @@ export function PremiumFeatureGate({ feature, title, caption, children, classNam
   const subscription = useSubscriptionStore((state) => state.status);
   const openPremium = usePremiumStore((state) => state.openPremium);
   const isAllowed = Boolean(subscription?.features?.[feature] || subscription?.access.hasPremium || subscription?.access.hasBusiness);
+  const showMonetization = canShowMonetization(subscription);
 
   if (isAllowed) return <>{children}</>;
+  if (!showMonetization) return null;
 
   return (
     <button
