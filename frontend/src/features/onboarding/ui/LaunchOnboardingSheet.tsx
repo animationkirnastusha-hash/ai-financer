@@ -11,7 +11,6 @@ import { FinishStep } from '@/features/onboarding/ui/steps/FinishStep';
 import { GoalsStep } from '@/features/onboarding/ui/steps/GoalsStep';
 import { LoansStep } from '@/features/onboarding/ui/steps/LoansStep';
 import { MicrophonePermissionStep } from '@/features/onboarding/ui/steps/MicrophonePermissionStep';
-import { PremiumTrialStep } from '@/features/onboarding/ui/steps/PremiumTrialStep';
 import { RemindersStep } from '@/features/onboarding/ui/steps/RemindersStep';
 import { VoiceIntroStep } from '@/features/onboarding/ui/steps/VoiceIntroStep';
 import { WelcomeStep } from '@/features/onboarding/ui/steps/WelcomeStep';
@@ -26,7 +25,6 @@ type StepId =
   | 'loans'
   | 'goals'
   | 'reminders'
-  | 'premium'
   | 'finish';
 
 const steps: Array<{ id: StepId; title: string }> = [
@@ -38,7 +36,6 @@ const steps: Array<{ id: StepId; title: string }> = [
   { id: 'loans', title: 'Кредиты' },
   { id: 'goals', title: 'Цели' },
   { id: 'reminders', title: 'Напоминания' },
-  { id: 'premium', title: 'Premium' },
   { id: 'finish', title: 'Готово' },
 ];
 
@@ -59,7 +56,6 @@ export function LaunchOnboardingSheet() {
   const complete = useOnboardingStore((state) => state.complete);
 
   const user = useAuthStore((state) => state.user);
-  const isAdmin = Boolean(user?.isAdmin);
   const navigateTo = useNavigationStore((state) => state.navigateTo);
   const createAccount = useAccountsStore((state) => state.createAccount);
   const loadAccounts = useAccountsStore((state) => state.loadAccounts);
@@ -212,7 +208,6 @@ export function LaunchOnboardingSheet() {
           {currentStep.id === 'loans' ? <LoansStep draft={draft} onChange={updateDraft} /> : null}
           {currentStep.id === 'goals' ? <GoalsStep draft={draft} onChange={updateDraft} /> : null}
           {currentStep.id === 'reminders' ? <RemindersStep draft={draft} onChange={updateDraft} /> : null}
-          {currentStep.id === 'premium' ? <PremiumTrialStep isAdmin={isAdmin} /> : null}
           {currentStep.id === 'finish' ? <FinishStep draft={draft} /> : null}
 
           {finishError ? <div className="app-error-box">{finishError}</div> : null}

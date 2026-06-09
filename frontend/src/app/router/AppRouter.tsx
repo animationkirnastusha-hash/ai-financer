@@ -40,7 +40,7 @@ export function AppRouter() {
   const goBack = useNavigationStore((state) => state.goBack);
   const subscription = useSubscriptionStore((state) => state.status);
   const loadSubscription = useSubscriptionStore((state) => state.load);
-  const hasBusiness = Boolean(isAdmin || subscription?.access.hasBusiness);
+  const hasBusiness = Boolean(subscription?.access.hasBusiness);
 
   useEffect(() => {
     if (user) void loadSubscription();
@@ -60,7 +60,7 @@ export function AppRouter() {
         {currentScreen === 'settings' && <SettingsPage />}
         {currentScreen === 'store' && <PremiumPage />}
         {currentScreen === 'premium' && <PremiumPage />}
-        {currentScreen === 'business-accountant' && (hasBusiness ? <BusinessAccountantPage /> : <PremiumPage />)}
+        {currentScreen === 'business-accountant' && (hasBusiness ? <BusinessAccountantPage /> : <DashboardPage />)}
         {currentScreen === 'receipt-scans' && <ReceiptScansPage />}
         {currentScreen === 'sections' && <SectionsPage onBack={goBack} />}
         {currentScreen === 'admin' && (isAdmin ? <AdminPage /> : <DashboardPage />)}

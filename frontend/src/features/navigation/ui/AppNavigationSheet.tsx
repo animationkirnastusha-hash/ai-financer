@@ -29,8 +29,11 @@ const planningLinks: NavigationItem[] = [
 
 const growthLinks: NavigationItem[] = [
   { screen: 'store', labelKey: 'screen.store', captionKey: 'nav.store.caption' },
-  { screen: 'receipt-scans', labelKey: 'screen.receipts', captionKey: 'nav.receipts.caption' },
   { screen: 'referral', labelKey: 'common.referrals', captionKey: 'nav.referral.caption' },
+];
+
+const receiptLinks: NavigationItem[] = [
+  { screen: 'receipt-scans', labelKey: 'screen.receipts', captionKey: 'nav.receipts.caption' },
 ];
 
 const businessLinks: NavigationItem[] = [
@@ -51,7 +54,8 @@ export function AppNavigationSheet() {
   const isAdmin = Boolean(user?.isAdmin);
   const subscription = useSubscriptionStore((state) => state.status);
   const loadSubscription = useSubscriptionStore((state) => state.load);
-  const hasBusiness = Boolean(isAdmin || subscription?.access.hasBusiness);
+  const hasBusiness = Boolean(subscription?.access.hasBusiness);
+  const hasReceiptAccess = Boolean(subscription?.features?.receiptScan || subscription?.access.hasPremium || subscription?.access.hasBusiness);
 
   useEffect(() => {
     if (isOpen && user && !subscription) void loadSubscription();
@@ -65,6 +69,7 @@ export function AppNavigationSheet() {
     { titleKey: 'nav.group.growth', items: growthLinks },
   ];
 
+  if (hasReceiptAccess) groups.push({ titleKey: 'screen.receipts', items: receiptLinks });
   if (hasBusiness) groups.push({ titleKey: 'nav.group.business', items: businessLinks });
   if (isAdmin) groups.push({ titleKey: 'nav.group.admin', items: adminLinks });
 

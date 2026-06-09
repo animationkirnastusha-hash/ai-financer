@@ -81,7 +81,8 @@ export default function PremiumPage() {
     void loadSubscription();
   }, [loadSubscription]);
 
-  const selectedCard = useMemo(() => storeCards.find((card) => card.tone === selectedTone) ?? storeCards[0], [selectedTone]);
+  const visibleStoreCards = useMemo(() => storeCards.filter((card) => card.tone !== 'business' || hasBusiness), [hasBusiness]);
+  const selectedCard = useMemo(() => visibleStoreCards.find((card) => card.tone === selectedTone) ?? visibleStoreCards[0] ?? storeCards[0], [selectedTone, visibleStoreCards]);
 
   const handleStartTrial = async () => {
     await startTrial();
@@ -94,7 +95,7 @@ export default function PremiumPage() {
     }
 
     if (card.tone === 'business') {
-      navigateTo('business-accountant');
+      if (hasBusiness) navigateTo('business-accountant');
       return;
     }
 
@@ -112,7 +113,7 @@ export default function PremiumPage() {
         <ScreenTopBar title={t('screen.store')} left="back" right={['home', 'settings']} />
         <StoreHero premiumCard={storeCards[0]} onPremiumOpen={handlePremiumOpen} />
         <StoreProductShowcase
-          cards={storeCards}
+          cards={visibleStoreCards}
           selected={selectedCard}
           hasPremium={hasPremium}
           hasBusiness={hasBusiness}

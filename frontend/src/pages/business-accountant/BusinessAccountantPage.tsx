@@ -4,7 +4,6 @@ import { BusinessModuleList } from '@/features/business-workspace/ui/BusinessMod
 import { BusinessSetupCard } from '@/features/business-workspace/ui/BusinessSetupCard';
 import { BusinessSummaryCards } from '@/features/business-workspace/ui/BusinessSummaryCards';
 import { useBusinessWorkspaceStore } from '@/features/business-workspace/model/businessWorkspace.store';
-import { useAuthStore } from '@/features/auth/model/auth.store';
 import { useNavigationStore } from '@/features/navigation/model/navigation.store';
 import { useSubscriptionStore } from '@/features/subscription/model/subscription.store';
 import { StorePaymentActions } from '@/features/payments/ui/StorePaymentActions';
@@ -40,7 +39,6 @@ function BusinessLockedFallback() {
 export default function BusinessAccountantPage() {
   const { t } = useI18n();
   const [tab, setTab] = useState<BusinessTab>('overview');
-  const isAdmin = Boolean(useAuthStore((state) => state.user?.isAdmin));
   const subscription = useSubscriptionStore((state) => state.status);
   const loadSubscription = useSubscriptionStore((state) => state.load);
   const workspace = useBusinessWorkspaceStore((state) => state.workspace);
@@ -54,7 +52,7 @@ export default function BusinessAccountantPage() {
     void loadSubscription();
   }, [loadSubscription]);
 
-  const hasBusiness = Boolean(isAdmin || subscription?.access.hasBusiness);
+  const hasBusiness = Boolean(subscription?.access.hasBusiness);
 
   useEffect(() => {
     if (hasBusiness) void loadWorkspace();
