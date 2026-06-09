@@ -1,4 +1,4 @@
-export type AISettingsPreset = 'strict' | 'balanced' | 'simple';
+export type AISettingsPreset = 'strict' | 'balanced' | 'simple' | 'fast';
 export type CompanionTone = 'calm' | 'friendly' | 'strict' | 'coach';
 
 export interface AISettingsUpdateInput {

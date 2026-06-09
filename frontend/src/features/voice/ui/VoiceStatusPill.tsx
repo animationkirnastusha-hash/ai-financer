@@ -1,5 +1,6 @@
 import type { VoiceCaptureMode, VoiceSessionPhase } from '@/features/voice/model/voiceSession.types';
 import type { VoiceInputState } from '@/features/voice/model/voice.types';
+import { useI18n } from '@/shared/lib/i18n';
 
 type VoiceStatusPillProps = {
   canUseVoice: boolean;
@@ -8,7 +9,6 @@ type VoiceStatusPillProps = {
   captureMode: VoiceCaptureMode;
   phase?: VoiceSessionPhase;
   cooldownUntil?: number;
-  isLocked?: boolean;
 };
 
 export function VoiceStatusPill({
@@ -16,17 +16,16 @@ export function VoiceStatusPill({
   isBusy,
   voiceState,
   phase = 'idle',
-  isLocked = false,
 }: VoiceStatusPillProps) {
-  let label = 'Голос выключен';
+  const { t } = useI18n();
+  let label = t('voice.status.off');
 
   if (canUseVoice) {
-    if (isBusy || phase === 'dispatching') label = 'Выполняю';
-    else if (voiceState === 'uploading' || phase === 'uploading') label = 'Распознаю';
-    else if (isLocked || phase === 'locked') label = 'Запись закреплена';
-    else if (voiceState === 'recording' || phase === 'holding') label = 'Слушаю';
-    else if (phase === 'cooldown') label = 'Готова';
-    else label = 'Зажми для голоса';
+    if (isBusy || phase === 'dispatching') label = t('voice.status.dispatching');
+    else if (voiceState === 'uploading' || phase === 'uploading') label = t('voice.status.uploading');
+    else if (voiceState === 'recording' || phase === 'holding') label = t('voice.status.listening');
+    else if (phase === 'cooldown') label = t('voice.status.ready');
+    else label = t('voice.status.tapTextHoldVoice');
   }
 
   return (

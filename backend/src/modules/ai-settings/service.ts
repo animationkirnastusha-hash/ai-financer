@@ -30,6 +30,13 @@ const PRESETS: Record<AISettingsPreset, {
     requireConfirmForAccountActions: true,
     companionTone: 'coach',
   },
+  fast: {
+    autoConfirmExpenseLimit: 1000000,
+    autoConfirmIncomeLimit: 5000000,
+    autoConfirmTransferLimit: 0,
+    requireConfirmForAccountActions: false,
+    companionTone: 'friendly',
+  },
 };
 
 const ONBOARDING_STEPS = [
@@ -202,6 +209,11 @@ export class AISettingsService {
         title: 'Простой режим',
         description: 'Меньше вопросов для повседневного учёта. Подходит тем, кто не хочет настраивать вручную.',
       },
+      {
+        key: 'fast',
+        title: 'Минимум подтверждений',
+        description: 'Обычные команды выполняются сразу. Проверка остаётся для опасных действий и неясных запросов.',
+      },
     ];
   }
 
@@ -311,7 +323,7 @@ export class AISettingsService {
   }
 
   private isPreset(value: unknown): value is AISettingsPreset {
-    return value === 'strict' || value === 'balanced' || value === 'simple';
+    return value === 'strict' || value === 'balanced' || value === 'simple' || value === 'fast';
   }
 
   private isCompanionTone(value: unknown): value is CompanionTone {

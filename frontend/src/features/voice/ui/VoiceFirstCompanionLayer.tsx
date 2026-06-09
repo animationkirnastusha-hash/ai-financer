@@ -10,14 +10,13 @@ import { useVoiceSessionMachine } from '@/features/voice/model/useVoiceSessionMa
 import { VOICE_BUBBLE_TIMEOUT_MS } from '@/features/voice/model/voiceConstants';
 import type { VoiceCompanionMood, VoiceThought, VoiceBubbleTone } from '@/features/voice/model/voiceSession.types';
 import { compactVoiceBubble } from '@/features/voice/model/voiceText';
-import { VoicePendingConfirmModal } from '@/features/voice/ui/VoicePendingConfirmModal';
-import { VoiceLockActions } from '@/features/voice/ui/VoiceLockActions';
 import { VoicePermissionIntro } from '@/features/voice/ui/VoicePermissionIntro';
 import { VoiceStatusPill } from '@/features/voice/ui/VoiceStatusPill';
 import { VoiceThoughtBubble } from '@/features/voice/ui/VoiceThoughtBubble';
+import { useI18n } from '@/shared/lib/i18n';
 import { CompanionButton } from '@/shared/ui/CompanionButton';
 
-type GestureMode = 'idle' | 'holding' | 'locked';
+type GestureMode = 'idle' | 'holding';
 
 type GestureRuntime = {
   pointerId: number | null;
@@ -29,12 +28,12 @@ type GestureRuntime = {
   mode: GestureMode;
 };
 
-const SWIPE_LOCK_PX = 48;
 const SWIPE_CANCEL_PX = 58;
 const TAP_GUARD_MS = 320;
 const HOLD_TO_VOICE_MS = 210;
 
 export function VoiceFirstCompanionLayer() {
+  const { t } = useI18n();
   const modalStack = useAppModalStore((state) => state.stack);
   const openModal = useAppModalStore((state) => state.openModal);
   const hasOpenModal = modalStack.length > 0;
@@ -111,7 +110,6 @@ export function VoiceFirstCompanionLayer() {
     cooldownUntil,
     recordSessionMs,
     reset: resetVoiceMachine,
-    markLocked,
   } = machine;
 
   const voice = useVoiceInput({
@@ -156,18 +154,16 @@ export function VoiceFirstCompanionLayer() {
         return;
       }
 
+      const sessionId = crypto.randomUUID();
       resetVoiceMachine();
       showThought('Думаю.', 'neutral', 1400);
-      openModal({
-        type: 'ai-text-overlay',
-        initialCommand: command,
-        mode: 'voice',
-        autoStartVoice: false,
-        autoCloseOnVoiceResult: true,
-        autoSubmitInitialCommand: true,
+      await dispatchCommand({
+        sessionId,
+        finalText: command,
+        segments: [{ text: command, role: 'initial', at: Date.now() }],
       });
     };
-  }, [openModal, resetVoiceMachine, showThought]);
+  }, [dispatchCommand, resetVoiceMachine, showThought]);
 
   useEffect(() => {
     resetVoiceMachineRef.current = resetVoiceMachine;
@@ -248,18 +244,6 @@ export function VoiceFirstCompanionLayer() {
     explainVoiceUnavailable();
     return false;
   }, [canStartManualRecording, explainVoiceUnavailable, resetVoiceMachine, setVoicePermissionPrompted, showThought, voice]);
-
-  const openLockedVoiceOverlay = useCallback(() => {
-    if (!canStartManualRecording) {
-      explainVoiceUnavailable();
-      return false;
-    }
-
-    resetVoiceMachine();
-    showThought('Слушаю. Сессия открыта.', 'listening', 1600);
-    openModal({ type: 'ai-text-overlay', mode: 'voice', autoStartVoice: true, autoCloseOnVoiceResult: false });
-    return true;
-  }, [canStartManualRecording, explainVoiceUnavailable, openModal, resetVoiceMachine, showThought]);
 
   const primeVoicePermission = useCallback(async () => {
     setIsPriming(true);
@@ -347,18 +331,7 @@ export function VoiceFirstCompanionLayer() {
       return;
     }
 
-    if (dy <= -SWIPE_LOCK_PX && Math.abs(dy) > Math.abs(dx) * 0.8) {
-      event.preventDefault();
-      clearHoldTimer();
-      gesture.mode = 'locked';
-      gesture.started = true;
-      setGestureMode('locked');
-      markLocked();
-      const opened = openLockedVoiceOverlay();
-      if (!opened) resetGesture();
-      logVoiceDebugEvent('manual_voice_locked_overlay_opened', { pointerId: event.pointerId, dy: Math.round(dy) });
-    }
-  }, [cancelManualRecording, clearHoldTimer, markLocked, openLockedVoiceOverlay, resetGesture]);
+  }, [cancelManualRecording, clearHoldTimer]);
 
   const handlePointerUp = useCallback((event: PointerEvent<HTMLDivElement>) => {
     const gesture = gestureRef.current;
@@ -373,13 +346,6 @@ export function VoiceFirstCompanionLayer() {
       resetGesture();
       return;
     }
-
-    if (gesture.mode === 'locked') {
-      gesture.pointerId = null;
-      logVoiceDebugEvent('manual_voice_pointer_up_locked_overlay', { pointerId: event.pointerId });
-      return;
-    }
-
     if (!gesture.started) {
       resetGesture();
       openTextOverlay();
@@ -403,13 +369,6 @@ export function VoiceFirstCompanionLayer() {
     const gesture = gestureRef.current;
     if (gesture.pointerId !== event.pointerId) return;
     clearHoldTimer();
-
-    if (gesture.mode === 'locked') {
-      gesture.pointerId = null;
-      logVoiceDebugEvent('manual_voice_pointer_cancel_locked', { pointerId: event.pointerId });
-      return;
-    }
-
     cancelManualRecording('pointer_cancel');
   }, [cancelManualRecording, clearHoldTimer]);
 
@@ -473,6 +432,11 @@ export function VoiceFirstCompanionLayer() {
     resetVoiceMachine();
   }, [chat.pendingActions.length, resetGesture, resetVoiceMachine, voice]);
 
+  useEffect(() => {
+    if (chat.pendingActions.length <= 0 || hasTextChatOverlay) return;
+    openModal({ type: 'ai-text-overlay', mode: 'text', autoStartVoice: false, autoCloseOnVoiceResult: false });
+  }, [chat.pendingActions.length, hasTextChatOverlay, openModal]);
+
   useEffect(() => () => {
     if (bubbleTimerRef.current !== null) window.clearTimeout(bubbleTimerRef.current);
     if (holdTimerRef.current !== null) window.clearTimeout(holdTimerRef.current);
@@ -482,7 +446,7 @@ export function VoiceFirstCompanionLayer() {
 
   const mood = useMemo<VoiceCompanionMood>(() => {
     if (chat.pendingActions.length > 0) return 'confirm';
-    if (voice.state === 'recording' || gestureMode === 'holding' || gestureMode === 'locked') return 'listening';
+    if (voice.state === 'recording' || gestureMode === 'holding' || false) return 'listening';
     if (voice.state === 'uploading' || chat.isSending || isDispatching) return 'thinking';
     if (thought?.tone === 'warning') return 'warning';
     if (thought?.tone === 'success') return 'success';
@@ -491,9 +455,8 @@ export function VoiceFirstCompanionLayer() {
 
   const needsIntro = microphoneNeedsAction && (!permissionIntroDismissed || permissionIntroOpen);
   const showFloatingCompanion = !hasOpenModal;
-  const isLocked = gestureMode === 'locked';
 
-  if (!showFloatingCompanion && !needsIntro && chat.pendingActions.length === 0) return null;
+  if (!showFloatingCompanion && !needsIntro) return null;
 
   return (
     <>
@@ -510,18 +473,8 @@ export function VoiceFirstCompanionLayer() {
         />
       ) : null}
 
-      {!hasTextChatOverlay ? (
-        <VoicePendingConfirmModal
-          pendingActions={chat.pendingActions}
-          onConfirm={chat.confirmAction}
-          onCancel={chat.cancelAction}
-          onUpdate={chat.updatePendingAction}
-        />
-      ) : null}
-
-
       {showFloatingCompanion ? (
-        <div className={isLocked ? 'voice-first-companion voice-first-companion--locked' : 'voice-first-companion'} data-no-swipe="true">
+        <div className="voice-first-companion" data-no-swipe="true">
           <VoiceThoughtBubble thought={thought} />
 
           <div className="voice-first-companion__controls">
@@ -533,14 +486,13 @@ export function VoiceFirstCompanionLayer() {
                 captureMode={captureMode}
                 phase={phase}
                 cooldownUntil={cooldownUntil}
-                isLocked={isLocked}
               />
             </div>
 
             <div
               className="voice-first-companion__press-target"
               role="button"
-              aria-label={isLocked ? 'Нажми, чтобы отправить запись' : 'Зажми для голосовой команды'}
+              aria-label={t('voice.fina.tapTextHoldVoice')}
               tabIndex={0}
               onPointerDown={handlePointerDown}
               onPointerMove={handlePointerMove}
@@ -551,7 +503,7 @@ export function VoiceFirstCompanionLayer() {
               <CompanionButton
                 mood={mood}
                 size="md"
-                label={isLocked ? 'Нажми, чтобы отправить' : 'Зажми для голосовой команды'}
+                label={t('voice.fina.tapTextHoldVoice')}
                 className="pointer-events-none select-none"
                 tabIndex={-1}
                 aria-hidden="true"
@@ -562,7 +514,6 @@ export function VoiceFirstCompanionLayer() {
         </div>
       ) : null}
 
-      {showFloatingCompanion && isLocked ? <VoiceLockActions onCancel={() => cancelManualRecording('locked_cancel_button')} /> : null}
     </>
   );
 }

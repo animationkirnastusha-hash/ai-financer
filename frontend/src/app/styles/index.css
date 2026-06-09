@@ -14,6 +14,7 @@
 @import "./pages/transactions.css";
 @import "./pages/taxonomy.css";
 @import "./pages/settings.css";
+@import "./features/ai-settings/ai-settings-panel.css";
 @import "./features/chat/ai-text.css";
 @import "./features/progression/companion-progress.css";
 @import "./screens/product-screens.css";

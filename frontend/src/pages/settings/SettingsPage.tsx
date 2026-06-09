@@ -6,10 +6,9 @@ import { ScreenTopBar } from '@/shared/ui/ScreenTopBar';
 import { useAuthStore } from '@/features/auth/model/auth.store';
 import { dataResetApi, type DataResetMode } from '@/features/data-reset/api/dataReset.api';
 import { useNotificationsStore } from '@/features/notifications/model/notifications.store';
-import { canShowStoreSurface, hasRealBusinessAccess } from '@/features/subscription/lib/entitlements';
-import { useSubscriptionStore } from '@/features/subscription/model/subscription.store';
 import type { AppCurrency } from '@/features/settings/model/settings.types';
 import { useI18n } from '@/shared/lib/i18n';
+import { AISettingsPanel } from '@/features/settings/ui/AISettingsPanel';
 
 type SettingsModal = SettingsSection | null;
 
@@ -59,12 +58,8 @@ export default function SettingsPage() {
   const [resetStatus, setResetStatus] = useState<string | null>(null);
   const [resetMode, setResetMode] = useState<DataResetMode | null>(null);
   const [modal, setModal] = useState<SettingsModal>(null);
-  const navigateTo = useNavigationStore((state) => state.navigateTo);
   const consumeSettingsSection = useNavigationStore((state) => state.consumeSettingsSection);
   const user = useAuthStore((state) => state.user);
-  const subscription = useSubscriptionStore((state) => state.status);
-  const hasBusiness = hasRealBusinessAccess(subscription);
-  const canShowStore = canShowStoreSurface(subscription);
 
   const voiceEnabled = useSettingsStore((state) => state.voiceEnabled);
   const voiceBetaEnabled = useSettingsStore((state) => state.voiceBetaEnabled);
@@ -141,15 +136,6 @@ export default function SettingsPage() {
     }
   };
 
-  const navigationItems = [
-    { title: t('screen.accounts'), caption: t('nav.accounts.caption'), screen: 'accounts' as const },
-    { title: t('screen.goals'), caption: t('nav.goals.caption'), screen: 'goals' as const },
-    { title: 'Фина', caption: language === 'en' ? 'Progress and habit' : 'Прогресс и привычка', screen: 'companion' as const },
-    { title: t('screen.sections'), caption: t('nav.sections.caption'), screen: 'sections' as const },
-    { title: t('common.referrals'), caption: t('nav.referral.caption'), screen: 'referral' as const },
-    ...(canShowStore ? [{ title: t('screen.store'), caption: t('nav.store.caption'), screen: 'store' as const }] : []),
-    ...(hasBusiness ? [{ title: t('screen.business'), caption: t('nav.business.caption'), screen: 'business-accountant' as const }] : []),
-  ];
 
   return (
     <div className="app-page app-settings-page text-white">
@@ -177,18 +163,6 @@ export default function SettingsPage() {
           <SettingsCard title={t('settings.card.currency.title')} caption={t('settings.card.currency.caption')} value={`${mainCurrency}${secondaryCurrencyEnabled ? ` + ${secondaryCurrency}` : ''}`} onClick={() => setModal('currency')} />
           <SettingsCard title={t('settings.card.ai.title')} caption={t('settings.card.ai.caption')} value={textInputEnabled ? t('settings.card.ai.on') : t('settings.card.ai.off')} onClick={() => setModal('ai')} />
           <SettingsCard title={t('settings.card.data.title')} caption={t('settings.card.data.caption')} value={t('settings.card.data.value')} onClick={() => setModal('data')} />
-        </section>
-
-        <section className="app-card app-settings-nav">
-          <div className="app-section-title">{t('settings.sections.title')}</div>
-          <div className="mt-3 grid gap-2">
-            {navigationItems.map((item) => (
-              <button key={item.screen} type="button" onClick={() => navigateTo(item.screen)} className="app-list-button">
-                <span>{item.title}</span>
-                <small>{item.caption}</small>
-              </button>
-            ))}
-          </div>
         </section>
 
         {user ? (
@@ -259,11 +233,14 @@ export default function SettingsPage() {
       ) : null}
 
       {modal === 'ai' ? (
-        <ModalShell title="Подсказки" caption="Запасной ввод и короткие наблюдения по финансам." onClose={() => setModal(null)}>
-          <div className="grid gap-3">
-            <ToggleLine title="Текстовый ввод" caption="Показывать поле, если говорить неудобно." checked={textInputEnabled} onChange={setTextInputEnabled} />
-            <ToggleLine title="Наблюдения" caption="Показывать короткие финансовые выводы." checked={aiInsightsEnabled} onChange={setAIInsightsEnabled} />
-          </div>
+        <ModalShell title={t('settings.ai.title')} caption={t('settings.ai.caption')} onClose={() => setModal(null)}>
+          <AISettingsPanel
+            t={t}
+            textInputEnabled={textInputEnabled}
+            aiInsightsEnabled={aiInsightsEnabled}
+            onTextInputChange={setTextInputEnabled}
+            onAIInsightsChange={setAIInsightsEnabled}
+          />
         </ModalShell>
       ) : null}
 

@@ -9,8 +9,35 @@ import type { ChatMessage, SendChatMessageOptions, SendChatMessagePayload } from
 import { useAuthStore } from '@/features/auth/model/auth.store';
 import { appendLocalMessages, emitPendingSync, isClarificationPending, isConfirmationPending, isTransientNetworkError, sleep } from '@/features/chat/model/chatController.utils';
 import { useChatStore } from '@/features/chat/model/chat.store';
+import { parseNavigationIntent } from '@/features/navigation/lib/parseNavigationIntent';
+import { useNavigationStore, type AppScreen } from '@/features/navigation/model/navigation.store';
+import { useI18n } from '@/shared/lib/i18n';
+
+
+function getScreenLabel(screen: AppScreen) {
+  const labels: Record<AppScreen, string> = {
+    dashboard: 'главную',
+    accounts: 'счета',
+    analytics: 'аналитику',
+    goals: 'цели',
+    obligations: 'обязательства',
+    'spending-limits': 'лимиты',
+    companion: 'компаньона',
+    settings: 'настройки',
+    store: 'магазин',
+    premium: 'Premium',
+    'business-accountant': 'Business',
+    'receipt-scans': 'чеки',
+    sections: 'категории',
+    admin: 'админку',
+    referral: 'рефералы',
+  };
+
+  return labels[screen] ?? 'раздел';
+}
 
 export function useChatController() {
+  const { t } = useI18n();
   const messages = useChatStore((state) => state.messages) as ChatMessage[];
   const setMessages = useChatStore((state) => state.setMessages) as (value: ChatMessage[] | ((messages: ChatMessage[]) => ChatMessage[])) => void;
   const [pendingActions, setPendingActions] = useState<any[]>([]);
@@ -27,6 +54,8 @@ export function useChatController() {
   const refreshTransactions = useTransactionsStore((state) => state.refreshAll);
 
   const hasAuthToken = useAuthStore((state) => Boolean(state.token));
+  const navigateTo = useNavigationStore((state) => state.navigateTo);
+  const goBack = useNavigationStore((state) => state.goBack);
 
   const loadPendingActions = useCallback(async () => {
     if (!hasAuthToken) return;
@@ -115,6 +144,54 @@ export function useChatController() {
 
       setMessages((prev) => appendLocalMessages(prev, userMessage));
 
+      const navigationIntent = parseNavigationIntent(text);
+      if (navigationIntent.type === 'open_screen') {
+        navigateTo(navigationIntent.screen);
+        setMessages((prev) => appendLocalMessages(prev, {
+          id: crypto.randomUUID(),
+          role: 'assistant',
+          text: t('textChat.nav.openScreen', { screen: getScreenLabel(navigationIntent.screen) }),
+          content: t('textChat.nav.openScreen', { screen: getScreenLabel(navigationIntent.screen) }),
+          createdAt: new Date().toISOString(),
+          kind: 'success',
+          actionType: 'navigation',
+        }));
+        if (requestAbortRef.current === controller) requestAbortRef.current = null;
+        setIsSending(false);
+        return;
+      }
+
+      if (navigationIntent.type === 'go_back') {
+        goBack();
+        setMessages((prev) => appendLocalMessages(prev, {
+          id: crypto.randomUUID(),
+          role: 'assistant',
+          text: t('textChat.nav.back'),
+          content: t('textChat.nav.back'),
+          createdAt: new Date().toISOString(),
+          kind: 'success',
+          actionType: 'navigation',
+        }));
+        if (requestAbortRef.current === controller) requestAbortRef.current = null;
+        setIsSending(false);
+        return;
+      }
+
+      if (navigationIntent.type === 'open_text_chat') {
+        setMessages((prev) => appendLocalMessages(prev, {
+          id: crypto.randomUUID(),
+          role: 'assistant',
+          text: t('textChat.nav.chatOpen'),
+          content: t('textChat.nav.chatOpen'),
+          createdAt: new Date().toISOString(),
+          kind: 'text',
+          actionType: 'navigation',
+        }));
+        if (requestAbortRef.current === controller) requestAbortRef.current = null;
+        setIsSending(false);
+        return;
+      }
+
       try {
         let response;
         try {
@@ -187,7 +264,7 @@ export function useChatController() {
         if (requestSeqRef.current === requestSeq) setIsSending(false);
       }
     },
-    [isSending, refreshFinanceState],
+    [goBack, isSending, navigateTo, refreshFinanceState, t],
   );
 
   const confirmAction = useCallback(
