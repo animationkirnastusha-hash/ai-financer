@@ -361,3 +361,212 @@
     transition: none;
   }
 }
+
+/* Pack 69: layout recovery after CSS split.
+   Keeps fixes scoped to broken production screens instead of changing the whole system. */
+.app-modal-backdrop {
+  width: 100vw !important;
+  height: 100dvh !important;
+  min-height: 100dvh !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  align-items: flex-end !important;
+  justify-content: center !important;
+  overscroll-behavior: contain !important;
+  touch-action: none;
+}
+
+.app-modal-sheet {
+  width: min(100vw, 620px) !important;
+  max-width: 100vw !important;
+  max-height: min(88dvh, 760px) !important;
+  margin: 0 !important;
+  contain: layout paint;
+}
+
+.app-modal-body {
+  min-height: 0 !important;
+  overflow-y: auto !important;
+  overscroll-behavior: contain !important;
+  -webkit-overflow-scrolling: touch;
+}
+
+body.ai-any-modal-open .telegram-app-content,
+body.ai-core-modal-open .telegram-app-content,
+body.ai-modal-open .telegram-app-content {
+  overflow: hidden !important;
+}
+
+/* Text should not collapse into a single inline line inside cards. */
+.limits-guide-card,
+.analytics-mini-card,
+.referral-benefit-card,
+.referral-code-panel__main,
+.referral-list article,
+.referral-balance-card,
+.analytics-income-grid article,
+.business-money-grid article,
+.business-account-list article {
+  display: grid !important;
+  gap: 7px !important;
+  align-content: start;
+}
+
+.limits-guide-card > b,
+.limits-guide-card > span,
+.analytics-mini-card > span,
+.analytics-mini-card > strong,
+.analytics-mini-card > small,
+.referral-benefit-card > b,
+.referral-benefit-card > span,
+.referral-code-panel__main > span,
+.referral-code-panel__main > strong,
+.referral-code-panel__main > small,
+.referral-list article > b,
+.referral-list article > span,
+.referral-balance-card h2,
+.referral-balance-card p,
+.analytics-income-grid article > span,
+.analytics-income-grid article > strong,
+.business-money-grid article > span,
+.business-money-grid article > strong,
+.business-account-list article > span,
+.business-account-list article > strong {
+  display: block !important;
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: normal;
+  word-break: normal;
+}
+
+.limits-guide-card > span,
+.analytics-mini-card > small,
+.referral-benefit-card > span,
+.referral-code-panel__main > small,
+.referral-list article > span,
+.referral-balance-card p,
+.analytics-income-grid article > span,
+.business-money-grid article > span,
+.business-account-list article > span {
+  color: rgba(255,255,255,.52);
+  line-height: 1.38;
+}
+
+.referral-code-panel__main > strong {
+  overflow-wrap: anywhere;
+  font-size: clamp(18px, 5.6vw, 26px);
+  line-height: 1.06;
+}
+
+.referral-hero__stats article,
+.limits-hero__stats span {
+  display: grid !important;
+  gap: 3px !important;
+  align-content: center;
+  min-height: 40px;
+}
+
+.referral-hero__stats strong,
+.referral-hero__stats span,
+.limits-hero__stats span {
+  display: block !important;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Hero action buttons must not squeeze titles into one-letter columns. */
+.app-obligations-hero__top {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+}
+
+.app-obligations-hero__top .app-hero-title,
+.app-obligations-hero__top h1,
+.app-obligations-hero__top p,
+.analytics-section-card h2,
+.analytics-mini-card strong,
+.limits-guide-card b {
+  overflow-wrap: normal !important;
+  word-break: normal !important;
+  hyphens: none !important;
+}
+
+.app-obligations-hero__top .app-primary-button,
+.analytics-section-card__head .app-secondary-button,
+.receipt-history-card__head .app-secondary-button,
+.referral-section-head .app-secondary-button,
+.limits-section-head .app-secondary-button,
+.app-next-payment-card__actions .app-primary-button,
+.app-next-payment-card__actions .app-secondary-button,
+.app-loan-card__actions .app-primary-button,
+.app-loan-card__actions .app-secondary-button {
+  width: auto !important;
+  flex: 0 0 auto !important;
+}
+
+/* Form blocks: no inline label/value merging. */
+.limits-form label,
+.app-obligation-field,
+.app-field {
+  display: grid !important;
+  gap: 7px !important;
+}
+
+.limits-form label > span,
+.app-obligation-field > span,
+.app-field > span {
+  display: block !important;
+  min-width: 0;
+  line-height: 1.2;
+}
+
+/* Fina should not cover inputs and CTAs on dense forms. */
+.spending-limits-page .voice-first-companion,
+.app-obligations-page .voice-first-companion,
+.referral-page .voice-first-companion,
+.app-analytics-page .voice-first-companion {
+  opacity: .72;
+}
+
+.spending-limits-page:focus-within .voice-first-companion,
+.app-obligations-page:focus-within .voice-first-companion,
+.referral-page:focus-within .voice-first-companion,
+.app-analytics-page:focus-within .voice-first-companion {
+  display: none !important;
+}
+
+@media (max-width: 560px) {
+  .app-obligations-hero__top {
+    grid-template-columns: 1fr !important;
+    gap: 14px !important;
+  }
+
+  .app-obligations-hero__top .app-primary-button {
+    width: 100% !important;
+  }
+
+  .analytics-section-card__head,
+  .receipt-history-card__head,
+  .referral-section-head,
+  .limits-section-head {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    align-items: start !important;
+  }
+
+  .analytics-section-card__head .app-secondary-button,
+  .receipt-history-card__head .app-secondary-button,
+  .limits-section-head .app-secondary-button {
+    width: 100% !important;
+  }
+
+  .limits-guide-grid,
+  .analytics-grid-two,
+  .referral-benefits-grid,
+  .analytics-income-grid {
+    grid-template-columns: 1fr !important;
+  }
+}

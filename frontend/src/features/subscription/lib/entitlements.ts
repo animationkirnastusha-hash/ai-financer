@@ -16,6 +16,6 @@ export function hasFeatureAccess(subscription: SubscriptionStatusDto | null | un
   return Boolean(subscription?.features?.[feature]);
 }
 
-export function canShowStoreSurface(subscription: SubscriptionStatusDto | null | undefined): boolean {
-  return hasPaidAccess(subscription);
+export function canShowStoreSurface(_subscription: SubscriptionStatusDto | null | undefined): boolean {
+  return true;
 }
