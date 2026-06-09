@@ -38,9 +38,9 @@
 @import "./features/store/payments.css";
 @import "./features/store/premium-sheet.css";
 @import "./pages/product-polish.css";
-@import "./pages/referral.css";
-@import "./pages/analytics-layout.css";
-@import "./features/store/store-layout.css";
 
 @import "./screens/motion-polish.css";
 @import "./screens/product-final-pass.css";
+@import "./pages/referral.css";
+@import "./pages/analytics-layout.css";
+@import "./features/store/store-layout.css";

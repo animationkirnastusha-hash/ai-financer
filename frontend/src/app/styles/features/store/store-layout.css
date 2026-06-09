@@ -1,47 +1,25 @@
-/* Store page layout. */
-.monetization-page {
-  overflow-x: hidden;
+/* Store page layout. Product cards and Store-only blocks live here. */
+.monetization-page,
+.monetization-page * {
+  box-sizing: border-box;
 }
 
 .monetization-page .app-page__inner {
   width: min(100%, 760px);
-  margin-inline: auto;
-  padding-inline: clamp(14px, 4vw, 22px);
+  padding-inline: 16px;
   padding-bottom: max(120px, calc(env(safe-area-inset-bottom) + 96px));
 }
 
-.monetization-page .app-card,
 .store-hero,
 .store-showcase,
 .store-status-card,
+.store-feature-section,
 .store-trial-card,
 .store-usage-card,
-.store-feature-section,
 .store-payment-section,
-.store-product-detail,
-.store-product-detail__copy,
-.store-product-detail__side {
+.store-card,
+.store-feature-card {
   min-width: 0;
-}
-
-.store-hero,
-.store-showcase,
-.store-status-card,
-.store-trial-card,
-.store-usage-card,
-.store-feature-section,
-.store-payment-section {
-  padding: clamp(18px, 5vw, 26px);
-}
-
-.monetization-page .app-page__inner,
-.store-showcase,
-.store-status-card,
-.store-trial-card,
-.store-usage-card,
-.store-feature-section {
-  display: grid;
-  gap: 16px;
 }
 
 .monetization-hero__actions,
@@ -49,9 +27,10 @@
 .monetization-section__head,
 .store-card__head {
   display: flex;
+  flex-wrap: wrap;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 12px;
+  gap: 10px;
 }
 
 .store-showcase__head > div,
@@ -62,9 +41,9 @@
 
 .store-product-tabs {
   display: flex;
-  gap: 10px;
+  gap: 8px;
   overflow-x: auto;
-  padding-bottom: 2px;
+  padding: 4px 2px 8px;
   scrollbar-width: none;
 }
 
@@ -74,14 +53,34 @@
 
 .store-product-tabs button {
   flex: 0 0 auto;
-  max-width: min(220px, 72vw);
+  display: grid;
+  gap: 3px;
+  min-width: 112px;
+  max-width: 178px;
   white-space: normal;
+  text-align: left;
+}
+
+.store-product-tabs small,
+.store-product-tabs span,
+.store-card p,
+.store-feature-card span,
+.store-product-detail p,
+.store-product-detail li,
+.store-usage-grid span {
+  line-height: 1.35;
 }
 
 .store-product-detail {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(132px, 180px);
+  grid-template-columns: minmax(0, 1fr) minmax(142px, auto);
   gap: 14px;
+  align-items: stretch;
+}
+
+.store-product-detail__copy,
+.store-product-detail__side {
+  min-width: 0;
 }
 
 .store-product-detail h3,
@@ -93,37 +92,69 @@
 .store-card p,
 .store-card li,
 .store-feature-card strong,
-.store-feature-card span,
-.store-usage-grid strong,
-.store-usage-grid span {
-  display: block;
-  word-break: normal;
-  overflow-wrap: normal;
+.store-feature-card span {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+.store-product-detail__side {
+  display: grid;
+  align-content: space-between;
+  gap: 10px;
+}
+
+.store-card-grid,
+.store-feature-grid,
+.store-payment-grid,
+.store-usage-grid {
+  display: grid;
+  gap: 10px;
 }
 
 .store-card-grid,
 .store-feature-grid {
-  display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
+}
+
+.store-payment-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .store-usage-grid {
-  display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
 }
 
 .store-card__button,
-.store-feature-card {
+.store-feature-card,
+.store-payment-grid > *,
+.store-usage-grid > * {
   min-width: 0;
 }
 
-@media (max-width: 560px) {
+.store-card__button {
+  display: grid;
+  gap: 12px;
+  width: 100%;
+  text-align: left;
+}
+
+.store-card__action,
+.store-card__head span {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+@media (max-width: 620px) {
   .store-card-grid,
   .store-feature-grid,
-  .store-usage-grid,
-  .store-product-detail {
+  .store-payment-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 520px) {
+  .store-product-detail,
+  .store-usage-grid {
     grid-template-columns: 1fr;
   }
 
@@ -135,7 +166,16 @@
     flex-direction: column;
   }
 
-  .store-product-detail__side {
-    align-items: stretch;
+  .monetization-hero__actions > *,
+  .store-showcase__head .app-primary-button,
+  .store-showcase__head .app-secondary-button,
+  .monetization-section__head .app-primary-button,
+  .monetization-section__head .app-secondary-button {
+    width: 100%;
+  }
+
+  .store-card__action,
+  .store-card__head span {
+    width: fit-content;
   }
 }
