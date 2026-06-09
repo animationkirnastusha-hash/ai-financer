@@ -295,3 +295,27 @@ body.ai-core-modal-open .voice-first-companion {
   from { opacity: 0; transform: translate3d(0, 4px, 0) scale(.98); }
   to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
 }
+
+/* Compact companion on dense commercial/settings pages. */
+body:has(.monetization-page) .voice-first-companion,
+body:has(.referral-page) .voice-first-companion,
+body:has(.spending-limits-page) .voice-first-companion {
+  right: 10px !important;
+  bottom: calc(32px + env(safe-area-inset-bottom)) !important;
+  opacity: .78;
+}
+
+body:has(.monetization-page) .voice-first-companion .ai-companion-control,
+body:has(.referral-page) .voice-first-companion .ai-companion-control,
+body:has(.spending-limits-page) .voice-first-companion .ai-companion-control {
+  width: 58px !important;
+  height: 58px !important;
+}
+
+body:has(.monetization-page) .voice-first-mic-toggle,
+body:has(.referral-page) .voice-first-mic-toggle,
+body:has(.spending-limits-page) .voice-first-mic-toggle {
+  max-width: 154px !important;
+  font-size: 9px;
+  padding: 8px 10px;
+}

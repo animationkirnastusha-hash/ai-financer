@@ -81,12 +81,7 @@ export default function PremiumPage() {
     void loadSubscription();
   }, [loadSubscription]);
 
-  const visibleCards = useMemo(() => storeCards.filter((card) => {
-    if (card.tone === 'business') return true;
-    if (card.tone === 'premium') return true;
-    if (card.tone === 'referral') return true;
-    return true;
-  }), []);
+  const visibleCards = useMemo(() => storeCards, []);
 
   const selectedCard = useMemo(
     () => visibleCards.find((card) => card.tone === selectedTone) ?? visibleCards[0] ?? storeCards[0],

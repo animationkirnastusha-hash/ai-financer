@@ -1,11 +1,11 @@
-/* Spending limits page. Page-specific layout only. */
+/* Spending limits page. Keep page-specific layout here only. */
 .spending-limits-page .app-page__inner {
   display: grid;
-  gap: 16px;
-  padding-bottom: calc(var(--app-bottom-safe, 24px) + 120px);
+  gap: 18px;
+  padding-inline: 18px;
+  padding-bottom: calc(var(--app-bottom-safe, 24px) + 158px);
 }
 
-.spending-limits-page .app-card,
 .limits-hero,
 .limits-form-card,
 .limits-guide-card,
@@ -15,27 +15,39 @@
 }
 
 .limits-hero {
-  display: grid;
-  gap: 14px;
+  position: relative;
   overflow: hidden;
+  display: grid;
+  gap: 18px;
+  padding: 22px 18px;
+  border-radius: 32px;
 }
 
 .limits-hero h1,
 .limits-form-card h2,
-.limits-list-section h2,
-.limits-card h3 {
-  display: block;
+.limits-list-section h2 {
   margin: 0;
-  line-height: 1.08;
-  word-break: normal;
-  overflow-wrap: normal;
+  color: rgba(255,255,255,.95);
+  font-weight: 780;
+  letter-spacing: -.035em;
+  line-height: 1.1;
+  overflow-wrap: anywhere;
+}
+
+.limits-hero h1 {
+  font-size: clamp(27px, 7vw, 38px);
+}
+
+.limits-form-card h2,
+.limits-list-section h2 {
+  font-size: 24px;
 }
 
 .limits-hero p {
-  display: block;
   margin: 0;
-  max-width: 36rem;
-  color: rgba(255,255,255,.62);
+  max-width: 34rem;
+  color: rgba(255,255,255,.66);
+  font-size: clamp(17px, 4.4vw, 24px);
   line-height: 1.45;
 }
 
@@ -49,12 +61,12 @@
 .limits-hero__stats article,
 .limits-guide-card {
   display: grid;
-  gap: 6px;
+  gap: 7px;
   min-width: 0;
-  border: 1px solid rgba(255,255,255,.10);
-  border-radius: 20px;
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 22px;
   background: rgba(255,255,255,.055);
-  padding: 12px;
+  padding: 14px;
 }
 
 .limits-hero__stats strong,
@@ -63,10 +75,19 @@
 .limits-card__amounts span {
   display: block;
   min-width: 0;
-  color: rgba(255,255,255,.92);
-  line-height: 1.15;
-  word-break: normal;
-  overflow-wrap: break-word;
+  overflow-wrap: anywhere;
+  line-height: 1.08;
+}
+
+.limits-hero__stats strong {
+  color: #fff;
+  font-size: 24px;
+  letter-spacing: -.035em;
+}
+
+.limits-guide-card b {
+  color: rgba(255,255,255,.94);
+  font-size: 21px;
 }
 
 .limits-hero__stats span,
@@ -74,62 +95,59 @@
 .limits-card__type,
 .limits-card__footer small,
 .limits-card__amounts small {
-  display: block;
-  min-width: 0;
-  color: rgba(255,255,255,.56);
-  font-size: 12px;
-  line-height: 1.35;
-  word-break: normal;
-  overflow-wrap: break-word;
+  color: rgba(255,255,255,.58);
+  font-size: 13px;
+  line-height: 1.38;
 }
 
 .limits-section-head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 14px;
+  display: grid;
+  gap: 8px;
   margin-bottom: 14px;
 }
 
-.limits-section-head > div {
-  display: grid;
-  gap: 5px;
-  min-width: 0;
+.limits-form-card,
+.limits-list-section {
+  padding: 20px 18px;
+  border-radius: 32px;
 }
 
 .limits-form {
   display: grid;
-  gap: 12px;
+  gap: 14px;
 }
 
 .limits-form label {
   display: grid;
-  gap: 7px;
+  gap: 8px;
   min-width: 0;
-  color: rgba(255,255,255,.56);
-  font-size: 12px;
+  color: rgba(255,255,255,.58);
+  font-size: 13px;
+  line-height: 1.35;
 }
 
 .limits-form input,
 .limits-form select {
   width: 100%;
   min-width: 0;
-  min-height: 46px;
-  border: 1px solid rgba(255,255,255,.10);
-  border-radius: 18px;
-  background: rgba(255,255,255,.06);
+  min-height: 52px;
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 20px;
+  background: rgba(255,255,255,.065);
   color: #fff;
-  padding: 0 14px;
+  padding: 0 16px;
   outline: none;
-  font-size: 16px;
+  font-size: 17px;
 }
 
-.limits-form select option { color: #0b1016; }
+.limits-form select option {
+  color: #0b1016;
+}
 
 .limits-form__row {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
+  gap: 12px;
 }
 
 .limits-error {
@@ -137,22 +155,32 @@
   border-radius: 18px;
   background: rgba(248,113,113,.08);
   color: #fecaca;
-  padding: 10px 12px;
+  padding: 11px 13px;
   font-size: 13px;
 }
 
-.limits-list,
-.limits-list-section {
+.limits-list {
   display: grid;
   gap: 12px;
 }
 
-.limits-card {
+.limits-card,
+.limits-empty {
   display: grid;
   gap: 12px;
+  padding: 18px;
+  border-radius: 28px;
 }
 
-.limits-card[data-inactive="true"] { opacity: .62; }
+.limits-empty {
+  color: rgba(255,255,255,.8);
+  font-size: 18px;
+  line-height: 1.4;
+}
+
+.limits-card[data-inactive="true"] {
+  opacity: .62;
+}
 
 .limits-card__top,
 .limits-card__amounts,
@@ -163,16 +191,12 @@
   gap: 12px;
 }
 
-.limits-card__top > div,
-.limits-card__amounts > span,
-.limits-card__amounts > small,
-.limits-card__footer > small {
-  min-width: 0;
-}
-
 .limits-card__top h3 {
-  margin-top: 4px;
-  font-size: 18px;
+  margin: 4px 0 0;
+  color: white;
+  font-size: 20px;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
 }
 
 .limits-card__badge {
@@ -180,7 +204,7 @@
   align-items: center;
   justify-content: center;
   max-width: 100%;
-  border: 1px solid rgba(255,255,255,.10);
+  border: 1px solid rgba(255,255,255,.1);
   border-radius: 999px;
   background: rgba(255,255,255,.06);
   padding: 7px 10px;
@@ -212,7 +236,7 @@
 
 .limits-card__footer button {
   min-height: 34px;
-  border: 1px solid rgba(255,255,255,.10);
+  border: 1px solid rgba(255,255,255,.1);
   border-radius: 999px;
   background: rgba(255,255,255,.06);
   color: rgba(255,255,255,.82);
@@ -230,11 +254,14 @@
     grid-template-columns: 1fr;
   }
 
-  .limits-section-head {
-    flex-direction: column;
-  }
-
   .limits-card__footer div {
     justify-content: flex-start;
+  }
+
+  .spending-limits-page .app-primary-button,
+  .spending-limits-page .app-secondary-button {
+    min-height: 52px;
+    border-radius: 22px;
+    font-size: 16px;
   }
 }

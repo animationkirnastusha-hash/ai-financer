@@ -1,4 +1,4 @@
-/* moved from app/styles/35-store-payments.css. Keep order through app/styles/index.css. */
+/* Store payment blocks. */
 .store-payment-section {
   overflow: hidden;
 }
@@ -9,12 +9,6 @@
   margin-top: 16px;
 }
 
-@media (min-width: 720px) {
-  .store-payment-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
 .store-payment-actions {
   display: grid;
   gap: 12px;
@@ -23,31 +17,32 @@
 
 .store-payment-actions--compact {
   margin-top: 0;
-  border: 1px solid rgba(255,255,255,.1);
-  border-radius: 24px;
-  padding: 14px;
-  background: linear-gradient(180deg, rgba(255,255,255,.075), rgba(255,255,255,.035));
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  background: transparent;
 }
 
 .store-payment-actions h3 {
   margin: 0;
+  color: rgba(255,255,255,.94);
   font-size: 17px;
   font-weight: 800;
-  letter-spacing: -0.02em;
+  letter-spacing: -.02em;
 }
 
 .store-payment-plan-toggle {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
+  gap: 10px;
 }
 
 .store-payment-plan-toggle button {
   min-width: 0;
-  border: 1px solid rgba(255,255,255,.1);
-  border-radius: 18px;
-  padding: 12px;
-  background: rgba(255,255,255,.045);
+  border: 1px solid rgba(255,255,255,.11);
+  border-radius: 20px;
+  padding: 13px;
+  background: rgba(255,255,255,.055);
   color: inherit;
   text-align: left;
   transition: transform .16s ease, border-color .16s ease, background .16s ease;
@@ -59,155 +54,141 @@
 
 .store-payment-plan-toggle button.is-active {
   border-color: rgba(109, 241, 194, .5);
-  background: rgba(109, 241, 194, .12);
+  background: linear-gradient(145deg, rgba(109, 241, 194, .18), rgba(255,255,255,.07));
 }
 
 .store-payment-plan-toggle span,
-.store-payment-plan-toggle strong {
+.store-payment-plan-toggle strong,
+.store-payment-plan-toggle small {
   display: block;
 }
 
 .store-payment-plan-toggle span {
-  color: rgba(255,255,255,.62);
+  color: rgba(255,255,255,.58);
   font-size: 12px;
 }
 
 .store-payment-plan-toggle strong {
   margin-top: 5px;
-  font-size: 16px;
-}
-
-.store-payment-action-row {
-  display: grid;
-  gap: 8px;
-}
-
-@media (min-width: 520px) {
-  .store-payment-action-row {
-    grid-template-columns: 1fr 1fr;
-  }
-}
-
-.store-payment-admin-access-button {
-  width: 100%;
-  border: 1px dashed rgba(255,255,255,.18);
-  border-radius: 16px;
-  padding: 11px 14px;
-  background: rgba(255,255,255,.045);
-  color: rgba(255,255,255,.82);
-  font-weight: 750;
-}
-
-.store-payment-message {
-  margin: 0;
-  border-radius: 16px;
-  padding: 11px 13px;
-  background: rgba(109, 241, 194, .1);
-  color: rgba(255,255,255,.8);
-  font-size: 13px;
-  line-height: 1.35;
-}
-
-.store-payment-selected-price {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px;
-  border: 1px solid rgba(255,255,255,.08);
-  border-radius: 18px;
-  padding: 12px;
-  background: rgba(0,0,0,.14);
-}
-
-.store-payment-selected-price span {
-  width: 100%;
-  color: rgba(255,255,255,.58);
-  font-size: 12px;
-}
-
-.store-payment-selected-price strong {
-  font-size: 20px;
-  line-height: 1;
-}
-
-.store-payment-selected-price del {
-  color: rgba(255,255,255,.42);
-  font-size: 13px;
-}
-
-.store-payment-selected-price em {
-  border-radius: 999px;
-  padding: 4px 8px;
-  background: rgba(109, 241, 194, .12);
-  color: rgba(180, 255, 226, .92);
-  font-size: 12px;
-  font-style: normal;
-  font-weight: 800;
-}
-
-@media (min-width: 520px) {
-  .store-payment-action-row {
-    grid-template-columns: 1fr;
-  }
+  color: white;
+  font-size: 19px;
+  line-height: 1.08;
 }
 
 .store-payment-plan-toggle small {
-  display: block;
-  margin-top: 4px;
-  color: rgba(255,255,255,.48);
-  font-size: 11px;
-  line-height: 1.25;
-}
-
-.store-payment-selected-price small {
-  width: 100%;
-  color: rgba(255,255,255,.52);
+  margin-top: 5px;
+  color: rgba(255,255,255,.46);
   font-size: 12px;
-  line-height: 1.25;
+  line-height: 1.28;
 }
 
+.store-payment-selected-price {
+  display: grid;
+  gap: 8px;
+  border: 1px solid rgba(255,255,255,.09);
+  border-radius: 22px;
+  padding: 15px;
+  background: rgba(0,0,0,.16);
+}
+
+.store-payment-selected-price span,
+.store-payment-selected-price small {
+  color: rgba(255,255,255,.54);
+  font-size: 12px;
+  line-height: 1.3;
+}
+
+.store-payment-selected-price strong {
+  color: white;
+  font-size: 30px;
+  line-height: 1;
+  letter-spacing: -.045em;
+}
+
+.store-payment-selected-price del {
+  margin-left: 6px;
+  color: rgba(255,255,255,.36);
+  font-size: 15px;
+}
+
+.store-payment-selected-price em {
+  justify-self: start;
+  border-radius: 999px;
+  padding: 5px 10px;
+  background: rgba(109, 241, 194, .14);
+  color: rgba(180, 255, 226, .94);
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 850;
+}
 
 .store-payment-methods {
   display: grid;
-  gap: 8px;
+  gap: 9px;
 }
 
 .store-payment-method {
   display: grid;
   gap: 4px;
   width: 100%;
-  border: 1px solid rgba(255,255,255,.1);
-  border-radius: 18px;
-  padding: 12px 14px;
-  background: rgba(255,255,255,.045);
+  border: 1px solid rgba(255,255,255,.11);
+  border-radius: 20px;
+  padding: 13px 15px;
+  background: rgba(255,255,255,.052);
   color: inherit;
   text-align: left;
 }
 
 .store-payment-method.is-active {
-  border-color: rgba(109, 241, 194, .42);
-  background: linear-gradient(180deg, rgba(109, 241, 194, .16), rgba(109, 241, 194, .07));
+  border-color: rgba(109, 241, 194, .44);
+  background: linear-gradient(180deg, rgba(109, 241, 194, .17), rgba(109, 241, 194, .07));
 }
 
 .store-payment-method:disabled:not(.is-active) {
   cursor: default;
-  opacity: .62;
+  opacity: .58;
 }
 
 .store-payment-method span {
   color: rgba(255,255,255,.55);
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 750;
 }
 
 .store-payment-method strong {
-  font-size: 14px;
+  color: rgba(255,255,255,.86);
+  font-size: 15px;
   font-weight: 850;
 }
 
-.store-payment-soon-note {
-  margin: -2px 0 0;
+.store-payment-soon-note,
+.store-payment-message {
+  margin: 0;
   color: rgba(255,255,255,.58);
   font-size: 12px;
-  line-height: 1.35;
+  line-height: 1.42;
+}
+
+.store-payment-message {
+  border-radius: 18px;
+  padding: 12px 14px;
+  background: rgba(109, 241, 194, .1);
+  color: rgba(255,255,255,.8);
+}
+
+.store-payment-admin-access-button {
+  width: 100%;
+  min-height: 48px;
+  border: 1px dashed rgba(255,255,255,.2);
+  border-radius: 18px;
+  padding: 12px 14px;
+  background: rgba(255,255,255,.052);
+  color: rgba(255,255,255,.82);
+  font-weight: 780;
+}
+
+@media (max-width: 420px) {
+  .store-payment-plan-toggle {
+    grid-template-columns: 1fr;
+  }
 }
