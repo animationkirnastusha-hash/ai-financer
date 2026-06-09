@@ -5,6 +5,7 @@ import { useSubscriptionStore } from '@/features/subscription/model/subscription
 import { useNavigationStore } from '@/features/navigation/model/navigation.store';
 import { StorePaymentActions } from '@/features/payments/ui/StorePaymentActions';
 import { useI18n, type I18nKey } from '@/shared/lib/i18n';
+import { hasPaidAccess, hasRealPremiumAccess } from '@/features/subscription/lib/entitlements';
 
 const sheetFeatures: I18nKey[] = [
   'premium.sheet.feature.forecast',
@@ -33,9 +34,11 @@ export function PremiumUpgradeSheet() {
     return () => document.body.classList.remove('ai-modal-open');
   }, [open]);
 
-  if (!open || !trigger) return null;
+  const hasVisibleAccess = hasPaidAccess(subscription);
 
-  const hasPremium = Boolean(subscription?.access.hasPremium);
+  if (!open || !trigger || !hasVisibleAccess) return null;
+
+  const hasPremium = hasRealPremiumAccess(subscription);
   const trialUsed = Boolean(subscription?.access.trialUsed);
 
   const handleStartTrial = async () => {

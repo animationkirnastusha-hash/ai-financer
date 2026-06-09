@@ -1,10 +1,12 @@
 import type { ReactNode } from 'react';
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useAppModalStore } from '@/features/modals/model/appModal.store';
 import { useNavigationStore } from '@/features/navigation/model/navigation.store';
 import { useNotificationsStore } from '@/features/notifications/model/notifications.store';
 import { useI18n, type I18nKey } from '@/shared/lib/i18n';
 import { SettingsGearIcon } from '@/shared/ui/AppIcons';
+import { useSubscriptionStore } from '@/features/subscription/model/subscription.store';
+import { canShowStoreSurface } from '@/features/subscription/lib/entitlements';
 
 type Action = 'back' | 'analytics' | 'history' | 'settings' | 'home' | 'store' | 'referral' | 'notifications';
 type LeftAction = 'menu' | 'back' | 'none' | { label: string; onClick: () => void };
@@ -15,6 +17,8 @@ type Props = {
   right?: Action[];
   className?: string;
 };
+
+const DEFAULT_RIGHT_ACTIONS: Action[] = ['notifications', 'analytics', 'settings'];
 
 function BellIcon() {
   return (
@@ -124,7 +128,7 @@ function TextButton({ children, label, onClick }: { children: ReactNode; label: 
   );
 }
 
-export function ScreenTopBar({ title, left = 'menu', right = ['notifications', 'analytics', 'settings'], className = '' }: Props) {
+export function ScreenTopBar({ title, left = 'menu', right = DEFAULT_RIGHT_ACTIONS, className = '' }: Props) {
   const { t } = useI18n();
   const openNavigationMenu = useNavigationStore((state) => state.openNavigationMenu);
   const navigateTo = useNavigationStore((state) => state.navigateTo);
@@ -133,10 +137,13 @@ export function ScreenTopBar({ title, left = 'menu', right = ['notifications', '
   const openModal = useAppModalStore((state) => state.openModal);
   const unreadCount = useNotificationsStore((state) => state.unreadCount);
   const loadUnreadCount = useNotificationsStore((state) => state.loadUnreadCount);
+  const subscription = useSubscriptionStore((state) => state.status);
+  const canShowStore = canShowStoreSurface(subscription);
+  const visibleRight = useMemo(() => right.filter((action) => action !== 'store' || canShowStore), [canShowStore, right]);
 
   useEffect(() => {
-    if (right.includes('notifications')) void loadUnreadCount();
-  }, [loadUnreadCount, right]);
+    if (visibleRight.includes('notifications')) void loadUnreadCount();
+  }, [loadUnreadCount, visibleRight]);
 
   const handleAction = (action: Action) => {
     if (action === 'back') goBack();
@@ -160,7 +167,7 @@ export function ScreenTopBar({ title, left = 'menu', right = ['notifications', '
         </div>
 
         <div className="screen-top-bar__side screen-top-bar__side--right">
-          {right.map((action) => (
+          {visibleRight.map((action) => (
             <IconButton key={action} label={t(actionLabelKey[action])} onClick={() => handleAction(action)} badge={action === 'notifications' ? unreadCount : undefined}>
               {actionIcon[action]}
             </IconButton>

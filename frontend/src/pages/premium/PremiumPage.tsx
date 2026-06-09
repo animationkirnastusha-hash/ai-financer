@@ -9,7 +9,7 @@ import { StoreTrialCard } from '@/features/store/ui/StoreTrialCard';
 import { StorePaymentActions } from '@/features/payments/ui/StorePaymentActions';
 import { StoreUsageCard } from '@/features/store/ui/StoreUsageCard';
 import { useSubscriptionStore } from '@/features/subscription/model/subscription.store';
-import { canShowBusiness, canShowMonetization } from '@/features/subscription/lib/entitlements';
+import { hasRealPremiumAccess, hasRealBusinessAccess } from '@/features/subscription/lib/entitlements';
 import { useI18n } from '@/shared/lib/i18n';
 import { ScreenTopBar } from '@/shared/ui/ScreenTopBar';
 
@@ -74,17 +74,23 @@ export default function PremiumPage() {
   const loadSubscription = useSubscriptionStore((state) => state.load);
   const startTrial = useSubscriptionStore((state) => state.startTrial);
   const [selectedTone, setSelectedTone] = useState<StoreCard['tone']>('premium');
-  const access = subscription?.access;
-  const hasPremium = Boolean(access?.hasPremium);
-  const hasBusiness = Boolean(access?.hasBusiness);
-  const showMonetization = canShowMonetization(subscription);
+  const hasPremium = hasRealPremiumAccess(subscription);
+  const hasBusiness = hasRealBusinessAccess(subscription);
 
   useEffect(() => {
     void loadSubscription();
   }, [loadSubscription]);
 
-  const visibleCards = useMemo(() => storeCards.filter((card) => card.tone !== 'business' || canShowBusiness(subscription)), [subscription]);
-  const selectedCard = useMemo(() => visibleCards.find((card) => card.tone === selectedTone) ?? visibleCards[0] ?? storeCards[0], [selectedTone, visibleCards]);
+  const visibleCards = useMemo(() => storeCards.filter((card) => {
+    if (card.tone === 'business') return hasBusiness;
+    if (card.tone === 'premium') return hasPremium || hasBusiness;
+    return false;
+  }), [hasBusiness, hasPremium]);
+
+  const selectedCard = useMemo(
+    () => visibleCards.find((card) => card.tone === selectedTone) ?? visibleCards[0] ?? storeCards[0],
+    [selectedTone, visibleCards],
+  );
 
   const handleStartTrial = async () => {
     await startTrial();
@@ -97,7 +103,7 @@ export default function PremiumPage() {
     }
 
     if (card.tone === 'business') {
-      if (hasBusiness) navigateTo('business-accountant');
+      navigateTo('business-accountant');
       return;
     }
 
@@ -109,31 +115,19 @@ export default function PremiumPage() {
     });
   };
 
-  if (!showMonetization) {
-    return (
-      <div className="app-page monetization-page text-white">
-        <div className="app-page__inner space-y-4">
-          <ScreenTopBar title={t('screen.store')} left="back" right={['home', 'settings']} />
-          <StoreStatusCard subscription={subscription} isLoading={isLoading} />
-          <StoreUsageCard subscription={subscription} />
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="app-page monetization-page text-white">
       <div className="app-page__inner space-y-4">
         <ScreenTopBar title={t('screen.store')} left="back" right={['home', 'settings']} />
-        <StoreHero premiumCard={visibleCards[0] ?? storeCards[0]} onPremiumOpen={handlePremiumOpen} />
-        <StoreProductShowcase
+        {visibleCards[0] ? <StoreHero premiumCard={visibleCards[0]} onPremiumOpen={handlePremiumOpen} /> : null}
+        {visibleCards.length > 0 ? <StoreProductShowcase
           cards={visibleCards}
           selected={selectedCard}
           hasPremium={hasPremium}
           hasBusiness={hasBusiness}
           onSelect={(card) => setSelectedTone(card.tone)}
           onOpen={handlePremiumOpen}
-        />
+        /> : null}
         <StoreStatusCard subscription={subscription} isLoading={isLoading} />
         <StoreUsageCard subscription={subscription} />
         <StoreFeatureSection features={storeFeatures} />

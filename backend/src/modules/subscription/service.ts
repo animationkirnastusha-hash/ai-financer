@@ -119,7 +119,7 @@ export class SubscriptionService {
   private async ensureUser(userId: string) {
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: { id: true, isAdmin: true, tier: true },
+      select: { id: true, tier: true },
     });
     if (!user) throw new NotFoundError('User not found');
     return user;
@@ -135,11 +135,11 @@ export class SubscriptionService {
     });
   }
 
-  private getAccess(subscription: Subscription | null, isAdmin: boolean): SubscriptionAccess {
+  private getAccess(subscription: Subscription | null): SubscriptionAccess {
     const now = new Date();
     const trialActive = isFuture(subscription?.trialUntil, now);
-    const premiumActive = Boolean(isAdmin || subscription?.premiumLifetime || isFuture(subscription?.premiumUntil, now) || trialActive || subscription?.businessLifetime || isFuture(subscription?.businessUntil, now));
-    const businessActive = Boolean(isAdmin || subscription?.businessLifetime || isFuture(subscription?.businessUntil, now));
+    const businessActive = Boolean(subscription?.businessLifetime || isFuture(subscription?.businessUntil, now));
+    const premiumActive = Boolean(subscription?.premiumLifetime || isFuture(subscription?.premiumUntil, now) || trialActive || businessActive);
 
     const status: SubscriptionStatusCode = businessActive
       ? 'business'
@@ -156,8 +156,8 @@ export class SubscriptionService {
       premiumUntil: asDateOrNull(subscription?.premiumUntil),
       businessUntil: asDateOrNull(subscription?.businessUntil),
       trialUntil: asDateOrNull(subscription?.trialUntil),
-      premiumLifetime: Boolean(subscription?.premiumLifetime || isAdmin),
-      businessLifetime: Boolean(subscription?.businessLifetime || isAdmin),
+      premiumLifetime: Boolean(subscription?.premiumLifetime),
+      businessLifetime: Boolean(subscription?.businessLifetime),
     };
   }
 
@@ -189,9 +189,9 @@ export class SubscriptionService {
   }
 
   async getStatus(userId: string): Promise<SubscriptionStatus> {
-    const user = await this.ensureUser(userId);
+    await this.ensureUser(userId);
     const subscription = await this.ensureSubscription(userId);
-    const access = this.getAccess(subscription, user.isAdmin);
+    const access = this.getAccess(subscription);
     const limits = this.getLimits(access);
 
     return {
@@ -383,9 +383,9 @@ export class SubscriptionService {
   }
 
   async syncUserTier(userId: string): Promise<'FREE' | 'PREMIUM' | 'BUSINESS'> {
-    const user = await this.ensureUser(userId);
+    await this.ensureUser(userId);
     const subscription = await this.ensureSubscription(userId);
-    const access = this.getAccess(subscription, user.isAdmin);
+    const access = this.getAccess(subscription);
     const tier: 'FREE' | 'PREMIUM' | 'BUSINESS' = access.hasBusiness ? 'BUSINESS' : access.hasPremium ? 'PREMIUM' : 'FREE';
     await prisma.user.update({ where: { id: userId }, data: { tier } });
     return tier;

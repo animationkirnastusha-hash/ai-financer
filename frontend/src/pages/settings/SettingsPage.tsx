@@ -3,13 +3,13 @@ import { useSettingsStore } from '@/features/settings/model/settings.store';
 import { useNavigationStore, type SettingsSection } from '@/features/navigation/model/navigation.store';
 import { LanguageSwitcher } from '@/shared/ui/LanguageSwitcher';
 import { ScreenTopBar } from '@/shared/ui/ScreenTopBar';
+import { useAuthStore } from '@/features/auth/model/auth.store';
 import { dataResetApi, type DataResetMode } from '@/features/data-reset/api/dataReset.api';
 import { useNotificationsStore } from '@/features/notifications/model/notifications.store';
+import { canShowStoreSurface, hasRealBusinessAccess } from '@/features/subscription/lib/entitlements';
+import { useSubscriptionStore } from '@/features/subscription/model/subscription.store';
 import type { AppCurrency } from '@/features/settings/model/settings.types';
 import { useI18n } from '@/shared/lib/i18n';
-import { useSubscriptionStore } from '@/features/subscription/model/subscription.store';
-import { useAuthStore } from '@/features/auth/model/auth.store';
-import { canShowMonetization, hasBusinessAccess } from '@/features/subscription/lib/entitlements';
 
 type SettingsModal = SettingsSection | null;
 
@@ -61,10 +61,10 @@ export default function SettingsPage() {
   const [modal, setModal] = useState<SettingsModal>(null);
   const navigateTo = useNavigationStore((state) => state.navigateTo);
   const consumeSettingsSection = useNavigationStore((state) => state.consumeSettingsSection);
-  const subscription = useSubscriptionStore((state) => state.status);
   const user = useAuthStore((state) => state.user);
-  const hasBusiness = hasBusinessAccess(subscription);
-  const showMonetization = canShowMonetization(subscription);
+  const subscription = useSubscriptionStore((state) => state.status);
+  const hasBusiness = hasRealBusinessAccess(subscription);
+  const canShowStore = canShowStoreSurface(subscription);
 
   const voiceEnabled = useSettingsStore((state) => state.voiceEnabled);
   const voiceBetaEnabled = useSettingsStore((state) => state.voiceBetaEnabled);
@@ -147,8 +147,8 @@ export default function SettingsPage() {
     { title: 'Фина', caption: language === 'en' ? 'Progress and habit' : 'Прогресс и привычка', screen: 'companion' as const },
     { title: t('screen.sections'), caption: t('nav.sections.caption'), screen: 'sections' as const },
     { title: t('common.referrals'), caption: t('nav.referral.caption'), screen: 'referral' as const },
+    ...(canShowStore ? [{ title: t('screen.store'), caption: t('nav.store.caption'), screen: 'store' as const }] : []),
     ...(hasBusiness ? [{ title: t('screen.business'), caption: t('nav.business.caption'), screen: 'business-accountant' as const }] : []),
-    ...(showMonetization ? [{ title: t('screen.store'), caption: t('nav.store.caption'), screen: 'store' as const }] : []),
   ];
 
   return (

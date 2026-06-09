@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { useAuthStore } from '@/features/auth/model/auth.store';
 import { useNavigationStore, type AppScreen } from '@/features/navigation/model/navigation.store';
 import { useSubscriptionStore } from '@/features/subscription/model/subscription.store';
-import { canShowMonetization, canUseReceiptScan, hasBusinessAccess } from '@/features/subscription/lib/entitlements';
+import { canShowStoreSurface, hasFeatureAccess, hasRealBusinessAccess } from '@/features/subscription/lib/entitlements';
 import { useI18n, type I18nKey } from '@/shared/lib/i18n';
 
 type NavigationItem = {
@@ -32,7 +32,7 @@ const referralLinks: NavigationItem[] = [
   { screen: 'referral', labelKey: 'common.referrals', captionKey: 'nav.referral.caption' },
 ];
 
-const monetizationLinks: NavigationItem[] = [
+const paidLinks: NavigationItem[] = [
   { screen: 'store', labelKey: 'screen.store', captionKey: 'nav.store.caption' },
 ];
 
@@ -58,9 +58,9 @@ export function AppNavigationSheet() {
   const isAdmin = Boolean(user?.isAdmin);
   const subscription = useSubscriptionStore((state) => state.status);
   const loadSubscription = useSubscriptionStore((state) => state.load);
-  const hasBusiness = hasBusinessAccess(subscription);
-  const showMonetization = canShowMonetization(subscription);
-  const showReceipts = canUseReceiptScan(subscription);
+  const hasBusiness = hasRealBusinessAccess(subscription);
+  const canShowStore = canShowStoreSurface(subscription);
+  const canShowReceipts = hasFeatureAccess(subscription, 'receiptScan');
 
   useEffect(() => {
     if (isOpen && user && !subscription) void loadSubscription();
@@ -68,18 +68,14 @@ export function AppNavigationSheet() {
 
   if (!isOpen) return null;
 
-  const growthItems = [
-    ...referralLinks,
-    ...(showMonetization ? monetizationLinks : []),
-    ...(showReceipts ? receiptLinks : []),
-  ];
-
   const groups: NavigationGroup[] = [
     { titleKey: 'nav.group.main', items: productLinks },
     { titleKey: 'nav.group.plan', items: planningLinks },
+    { titleKey: 'nav.group.growth', items: referralLinks },
   ];
 
-  if (growthItems.length > 0) groups.push({ titleKey: 'nav.group.growth', items: growthItems });
+  if (canShowStore) groups.push({ titleKey: 'nav.group.premium', items: paidLinks });
+  if (canShowReceipts) groups.push({ titleKey: 'nav.group.premium', items: receiptLinks });
   if (hasBusiness) groups.push({ titleKey: 'nav.group.business', items: businessLinks });
   if (isAdmin) groups.push({ titleKey: 'nav.group.admin', items: adminLinks });
 

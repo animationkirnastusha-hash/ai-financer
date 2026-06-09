@@ -2,11 +2,11 @@ import { useEffect, useMemo } from 'react';
 import { useAppModalStore } from '@/features/modals/model/appModal.store';
 import { useNavigationStore } from '@/features/navigation/model/navigation.store';
 import { useTransactionsStore } from '@/features/transactions/model/transactions.store';
+import { useSubscriptionStore } from '@/features/subscription/model/subscription.store';
+import { hasRealPremiumAccess, hasRealBusinessAccess } from '@/features/subscription/lib/entitlements';
 import { formatMoney } from '@/shared/lib/money';
 import { useI18n } from '@/shared/lib/i18n';
 import { ScreenTopBar } from '@/shared/ui/ScreenTopBar';
-import { useSubscriptionStore } from '@/features/subscription/model/subscription.store';
-import { canShowMonetization } from '@/features/subscription/lib/entitlements';
 
 function isCurrentMonth(value: string) {
   const date = new Date(value);
@@ -44,7 +44,7 @@ export default function AnalyticsPage() {
   const openModal = useAppModalStore((state) => state.openModal);
   const navigateTo = useNavigationStore((state) => state.navigateTo);
   const subscription = useSubscriptionStore((state) => state.status);
-  const showMonetization = canShowMonetization(subscription);
+  const canShowPremiumAnalytics = hasRealPremiumAccess(subscription) || hasRealBusinessAccess(subscription);
   const transactions = useTransactionsStore((state) => state.items);
   const loadTransactions = useTransactionsStore((state) => state.loadTransactions);
 
@@ -164,7 +164,7 @@ export default function AnalyticsPage() {
           </div>
         </section>
 
-        {showMonetization ? (
+        {canShowPremiumAnalytics ? (
           <section className="app-card analytics-section-card">
             <div className="analytics-section-card__head">
               <div><div className="app-eyebrow">{t('analytics.premium.eyebrow')}</div><h2>{t('analytics.premium.title')}</h2></div>

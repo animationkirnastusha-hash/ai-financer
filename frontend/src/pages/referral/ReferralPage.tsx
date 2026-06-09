@@ -83,7 +83,7 @@ export default function ReferralPage() {
   return (
     <div className="app-page referral-page text-white">
       <div className="app-page__inner space-y-4">
-        <ScreenTopBar title={t('common.referrals')} left="back" right={['home', 'store']} />
+        <ScreenTopBar title={t('common.referrals')} left="back" right={['home']} />
 
         <header className="referral-hero app-card app-card--hero">
           <div>

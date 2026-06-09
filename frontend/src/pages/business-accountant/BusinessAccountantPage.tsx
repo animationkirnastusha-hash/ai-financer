@@ -4,36 +4,14 @@ import { BusinessModuleList } from '@/features/business-workspace/ui/BusinessMod
 import { BusinessSetupCard } from '@/features/business-workspace/ui/BusinessSetupCard';
 import { BusinessSummaryCards } from '@/features/business-workspace/ui/BusinessSummaryCards';
 import { useBusinessWorkspaceStore } from '@/features/business-workspace/model/businessWorkspace.store';
-import { useNavigationStore } from '@/features/navigation/model/navigation.store';
 import { useSubscriptionStore } from '@/features/subscription/model/subscription.store';
-import { hasBusinessAccess } from '@/features/subscription/lib/entitlements';
+import { hasRealBusinessAccess } from '@/features/subscription/lib/entitlements';
 import { useI18n } from '@/shared/lib/i18n';
 import { ScreenTopBar } from '@/shared/ui/ScreenTopBar';
 import { Spinner } from '@/shared/ui/Spinner';
 import { formatMoney } from '@/shared/lib/money';
 
 type BusinessTab = 'overview' | 'money' | 'accounts' | 'settings';
-
-function BusinessLockedFallback() {
-  const { t } = useI18n();
-  const navigateTo = useNavigationStore((state) => state.navigateTo);
-
-  return (
-    <div className="app-page text-white">
-      <div className="app-page__inner space-y-4">
-        <ScreenTopBar title={t('screen.business')} left="back" right={['home', 'store']} />
-        <section className="app-card business-locked-card">
-          <div className="app-eyebrow">{t('business.locked.eyebrow')}</div>
-          <h1 className="app-hero-title">{t('business.locked.title')}</h1>
-          <p className="app-hero-caption">{t('business.locked.caption')}</p>
-          <div className="business-locked-actions">
-            <button type="button" className="app-primary-button" onClick={() => navigateTo('dashboard')}>{t('common.back')}</button>
-          </div>
-        </section>
-      </div>
-    </div>
-  );
-}
 
 export default function BusinessAccountantPage() {
   const { t } = useI18n();
@@ -51,13 +29,13 @@ export default function BusinessAccountantPage() {
     void loadSubscription();
   }, [loadSubscription]);
 
-  const hasBusiness = hasBusinessAccess(subscription);
+  const hasBusiness = hasRealBusinessAccess(subscription);
 
   useEffect(() => {
     if (hasBusiness) void loadWorkspace();
   }, [hasBusiness, loadWorkspace]);
 
-  if (!hasBusiness) return <BusinessLockedFallback />;
+  if (!hasBusiness) return null;
 
   const tabs: Array<{ id: BusinessTab; label: string }> = [
     { id: 'overview', label: t('business.tab.overview') },

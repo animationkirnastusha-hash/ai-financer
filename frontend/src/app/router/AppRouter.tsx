@@ -8,7 +8,7 @@ import { LaunchOnboardingSheet } from '@/features/onboarding/ui/LaunchOnboarding
 import { ProductAnalyticsTracker } from '@/features/product-analytics/ui/ProductAnalyticsTracker';
 import { useAuthStore } from '@/features/auth/model/auth.store';
 import { useSubscriptionStore } from '@/features/subscription/model/subscription.store';
-import { canShowMonetization, hasBusinessAccess } from '@/features/subscription/lib/entitlements';
+import { canShowStoreSurface, hasFeatureAccess, hasRealBusinessAccess } from '@/features/subscription/lib/entitlements';
 import { Spinner } from '@/shared/ui/Spinner';
 
 const AccountsPage = lazy(() => import('@/pages/accounts/AccountsPage'));
@@ -41,8 +41,9 @@ export function AppRouter() {
   const goBack = useNavigationStore((state) => state.goBack);
   const subscription = useSubscriptionStore((state) => state.status);
   const loadSubscription = useSubscriptionStore((state) => state.load);
-  const hasBusiness = hasBusinessAccess(subscription);
-  const showMonetization = canShowMonetization(subscription);
+  const hasBusiness = hasRealBusinessAccess(subscription);
+  const canShowStore = canShowStoreSurface(subscription);
+  const canShowReceipts = hasFeatureAccess(subscription, 'receiptScan');
 
   useEffect(() => {
     if (user) void loadSubscription();
@@ -60,10 +61,10 @@ export function AppRouter() {
         {currentScreen === 'spending-limits' && <SpendingLimitsPage />}
         {currentScreen === 'companion' && <CompanionPage />}
         {currentScreen === 'settings' && <SettingsPage />}
-        {currentScreen === 'store' && (showMonetization ? <PremiumPage /> : <DashboardPage />)}
-        {currentScreen === 'premium' && (showMonetization ? <PremiumPage /> : <DashboardPage />)}
+        {currentScreen === 'store' && (canShowStore ? <PremiumPage /> : <DashboardPage />)}
+        {currentScreen === 'premium' && (canShowStore ? <PremiumPage /> : <DashboardPage />)}
         {currentScreen === 'business-accountant' && (hasBusiness ? <BusinessAccountantPage /> : <DashboardPage />)}
-        {currentScreen === 'receipt-scans' && <ReceiptScansPage />}
+        {currentScreen === 'receipt-scans' && (canShowReceipts ? <ReceiptScansPage /> : <DashboardPage />)}
         {currentScreen === 'sections' && <SectionsPage onBack={goBack} />}
         {currentScreen === 'admin' && (isAdmin ? <AdminPage /> : <DashboardPage />)}
         {currentScreen === 'referral' && <ReferralPage />}
@@ -71,7 +72,7 @@ export function AppRouter() {
 
       <AppNavigationSheet />
       <AppModalManager />
-      {showMonetization ? <PremiumUpgradeSheet /> : null}
+      {canShowStore ? <PremiumUpgradeSheet /> : null}
       <LaunchOnboardingSheet />
     </AppShell>
   );

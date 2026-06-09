@@ -21,5 +21,6 @@ export const navigationDictionary = {
   'nav.referral.caption': 'Invites and bonuses',
   'nav.admin.caption': 'Users and tools',
   'nav.limits.caption': 'Spending control by accounts and categories',
+  'nav.group.premium': 'Premium',
   'nav.group.business': 'Business',
 } as const;
