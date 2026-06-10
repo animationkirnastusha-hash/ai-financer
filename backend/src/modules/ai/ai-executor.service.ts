@@ -6,6 +6,7 @@ import { progressionActivityBridge } from '../progression/activity-bridge.servic
 import { aiPremiumService } from './ai-premium.service';
 import { aiCompanionService } from './ai-companion.service';
 import { aiAnalyticsService } from './ai-analytics.service';
+import { resolveCategoryAppearance, resolveSectionAppearance, resolveTaxonomyForText, shouldReplaceGenericIcon } from '../taxonomy/taxonomy-icons';
 
 const transactionInclude = {
   account: {
@@ -214,12 +215,18 @@ export class AIExecutorService {
       const amount = this.toInteger(resolved.amountInAccountCurrency ?? input.amount, 0);
       if (amount <= 0) throw new BadRequestError('Transaction amount must be positive');
 
+      const taxonomy = resolveTaxonomyForText({
+        kind,
+        title: typeof input.category === 'string' ? input.category : undefined,
+        description: typeof input.description === 'string' ? input.description : undefined,
+      });
+
       const sectionId = typeof resolved.sectionId === 'string'
         ? resolved.sectionId
-        : await this.findOrCreateSectionId(tx, userId, typeof input.section === 'string' ? input.section : '');
+        : await this.findOrCreateSectionId(tx, userId, typeof input.section === 'string' && input.section.trim() ? input.section : taxonomy.sectionName);
 
       const categoryId = await this.findOrCreateCategoryId(tx, userId, {
-        name: typeof input.category === 'string' ? input.category : '',
+        name: typeof input.category === 'string' && input.category.trim() ? input.category : taxonomy.categoryName,
         type: kind,
         sectionId,
       });
@@ -981,12 +988,27 @@ export class AIExecutorService {
     if (!name) return null;
 
     const existing = await tx.section.findFirst({ where: { userId, name } });
-    if (existing) return existing.id;
+    const appearance = resolveSectionAppearance(name);
+    if (existing) {
+      if (shouldReplaceGenericIcon(existing.icon) || !existing.color) {
+        const updated = await tx.section.update({
+          where: { id: existing.id },
+          data: {
+            icon: shouldReplaceGenericIcon(existing.icon) ? appearance.icon : existing.icon,
+            color: existing.color ?? appearance.color,
+          },
+        });
+        return updated.id;
+      }
+      return existing.id;
+    }
 
     const created = await tx.section.create({
       data: {
         userId,
         name,
+        icon: appearance.icon,
+        color: appearance.color,
       },
     });
 
@@ -1002,13 +1024,29 @@ export class AIExecutorService {
     if (!name) return null;
 
     const existing = await tx.category.findFirst({ where: { userId, name } });
-    if (existing) return existing.id;
+    const appearance = resolveCategoryAppearance(name, params.type);
+    if (existing) {
+      if (shouldReplaceGenericIcon(existing.icon) || !existing.color || !existing.sectionId) {
+        const updated = await tx.category.update({
+          where: { id: existing.id },
+          data: {
+            icon: shouldReplaceGenericIcon(existing.icon) ? appearance.categoryIcon : existing.icon,
+            color: existing.color ?? appearance.categoryColor,
+            sectionId: existing.sectionId ?? params.sectionId ?? null,
+          },
+        });
+        return updated.id;
+      }
+      return existing.id;
+    }
 
     const created = await tx.category.create({
       data: {
         userId,
         name,
         type: params.type,
+        icon: appearance.categoryIcon,
+        color: appearance.categoryColor,
         sectionId: params.sectionId ?? null,
       },
     });

@@ -2,6 +2,7 @@ import { type ReactNode, useEffect, useMemo, useState } from 'react';
 
 import { useAccountsStore } from '@/features/accounts/model/accounts.store';
 import { useSectionsStore } from '@/features/sections/model/sections.store';
+import { TransactionTaxonomyPicker } from '@/features/transactions/ui/TransactionTaxonomyPicker';
 import type { DeleteTransactionBalanceMode, TransactionDto } from '@/features/transactions/api/transactions.api';
 import { formatMoney } from '@/shared/lib/money';
 
@@ -75,6 +76,7 @@ export function TransactionEditSheet({
   const [date, setDate] = useState(toDateInput(null));
   const [accountId, setAccountId] = useState('');
   const [toAccountId, setToAccountId] = useState<string | null>(null);
+  const [categoryId, setCategoryId] = useState('');
   const [localError, setLocalError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -93,14 +95,15 @@ export function TransactionEditSheet({
     setDate(toDateInput(transaction.date));
     setAccountId(transaction.accountId ?? '');
     setToAccountId(transaction.toAccountId ?? null);
+    setCategoryId(transaction.categoryId ?? '');
     setLocalError(null);
   }, [open, transaction]);
 
   const selectedAccount = accounts.find((account) => account.id === accountId) ?? transaction?.account ?? null;
   const selectedCategory = useMemo(() => {
-    if (!transaction?.categoryId) return transaction?.category ?? null;
-    return categories.find((category) => category.id === transaction.categoryId) ?? transaction.category ?? null;
-  }, [categories, transaction]);
+    if (!categoryId) return null;
+    return categories.find((category) => category.id === categoryId) ?? transaction?.category ?? null;
+  }, [categories, categoryId, transaction]);
   const selectedSection = selectedCategory?.sectionId
     ? sections.find((section) => section.id === selectedCategory.sectionId) ?? selectedCategory.section ?? transaction?.section ?? null
     : transaction?.section ?? null;
@@ -140,7 +143,7 @@ export function TransactionEditSheet({
       description: description.trim() || null,
       date: new Date(`${date}T12:00:00`).toISOString(),
       accountId,
-      categoryId: undefined,
+      categoryId: type !== 'transfer' ? categoryId || null : null,
       type,
       toAccountId: type === 'transfer' ? toAccountId : null,
     });
@@ -208,7 +211,7 @@ export function TransactionEditSheet({
                 type="button"
                 onClick={() => {
                   setType(item);
-                  if (item === 'transfer') setToAccountId(null);
+                  if (item === 'transfer') { setToAccountId(null); setCategoryId(''); }
                 }}
                 className={type === item ? 'app-choice app-choice--active' : 'app-choice'}
               >
@@ -266,7 +269,13 @@ export function TransactionEditSheet({
               </div>
             </section>
           ) : (
-            <div className="app-inline-hint">После сохранения Фина пересоберёт категорию, раздел, цвет и иконку по названию и описанию.</div>
+            <TransactionTaxonomyPicker
+              type={type}
+              title={title}
+              description={description}
+              categoryId={categoryId}
+              onCategoryIdChange={setCategoryId}
+            />
           )}
 
           {localError ? <div className="app-error-box">{localError}</div> : null}

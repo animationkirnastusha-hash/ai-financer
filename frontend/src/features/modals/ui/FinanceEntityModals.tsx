@@ -97,6 +97,7 @@ export function FinanceEntityModals({
           category={modal.category ?? null}
           sections={sections}
           initialType={modal.initialType}
+          initialName={modal.prefillName ?? null}
           initialSectionId={modal.sectionId ?? null}
           isSaving={isCreatingTaxonomy || isTaxonomySaving}
           modalLayer={layer}

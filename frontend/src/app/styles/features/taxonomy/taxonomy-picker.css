@@ -1,0 +1,62 @@
+.app-taxonomy-picker {
+  display: grid;
+  gap: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 24px;
+  padding: 14px;
+  background:
+    radial-gradient(circle at 14% 0%, rgba(52, 211, 153, 0.12), transparent 34%),
+    rgba(255, 255, 255, 0.035);
+}
+
+.app-taxonomy-picker__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.app-taxonomy-picker__eyebrow {
+  font-size: 10px;
+  line-height: 1.2;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.42);
+}
+
+.app-taxonomy-picker__title {
+  margin-top: 5px;
+  font-size: 15px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.app-taxonomy-picker__create {
+  flex-shrink: 0;
+  border: 1px solid rgba(52, 211, 153, 0.24);
+  border-radius: 999px;
+  padding: 8px 12px;
+  background: rgba(52, 211, 153, 0.1);
+  color: rgba(220, 252, 231, 0.95);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.app-taxonomy-picker__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 12px;
+}
+
+.app-taxonomy-picker__meta span {
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 999px;
+  padding: 6px 9px;
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.app-taxonomy-picker__select {
+  margin: 0;
+}

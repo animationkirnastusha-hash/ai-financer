@@ -15,7 +15,7 @@ export type AppModalDescriptor =
   | { type: 'account-transfer'; fromAccountId: string }
   | { type: 'transaction-create'; initialType?: 'expense' | 'income' | 'transfer' }
   | { type: 'transaction-edit'; transaction: TransactionDto }
-  | { type: 'category-edit'; category?: CategoryDto | null; sectionId?: string | null; initialType?: 'expense' | 'income' | 'both'; onSavedCategory?: (category: CategoryDto) => void }
+  | { type: 'category-edit'; category?: CategoryDto | null; sectionId?: string | null; initialType?: 'expense' | 'income' | 'both'; prefillName?: string | null; onSavedCategory?: (category: CategoryDto) => void }
   | { type: 'section-edit'; section?: SectionDto | null }
   | { type: 'goal-edit'; goal?: GoalDto | null; onAfterSave?: () => void }
   | { type: 'obligation-edit'; loan?: LoanDto | null; initialType?: LoanType | null }

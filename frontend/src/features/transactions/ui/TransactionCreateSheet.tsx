@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useAccountsStore } from '@/features/accounts/model/accounts.store';
+import { TransactionTaxonomyPicker } from '@/features/transactions/ui/TransactionTaxonomyPicker';
 import { Drawer } from '@/shared/ui/Drawer';
 import { Button } from '@/shared/ui/Button';
 import { useI18n } from '@/shared/lib/i18n';
@@ -36,6 +37,7 @@ export function TransactionCreateSheet({ open, isSaving = false, initialType = '
   const [description, setDescription] = useState('');
   const [accountId, setAccountId] = useState('');
   const [toAccountId, setToAccountId] = useState<string | null>(null);
+  const [categoryId, setCategoryId] = useState('');
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -51,6 +53,7 @@ export function TransactionCreateSheet({ open, isSaving = false, initialType = '
     setDescription('');
     setAccountId(accounts[0]?.id ?? '');
     setToAccountId(null);
+    setCategoryId('');
     setError(null);
   }, [open, accounts, initialType]);
 
@@ -79,7 +82,7 @@ export function TransactionCreateSheet({ open, isSaving = false, initialType = '
     const payload = {
       accountId,
       toAccountId: type === 'transfer' ? toAccountId : null,
-      categoryId: null,
+      categoryId: type !== 'transfer' ? categoryId || null : null,
       amount: Math.round(parsedAmount),
       type,
       title: title.trim() || null,
@@ -109,7 +112,7 @@ export function TransactionCreateSheet({ open, isSaving = false, initialType = '
       <div className="space-y-3">
         <div className="grid grid-cols-3 gap-2">
           {(['expense', 'income', 'transfer'] as const).map((item) => (
-            <button key={item} type="button" onClick={() => { setType(item); setToAccountId(null); }} className={type === item ? 'app-choice app-choice--active' : 'app-choice'}>
+            <button key={item} type="button" onClick={() => { setType(item); setToAccountId(null); if (item === 'transfer') setCategoryId(''); }} className={type === item ? 'app-choice app-choice--active' : 'app-choice'}>
               {item === 'expense' ? t('transaction.type.expense') : item === 'income' ? t('transaction.type.income') : t('transaction.type.transfer')}
             </button>
           ))}
@@ -151,7 +154,13 @@ export function TransactionCreateSheet({ open, isSaving = false, initialType = '
             </select>
           </label>
         ) : (
-          <div className="app-inline-hint">{t('transaction.create.autoCategoryHint')}</div>
+          <TransactionTaxonomyPicker
+            type={type}
+            title={title}
+            description={description}
+            categoryId={categoryId}
+            onCategoryIdChange={setCategoryId}
+          />
         )}
 
         {error ? <div className="app-error-box">{error}</div> : null}

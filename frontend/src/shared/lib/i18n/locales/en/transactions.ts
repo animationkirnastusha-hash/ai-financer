@@ -16,5 +16,12 @@ export const transactionsDictionary = {
   'transaction.create.account': 'Account',
   'transaction.create.toAccount': 'To',
   'transaction.create.selectAccount': 'Choose an account',
+  'transaction.category.label': 'Category',
+  'transaction.category.choose': 'Category choice',
+  'transaction.category.auto': 'Automatic',
+  'transaction.category.create': 'Create',
+  'transaction.category.prediction': 'Fina will choose automatically',
+  'transaction.category.selected': 'Chosen manually',
+  'transaction.category.section': 'Section',
   'transaction.create.autoCategoryHint': 'Category and section will appear automatically after saving.',
 } as const;

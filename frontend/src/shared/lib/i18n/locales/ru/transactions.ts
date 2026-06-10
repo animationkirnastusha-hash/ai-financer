@@ -16,5 +16,12 @@ export const transactionsDictionary = {
   'transaction.create.account': 'Счёт',
   'transaction.create.toAccount': 'Куда',
   'transaction.create.selectAccount': 'Выбери счёт',
+  'transaction.category.label': 'Категория',
+  'transaction.category.choose': 'Выбор категории',
+  'transaction.category.auto': 'Автоматически',
+  'transaction.category.create': 'Создать',
+  'transaction.category.prediction': 'Фина подберёт автоматически',
+  'transaction.category.selected': 'Выбрано вручную',
+  'transaction.category.section': 'Раздел',
   'transaction.create.autoCategoryHint': 'Категория и раздел появятся автоматически после сохранения.',
 } as const;

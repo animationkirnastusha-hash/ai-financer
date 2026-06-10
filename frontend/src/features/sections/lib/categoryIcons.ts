@@ -6,6 +6,23 @@ export { TAXONOMY_ICON_RULES };
 
 export const TAXONOMY_ICON_ENTRY_COUNT = TAXONOMY_ICON_RULES.reduce((sum, item) => sum + item.keywords.length + 1, 0);
 
+const PALETTE = [
+  '#34D399', '#60A5FA', '#A78BFA', '#F472B6', '#F59E0B', '#22D3EE',
+  '#FB7185', '#4ADE80', '#F97316', '#818CF8', '#2DD4BF', '#E879F9',
+];
+
+function hashString(value: string) {
+  let hash = 0;
+  for (let index = 0; index < value.length; index += 1) {
+    hash = ((hash << 5) - hash + value.charCodeAt(index)) | 0;
+  }
+  return Math.abs(hash);
+}
+
+function stableCategoryColor(value: string) {
+  return PALETTE[hashString(value) % PALETTE.length];
+}
+
 function normalizeText(value: string) {
   return value
     .toLowerCase()
@@ -70,7 +87,7 @@ export function resolveTaxonomyIcon(rawText: string, type: 'income' | 'expense')
     sectionColor: chosen.sectionColor,
     categoryName: chosen.categoryName,
     categoryIcon: chosen.categoryIcon,
-    categoryColor: chosen.categoryColor,
+    categoryColor: stableCategoryColor(`${type}:${chosen.categoryName}:${chosen.id}`),
     confidence,
     matchedRuleId: chosen.id,
   };

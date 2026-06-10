@@ -9,6 +9,7 @@ type Props = {
   sections: SectionDto[];
   isSaving?: boolean;
   initialType?: 'expense' | 'income' | 'both';
+  initialName?: string | null;
   initialSectionId?: string | null;
   modalLayer?: number;
   onClose: () => void;
@@ -22,7 +23,7 @@ const typeOptions: Array<{ value: 'expense' | 'income' | 'both'; label: string }
   { value: 'both', label: 'Оба' },
 ];
 
-export function CategoryEditSheet({ open, category, sections, isSaving = false, initialType = 'expense', initialSectionId = null, modalLayer, onClose, onSave, onDelete }: Props) {
+export function CategoryEditSheet({ open, category, sections, isSaving = false, initialType = 'expense', initialName = null, initialSectionId = null, modalLayer, onClose, onSave, onDelete }: Props) {
   const [name, setName] = useState('');
   const [type, setType] = useState<'expense' | 'income' | 'both'>('expense');
   const [sectionId, setSectionId] = useState<string | null>(null);
@@ -30,11 +31,11 @@ export function CategoryEditSheet({ open, category, sections, isSaving = false, 
 
   useEffect(() => {
     if (!open) return;
-    setName(category?.name ?? '');
+    setName(category?.name ?? initialName ?? '');
     setType(category?.type === 'income' || category?.type === 'expense' || category?.type === 'both' ? category.type : initialType);
     setSectionId(category?.sectionId ?? initialSectionId ?? null);
     setError(null);
-  }, [open, category, initialType, initialSectionId]);
+  }, [open, category, initialType, initialName, initialSectionId]);
 
   const canSave = useMemo(() => name.trim().length >= 2 && !isSaving, [name, isSaving]);
 

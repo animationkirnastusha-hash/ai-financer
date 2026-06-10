@@ -13,6 +13,7 @@
 @import "./pages/accounts.css";
 @import "./pages/transactions.css";
 @import "./pages/taxonomy.css";
+@import "./features/taxonomy/taxonomy-picker.css";
 @import "./pages/settings.css";
 @import "./features/ai-settings/ai-settings-panel.css";
 @import "./features/chat/ai-text.css";

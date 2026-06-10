@@ -302,6 +302,9 @@ export class TransactionService {
       existingCategoryId: existing.categoryId,
       existingSectionId: existing.sectionId,
       nextType,
+      nextTitle,
+      nextDescription,
+      textChanged: input.title !== undefined || input.description !== undefined || input.type !== undefined,
       categoryId: input.categoryId,
       sectionId: input.sectionId,
     });
@@ -461,6 +464,9 @@ export class TransactionService {
       existingCategoryId?: string | null;
       existingSectionId?: string | null;
       nextType: TransactionType;
+      nextTitle?: string | null;
+      nextDescription?: string | null;
+      textChanged?: boolean;
       categoryId?: string | null;
       sectionId?: string | null;
     },
@@ -471,10 +477,12 @@ export class TransactionService {
 
     if (params.categoryId !== undefined) {
       if (!params.categoryId) {
-        return {
-          categoryId: null as string | null,
+        return this.resolveTransactionTaxonomy(userId, {
+          type: params.nextType,
+          title: params.nextTitle,
+          description: params.nextDescription,
           sectionId: params.sectionId ?? null,
-        };
+        });
       }
 
       const category = await this.ensureOwnedCategory(userId, params.categoryId, params.nextType);
@@ -484,11 +492,13 @@ export class TransactionService {
       };
     }
 
-    if (params.nextType !== params.existingType) {
-      return {
-        categoryId: null as string | null,
-        sectionId: params.sectionId ?? null,
-      };
+    if (params.nextType !== params.existingType || params.textChanged) {
+      return this.resolveTransactionTaxonomy(userId, {
+        type: params.nextType,
+        title: params.nextTitle,
+        description: params.nextDescription,
+        sectionId: params.sectionId ?? params.existingSectionId ?? null,
+      });
     }
 
     return {
@@ -595,7 +605,7 @@ export class TransactionService {
       throw new NotFoundError('Category not found');
     }
 
-    if (type !== 'transfer' && category.type !== type) {
+    if (type !== 'transfer' && category.type !== type && category.type !== 'both') {
       throw new BadRequestError('Category type does not match transaction type');
     }
 
