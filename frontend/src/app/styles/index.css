@@ -11,6 +11,7 @@
 @import "./features/voice/fina.css";
 @import "./pages/dashboard.css";
 @import "./pages/accounts.css";
+@import "./pages/account-details-sheet.css";
 @import "./pages/transactions.css";
 @import "./pages/taxonomy.css";
 @import "./pages/settings.css";
@@ -32,6 +33,7 @@
 @import "./pages/notifications.css";
 @import "./pages/reports.css";
 @import "./features/chat/text-chat-overlay.css";
+@import "./features/chat/voice-composer.css";
 @import "./pages/spending-limits.css";
 @import "./pages/business-workspace.css";
 @import "./pages/receipt-scans.css";

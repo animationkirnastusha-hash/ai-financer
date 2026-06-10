@@ -1,9 +1,9 @@
-import { useState } from 'react';
+import { useState } from "react";
 
-import { getPreviewFromMessageData } from '@/features/pending-actions/lib/pendingActionView';
-import { cn } from '@/shared/lib/cn';
-import { useI18n } from '@/shared/lib/i18n';
-import { Button, Surface } from '@/shared/ui';
+import { getPreviewFromMessageData } from "@/features/pending-actions/lib/pendingActionView";
+import { cn } from "@/shared/lib/cn";
+import { useI18n } from "@/shared/lib/i18n";
+import { Button, Surface } from "@/shared/ui";
 
 type FinancePreviewCardProps = {
   title: string;
@@ -25,13 +25,17 @@ export function FinancePreviewCard({
   const { t } = useI18n();
   const [isConfirming, setIsConfirming] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
+  const [submittedAction, setSubmittedAction] = useState<
+    "confirm" | "cancel" | null
+  >(null);
   const view = getPreviewFromMessageData({ title, intent, data });
   const requiresConfirmation = Boolean(actionId);
-  const isProcessing = isConfirming || isCancelling;
+  const isProcessing = Boolean(submittedAction) || isConfirming || isCancelling;
 
   const handleConfirm = async () => {
     if (!actionId || isProcessing) return;
 
+    setSubmittedAction("confirm");
     setIsConfirming(true);
     try {
       await onConfirm?.(actionId);
@@ -43,6 +47,7 @@ export function FinancePreviewCard({
   const handleCancel = async () => {
     if (!actionId || isProcessing) return;
 
+    setSubmittedAction("cancel");
     setIsCancelling(true);
     try {
       await onCancel?.(actionId);
@@ -56,14 +61,17 @@ export function FinancePreviewCard({
       <div className="p-4">
         <div className="flex flex-wrap items-center gap-2">
           <span className="rounded-full border border-emerald-300/20 bg-emerald-300/10 px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.16em] text-emerald-100/85">
-            {t('chat.preview.check')}
+            {t("chat.preview.check")}
           </span>
           <span
             className={cn(
-              'rounded-full border px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.14em]',
-              view.riskTone === 'safe' && 'border-emerald-300/20 bg-emerald-300/10 text-emerald-100/80',
-              view.riskTone === 'medium' && 'border-amber-300/20 bg-amber-300/10 text-amber-100/80',
-              view.riskTone === 'high' && 'border-rose-300/20 bg-rose-300/10 text-rose-100/80',
+              "rounded-full border px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.14em]",
+              view.riskTone === "safe" &&
+                "border-emerald-300/20 bg-emerald-300/10 text-emerald-100/80",
+              view.riskTone === "medium" &&
+                "border-amber-300/20 bg-amber-300/10 text-amber-100/80",
+              view.riskTone === "high" &&
+                "border-rose-300/20 bg-rose-300/10 text-rose-100/80",
             )}
           >
             {view.riskLabel}
@@ -79,7 +87,9 @@ export function FinancePreviewCard({
         </div>
 
         {view.amountLabel ? (
-          <div className="mt-1 text-sm leading-5 text-white/65">{view.title}</div>
+          <div className="mt-1 text-sm leading-5 text-white/65">
+            {view.title}
+          </div>
         ) : null}
 
         <div className="mt-4 rounded-[22px] border border-white/8 bg-black/20 px-3.5 py-3 text-sm leading-6 text-white/72">
@@ -105,16 +115,29 @@ export function FinancePreviewCard({
         {requiresConfirmation ? (
           <div className="mt-4 grid grid-cols-[1.15fr_0.85fr] gap-2">
             <Button fullWidth disabled={isProcessing} onClick={handleConfirm}>
-              {isConfirming ? t('chat.preview.confirming') : t('chat.preview.confirm')}
+              {submittedAction === "confirm" && !isConfirming
+                ? t("chat.preview.confirmed")
+                : isConfirming
+                  ? t("chat.preview.confirming")
+                  : t("chat.preview.confirm")}
             </Button>
 
-            <Button fullWidth variant="secondary" disabled={isProcessing} onClick={handleCancel}>
-              {isCancelling ? t('chat.preview.cancelling') : t('chat.preview.cancel')}
+            <Button
+              fullWidth
+              variant="secondary"
+              disabled={isProcessing}
+              onClick={handleCancel}
+            >
+              {submittedAction === "cancel" && !isCancelling
+                ? t("chat.preview.cancelled")
+                : isCancelling
+                  ? t("chat.preview.cancelling")
+                  : t("chat.preview.cancel")}
             </Button>
           </div>
         ) : (
           <div className="mt-4 rounded-2xl border border-emerald-400/15 bg-emerald-400/10 px-3 py-2 text-sm text-emerald-200">
-            {t('chat.preview.done')}
+            {t("chat.preview.done")}
           </div>
         )}
       </div>

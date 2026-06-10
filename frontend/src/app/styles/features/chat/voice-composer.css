@@ -1,0 +1,17 @@
+/* Pack 84: Telegram-like hold-to-record composer button. */
+.text-chat-overlay__voice-send {
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.text-chat-overlay__voice-send[data-recording='true'] {
+  background: linear-gradient(135deg, #fb7185, #f43f5e);
+  color: #fff;
+  box-shadow: 0 0 0 9px rgba(244, 63, 94, .14), 0 16px 36px rgba(244, 63, 94, .28);
+  transform: scale(1.04);
+}
+
+.text-chat-overlay__composer textarea:not(:placeholder-shown) + .text-chat-overlay__voice-send {
+  display: none;
+}

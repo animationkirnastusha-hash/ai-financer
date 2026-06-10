@@ -1,45 +1,60 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { pendingActionsApi } from '@/features/pending-actions/api/pendingActions.api';
-import { auditLogApi } from '@/features/audit-log/api/auditLog.api';
-import { chatApi } from '@/features/chat/api/chat.api';
-import { useAccountsStore } from '@/features/accounts/model/accounts.store';
-import { useTransactionsStore } from '@/features/transactions/model/transactions.store';
-import type { ChatMessage, SendChatMessageOptions, SendChatMessagePayload } from '@/features/chat/model/chat.types';
-import { useAuthStore } from '@/features/auth/model/auth.store';
-import { appendLocalMessages, emitPendingSync, isClarificationPending, isConfirmationPending, isTransientNetworkError, sleep } from '@/features/chat/model/chatController.utils';
-import { useChatStore } from '@/features/chat/model/chat.store';
-import { parseNavigationIntent } from '@/features/navigation/lib/parseNavigationIntent';
-import { useNavigationStore, type AppScreen } from '@/features/navigation/model/navigation.store';
-import { useI18n } from '@/shared/lib/i18n';
-
+import { pendingActionsApi } from "@/features/pending-actions/api/pendingActions.api";
+import { auditLogApi } from "@/features/audit-log/api/auditLog.api";
+import { chatApi } from "@/features/chat/api/chat.api";
+import { useAccountsStore } from "@/features/accounts/model/accounts.store";
+import { useTransactionsStore } from "@/features/transactions/model/transactions.store";
+import type {
+  ChatMessage,
+  SendChatMessageOptions,
+  SendChatMessagePayload,
+} from "@/features/chat/model/chat.types";
+import { useAuthStore } from "@/features/auth/model/auth.store";
+import {
+  appendLocalMessages,
+  emitPendingSync,
+  isClarificationPending,
+  isConfirmationPending,
+  isTransientNetworkError,
+  sleep,
+} from "@/features/chat/model/chatController.utils";
+import { useChatStore } from "@/features/chat/model/chat.store";
+import { parseNavigationIntent } from "@/features/navigation/lib/parseNavigationIntent";
+import {
+  useNavigationStore,
+  type AppScreen,
+} from "@/features/navigation/model/navigation.store";
+import { useI18n } from "@/shared/lib/i18n";
 
 function getScreenLabel(screen: AppScreen) {
   const labels: Record<AppScreen, string> = {
-    dashboard: 'главную',
-    accounts: 'счета',
-    analytics: 'аналитику',
-    goals: 'цели',
-    obligations: 'обязательства',
-    'spending-limits': 'лимиты',
-    companion: 'компаньона',
-    settings: 'настройки',
-    store: 'магазин',
-    premium: 'Premium',
-    'business-accountant': 'Business',
-    'receipt-scans': 'чеки',
-    sections: 'категории',
-    admin: 'админку',
-    referral: 'рефералы',
+    dashboard: "главную",
+    accounts: "счета",
+    analytics: "аналитику",
+    goals: "цели",
+    obligations: "обязательства",
+    "spending-limits": "лимиты",
+    companion: "компаньона",
+    settings: "настройки",
+    store: "магазин",
+    premium: "Premium",
+    "business-accountant": "Business",
+    "receipt-scans": "чеки",
+    sections: "категории",
+    admin: "админку",
+    referral: "рефералы",
   };
 
-  return labels[screen] ?? 'раздел';
+  return labels[screen] ?? "раздел";
 }
 
 export function useChatController() {
   const { t } = useI18n();
   const messages = useChatStore((state) => state.messages) as ChatMessage[];
-  const setMessages = useChatStore((state) => state.setMessages) as (value: ChatMessage[] | ((messages: ChatMessage[]) => ChatMessage[])) => void;
+  const setMessages = useChatStore((state) => state.setMessages) as (
+    value: ChatMessage[] | ((messages: ChatMessage[]) => ChatMessage[]),
+  ) => void;
   const [pendingActions, setPendingActions] = useState<any[]>([]);
   const [auditLogs, setAuditLogs] = useState<any[]>([]);
   const [isPendingOpen, setIsPendingOpen] = useState(false);
@@ -49,6 +64,7 @@ export function useChatController() {
   const refreshQueuedRef = useRef(false);
   const requestAbortRef = useRef<AbortController | null>(null);
   const requestSeqRef = useRef(0);
+  const handlingPendingActionIdsRef = useRef(new Set<string>());
 
   const loadAccounts = useAccountsStore((state) => state.loadAccounts);
   const refreshTransactions = useTransactionsStore((state) => state.refreshAll);
@@ -64,7 +80,7 @@ export function useChatController() {
       const items = await pendingActionsApi.list();
       setPendingActions(Array.isArray(items) ? items : []);
     } catch (error) {
-      console.error('Failed to load pending actions', error);
+      console.error("Failed to load pending actions", error);
       setPendingActions([]);
     }
   }, [hasAuthToken]);
@@ -76,7 +92,7 @@ export function useChatController() {
       const items = await auditLogApi.list();
       setAuditLogs(Array.isArray(items) ? items : []);
     } catch (error) {
-      console.error('Failed to load audit logs', error);
+      console.error("Failed to load audit logs", error);
       setAuditLogs([]);
     }
   }, [hasAuthToken]);
@@ -112,13 +128,18 @@ export function useChatController() {
     const handler = () => {
       void refreshFinanceState();
     };
-    window.addEventListener('ai-financer:pending-sync', handler);
-    return () => window.removeEventListener('ai-financer:pending-sync', handler);
+    window.addEventListener("ai-financer:pending-sync", handler);
+    return () =>
+      window.removeEventListener("ai-financer:pending-sync", handler);
   }, [refreshFinanceState]);
 
   const sendMessage = useCallback(
-    async (input: string | SendChatMessagePayload, options: SendChatMessageOptions = {}) => {
-      const payload: SendChatMessagePayload = typeof input === 'string' ? { text: input, source: 'text' } : input;
+    async (
+      input: string | SendChatMessagePayload,
+      options: SendChatMessageOptions = {},
+    ) => {
+      const payload: SendChatMessagePayload =
+        typeof input === "string" ? { text: input, source: "text" } : input;
       const text = payload.text.trim();
       if (!text) return;
 
@@ -135,59 +156,72 @@ export function useChatController() {
 
       const userMessage: ChatMessage = {
         id: crypto.randomUUID(),
-        role: 'user',
+        role: "user",
         text,
         content: text,
         createdAt: new Date().toISOString(),
-        kind: 'text',
+        kind: "text",
       };
 
       setMessages((prev) => appendLocalMessages(prev, userMessage));
 
       const navigationIntent = parseNavigationIntent(text);
-      if (navigationIntent.type === 'open_screen') {
+      if (navigationIntent.type === "open_screen") {
         navigateTo(navigationIntent.screen);
-        setMessages((prev) => appendLocalMessages(prev, {
-          id: crypto.randomUUID(),
-          role: 'assistant',
-          text: t('textChat.nav.openScreen', { screen: getScreenLabel(navigationIntent.screen) }),
-          content: t('textChat.nav.openScreen', { screen: getScreenLabel(navigationIntent.screen) }),
-          createdAt: new Date().toISOString(),
-          kind: 'success',
-          actionType: 'navigation',
-        }));
-        if (requestAbortRef.current === controller) requestAbortRef.current = null;
+        setMessages((prev) =>
+          appendLocalMessages(prev, {
+            id: crypto.randomUUID(),
+            role: "assistant",
+            text: t("textChat.nav.openScreen", {
+              screen: getScreenLabel(navigationIntent.screen),
+            }),
+            content: t("textChat.nav.openScreen", {
+              screen: getScreenLabel(navigationIntent.screen),
+            }),
+            createdAt: new Date().toISOString(),
+            kind: "success",
+            actionType: "navigation",
+          }),
+        );
+        if (requestAbortRef.current === controller)
+          requestAbortRef.current = null;
         setIsSending(false);
         return;
       }
 
-      if (navigationIntent.type === 'go_back') {
+      if (navigationIntent.type === "go_back") {
         goBack();
-        setMessages((prev) => appendLocalMessages(prev, {
-          id: crypto.randomUUID(),
-          role: 'assistant',
-          text: t('textChat.nav.back'),
-          content: t('textChat.nav.back'),
-          createdAt: new Date().toISOString(),
-          kind: 'success',
-          actionType: 'navigation',
-        }));
-        if (requestAbortRef.current === controller) requestAbortRef.current = null;
+        setMessages((prev) =>
+          appendLocalMessages(prev, {
+            id: crypto.randomUUID(),
+            role: "assistant",
+            text: t("textChat.nav.back"),
+            content: t("textChat.nav.back"),
+            createdAt: new Date().toISOString(),
+            kind: "success",
+            actionType: "navigation",
+          }),
+        );
+        if (requestAbortRef.current === controller)
+          requestAbortRef.current = null;
         setIsSending(false);
         return;
       }
 
-      if (navigationIntent.type === 'open_text_chat') {
-        setMessages((prev) => appendLocalMessages(prev, {
-          id: crypto.randomUUID(),
-          role: 'assistant',
-          text: t('textChat.nav.chatOpen'),
-          content: t('textChat.nav.chatOpen'),
-          createdAt: new Date().toISOString(),
-          kind: 'text',
-          actionType: 'navigation',
-        }));
-        if (requestAbortRef.current === controller) requestAbortRef.current = null;
+      if (navigationIntent.type === "open_text_chat") {
+        setMessages((prev) =>
+          appendLocalMessages(prev, {
+            id: crypto.randomUUID(),
+            role: "assistant",
+            text: t("textChat.nav.chatOpen"),
+            content: t("textChat.nav.chatOpen"),
+            createdAt: new Date().toISOString(),
+            kind: "text",
+            actionType: "navigation",
+          }),
+        );
+        if (requestAbortRef.current === controller)
+          requestAbortRef.current = null;
         setIsSending(false);
         return;
       }
@@ -195,30 +229,38 @@ export function useChatController() {
       try {
         let response;
         try {
-          response = await chatApi.sendMessage({ ...payload, text }, controller.signal);
+          response = await chatApi.sendMessage(
+            { ...payload, text },
+            controller.signal,
+          );
         } catch (error) {
           if (controller.signal.aborted) return;
           if (!isTransientNetworkError(error)) throw error;
           await sleep(navigator.onLine ? 1400 : 2400);
           if (controller.signal.aborted) return;
-          response = await chatApi.sendMessage({ ...payload, text }, controller.signal);
+          response = await chatApi.sendMessage(
+            { ...payload, text },
+            controller.signal,
+          );
         }
 
-        if (requestSeqRef.current !== requestSeq || controller.signal.aborted) return;
+        if (requestSeqRef.current !== requestSeq || controller.signal.aborted)
+          return;
 
-        const assistantText = response.message || 'Готово';
-        const responseData = response.parsed && typeof response.parsed === 'object'
-          ? (response.parsed as Record<string, unknown>)
-          : undefined;
+        const assistantText = response.message || "Готово";
+        const responseData =
+          response.parsed && typeof response.parsed === "object"
+            ? (response.parsed as Record<string, unknown>)
+            : undefined;
 
         if (response.requiresConfirmation && response.meta?.pendingActionId) {
           const previewMessage: ChatMessage = {
             id: crypto.randomUUID(),
-            role: 'assistant',
+            role: "assistant",
             text: assistantText,
             content: assistantText,
             createdAt: new Date().toISOString(),
-            kind: 'preview',
+            kind: "preview",
             actionType: response.intent,
             actionId: response.meta.pendingActionId,
             auditLogId: response.meta?.auditLogId,
@@ -233,15 +275,17 @@ export function useChatController() {
 
         const assistantMessage: ChatMessage = {
           id: crypto.randomUUID(),
-          role: 'assistant',
+          role: "assistant",
           text: assistantText,
           content: assistantText,
           createdAt: new Date().toISOString(),
-          kind: response.executed ? 'success' : 'text',
+          kind: response.executed ? "success" : "text",
           actionType: response.intent,
           actionId: response.meta?.auditLogId,
           auditLogId: response.meta?.auditLogId,
-          canUndo: Boolean(response.meta?.undo?.available && response.meta?.auditLogId),
+          canUndo: Boolean(
+            response.meta?.undo?.available && response.meta?.auditLogId,
+          ),
           data: responseData,
         };
 
@@ -249,18 +293,22 @@ export function useChatController() {
         await refreshFinanceState();
       } catch (error) {
         if (controller.signal.aborted) return;
-        console.error('Send message failed', error);
+        console.error("Send message failed", error);
 
-        setMessages((prev) => appendLocalMessages(prev, {
-          id: crypto.randomUUID(),
-          role: 'assistant',
-          text: 'Связь нестабильна. Команда не выполнена, повтори позже или отправь текстом ещё раз.',
-          content: 'Связь нестабильна. Команда не выполнена, повтори позже или отправь текстом ещё раз.',
-          createdAt: new Date().toISOString(),
-          kind: 'error',
-        }));
+        setMessages((prev) =>
+          appendLocalMessages(prev, {
+            id: crypto.randomUUID(),
+            role: "assistant",
+            text: "Связь нестабильна. Команда не выполнена, повтори позже или отправь текстом ещё раз.",
+            content:
+              "Связь нестабильна. Команда не выполнена, повтори позже или отправь текстом ещё раз.",
+            createdAt: new Date().toISOString(),
+            kind: "error",
+          }),
+        );
       } finally {
-        if (requestAbortRef.current === controller) requestAbortRef.current = null;
+        if (requestAbortRef.current === controller)
+          requestAbortRef.current = null;
         if (requestSeqRef.current === requestSeq) setIsSending(false);
       }
     },
@@ -269,36 +317,46 @@ export function useChatController() {
 
   const confirmAction = useCallback(
     async (actionId: string) => {
-      if (!actionId) return;
+      if (!actionId || handlingPendingActionIdsRef.current.has(actionId))
+        return;
+      handlingPendingActionIdsRef.current.add(actionId);
 
       setPendingActions((prev) => prev.filter((item) => item.id !== actionId));
 
       try {
         const response: any = await pendingActionsApi.confirm(actionId);
-        const assistantText = response?.message || '✅ Действие подтверждено.';
+        const assistantText = response?.message || "Действие выполнено.";
 
-        setMessages((prev) => appendLocalMessages(prev, {
-          id: crypto.randomUUID(),
-          role: 'assistant',
-          text: assistantText,
-          content: assistantText,
-          createdAt: new Date().toISOString(),
-          kind: 'text',
-          actionType: response?.intent,
-          actionId: response?.meta?.auditLogId,
-          data: response?.data && typeof response.data === 'object' ? response.data : undefined,
-        }));
+        setMessages((prev) =>
+          appendLocalMessages(prev, {
+            id: crypto.randomUUID(),
+            role: "assistant",
+            text: assistantText,
+            content: assistantText,
+            createdAt: new Date().toISOString(),
+            kind: response?.success === false ? "error" : "success",
+            actionType: response?.intent,
+            actionId: response?.meta?.auditLogId,
+            data:
+              response?.data && typeof response.data === "object"
+                ? response.data
+                : undefined,
+          }),
+        );
       } catch (error) {
-        console.error('Confirm action failed', error);
+        console.error("Confirm action failed", error);
 
-        setMessages((prev) => appendLocalMessages(prev, {
-          id: crypto.randomUUID(),
-          role: 'assistant',
-          text: 'Не удалось подтвердить действие. Возможно, оно уже выполнено, отменено или истекло.',
-          content: 'Не удалось подтвердить действие. Возможно, оно уже выполнено, отменено или истекло.',
-          createdAt: new Date().toISOString(),
-          kind: 'error',
-        }));
+        setMessages((prev) =>
+          appendLocalMessages(prev, {
+            id: crypto.randomUUID(),
+            role: "assistant",
+            text: "Действие не выполнено. Проверь данные и создай его заново.",
+            content:
+              "Действие не выполнено. Проверь данные и создай его заново.",
+            createdAt: new Date().toISOString(),
+            kind: "error",
+          }),
+        );
       } finally {
         setIsPendingOpen(false);
         await refreshFinanceState();
@@ -310,26 +368,30 @@ export function useChatController() {
 
   const cancelAction = useCallback(
     async (actionId: string) => {
-      if (!actionId) return;
+      if (!actionId || handlingPendingActionIdsRef.current.has(actionId))
+        return;
+      handlingPendingActionIdsRef.current.add(actionId);
 
       setPendingActions((prev) => prev.filter((item) => item.id !== actionId));
 
       try {
         const response: any = await pendingActionsApi.cancel(actionId);
-        const assistantText = response?.message || 'Действие отменено.';
+        const assistantText = response?.message || "Действие отменено.";
 
-        setMessages((prev) => appendLocalMessages(prev, {
-          id: crypto.randomUUID(),
-          role: 'assistant',
-          text: assistantText,
-          content: assistantText,
-          createdAt: new Date().toISOString(),
-          kind: 'text',
-          actionType: response?.intent,
-          actionId: response?.meta?.auditLogId,
-        }));
+        setMessages((prev) =>
+          appendLocalMessages(prev, {
+            id: crypto.randomUUID(),
+            role: "assistant",
+            text: assistantText,
+            content: assistantText,
+            createdAt: new Date().toISOString(),
+            kind: "text",
+            actionType: response?.intent,
+            actionId: response?.meta?.auditLogId,
+          }),
+        );
       } catch (error) {
-        console.error('Cancel action failed', error);
+        console.error("Cancel action failed", error);
       } finally {
         setIsPendingOpen(false);
         await refreshFinanceState();
@@ -345,34 +407,39 @@ export function useChatController() {
 
       try {
         const response = await chatApi.undoByAuditLog(auditLogId);
-        const assistantText = response?.message || '↩️ Операция отменена.';
+        const assistantText = response?.message || "↩️ Операция отменена.";
 
-        setMessages((prev) => appendLocalMessages(
-          prev.map((message) =>
-            message.auditLogId === auditLogId
-              ? { ...message, canUndo: false }
-              : message,
+        setMessages((prev) =>
+          appendLocalMessages(
+            prev.map((message) =>
+              message.auditLogId === auditLogId
+                ? { ...message, canUndo: false }
+                : message,
+            ),
+            {
+              id: crypto.randomUUID(),
+              role: "assistant",
+              text: assistantText,
+              content: assistantText,
+              createdAt: new Date().toISOString(),
+              kind: "text",
+            },
           ),
-          {
-            id: crypto.randomUUID(),
-            role: 'assistant',
-            text: assistantText,
-            content: assistantText,
-            createdAt: new Date().toISOString(),
-            kind: 'text',
-          },
-        ));
+        );
       } catch (error) {
-        console.error('Undo failed', error);
+        console.error("Undo failed", error);
 
-        setMessages((prev) => appendLocalMessages(prev, {
-          id: crypto.randomUUID(),
-          role: 'assistant',
-          text: 'Не удалось отменить операцию. Возможно, она уже отменена или изменена.',
-          content: 'Не удалось отменить операцию. Возможно, она уже отменена или изменена.',
-          createdAt: new Date().toISOString(),
-          kind: 'error',
-        }));
+        setMessages((prev) =>
+          appendLocalMessages(prev, {
+            id: crypto.randomUUID(),
+            role: "assistant",
+            text: "Не удалось отменить операцию. Возможно, она уже отменена или изменена.",
+            content:
+              "Не удалось отменить операцию. Возможно, она уже отменена или изменена.",
+            createdAt: new Date().toISOString(),
+            kind: "error",
+          }),
+        );
       } finally {
         await refreshFinanceState();
       }
@@ -397,8 +464,14 @@ export function useChatController() {
   const openAudit = useCallback(() => setIsAuditOpen(true), []);
   const closeAudit = useCallback(() => setIsAuditOpen(false), []);
 
-  const clarificationActions = useMemo(() => pendingActions.filter(isClarificationPending), [pendingActions]);
-  const confirmationActions = useMemo(() => pendingActions.filter(isConfirmationPending), [pendingActions]);
+  const clarificationActions = useMemo(
+    () => pendingActions.filter(isClarificationPending),
+    [pendingActions],
+  );
+  const confirmationActions = useMemo(
+    () => pendingActions.filter(isConfirmationPending),
+    [pendingActions],
+  );
 
   return {
     messages,
