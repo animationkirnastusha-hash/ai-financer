@@ -31,6 +31,8 @@ export const createRecurringPayment = asyncHandler(async (req: Request, res: Res
     name: req.body.name,
     amount: Number(req.body.amount),
     category: req.body.category,
+    categoryId: req.body.categoryId ?? null,
+    sectionId: req.body.sectionId ?? null,
     period: req.body.period,
     accountId: req.body.accountId,
     nextDate: parseOptionalDate(req.body.nextDate),
@@ -46,6 +48,8 @@ export const updateRecurringPayment = asyncHandler(async (req: Request, res: Res
     name: req.body.name,
     amount: req.body.amount !== undefined ? Number(req.body.amount) : undefined,
     category: req.body.category,
+    categoryId: Object.prototype.hasOwnProperty.call(req.body, 'categoryId') ? req.body.categoryId : undefined,
+    sectionId: Object.prototype.hasOwnProperty.call(req.body, 'sectionId') ? req.body.sectionId : undefined,
     period: req.body.period,
     accountId: req.body.accountId,
     nextDate: parseOptionalDate(req.body.nextDate),
@@ -60,6 +64,8 @@ export const markRecurringPaid = asyncHandler(async (req: Request, res: Response
   const recurringPayment = await recurringService.markPaid(req.userId!, recurringId, {
     paidAt: parseOptionalDate(req.body.paidAt),
     advance: req.body.advance,
+    createExpense: req.body.createExpense,
+    note: req.body.note,
   });
 
   res.json({ recurringPayment });

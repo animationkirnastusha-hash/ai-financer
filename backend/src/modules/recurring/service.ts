@@ -1,6 +1,7 @@
 import { Prisma } from '@prisma/client';
 import { prisma } from '../../lib/prisma';
 import { BadRequestError, NotFoundError } from '../../shared/core/errors';
+import { TransactionService } from '../transactions/service';
 
 export type RecurringPeriod = 'weekly' | 'monthly' | 'yearly' | 'custom';
 
@@ -8,6 +9,8 @@ export interface CreateRecurringPaymentInput {
   name: string;
   amount: number;
   category?: string | null;
+  categoryId?: string | null;
+  sectionId?: string | null;
   period: string;
   accountId: string;
   nextDate?: Date;
@@ -18,6 +21,8 @@ export interface UpdateRecurringPaymentInput {
   name?: string;
   amount?: number;
   category?: string | null;
+  categoryId?: string | null;
+  sectionId?: string | null;
   period?: string;
   accountId?: string;
   nextDate?: Date;
@@ -27,6 +32,8 @@ export interface UpdateRecurringPaymentInput {
 export interface MarkRecurringPaidInput {
   paidAt?: Date;
   advance?: boolean;
+  createExpense?: boolean;
+  note?: string | null;
 }
 
 const recurringInclude = {
@@ -40,7 +47,36 @@ const recurringInclude = {
       color: true,
     },
   },
+  categoryRef: {
+    select: {
+      id: true,
+      name: true,
+      type: true,
+      icon: true,
+      color: true,
+      sectionId: true,
+    },
+  },
+  section: {
+    select: {
+      id: true,
+      name: true,
+      icon: true,
+      color: true,
+    },
+  },
+  payments: {
+    orderBy: { paidAt: 'desc' },
+    take: 5,
+    include: {
+      transaction: {
+        select: { id: true, amount: true, title: true, date: true, type: true },
+      },
+    },
+  },
 } satisfies Prisma.RecurringPaymentInclude;
+
+type RecurringWithInclude = Prisma.RecurringPaymentGetPayload<{ include: typeof recurringInclude }>;
 
 function normalizeText(value: unknown, label: string) {
   const text = typeof value === 'string' ? value.trim() : '';
@@ -52,6 +88,13 @@ function normalizeOptionalText(value: unknown, fallback = 'Регулярный 
   if (value === undefined || value === null || value === '') return fallback;
   const text = String(value).trim();
   return text || fallback;
+}
+
+function normalizeNullableText(value: unknown) {
+  if (value === undefined) return undefined;
+  if (value === null) return null;
+  const text = String(value).trim();
+  return text || null;
 }
 
 function normalizeAmount(value: unknown) {
@@ -79,7 +122,7 @@ function addPeriod(date: Date, period: string) {
   return next;
 }
 
-function serializeRecurring(payment: Prisma.RecurringPaymentGetPayload<{ include: typeof recurringInclude }>) {
+function serializeRecurring(payment: RecurringWithInclude) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const due = new Date(payment.nextDate);
@@ -87,11 +130,14 @@ function serializeRecurring(payment: Prisma.RecurringPaymentGetPayload<{ include
 
   return {
     ...payment,
+    category: payment.categoryRef?.name ?? payment.category,
     daysUntilPayment: Math.round((due.getTime() - today.getTime()) / 86400000),
   };
 }
 
 export class RecurringService {
+  private transactionService = new TransactionService();
+
   async getRecurringPayments(userId: string) {
     const rows = await prisma.recurringPayment.findMany({
       where: { userId },
@@ -128,6 +174,11 @@ export class RecurringService {
     const amount = normalizeAmount(input.amount);
     const period = normalizePeriod(input.period);
     const account = await this.ensureAccount(userId, input.accountId);
+    const taxonomy = await this.resolveTaxonomy(userId, {
+      categoryId: input.categoryId ?? null,
+      sectionId: input.sectionId ?? null,
+      categoryLabel: input.category,
+    });
 
     const recurringPayment = await prisma.recurringPayment.create({
       data: {
@@ -135,7 +186,9 @@ export class RecurringService {
         accountId: account.id,
         name,
         amount,
-        category: normalizeOptionalText(input.category),
+        category: taxonomy.categoryLabel,
+        categoryId: taxonomy.categoryId,
+        sectionId: taxonomy.sectionId,
         period,
         nextDate: input.nextDate ?? new Date(),
         isActive: input.isActive ?? true,
@@ -156,12 +209,22 @@ export class RecurringService {
       accountId = account.id;
     }
 
+    const shouldResolveTaxonomy = input.categoryId !== undefined || input.sectionId !== undefined || input.category !== undefined;
+    const taxonomy = shouldResolveTaxonomy
+      ? await this.resolveTaxonomy(userId, {
+          categoryId: input.categoryId ?? null,
+          sectionId: input.sectionId ?? null,
+          categoryLabel: input.category,
+          fallbackCategoryLabel: existing.category,
+        })
+      : null;
+
     const recurringPayment = await prisma.recurringPayment.update({
       where: { id: recurringId },
       data: {
         ...(input.name !== undefined ? { name: normalizeText(input.name, 'name') } : {}),
         ...(input.amount !== undefined ? { amount: normalizeAmount(input.amount) } : {}),
-        ...(input.category !== undefined ? { category: normalizeOptionalText(input.category) } : {}),
+        ...(taxonomy ? { category: taxonomy.categoryLabel, categoryId: taxonomy.categoryId, sectionId: taxonomy.sectionId } : {}),
         ...(input.period !== undefined ? { period: normalizePeriod(input.period) } : {}),
         ...(accountId !== undefined ? { accountId } : {}),
         ...(input.nextDate !== undefined ? { nextDate: input.nextDate } : {}),
@@ -180,14 +243,57 @@ export class RecurringService {
     });
     if (!existing) throw new NotFoundError('Recurring payment not found');
 
-    const nextDate = input.advance === false ? existing.nextDate : addPeriod(input.paidAt ?? existing.nextDate, existing.period);
-    const updated = await prisma.recurringPayment.update({
+    const paidAt = input.paidAt ?? new Date();
+    const shouldCreateExpense = input.createExpense !== false;
+    let transactionId: string | null = null;
+
+    if (shouldCreateExpense) {
+      const transaction = await this.transactionService.createTransaction(userId, {
+        accountId: existing.accountId,
+        categoryId: existing.categoryId,
+        sectionId: existing.sectionId,
+        amount: existing.amount,
+        type: 'expense',
+        title: existing.name,
+        description: input.note?.trim() || `Регулярный платёж: ${existing.name}`,
+        date: paidAt,
+        isAIGenerated: false,
+      });
+      transactionId = transaction.id;
+    }
+
+    const nextDate = input.advance === false ? existing.nextDate : addPeriod(paidAt, existing.period);
+
+    await prisma.$transaction(async (tx) => {
+      await tx.recurringPaymentPayment.create({
+        data: {
+          userId,
+          recurringPaymentId: existing.id,
+          accountId: existing.accountId,
+          transactionId,
+          amount: existing.amount,
+          paidAt,
+          note: normalizeNullableText(input.note),
+        },
+      });
+
+      await tx.recurringPayment.update({
+        where: { id: recurringId },
+        data: { nextDate },
+      });
+
+      await tx.obligationReminder.updateMany({
+        where: { userId, recurringPaymentId: existing.id, status: 'scheduled' },
+        data: { status: 'done' },
+      });
+    });
+
+    const recurringPayment = await prisma.recurringPayment.findUniqueOrThrow({
       where: { id: recurringId },
-      data: { nextDate },
       include: recurringInclude,
     });
 
-    return serializeRecurring(updated);
+    return serializeRecurring(recurringPayment);
   }
 
   async deleteRecurringPayment(userId: string, recurringId: string) {
@@ -206,6 +312,44 @@ export class RecurringService {
     const account = await prisma.account.findFirst({ where: { id: accountId, userId } });
     if (!account) throw new NotFoundError('Account not found');
     return account;
+  }
+
+  private async resolveTaxonomy(
+    userId: string,
+    input: {
+      categoryId?: string | null;
+      sectionId?: string | null;
+      categoryLabel?: string | null;
+      fallbackCategoryLabel?: string | null;
+    },
+  ) {
+    let sectionId = input.sectionId ?? null;
+    if (sectionId) {
+      const section = await prisma.section.findFirst({ where: { id: sectionId, userId }, select: { id: true } });
+      if (!section) throw new NotFoundError('Section not found');
+    }
+
+    if (!input.categoryId) {
+      return {
+        categoryId: null as string | null,
+        sectionId,
+        categoryLabel: normalizeOptionalText(input.categoryLabel, input.fallbackCategoryLabel || 'Регулярный платёж'),
+      };
+    }
+
+    const category = await prisma.category.findFirst({
+      where: { id: input.categoryId, userId },
+      select: { id: true, name: true, sectionId: true, type: true },
+    });
+
+    if (!category) throw new NotFoundError('Category not found');
+    if (category.type !== 'expense') throw new BadRequestError('Recurring payment category must be an expense category');
+
+    return {
+      categoryId: category.id,
+      sectionId: sectionId ?? category.sectionId ?? null,
+      categoryLabel: category.name,
+    };
   }
 }
 

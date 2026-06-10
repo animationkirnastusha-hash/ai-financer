@@ -16,11 +16,32 @@ function requireUserId(req: Request): string {
   return req.userId;
 }
 
-function readReceiptScanId(req: Request): string {
-  const raw = req.params.receiptScanId;
-  const value = Array.isArray(raw) ? raw[0] : raw;
-  if (!value || !value.trim()) throw new BadRequestError('Receipt scan is required');
-  return value.trim();
+function getReceiptScanId(req: Request): string {
+  const receiptScanId = typeof req.params.receiptScanId === 'string' ? req.params.receiptScanId : '';
+  if (!receiptScanId) throw new BadRequestError('Receipt scan is required');
+  return receiptScanId;
+}
+
+function parseOptionalDate(value: unknown) {
+  if (value === undefined) return undefined;
+  if (value === null || value === '') return null;
+  const date = new Date(String(value));
+  if (Number.isNaN(date.getTime())) throw new BadRequestError('Invalid receipt date');
+  return date;
+}
+
+function normalizeReceiptBody(body: Record<string, unknown>) {
+  return {
+    merchant: body.merchant as string | null | undefined,
+    totalAmount: body.totalAmount !== undefined ? Number(body.totalAmount) : undefined,
+    currency: body.currency as string | null | undefined,
+    purchasedAt: parseOptionalDate(body.purchasedAt),
+    accountId: body.accountId as string | null | undefined,
+    categoryId: body.categoryId as string | null | undefined,
+    rawText: body.rawText as string | null | undefined,
+    title: body.title as string | null | undefined,
+    description: body.description as string | null | undefined,
+  };
 }
 
 export const listReceiptScans = asyncHandler(async (req: Request, res: Response) => {
@@ -44,15 +65,17 @@ export const uploadReceiptScan = asyncHandler(async (req: ReceiptUploadRequest, 
 
 export const getReceiptScan = asyncHandler(async (req: Request, res: Response) => {
   const userId = requireUserId(req);
-  res.json(await receiptScanService.get(userId, readReceiptScanId(req)));
+  res.json(await receiptScanService.get(userId, getReceiptScanId(req)));
 });
 
 export const reviewReceiptScan = asyncHandler(async (req: Request, res: Response) => {
   const userId = requireUserId(req);
-  res.json({ scan: await receiptScanService.review(userId, readReceiptScanId(req), req.body ?? {}) });
+  const scan = await receiptScanService.review(userId, getReceiptScanId(req), normalizeReceiptBody(req.body ?? {}));
+  res.json({ scan });
 });
 
-export const createExpenseFromReceiptScan = asyncHandler(async (req: Request, res: Response) => {
+export const createReceiptExpense = asyncHandler(async (req: Request, res: Response) => {
   const userId = requireUserId(req);
-  res.status(201).json(await receiptScanService.createExpense(userId, readReceiptScanId(req), req.body ?? {}));
+  const result = await receiptScanService.createExpense(userId, getReceiptScanId(req), normalizeReceiptBody(req.body ?? {}));
+  res.json(result);
 });

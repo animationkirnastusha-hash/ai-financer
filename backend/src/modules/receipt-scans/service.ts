@@ -14,6 +14,9 @@ export type ReceiptScanDto = {
   totalAmount: number | null;
   currency: string;
   purchasedAt: string | null;
+  accountId: string | null;
+  categoryId: string | null;
+  transactionId: string | null;
   preview: ReceiptScanPreview | null;
   createdAt: string;
   updatedAt: string;
@@ -31,23 +34,20 @@ type CreateReceiptInput = {
   sizeBytes: number;
 };
 
-type ReviewReceiptInput = Partial<{
-  merchant: unknown;
-  totalAmount: unknown;
-  currency: unknown;
-  purchasedAt: unknown;
-  rawText: unknown;
-}>;
+export type ReviewReceiptInput = {
+  merchant?: string | null;
+  totalAmount?: number | null;
+  currency?: string | null;
+  purchasedAt?: Date | null;
+  accountId?: string | null;
+  categoryId?: string | null;
+  rawText?: string | null;
+};
 
-type CreateExpenseFromReceiptInput = Partial<{
-  accountId: unknown;
-  categoryId: unknown;
-  sectionId: unknown;
-  amount: unknown;
-  title: unknown;
-  description: unknown;
-  date: unknown;
-}>;
+export type CreateExpenseFromReceiptInput = ReviewReceiptInput & {
+  title?: string | null;
+  description?: string | null;
+};
 
 const MAX_RECEIPT_FILE_BYTES = 8 * 1024 * 1024;
 const ALLOWED_MIME_TYPES = new Set([
@@ -73,46 +73,18 @@ function parsePreview(value: string | null): ReceiptScanPreview | null {
   }
 }
 
-function normalizeOptionalString(value: unknown, maxLength = 180): string | null | undefined {
+function normalizeOptionalText(value: unknown) {
   if (value === undefined) return undefined;
   if (value === null) return null;
-  if (typeof value !== 'string') throw new BadRequestError('Invalid text value');
-  const trimmed = value.trim();
-  return trimmed ? trimmed.slice(0, maxLength) : null;
+  const text = String(value).trim();
+  return text || null;
 }
 
-function normalizeMoney(value: unknown): number | null | undefined {
-  if (value === undefined) return undefined;
-  if (value === null || value === '') return null;
-  const numeric = Number(value);
-  if (!Number.isFinite(numeric) || numeric < 0) throw new BadRequestError('Invalid receipt amount');
-  return Math.round(numeric);
-}
-
-function normalizeCurrency(value: unknown): string | undefined {
-  if (value === undefined || value === null || value === '') return undefined;
-  if (typeof value !== 'string') throw new BadRequestError('Invalid currency');
-  const currency = value.trim().toUpperCase().slice(0, 8);
-  return currency || undefined;
-}
-
-function normalizeDate(value: unknown): Date | null | undefined {
-  if (value === undefined) return undefined;
-  if (value === null || value === '') return null;
-  if (typeof value !== 'string') throw new BadRequestError('Invalid date');
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) throw new BadRequestError('Invalid date');
-  return date;
-}
-
-function normalizeRequiredString(value: unknown, field: string): string {
-  if (typeof value !== 'string' || !value.trim()) throw new BadRequestError(`${field} is required`);
-  return value.trim();
-}
-
-function formatMoney(amount: number | null | undefined, currency: string) {
-  if (typeof amount !== 'number') return '—';
-  return `${new Intl.NumberFormat('ru-RU').format(amount)} ${currency || 'RUB'}`;
+function normalizeAmount(value: unknown) {
+  if (value === undefined || value === null || value === '') return null;
+  const amount = Math.round(Number(value));
+  if (!Number.isFinite(amount) || amount <= 0) throw new BadRequestError('Receipt amount must be greater than 0');
+  return amount;
 }
 
 function toDto(scan: ReceiptScan): ReceiptScanDto {
@@ -126,6 +98,9 @@ function toDto(scan: ReceiptScan): ReceiptScanDto {
     totalAmount: scan.totalAmount,
     currency: scan.currency,
     purchasedAt: scan.purchasedAt?.toISOString() ?? null,
+    accountId: scan.accountId,
+    categoryId: scan.categoryId,
+    transactionId: scan.transactionId,
     preview: parsePreview(scan.preview),
     createdAt: scan.createdAt.toISOString(),
     updatedAt: scan.updatedAt.toISOString(),
@@ -136,7 +111,7 @@ function buildPreview(input: CreateReceiptInput): ReceiptScanPreview {
   const kb = Math.max(1, Math.round(input.sizeBytes / 1024));
   return {
     title: 'Чек загружен',
-    caption: 'Проверь чек и создай расход, когда данные готовы.',
+    caption: 'Проверь сумму, счёт и категорию перед созданием расхода.',
     fields: [
       { label: 'Файл', value: input.fileName },
       { label: 'Размер', value: `${kb} КБ` },
@@ -145,37 +120,26 @@ function buildPreview(input: CreateReceiptInput): ReceiptScanPreview {
   };
 }
 
-function buildReviewedPreview(scan: Pick<ReceiptScan, 'merchant' | 'totalAmount' | 'currency' | 'purchasedAt'>): ReceiptScanPreview {
+function buildReviewedPreview(scan: ReceiptScan): ReceiptScanPreview {
   return {
     title: scan.merchant || 'Чек проверен',
-    caption: 'Данные готовы. Можно создать расход из этого чека.',
+    caption: scan.transactionId ? 'Расход уже создан.' : 'Можно создать расход из этого чека.',
     fields: [
-      { label: 'Магазин', value: scan.merchant || '—' },
-      { label: 'Сумма', value: formatMoney(scan.totalAmount, scan.currency) },
-      { label: 'Дата', value: scan.purchasedAt ? new Intl.DateTimeFormat('ru-RU').format(scan.purchasedAt) : '—' },
+      { label: 'Сумма', value: scan.totalAmount ? `${scan.totalAmount} ${scan.currency}` : 'Не указана' },
+      { label: 'Дата', value: scan.purchasedAt ? scan.purchasedAt.toISOString().slice(0, 10) : 'Не указана' },
+      { label: 'Статус', value: scan.transactionId ? 'Расход создан' : 'Проверен' },
     ],
   };
 }
-
-function buildExpenseCreatedPreview(scan: Pick<ReceiptScan, 'merchant' | 'totalAmount' | 'currency' | 'purchasedAt'>, transactionId: string): ReceiptScanPreview {
-  return {
-    title: scan.merchant || 'Расход создан',
-    caption: 'Расход создан из чека. Чек сохранён в истории.',
-    fields: [
-      { label: 'Сумма', value: formatMoney(scan.totalAmount, scan.currency) },
-      { label: 'Операция', value: transactionId },
-    ],
-  };
-}
-
-const transactionService = new TransactionService();
 
 export class ReceiptScanService {
+  private transactionService = new TransactionService();
+
   async list(userId: string): Promise<ReceiptScanDto[]> {
     const scans = await prisma.receiptScan.findMany({
       where: { userId },
       orderBy: { createdAt: 'desc' },
-      take: 40,
+      take: 50,
     });
     return scans.map(toDto);
   }
@@ -234,73 +198,89 @@ export class ReceiptScanService {
     const existing = await prisma.receiptScan.findFirst({ where: { id: receiptScanId, userId } });
     if (!existing) throw new NotFoundError('Receipt scan not found');
 
-    const merchant = normalizeOptionalString(input.merchant, 120);
-    const totalAmount = normalizeMoney(input.totalAmount);
-    const currency = normalizeCurrency(input.currency);
-    const purchasedAt = normalizeDate(input.purchasedAt);
-    const rawText = normalizeOptionalString(input.rawText, 5000);
-
-    const draft = {
-      merchant: merchant !== undefined ? merchant : existing.merchant,
-      totalAmount: totalAmount !== undefined ? totalAmount : existing.totalAmount,
-      currency: currency !== undefined ? currency : existing.currency,
-      purchasedAt: purchasedAt !== undefined ? purchasedAt : existing.purchasedAt,
-    };
-
+    const data = await this.buildReviewData(userId, input);
     const updated = await prisma.receiptScan.update({
-      where: { id: existing.id },
+      where: { id: receiptScanId },
       data: {
-        ...(merchant !== undefined ? { merchant } : {}),
-        ...(totalAmount !== undefined ? { totalAmount } : {}),
-        ...(currency !== undefined ? { currency } : {}),
-        ...(purchasedAt !== undefined ? { purchasedAt } : {}),
-        ...(rawText !== undefined ? { rawText } : {}),
-        status: 'reviewed',
-        preview: JSON.stringify(buildReviewedPreview(draft)),
+        ...data,
+        status: existing.transactionId ? 'expense_created' : 'reviewed',
       },
     });
 
-    return toDto(updated);
+    const preview = buildReviewedPreview(updated);
+    const withPreview = await prisma.receiptScan.update({
+      where: { id: receiptScanId },
+      data: { preview: JSON.stringify(preview) },
+    });
+
+    return toDto(withPreview);
   }
 
-  async createExpense(userId: string, receiptScanId: string, input: CreateExpenseFromReceiptInput) {
-    const scan = await prisma.receiptScan.findFirst({ where: { id: receiptScanId, userId } });
-    if (!scan) throw new NotFoundError('Receipt scan not found');
+  async createExpense(userId: string, receiptScanId: string, input: CreateExpenseFromReceiptInput): Promise<{ scan: ReceiptScanDto; transactionId: string }> {
+    const reviewed = await this.review(userId, receiptScanId, input);
+    if (reviewed.transactionId) {
+      return { scan: reviewed, transactionId: reviewed.transactionId };
+    }
 
-    const accountId = normalizeRequiredString(input.accountId, 'accountId');
-    const amount = normalizeMoney(input.amount) ?? scan.totalAmount;
-    if (!amount || amount <= 0) throw new BadRequestError('Receipt amount is required before creating expense');
+    if (!reviewed.accountId) throw new BadRequestError('Account is required to create expense from receipt');
+    if (!reviewed.totalAmount) throw new BadRequestError('Receipt amount is required to create expense');
 
-    const title = normalizeOptionalString(input.title, 160) ?? scan.merchant ?? 'Расход по чеку';
-    const description = normalizeOptionalString(input.description, 500) ?? `Чек: ${scan.fileName}`;
-    const date = normalizeDate(input.date) ?? scan.purchasedAt ?? new Date();
-    const categoryId = normalizeOptionalString(input.categoryId, 80) ?? null;
-    const sectionId = normalizeOptionalString(input.sectionId, 80) ?? null;
-
-    const transaction = await transactionService.createTransaction(userId, {
-      accountId,
-      categoryId,
-      sectionId,
-      amount,
+    const transaction = await this.transactionService.createTransaction(userId, {
+      accountId: reviewed.accountId,
+      categoryId: reviewed.categoryId,
+      amount: reviewed.totalAmount,
       type: 'expense',
-      title,
-      description,
-      date,
+      title: input.title?.trim() || reviewed.merchant || 'Чек',
+      description: input.description?.trim() || `Расход из чека ${reviewed.fileName}`,
+      date: reviewed.purchasedAt ? new Date(reviewed.purchasedAt) : new Date(),
       isAIGenerated: false,
     });
 
     const updated = await prisma.receiptScan.update({
-      where: { id: scan.id },
+      where: { id: receiptScanId },
       data: {
+        transactionId: transaction.id,
         status: 'expense_created',
-        totalAmount: scan.totalAmount ?? amount,
-        merchant: scan.merchant ?? title,
-        purchasedAt: scan.purchasedAt ?? date,
-        preview: JSON.stringify(buildExpenseCreatedPreview({ ...scan, totalAmount: scan.totalAmount ?? amount, merchant: scan.merchant ?? title, purchasedAt: scan.purchasedAt ?? date }, transaction.id)),
       },
     });
 
-    return { scan: toDto(updated), transaction };
+    const preview = buildReviewedPreview(updated);
+    const withPreview = await prisma.receiptScan.update({
+      where: { id: receiptScanId },
+      data: { preview: JSON.stringify(preview) },
+    });
+
+    return { scan: toDto(withPreview), transactionId: transaction.id };
+  }
+
+  private async buildReviewData(userId: string, input: ReviewReceiptInput) {
+    const accountId = input.accountId === undefined ? undefined : await this.resolveAccountId(userId, input.accountId);
+    const categoryId = input.categoryId === undefined ? undefined : await this.resolveCategoryId(userId, input.categoryId);
+
+    return {
+      ...(input.merchant !== undefined ? { merchant: normalizeOptionalText(input.merchant) } : {}),
+      ...(input.totalAmount !== undefined ? { totalAmount: normalizeAmount(input.totalAmount) } : {}),
+      ...(input.currency !== undefined ? { currency: String(input.currency || 'RUB').trim().toUpperCase() } : {}),
+      ...(input.purchasedAt !== undefined ? { purchasedAt: input.purchasedAt } : {}),
+      ...(input.rawText !== undefined ? { rawText: normalizeOptionalText(input.rawText) } : {}),
+      ...(accountId !== undefined ? { accountId } : {}),
+      ...(categoryId !== undefined ? { categoryId } : {}),
+    };
+  }
+
+  private async resolveAccountId(userId: string, accountId: string | null | undefined) {
+    if (!accountId) return null;
+    const account = await prisma.account.findFirst({ where: { id: accountId, userId }, select: { id: true } });
+    if (!account) throw new NotFoundError('Account not found');
+    return account.id;
+  }
+
+  private async resolveCategoryId(userId: string, categoryId: string | null | undefined) {
+    if (!categoryId) return null;
+    const category = await prisma.category.findFirst({ where: { id: categoryId, userId }, select: { id: true, type: true } });
+    if (!category) throw new NotFoundError('Category not found');
+    if (category.type !== 'expense') throw new BadRequestError('Receipt category must be an expense category');
+    return category.id;
   }
 }
 

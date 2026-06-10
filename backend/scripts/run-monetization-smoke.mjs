@@ -4,6 +4,7 @@ const checks = [
   ['store/subscription', 'scripts/smoke/check-store-subscription.mjs'],
   ['business workspace', 'scripts/smoke/check-business-workspace.mjs'],
   ['receipt scans', 'scripts/smoke/check-receipt-scans.mjs'],
+  ['ai training', 'scripts/smoke/check-ai-training.mjs'],
 ];
 
 const started = Date.now();

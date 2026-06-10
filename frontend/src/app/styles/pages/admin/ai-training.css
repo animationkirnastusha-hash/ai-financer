@@ -1,0 +1,139 @@
+.admin-ai-training__hero {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.admin-ai-training__hero h2 {
+  margin-top: 8px;
+  font-size: 22px;
+  line-height: 1.05;
+  letter-spacing: -0.04em;
+}
+
+.admin-ai-training__hero p {
+  margin-top: 8px;
+  max-width: 26rem;
+  color: rgba(255, 255, 255, 0.52);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.admin-ai-training__item {
+  display: grid;
+  gap: 14px;
+}
+
+.admin-ai-training__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.admin-ai-training__top small {
+  color: rgba(255, 255, 255, 0.42);
+  font-size: 11px;
+}
+
+.admin-ai-training__badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  border-radius: 999px;
+  padding: 0 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.055);
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.admin-ai-training__badge.is-warning {
+  border-color: rgba(251, 191, 36, 0.25);
+  background: rgba(251, 191, 36, 0.1);
+  color: rgb(254, 243, 199);
+}
+
+.admin-ai-training__badge.is-success {
+  border-color: rgba(52, 211, 153, 0.25);
+  background: rgba(52, 211, 153, 0.1);
+  color: rgb(209, 250, 229);
+}
+
+.admin-ai-training__block {
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(0, 0, 0, 0.16);
+  padding: 12px;
+}
+
+.admin-ai-training__block span,
+.admin-ai-training__editor span {
+  display: block;
+  margin-bottom: 7px;
+  color: rgba(255, 255, 255, 0.42);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.admin-ai-training__block p,
+.admin-ai-training__block pre {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.admin-ai-training__block pre {
+  max-height: 170px;
+  overflow: auto;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.admin-ai-training__error {
+  border-radius: 18px;
+  border: 1px solid rgba(248, 113, 113, 0.22);
+  background: rgba(248, 113, 113, 0.1);
+  padding: 11px 12px;
+  color: rgb(254, 202, 202);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.admin-ai-training__editor textarea {
+  min-height: 110px;
+  width: 100%;
+  resize: vertical;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.055);
+  padding: 13px 14px;
+  color: white;
+  outline: none;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.admin-ai-training__editor textarea::placeholder {
+  color: rgba(255, 255, 255, 0.32);
+}
+
+.admin-ai-training__actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+@media (max-width: 420px) {
+  .admin-ai-training__hero,
+  .admin-ai-training__actions {
+    grid-template-columns: 1fr;
+    display: grid;
+  }
+}

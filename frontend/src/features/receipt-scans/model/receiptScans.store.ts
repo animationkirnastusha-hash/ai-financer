@@ -1,12 +1,13 @@
 import { create } from 'zustand';
-import { receiptScansApi, type CreateReceiptExpensePayload, type ReceiptScanDto, type ReviewReceiptScanPayload } from '@/features/receipt-scans/api/receiptScans.api';
+import {
+  receiptScansApi,
+  type CreateReceiptExpensePayload,
+  type ReceiptScanDto,
+  type ReviewReceiptScanPayload,
+} from '@/features/receipt-scans/api/receiptScans.api';
 import { useSubscriptionStore } from '@/features/subscription/model/subscription.store';
 
-function replaceItem(items: ReceiptScanDto[], next: ReceiptScanDto) {
-  return items.map((item) => (item.id === next.id ? next : item));
-}
-
-type ReceiptScansState = {
+export type ReceiptScansState = {
   items: ReceiptScanDto[];
   isLoading: boolean;
   isUploading: boolean;
@@ -18,6 +19,10 @@ type ReceiptScansState = {
   createExpense: (receiptScanId: string, payload: CreateReceiptExpensePayload) => Promise<ReceiptScanDto | null>;
   clearError: () => void;
 };
+
+function replaceScan(items: ReceiptScanDto[], scan: ReceiptScanDto) {
+  return items.map((item) => (item.id === scan.id ? scan : item));
+}
 
 export const useReceiptScansStore = create<ReceiptScansState>((set) => ({
   items: [],
@@ -55,7 +60,7 @@ export const useReceiptScansStore = create<ReceiptScansState>((set) => ({
     set({ isSaving: true, error: null });
     try {
       const response = await receiptScansApi.review(receiptScanId, payload);
-      set((state) => ({ items: replaceItem(state.items, response.scan), isSaving: false }));
+      set((state) => ({ items: replaceScan(state.items, response.scan), isSaving: false }));
       return response.scan;
     } catch (error) {
       set({ error: error instanceof Error ? error.message : 'receipt_scan_review_failed', isSaving: false });
@@ -67,7 +72,7 @@ export const useReceiptScansStore = create<ReceiptScansState>((set) => ({
     set({ isSaving: true, error: null });
     try {
       const response = await receiptScansApi.createExpense(receiptScanId, payload);
-      set((state) => ({ items: replaceItem(state.items, response.scan), isSaving: false }));
+      set((state) => ({ items: replaceScan(state.items, response.scan), isSaving: false }));
       return response.scan;
     } catch (error) {
       set({ error: error instanceof Error ? error.message : 'receipt_scan_expense_failed', isSaving: false });

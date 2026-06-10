@@ -54,9 +54,11 @@ export class DataResetService {
 
       deleted.notificationDeliveries = (await tx.notificationDelivery.deleteMany({ where: userWhere })).count;
       deleted.notifications = (await tx.notification.deleteMany({ where: userWhere })).count;
+      deleted.receiptScans = (await tx.receiptScan.deleteMany({ where: userWhere })).count;
       deleted.obligationReminders = (await tx.obligationReminder.deleteMany({ where: userWhere })).count;
       deleted.loanPayments = (await tx.loanPayment.deleteMany({ where: userWhere })).count;
       deleted.loans = (await tx.loan.deleteMany({ where: userWhere })).count;
+      deleted.recurringPaymentPayments = (await tx.recurringPaymentPayment.deleteMany({ where: userWhere })).count;
       deleted.recurringPayments = (await tx.recurringPayment.deleteMany({ where: userWhere })).count;
       deleted.spendingLimits = (await tx.spendingLimit.deleteMany({ where: userWhere })).count;
       deleted.transactions = (await tx.transaction.deleteMany({ where: userWhere })).count;

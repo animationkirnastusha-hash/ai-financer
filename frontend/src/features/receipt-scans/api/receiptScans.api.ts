@@ -1,6 +1,5 @@
 import { getAccessToken } from '@/features/auth/lib/accessToken';
 import type { SubscriptionStatusDto } from '@/features/subscription/api/subscription.api';
-import type { TransactionDto } from '@/features/transactions/api/transactions.api';
 import { env } from '@/shared/config/env';
 
 export type ReceiptScanPreviewDto = {
@@ -19,6 +18,9 @@ export type ReceiptScanDto = {
   totalAmount: number | null;
   currency: string;
   purchasedAt: string | null;
+  accountId: string | null;
+  categoryId: string | null;
+  transactionId: string | null;
   preview: ReceiptScanPreviewDto | null;
   createdAt: string;
   updatedAt: string;
@@ -36,19 +38,24 @@ export type ReceiptScanUploadDto = {
 export type ReviewReceiptScanPayload = Partial<{
   merchant: string | null;
   totalAmount: number | null;
-  currency: string;
+  currency: string | null;
   purchasedAt: string | null;
+  accountId: string | null;
+  categoryId: string | null;
   rawText: string | null;
 }>;
 
 export type CreateReceiptExpensePayload = {
   accountId: string;
   amount?: number | null;
+  totalAmount?: number | null;
   title?: string | null;
   description?: string | null;
   date?: string | null;
+  purchasedAt?: string | null;
   categoryId?: string | null;
-  sectionId?: string | null;
+  currency?: string | null;
+  merchant?: string | null;
 };
 
 async function parseResponse<T>(response: Response): Promise<T> {
@@ -67,13 +74,25 @@ async function parseResponse<T>(response: Response): Promise<T> {
   return payload as T;
 }
 
-function authHeaders(): HeadersInit {
+function authHeaders(extra?: HeadersInit): HeadersInit {
   const token = getAccessToken();
-  return token ? { Authorization: `Bearer ${token}` } : {};
+  return {
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...(extra ?? {}),
+  };
 }
 
-function jsonHeaders(): HeadersInit {
-  return { 'Content-Type': 'application/json', ...authHeaders() };
+function normalizeExpensePayload(payload: CreateReceiptExpensePayload): ReviewReceiptScanPayload & { title?: string | null; description?: string | null } {
+  return {
+    accountId: payload.accountId,
+    categoryId: payload.categoryId ?? null,
+    totalAmount: payload.totalAmount ?? payload.amount ?? null,
+    purchasedAt: payload.purchasedAt ?? payload.date ?? null,
+    currency: payload.currency ?? 'RUB',
+    merchant: payload.merchant ?? payload.title ?? null,
+    title: payload.title ?? null,
+    description: payload.description ?? null,
+  };
 }
 
 export const receiptScansApi = {
@@ -98,18 +117,18 @@ export const receiptScansApi = {
   review: async (receiptScanId: string, payload: ReviewReceiptScanPayload) => {
     const response = await fetch(`${env.apiBaseUrl}/receipt-scans/${receiptScanId}/review`, {
       method: 'PATCH',
-      headers: jsonHeaders(),
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify(payload),
     });
     return parseResponse<{ scan: ReceiptScanDto }>(response);
   },
 
   createExpense: async (receiptScanId: string, payload: CreateReceiptExpensePayload) => {
-    const response = await fetch(`${env.apiBaseUrl}/receipt-scans/${receiptScanId}/create-expense`, {
+    const response = await fetch(`${env.apiBaseUrl}/receipt-scans/${receiptScanId}/expense`, {
       method: 'POST',
-      headers: jsonHeaders(),
-      body: JSON.stringify(payload),
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify(normalizeExpensePayload(payload)),
     });
-    return parseResponse<{ scan: ReceiptScanDto; transaction: TransactionDto }>(response);
+    return parseResponse<{ scan: ReceiptScanDto; transactionId: string }>(response);
   },
 };

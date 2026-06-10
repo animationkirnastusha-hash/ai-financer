@@ -92,6 +92,7 @@ export const getReminders = asyncHandler(async (req: Request, res: Response) => 
 export const createReminder = asyncHandler(async (req: Request, res: Response) => {
   const reminder = await obligationService.createReminder(req.userId!, {
     loanId: req.body?.loanId ?? null,
+    recurringPaymentId: req.body?.recurringPaymentId ?? null,
     title: req.body?.title,
     message: req.body?.message ?? null,
     dueDate: parseDate(req.body?.dueDate) ?? new Date(),

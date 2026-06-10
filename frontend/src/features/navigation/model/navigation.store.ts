@@ -23,8 +23,6 @@ type NavigationState = {
   currentScreen: AppScreen;
   history: AppScreen[];
 
-  isAIMenuOpen: boolean;
-  isGlobalCommandListOpen: boolean;
   isNavigationMenuOpen: boolean;
   hasSystemNotifications: boolean;
   isNotificationsOpen: boolean;
@@ -36,12 +34,6 @@ type NavigationState = {
   openAIWithCommand: (command?: string) => void;
   goBack: () => void;
   goHome: () => void;
-
-  openAIMenu: () => void;
-  closeAIMenu: () => void;
-
-  openGlobalCommandList: () => void;
-  closeGlobalCommandList: () => void;
 
   openNavigationMenu: () => void;
   closeNavigationMenu: () => void;
@@ -58,21 +50,16 @@ export const useNavigationStore = create<NavigationState>((set, get) => ({
   currentScreen: 'dashboard',
   history: [],
 
-  isAIMenuOpen: false,
-  isGlobalCommandListOpen: false,
   isNavigationMenuOpen: false,
   hasSystemNotifications: true,
   isNotificationsOpen: false,
   settingsSection: null,
 
   navigateTo: (screen) => {
-    const targetScreen = screen;
     const { currentScreen, history } = get();
 
-    if (targetScreen === currentScreen) {
+    if (screen === currentScreen) {
       set({
-        isAIMenuOpen: false,
-        isGlobalCommandListOpen: false,
         isNavigationMenuOpen: false,
         isNotificationsOpen: false,
       });
@@ -80,13 +67,11 @@ export const useNavigationStore = create<NavigationState>((set, get) => ({
     }
 
     set({
-      currentScreen: targetScreen,
-      history: compactHistory(history, currentScreen, targetScreen),
-      isAIMenuOpen: false,
-      isGlobalCommandListOpen: false,
+      currentScreen: screen,
+      history: compactHistory(history, currentScreen, screen),
       isNavigationMenuOpen: false,
       isNotificationsOpen: false,
-      settingsSection: targetScreen === 'settings' ? get().settingsSection : null,
+      settingsSection: screen === 'settings' ? get().settingsSection : null,
     });
   },
 
@@ -96,8 +81,6 @@ export const useNavigationStore = create<NavigationState>((set, get) => ({
       currentScreen: 'settings',
       history: currentScreen === 'settings' ? history : compactHistory(history, currentScreen, 'settings'),
       settingsSection: section,
-      isAIMenuOpen: false,
-      isGlobalCommandListOpen: false,
       isNavigationMenuOpen: false,
       isNotificationsOpen: false,
     });
@@ -118,8 +101,6 @@ export const useNavigationStore = create<NavigationState>((set, get) => ({
 
     set({
       settingsSection: null,
-      isAIMenuOpen: false,
-      isGlobalCommandListOpen: false,
       isNavigationMenuOpen: false,
       isNotificationsOpen: false,
     });
@@ -140,8 +121,6 @@ export const useNavigationStore = create<NavigationState>((set, get) => ({
     set({
       currentScreen: previous,
       history: nextHistory,
-      isAIMenuOpen: false,
-      isGlobalCommandListOpen: false,
       isNavigationMenuOpen: false,
       isNotificationsOpen: false,
     });
@@ -151,30 +130,14 @@ export const useNavigationStore = create<NavigationState>((set, get) => ({
     set({
       currentScreen: 'dashboard',
       history: [],
-      isAIMenuOpen: false,
-      isGlobalCommandListOpen: false,
       isNavigationMenuOpen: false,
       isNotificationsOpen: false,
       settingsSection: null,
     }),
 
-  openAIMenu: () => set({ isAIMenuOpen: true, isNotificationsOpen: false, isNavigationMenuOpen: false }),
-  closeAIMenu: () => set({ isAIMenuOpen: false }),
-
-  openGlobalCommandList: () =>
-    set({
-      isGlobalCommandListOpen: true,
-      isAIMenuOpen: false,
-      isNavigationMenuOpen: false,
-      isNotificationsOpen: false,
-    }),
-  closeGlobalCommandList: () => set({ isGlobalCommandListOpen: false }),
-
   openNavigationMenu: () =>
     set({
       isNavigationMenuOpen: true,
-      isAIMenuOpen: false,
-      isGlobalCommandListOpen: false,
       isNotificationsOpen: false,
     }),
   closeNavigationMenu: () => set({ isNavigationMenuOpen: false }),
@@ -182,8 +145,6 @@ export const useNavigationStore = create<NavigationState>((set, get) => ({
   openNotifications: () =>
     set({
       isNotificationsOpen: true,
-      isAIMenuOpen: false,
-      isGlobalCommandListOpen: false,
       isNavigationMenuOpen: false,
     }),
   closeNotifications: () => set({ isNotificationsOpen: false }),

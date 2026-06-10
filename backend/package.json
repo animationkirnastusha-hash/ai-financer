@@ -49,7 +49,9 @@
     "smoke:full": "npm run smoke:predeploy && npm run smoke:monetization",
     "smoke:goals-limits": "node scripts/smoke/check-goals-limits.mjs",
     "smoke:obligations-reports": "node scripts/smoke/check-obligations-reports.mjs",
-    "smoke:voice-status": "node scripts/smoke/check-voice-status.mjs"
+    "smoke:voice-status": "node scripts/smoke/check-voice-status.mjs",
+    "smoke:ai-training": "node scripts/smoke/check-ai-training.mjs",
+    "smoke:prisma-features": "npm run smoke:obligations-reports && npm run smoke:business && npm run smoke:receipts && npm run smoke:ai-training"
   },
   "keywords": [],
   "author": "",

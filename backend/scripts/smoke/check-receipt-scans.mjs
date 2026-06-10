@@ -39,6 +39,19 @@ async function uploadReceipt(context) {
 await runSmoke('receipt-scans', async (context) => {
   await ensurePremiumAccess(context);
 
+  const accountResponse = await requestJson(context, '/accounts', {
+    method: 'POST',
+    expected: [201],
+    body: {
+      name: `Receipt smoke account ${context.suffix}`,
+      type: 'card',
+      currency: 'RUB',
+      balance: 15000,
+    },
+  });
+  const accountId = accountResponse.payload?.account?.id;
+  if (!accountId) throw new Error('Account for receipt expense was not created');
+
   const before = await requestJson(context, '/subscription/me');
   const beforeUsed = before.payload?.usage?.receiptScansThisMonth?.used;
   if (typeof beforeUsed !== 'number') throw new Error('Receipt usage before upload is invalid');
@@ -58,6 +71,32 @@ await runSmoke('receipt-scans', async (context) => {
     throw new Error('Receipt list does not contain uploaded scan');
   }
 
+  const reviewed = await requestJson(context, `/receipt-scans/${scanId}/review`, {
+    method: 'PATCH',
+    body: {
+      merchant: `Smoke Market ${context.suffix}`,
+      totalAmount: 1234,
+      currency: 'RUB',
+      purchasedAt: new Date().toISOString(),
+      rawText: 'Smoke receipt raw text',
+    },
+  });
+  if (reviewed.payload?.scan?.status !== 'reviewed') throw new Error('Receipt review did not set reviewed status');
+
+  const expense = await requestJson(context, `/receipt-scans/${scanId}/create-expense`, {
+    method: 'POST',
+    expected: [201],
+    body: {
+      accountId,
+      amount: 1234,
+      title: `Smoke receipt expense ${context.suffix}`,
+      description: 'predeploy receipt smoke',
+      date: new Date().toISOString(),
+    },
+  });
+  if (expense.payload?.scan?.status !== 'expense_created') throw new Error('Receipt expense did not set expense_created status');
+  if (!expense.payload?.transaction?.id) throw new Error('Receipt expense did not return transaction');
+
   const after = await requestJson(context, '/subscription/me');
   const afterUsed = after.payload?.usage?.receiptScansThisMonth?.used;
   if (typeof afterUsed !== 'number' || afterUsed < beforeUsed + 1) {
@@ -66,6 +105,8 @@ await runSmoke('receipt-scans', async (context) => {
 
   context.log('receipt scan flow passed', {
     scanId,
+    accountId,
+    transactionId: expense.payload.transaction.id,
     beforeUsed,
     afterUsed,
   });

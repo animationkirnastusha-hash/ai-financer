@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
-import { adminApi, type AdminEvent, type AdminOverview, type AdminUser } from '@/features/admin/api/admin.api';
+import { adminApi, type AdminAITrainingExample, type AdminEvent, type AdminOverview, type AdminUser } from '@/features/admin/api/admin.api';
 import { useAuthStore } from '@/features/auth/model/auth.store';
 import { useOnboardingStore } from '@/features/onboarding/model/onboarding.store';
 import { ScreenTopBar } from '@/shared/ui/ScreenTopBar';
 import { HttpError } from '@/shared/api/http';
 
-type Tab = 'overview' | 'users' | 'events' | 'monitoring' | 'tools';
+type Tab = 'overview' | 'users' | 'events' | 'monitoring' | 'training' | 'tools';
 
 type LoadError = {
   overview?: string;
@@ -62,11 +62,15 @@ export default function AdminPage() {
   const [overview, setOverview] = useState<AdminOverview | null>(null);
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [events, setEvents] = useState<AdminEvent[]>([]);
+  const [trainingExamples, setTrainingExamples] = useState<AdminAITrainingExample[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<LoadError>({});
   const [resettingUserId, setResettingUserId] = useState<string | null>(null);
   const [subscriptionBusy, setSubscriptionBusy] = useState<string | null>(null);
   const [subscriptionDays, setSubscriptionDays] = useState<Record<string, string>>({});
+  const [trainingDrafts, setTrainingDrafts] = useState<Record<string, string>>({});
+  const [trainingBusyId, setTrainingBusyId] = useState<string | null>(null);
+  const [isTrainingLoading, setIsTrainingLoading] = useState(false);
   const [premiumPreviewEnabled, setPremiumPreviewEnabled] = useState(() => localStorage.getItem('ai-financer-premium-preview') === '1');
   const replayOnboarding = useOnboardingStore((state) => state.reset);
 
@@ -113,6 +117,39 @@ export default function AdminPage() {
   const reloadUsers = async () => {
     const payload = await adminApi.users();
     setUsers(payload.users);
+  };
+
+  const loadTrainingExamples = async () => {
+    setIsTrainingLoading(true);
+    try {
+      const payload = await adminApi.aiTraining();
+      setTrainingExamples(payload.items);
+      setTrainingDrafts((current) => {
+        const next = { ...current };
+        payload.items.forEach((item) => {
+          if (next[item.id] === undefined) next[item.id] = item.correctedOutput ?? '';
+        });
+        return next;
+      });
+    } finally {
+      setIsTrainingLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!isAdmin || tab !== 'training') return;
+    void loadTrainingExamples();
+  }, [isAdmin, tab]);
+
+  const handleSaveTrainingExample = async (exampleId: string, success: boolean) => {
+    setTrainingBusyId(exampleId);
+    try {
+      const correctedOutput = trainingDrafts[exampleId] ?? '';
+      const response = await adminApi.updateAITraining(exampleId, { correctedOutput, success });
+      setTrainingExamples((items) => items.map((item) => item.id === exampleId ? response.result : item));
+    } finally {
+      setTrainingBusyId(null);
+    }
   };
 
 
@@ -179,6 +216,7 @@ export default function AdminPage() {
       { id: 'users', title: 'Пользователи' },
       { id: 'events', title: 'События' },
       { id: 'monitoring', title: 'Сервер' },
+      { id: 'training', title: 'Фина' },
       { id: 'tools', title: 'Инструменты' },
     ],
     [],
@@ -386,6 +424,80 @@ export default function AdminPage() {
         ) : null}
 
 
+        {tab === 'training' ? (
+          <section className="admin-ai-training space-y-3">
+            <div className="app-card admin-ai-training__hero">
+              <div>
+                <div className="app-eyebrow">Разбор Фины</div>
+                <h2>Ошибки и уточнения</h2>
+                <p>Здесь собираются команды, где Фина ошиблась, попросила уточнение или подготовила действие на проверку.</p>
+              </div>
+              <button type="button" className="app-secondary-button" onClick={() => void loadTrainingExamples()} disabled={isTrainingLoading}>
+                {isTrainingLoading ? 'Обновляю…' : 'Обновить'}
+              </button>
+            </div>
+
+            {isTrainingLoading && !trainingExamples.length ? <div className="app-card text-sm text-white/50">Загрузка…</div> : null}
+
+            {trainingExamples.length ? trainingExamples.map((item) => (
+              <article key={item.id} className="app-card admin-ai-training__item">
+                <div className="admin-ai-training__top">
+                  <span className={item.success ? 'admin-ai-training__badge is-success' : 'admin-ai-training__badge is-warning'}>
+                    {item.success ? 'Размечено' : 'Нужно проверить'}
+                  </span>
+                  <small>{formatDate(item.createdAt)}</small>
+                </div>
+
+                <div className="admin-ai-training__block">
+                  <span>Команда</span>
+                  <p>{item.input}</p>
+                </div>
+
+                {item.aiOutput ? (
+                  <div className="admin-ai-training__block">
+                    <span>Ответ Фины</span>
+                    <pre>{item.aiOutput}</pre>
+                  </div>
+                ) : null}
+
+                {item.error ? (
+                  <div className="admin-ai-training__error">{item.error}</div>
+                ) : null}
+
+                <label className="admin-ai-training__editor">
+                  <span>Как должно быть</span>
+                  <textarea
+                    value={trainingDrafts[item.id] ?? ''}
+                    onChange={(event) => setTrainingDrafts((state) => ({ ...state, [item.id]: event.target.value }))}
+                    rows={4}
+                    placeholder="Коротко опиши правильное действие или ответ."
+                  />
+                </label>
+
+                <div className="admin-ai-training__actions">
+                  <button
+                    type="button"
+                    className="app-secondary-button"
+                    disabled={trainingBusyId === item.id}
+                    onClick={() => void handleSaveTrainingExample(item.id, false)}
+                  >
+                    Сохранить как ошибку
+                  </button>
+                  <button
+                    type="button"
+                    className="app-primary-button"
+                    disabled={trainingBusyId === item.id}
+                    onClick={() => void handleSaveTrainingExample(item.id, true)}
+                  >
+                    Отметить исправленным
+                  </button>
+                </div>
+              </article>
+            )) : (
+              <div className="app-card text-sm text-white/50">Пока нет примеров для разбора.</div>
+            )}
+          </section>
+        ) : null}
 
         {tab === 'tools' ? (
           <div className="space-y-4">

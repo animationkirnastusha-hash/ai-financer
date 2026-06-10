@@ -33,6 +33,7 @@ export type UpdateLoanInput = Partial<CreateLoanInput> & {
 
 export type CreateReminderInput = {
   loanId?: string | null;
+  recurringPaymentId?: string | null;
   title: string;
   message?: string | null;
   dueDate: Date;
@@ -159,7 +160,10 @@ export class ObligationService {
           status: 'scheduled',
           remindAt: { lte: monthEnd },
         },
-        include: { loan: { select: { id: true, title: true, type: true, monthlyPayment: true, currency: true, accountId: true } } },
+        include: {
+          loan: { select: { id: true, title: true, type: true, monthlyPayment: true, currency: true, accountId: true } },
+          recurringPayment: { select: { id: true, name: true, amount: true, period: true, nextDate: true, accountId: true } },
+        },
         orderBy: { remindAt: 'asc' },
         take: 10,
       }),
@@ -349,22 +353,38 @@ export class ObligationService {
   async listReminders(userId: string) {
     return prisma.obligationReminder.findMany({
       where: { userId, status: { not: 'cancelled' } },
-      include: { loan: { select: { id: true, title: true, type: true, monthlyPayment: true, currency: true } } },
+      include: {
+        loan: { select: { id: true, title: true, type: true, monthlyPayment: true, currency: true } },
+        recurringPayment: { select: { id: true, name: true, amount: true, period: true, nextDate: true } },
+      },
       orderBy: [{ remindAt: 'asc' }],
       take: 100,
     });
   }
 
   async createReminder(userId: string, input: CreateReminderInput) {
+    if (input.loanId && input.recurringPaymentId) {
+      throw new BadRequestError('Reminder can be linked either to loan or recurring payment');
+    }
+
     if (input.loanId) {
       const loan = await prisma.loan.findFirst({ where: { id: input.loanId, userId }, select: { id: true } });
       if (!loan) throw new NotFoundError('Loan not found');
+    }
+
+    if (input.recurringPaymentId) {
+      const recurringPayment = await prisma.recurringPayment.findFirst({
+        where: { id: input.recurringPaymentId, userId },
+        select: { id: true },
+      });
+      if (!recurringPayment) throw new NotFoundError('Recurring payment not found');
     }
 
     return prisma.obligationReminder.create({
       data: {
         userId,
         loanId: input.loanId ?? null,
+        recurringPaymentId: input.recurringPaymentId ?? null,
         title: normalizeText(input.title, 'Reminder title'),
         message: input.message?.trim() || normalizeText(input.title, 'Reminder title'),
         dueDate: input.dueDate,
