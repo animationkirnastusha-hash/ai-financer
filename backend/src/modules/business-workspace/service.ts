@@ -100,7 +100,7 @@ export class BusinessWorkspaceService {
   async getWorkspace(userId: string) {
     const access = await this.assertAccess(userId);
     const workspace = await this.ensureWorkspace(userId);
-    const summary = await this.getSummary(userId, workspace.monthlyIncomePlan, workspace.monthlyExpensePlan);
+    const summary = await this.getSummary(userId, workspace);
     const accounts = await prisma.account.findMany({
       where: { userId },
       orderBy: { createdAt: 'asc' },
@@ -145,23 +145,36 @@ export class BusinessWorkspaceService {
       },
     });
 
-    const summary = await this.getSummary(userId, updated.monthlyIncomePlan, updated.monthlyExpensePlan);
+    const summary = await this.getSummary(userId, updated);
     return { workspace: serializeWorkspace(updated), summary };
   }
 
-  private async getSummary(userId: string, incomePlan: number, expensePlan: number) {
+  private async getSummary(userId: string, workspace: { monthlyIncomePlan: number; monthlyExpensePlan: number; incomeAccountId: string | null; expenseAccountId: string | null }) {
     const monthStart = startOfMonth();
     const soon = new Date(Date.now() + MONTH_MS);
+    const accountIds = [workspace.incomeAccountId, workspace.expenseAccountId].filter((id): id is string => Boolean(id));
 
-    const [incomeAgg, expenseAgg, activeLoans, upcomingReminders] = await Promise.all([
-      prisma.transaction.aggregate({
-        where: { userId, type: 'income', date: { gte: monthStart } },
-        _sum: { amount: true },
-      }),
-      prisma.transaction.aggregate({
-        where: { userId, type: 'expense', date: { gte: monthStart } },
-        _sum: { amount: true },
-      }),
+    const incomeWhere = {
+      userId,
+      type: 'income',
+      date: { gte: monthStart },
+      ...(workspace.incomeAccountId ? { accountId: workspace.incomeAccountId } : {}),
+    } as const;
+
+    const expenseWhere = {
+      userId,
+      type: 'expense',
+      date: { gte: monthStart },
+      ...(workspace.expenseAccountId ? { accountId: workspace.expenseAccountId } : {}),
+    } as const;
+
+    const recentWhere = accountIds.length
+      ? { userId, accountId: { in: accountIds } }
+      : { userId };
+
+    const [incomeAgg, expenseAgg, activeLoans, upcomingReminders, recentTransactions, recurringPayments, loanPayments] = await Promise.all([
+      prisma.transaction.aggregate({ where: incomeWhere, _sum: { amount: true } }),
+      prisma.transaction.aggregate({ where: expenseWhere, _sum: { amount: true } }),
       prisma.loan.count({ where: { userId, status: 'active' } }),
       prisma.obligationReminder.count({
         where: {
@@ -170,11 +183,48 @@ export class BusinessWorkspaceService {
           remindAt: { gte: new Date(), lte: soon },
         },
       }),
+      prisma.transaction.findMany({
+        where: recentWhere,
+        include: {
+          account: { select: { id: true, name: true, currency: true } },
+          category: { select: { id: true, name: true } },
+        },
+        orderBy: [{ date: 'desc' }, { createdAt: 'desc' }],
+        take: 6,
+      }),
+      prisma.recurringPayment.findMany({
+        where: { userId, isActive: true, nextDate: { lte: soon } },
+        include: { account: { select: { id: true, name: true, currency: true } } },
+        orderBy: { nextDate: 'asc' },
+        take: 5,
+      }),
+      prisma.loan.findMany({
+        where: { userId, status: 'active', nextPaymentDate: { not: null, lte: soon } },
+        include: { account: { select: { id: true, name: true, currency: true } } },
+        orderBy: { nextPaymentDate: 'asc' },
+        take: 5,
+      }),
     ]);
 
     const monthIncome = incomeAgg._sum.amount ?? 0;
     const monthExpense = expenseAgg._sum.amount ?? 0;
     const profit = monthIncome - monthExpense;
+    const incomePlan = workspace.monthlyIncomePlan;
+    const expensePlan = workspace.monthlyExpensePlan;
+    const insights: Array<{ type: string; title: string; caption: string }> = [];
+
+    if (!workspace.incomeAccountId && !workspace.expenseAccountId) {
+      insights.push({ type: 'setup', title: 'Выбери рабочие счета', caption: 'Так бизнес-раздел будет считать только рабочие деньги, без личных операций.' });
+    }
+    if (incomePlan > 0 && monthIncome < incomePlan) {
+      insights.push({ type: 'income_plan', title: 'До плана по доходам ещё есть запас', caption: `Выполнено ${Math.min(100, Math.round((monthIncome / incomePlan) * 100))}%.` });
+    }
+    if (expensePlan > 0 && monthExpense > expensePlan) {
+      insights.push({ type: 'expense_plan', title: 'Расходы выше плана', caption: 'Проверь регулярные платежи и последние траты.' });
+    }
+    if (profit >= 0 && monthIncome > 0) {
+      insights.push({ type: 'profit', title: 'Месяц в плюсе', caption: 'Фина будет держать фокус на расходах и ближайших платежах.' });
+    }
 
     return {
       monthIncome,
@@ -186,6 +236,37 @@ export class BusinessWorkspaceService {
       expenseProgress: expensePlan > 0 ? Math.min(100, Math.round((monthExpense / expensePlan) * 100)) : 0,
       activeLoans,
       upcomingReminders,
+      recentTransactions: recentTransactions.map((item) => ({
+        id: item.id,
+        title: item.title,
+        type: item.type,
+        amount: item.amount,
+        date: item.date.toISOString(),
+        accountName: item.account?.name ?? null,
+        categoryName: item.category?.name ?? null,
+        currency: item.account?.currency ?? 'RUB',
+      })),
+      nextPayments: [
+        ...recurringPayments.map((item) => ({
+          id: item.id,
+          type: 'recurring',
+          title: item.name,
+          amount: item.amount,
+          date: item.nextDate.toISOString(),
+          accountName: item.account?.name ?? null,
+          currency: item.account?.currency ?? 'RUB',
+        })),
+        ...loanPayments.map((item) => ({
+          id: item.id,
+          type: 'loan',
+          title: item.title,
+          amount: item.monthlyPayment,
+          date: item.nextPaymentDate?.toISOString() ?? new Date().toISOString(),
+          accountName: item.account?.name ?? null,
+          currency: item.currency,
+        })),
+      ].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()).slice(0, 5),
+      insights: insights.slice(0, 3),
     };
   }
 }

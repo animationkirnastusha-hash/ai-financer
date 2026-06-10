@@ -84,6 +84,19 @@ export type AdminEvent = {
   } | null;
 };
 
+export type AdminAITrainingExample = {
+  id: string;
+  userId: string | null;
+  input: string;
+  aiOutput: string | null;
+  correctedOutput: string | null;
+  success: boolean;
+  error: string | null;
+  model: string | null;
+  latencyMs: number | null;
+  createdAt: string;
+};
+
 export type AdminResetMode = 'finance' | 'full';
 export type AdminSubscriptionProduct = 'premium' | 'business';
 
@@ -102,4 +115,7 @@ export const adminApi = {
     apiClient.post<{ success: boolean }>('/admin/users/' + userId + '/subscription/revoke', { product }),
   restartTrial: (userId: string) => apiClient.post<{ success: boolean }>('/admin/users/' + userId + '/trial/restart'),
   processReferralRewards: () => apiClient.post<{ success: boolean; result: { referrers: number; checked: number; awarded: number } }>('/admin/referrals/process'),
+  aiTraining: () => apiClient.get<{ items: AdminAITrainingExample[] }>('/admin/ai-training'),
+  updateAITraining: (exampleId: string, payload: { correctedOutput?: string; success?: boolean }) =>
+    apiClient.patch<{ success: boolean; result: AdminAITrainingExample }>('/admin/ai-training/' + exampleId, payload),
 };

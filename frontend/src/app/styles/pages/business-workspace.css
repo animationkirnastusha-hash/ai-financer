@@ -289,3 +289,59 @@
     flex-direction: column;
   }
 }
+
+
+.business-insights-card,
+.business-detail-lists section {
+  display: grid;
+  gap: 12px;
+}
+
+.business-insight-list,
+.business-detail-lists {
+  display: grid;
+  gap: 10px;
+}
+
+.business-insight-list article,
+.business-detail-lists article {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.055);
+  padding: 12px;
+}
+
+.business-insight-list article {
+  display: grid;
+}
+
+.business-insight-list strong,
+.business-detail-lists strong {
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 14px;
+}
+
+.business-insight-list span,
+.business-detail-lists span,
+.business-detail-lists p {
+  color: rgba(255, 255, 255, 0.56);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.business-detail-lists h3 {
+  margin: 8px 0 0;
+  color: rgba(255, 255, 255, 0.74);
+  font-size: 13px;
+  letter-spacing: -0.01em;
+}
+
+.business-detail-lists b {
+  flex-shrink: 0;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 13px;
+}

@@ -1,5 +1,6 @@
 import { getAccessToken } from '@/features/auth/lib/accessToken';
 import type { SubscriptionStatusDto } from '@/features/subscription/api/subscription.api';
+import type { TransactionDto } from '@/features/transactions/api/transactions.api';
 import { env } from '@/shared/config/env';
 
 export type ReceiptScanPreviewDto = {
@@ -32,6 +33,24 @@ export type ReceiptScanUploadDto = {
   subscription: SubscriptionStatusDto;
 };
 
+export type ReviewReceiptScanPayload = Partial<{
+  merchant: string | null;
+  totalAmount: number | null;
+  currency: string;
+  purchasedAt: string | null;
+  rawText: string | null;
+}>;
+
+export type CreateReceiptExpensePayload = {
+  accountId: string;
+  amount?: number | null;
+  title?: string | null;
+  description?: string | null;
+  date?: string | null;
+  categoryId?: string | null;
+  sectionId?: string | null;
+};
+
 async function parseResponse<T>(response: Response): Promise<T> {
   const contentType = response.headers.get('content-type') || '';
   const payload = contentType.includes('application/json') ? await response.json() : await response.text();
@@ -53,6 +72,10 @@ function authHeaders(): HeadersInit {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
+function jsonHeaders(): HeadersInit {
+  return { 'Content-Type': 'application/json', ...authHeaders() };
+}
+
 export const receiptScansApi = {
   list: async () => {
     const response = await fetch(`${env.apiBaseUrl}/receipt-scans`, {
@@ -70,5 +93,23 @@ export const receiptScansApi = {
       body,
     });
     return parseResponse<ReceiptScanUploadDto>(response);
+  },
+
+  review: async (receiptScanId: string, payload: ReviewReceiptScanPayload) => {
+    const response = await fetch(`${env.apiBaseUrl}/receipt-scans/${receiptScanId}/review`, {
+      method: 'PATCH',
+      headers: jsonHeaders(),
+      body: JSON.stringify(payload),
+    });
+    return parseResponse<{ scan: ReceiptScanDto }>(response);
+  },
+
+  createExpense: async (receiptScanId: string, payload: CreateReceiptExpensePayload) => {
+    const response = await fetch(`${env.apiBaseUrl}/receipt-scans/${receiptScanId}/create-expense`, {
+      method: 'POST',
+      headers: jsonHeaders(),
+      body: JSON.stringify(payload),
+    });
+    return parseResponse<{ scan: ReceiptScanDto; transaction: TransactionDto }>(response);
   },
 };

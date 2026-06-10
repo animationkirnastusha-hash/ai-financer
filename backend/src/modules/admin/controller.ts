@@ -55,3 +55,19 @@ export const restartAdminTrial = asyncHandler(async (req: Request, res: Response
   const result = await adminService.restartTrial(userId);
   res.json({ success: true, result });
 });
+
+export const getAdminAITrainingExamples = asyncHandler(async (req: Request, res: Response) => {
+  const limit = Number(req.query.limit ?? 50);
+  const successQuery = req.query.success;
+  const success = successQuery === undefined ? null : successQuery === 'true';
+  const items = await adminService.getAITrainingExamples({ limit: Number.isFinite(limit) ? limit : 50, success });
+  res.json({ items });
+});
+
+export const updateAdminAITrainingExample = asyncHandler(async (req: Request, res: Response) => {
+  const rawId = req.params.exampleId;
+  const id = Array.isArray(rawId) ? rawId[0] : rawId;
+  const result = await adminService.updateAITrainingExample(id, req.body ?? {});
+  res.json({ success: true, result });
+});
+

@@ -16,6 +16,13 @@ function requireUserId(req: Request): string {
   return req.userId;
 }
 
+function readReceiptScanId(req: Request): string {
+  const raw = req.params.receiptScanId;
+  const value = Array.isArray(raw) ? raw[0] : raw;
+  if (!value || !value.trim()) throw new BadRequestError('Receipt scan is required');
+  return value.trim();
+}
+
 export const listReceiptScans = asyncHandler(async (req: Request, res: Response) => {
   const userId = requireUserId(req);
   res.json({ items: await receiptScanService.list(userId) });
@@ -37,7 +44,15 @@ export const uploadReceiptScan = asyncHandler(async (req: ReceiptUploadRequest, 
 
 export const getReceiptScan = asyncHandler(async (req: Request, res: Response) => {
   const userId = requireUserId(req);
-  const receiptScanId = typeof req.params.receiptScanId === 'string' ? req.params.receiptScanId : '';
-  if (!receiptScanId) throw new BadRequestError('Receipt scan is required');
-  res.json(await receiptScanService.get(userId, receiptScanId));
+  res.json(await receiptScanService.get(userId, readReceiptScanId(req)));
+});
+
+export const reviewReceiptScan = asyncHandler(async (req: Request, res: Response) => {
+  const userId = requireUserId(req);
+  res.json({ scan: await receiptScanService.review(userId, readReceiptScanId(req), req.body ?? {}) });
+});
+
+export const createExpenseFromReceiptScan = asyncHandler(async (req: Request, res: Response) => {
+  const userId = requireUserId(req);
+  res.status(201).json(await receiptScanService.createExpense(userId, readReceiptScanId(req), req.body ?? {}));
 });

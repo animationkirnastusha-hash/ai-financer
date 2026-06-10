@@ -13,6 +13,12 @@ import { formatMoney } from '@/shared/lib/money';
 
 type BusinessTab = 'overview' | 'money' | 'accounts' | 'settings';
 
+function formatBusinessDate(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '—';
+  return new Intl.DateTimeFormat('ru-RU', { day: '2-digit', month: 'short' }).format(date);
+}
+
 export default function BusinessAccountantPage() {
   const { t } = useI18n();
   const [tab, setTab] = useState<BusinessTab>('overview');
@@ -73,6 +79,24 @@ export default function BusinessAccountantPage() {
           {tab === 'overview' ? (
             <>
               <BusinessSummaryCards summary={summary} />
+              {summary?.insights?.length ? (
+                <section className="app-card business-insights-card">
+                  <div className="business-section-head">
+                    <div>
+                      <div className="app-eyebrow">{t('business.insights.eyebrow')}</div>
+                      <h2>{t('business.insights.title')}</h2>
+                    </div>
+                  </div>
+                  <div className="business-insight-list">
+                    {summary.insights.map((item) => (
+                      <article key={`${item.type}-${item.title}`}>
+                        <strong>{item.title}</strong>
+                        <span>{item.caption}</span>
+                      </article>
+                    ))}
+                  </div>
+                </section>
+              ) : null}
               <BusinessModuleList />
             </>
           ) : null}
@@ -89,6 +113,26 @@ export default function BusinessAccountantPage() {
                 <article><span>{t('business.summary.income')}</span><strong>{formatMoney(summary?.monthIncome ?? 0)}</strong></article>
                 <article><span>{t('business.summary.expense')}</span><strong>{formatMoney(summary?.monthExpense ?? 0)}</strong></article>
                 <article><span>{t('business.summary.profit')}</span><strong>{formatMoney(summary?.profit ?? 0, 'RUB', { sign: 'auto' })}</strong></article>
+              </div>
+              <div className="business-detail-lists">
+                <section>
+                  <h3>{t('business.money.nextPayments')}</h3>
+                  {summary?.nextPayments?.length ? summary.nextPayments.map((item) => (
+                    <article key={`${item.type}-${item.id}`}>
+                      <div><strong>{item.title}</strong><span>{formatBusinessDate(item.date)} · {item.accountName ?? '—'}</span></div>
+                      <b>{formatMoney(item.amount, item.currency)}</b>
+                    </article>
+                  )) : <p>{t('business.money.noNextPayments')}</p>}
+                </section>
+                <section>
+                  <h3>{t('business.money.recent')}</h3>
+                  {summary?.recentTransactions?.length ? summary.recentTransactions.map((item) => (
+                    <article key={item.id}>
+                      <div><strong>{item.title || item.categoryName || item.type}</strong><span>{formatBusinessDate(item.date)} · {item.accountName ?? '—'}</span></div>
+                      <b>{formatMoney(item.amount, item.currency, { sign: item.type === 'income' ? 'plus' : item.type === 'expense' ? 'minus' : 'auto' })}</b>
+                    </article>
+                  )) : <p>{t('business.money.noRecent')}</p>}
+                </section>
               </div>
             </section>
           ) : null}

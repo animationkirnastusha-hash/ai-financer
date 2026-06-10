@@ -7,6 +7,7 @@ import { aiIdempotencyService } from './ai-idempotency.service';
 import { aiResponseNormalizer } from './ai-response-normalizer.service';
 import { aiObservability } from './ai-observability.service';
 import { subscriptionService } from '../subscription/service';
+import { aiTrainingExampleService } from './ai-training-example.service';
 
 const aiService = new AIService();
 
@@ -107,6 +108,7 @@ async function withIdempotency<T>(
 }
 
 export const parseCommand = asyncHandler(async (req: Request, res: Response) => {
+  const startedAt = Date.now();
   const userId = req.userId;
   if (!userId) throw new BadRequestError('Unauthorized user');
 
@@ -139,6 +141,18 @@ export const parseCommand = asyncHandler(async (req: Request, res: Response) => 
       voiceSessionId: voiceSession?.id,
     });
     subscriptionUsage = updatedStatus.usage.voiceCommandsToday;
+  }
+
+  if (!idempotencyState.cached) {
+    void aiTrainingExampleService.captureFromResult({
+      userId,
+      command,
+      result,
+      latencyMs: Date.now() - startedAt,
+      model: process.env.AI_MODEL || process.env.OPENAI_MODEL || null || undefined,
+    }).catch((error) => {
+      console.warn('[AI] training example capture failed', error instanceof Error ? error.message : error);
+    });
   }
 
   await aiObservability.log({

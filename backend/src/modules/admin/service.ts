@@ -2,6 +2,7 @@ import { prisma } from '../../lib/prisma';
 import { monitoringService } from '../monitoring/monitoring.instance';
 import { dataResetService } from '../data-reset/service';
 import { subscriptionService } from '../subscription/service';
+import { aiTrainingExampleService } from '../ai/ai-training-example.service';
 
 function startOfDay(daysAgo: number) {
   const date = new Date();
@@ -240,4 +241,14 @@ export class AdminService {
   async restartTrial(userId: string) {
     return subscriptionService.restartTrial(userId);
   }
+
+  async getAITrainingExamples(options: { limit?: number; success?: boolean | null } = {}) {
+    return aiTrainingExampleService.list(options);
+  }
+
+  async updateAITrainingExample(id: string, input: unknown) {
+    const body = input && typeof input === 'object' ? input as { correctedOutput?: unknown; success?: unknown } : {};
+    return aiTrainingExampleService.update(id, body);
+  }
 }
+

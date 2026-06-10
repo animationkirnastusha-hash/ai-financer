@@ -35,6 +35,26 @@ export type BusinessWorkspaceSummaryDto = {
   expenseProgress: number;
   activeLoans: number;
   upcomingReminders: number;
+  recentTransactions?: Array<{
+    id: string;
+    title: string | null;
+    type: string;
+    amount: number;
+    date: string;
+    accountName: string | null;
+    categoryName: string | null;
+    currency: string;
+  }>;
+  nextPayments?: Array<{
+    id: string;
+    type: string;
+    title: string;
+    amount: number;
+    date: string;
+    accountName: string | null;
+    currency: string;
+  }>;
+  insights?: Array<{ type: string; title: string; caption: string }>;
 };
 
 export type BusinessWorkspacePayload = {
