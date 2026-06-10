@@ -2,65 +2,43 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigationStore } from '@/features/navigation/model/navigation.store';
 import { usePremiumStore } from '@/features/premium/model/premium.store';
 import { storeCards, storeFeatures, type StoreCard } from '@/features/store/model/storeCatalog';
-import { StoreFeatureSection } from '@/features/store/ui/StoreFeatureSection';
-import { StoreHero } from '@/features/store/ui/StoreHero';
+import { StoreProductCarousel } from '@/features/store/ui/StoreProductCarousel';
+import { StorePaymentSheet } from '@/features/store/ui/StorePaymentSheet';
 import { StoreStatusCard } from '@/features/store/ui/StoreStatusCard';
 import { StoreTrialCard } from '@/features/store/ui/StoreTrialCard';
-import { StorePaymentActions } from '@/features/payments/ui/StorePaymentActions';
 import { StoreUsageCard } from '@/features/store/ui/StoreUsageCard';
 import { useSubscriptionStore } from '@/features/subscription/model/subscription.store';
 import { hasRealPremiumAccess, hasRealBusinessAccess } from '@/features/subscription/lib/entitlements';
 import { useI18n } from '@/shared/lib/i18n';
 import { ScreenTopBar } from '@/shared/ui/ScreenTopBar';
 
-function StoreProductShowcase({ selected, cards, hasPremium, hasBusiness, onSelect, onOpen }: {
-  selected: StoreCard;
-  cards: StoreCard[];
-  hasPremium: boolean;
-  hasBusiness: boolean;
-  onSelect: (card: StoreCard) => void;
-  onOpen: (card: StoreCard) => void;
+function StoreCompactExtras({ onOpenReferral, onOpenPremium }: {
+  onOpenReferral: () => void;
+  onOpenPremium: () => void;
 }) {
   const { t } = useI18n();
-  const selectedActive = selected.tone === 'premium' ? hasPremium : selected.tone === 'business' ? hasBusiness : false;
+  const compactFeatures = storeFeatures.slice(0, 3);
 
   return (
-    <section className="store-showcase app-card">
-      <div className="store-showcase__head">
-        <div>
-          <div className="app-eyebrow">{t('store.showcase.eyebrow')}</div>
-          <h2>{t('store.showcase.title')}</h2>
-        </div>
-      </div>
-
-      <div className="store-product-tabs" role="tablist" aria-label={t('store.showcase.tabs')}>
-        {cards.map((card) => (
-          <button key={card.title} type="button" className={card.title === selected.title ? 'is-active' : undefined} onClick={() => onSelect(card)}>
-            <span>{t(card.eyebrow)}</span>
-            {(card.tone === 'premium' && hasPremium) || (card.tone === 'business' && hasBusiness) ? <small>{t('store.status.active')}</small> : null}
-          </button>
+    <section className="store-compact-extras">
+      <button type="button" className="store-compact-card store-compact-card--referral" onClick={onOpenReferral}>
+        <span>{t('store.referral.eyebrow')}</span>
+        <strong>{t('store.referral.title')}</strong>
+        <small>{t('store.referral.caption')}</small>
+      </button>
+      <button type="button" className="store-compact-card store-compact-card--features" onClick={onOpenPremium}>
+        <span>{t('store.features.eyebrow')}</span>
+        <strong>{t('store.carousel.moreTitle')}</strong>
+        <small>{t('store.carousel.moreCaption')}</small>
+      </button>
+      <div className="store-compact-feature-row" aria-label={t('store.features.title')}>
+        {compactFeatures.map((feature) => (
+          <div key={feature.title}>
+            <strong>{t(feature.title)}</strong>
+            <span>{t(feature.caption)}</span>
+          </div>
         ))}
       </div>
-
-      <article className={`store-product-detail store-product-detail--${selected.tone}`}>
-        <div className="store-product-detail__copy">
-          <div className="app-eyebrow">{t(selected.eyebrow)}</div>
-          <h3>{t(selected.title)}</h3>
-          <p>{t(selected.caption)}</p>
-          <ul>
-            {selected.items.map((item) => <li key={item}>{t(item)}</li>)}
-          </ul>
-        </div>
-        <div className="store-product-detail__side">
-          <span>{selectedActive ? t('store.status.active') : t('store.showcase.price')}</span>
-          <strong>{selected.tone === 'business' ? t('store.showcase.businessPrice') : selected.tone === 'premium' ? t('store.showcase.premiumPrice') : t('store.showcase.referralPrice')}</strong>
-          {selected.tone === 'premium' || selected.tone === 'business' ? (
-            <StorePaymentActions product={selected.tone} compact />
-          ) : (
-            <button type="button" className="app-primary-button" onClick={() => onOpen(selected)}>{t(selected.action)}</button>
-          )}
-        </div>
-      </article>
     </section>
   );
 }
@@ -74,6 +52,7 @@ export default function PremiumPage() {
   const loadSubscription = useSubscriptionStore((state) => state.load);
   const startTrial = useSubscriptionStore((state) => state.startTrial);
   const [selectedTone, setSelectedTone] = useState<StoreCard['tone']>('premium');
+  const [paymentProduct, setPaymentProduct] = useState<StoreCard | null>(null);
   const hasPremium = hasRealPremiumAccess(subscription);
   const hasBusiness = hasRealBusinessAccess(subscription);
 
@@ -81,33 +60,37 @@ export default function PremiumPage() {
     void loadSubscription();
   }, [loadSubscription]);
 
-  const visibleCards = useMemo(() => storeCards, []);
+  const carouselCards = useMemo(
+    () => storeCards.filter((card) => card.tone === 'premium' || card.tone === 'business'),
+    [],
+  );
 
   const selectedCard = useMemo(
-    () => visibleCards.find((card) => card.tone === selectedTone) ?? visibleCards[0] ?? storeCards[0],
-    [selectedTone, visibleCards],
+    () => carouselCards.find((card) => card.tone === selectedTone) ?? carouselCards[0] ?? storeCards[0],
+    [carouselCards, selectedTone],
   );
 
   const handleStartTrial = async () => {
     await startTrial();
   };
 
-  const handlePremiumOpen = (card: StoreCard) => {
-    if (card.tone === 'referral') {
-      navigateTo('referral');
-      return;
+  const handleOpenPayment = (card: StoreCard) => {
+    if (card.tone === 'premium' || card.tone === 'business') {
+      setPaymentProduct(card);
     }
+  };
 
-    if (card.tone === 'business') {
-      navigateTo('business-accountant');
-      return;
-    }
+  const handleOpenReferral = () => {
+    navigateTo('referral');
+  };
 
+  const handleOpenPremiumSheet = () => {
+    const card = selectedCard;
     openPremium({
       kind: 'deep_analysis',
       title: t(card.title),
       description: t(card.caption),
-      cta: t(card.action),
+      cta: t('store.carousel.buy'),
     });
   };
 
@@ -115,20 +98,26 @@ export default function PremiumPage() {
     <div className="app-page monetization-page text-white">
       <div className="app-page__inner space-y-4">
         <ScreenTopBar title={t('screen.store')} left="back" right={['home', 'settings']} />
-        {visibleCards[0] ? <StoreHero premiumCard={visibleCards[0]} onPremiumOpen={handlePremiumOpen} /> : null}
-        {visibleCards.length > 0 ? <StoreProductShowcase
-          cards={visibleCards}
-          selected={selectedCard}
+
+        <StoreProductCarousel
+          cards={carouselCards}
+          activeTone={selectedTone}
           hasPremium={hasPremium}
           hasBusiness={hasBusiness}
           onSelect={(card) => setSelectedTone(card.tone)}
-          onOpen={handlePremiumOpen}
-        /> : null}
-        <StoreStatusCard subscription={subscription} isLoading={isLoading} />
-        <StoreUsageCard subscription={subscription} />
-        <StoreFeatureSection features={storeFeatures} />
+          onBuy={handleOpenPayment}
+        />
+
+        <div className="store-minimal-grid">
+          <StoreStatusCard subscription={subscription} isLoading={isLoading} />
+          <StoreUsageCard subscription={subscription} />
+        </div>
+
         <StoreTrialCard subscription={subscription} isLoading={isLoading} onStartTrial={handleStartTrial} />
+        <StoreCompactExtras onOpenReferral={handleOpenReferral} onOpenPremium={handleOpenPremiumSheet} />
       </div>
+
+      <StorePaymentSheet open={Boolean(paymentProduct)} product={paymentProduct} onClose={() => setPaymentProduct(null)} />
     </div>
   );
 }

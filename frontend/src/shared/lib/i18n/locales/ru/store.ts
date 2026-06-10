@@ -102,4 +102,9 @@ export const storeDictionary = {
   'store.showcase.premiumPrice': '399 Stars / месяц',
   'store.showcase.businessPrice': '899 Stars / месяц',
   'store.showcase.referralPrice': 'Бонусы',
+  'store.carousel.aria': 'Карусель продуктов магазина',
+  'store.carousel.buy': 'Купить',
+  'store.carousel.moreTitle': 'Больше возможностей Фины',
+  'store.carousel.moreCaption': 'Коротко о том, что усиливает Premium.',
+  'store.payment.sheetSubtitle': 'Выбери период и удобный способ оплаты.',
 } as const;

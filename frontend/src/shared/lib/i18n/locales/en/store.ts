@@ -102,4 +102,9 @@ export const storeDictionary = {
   'store.showcase.premiumPrice': '399 Stars / month',
   'store.showcase.businessPrice': '899 Stars / month',
   'store.showcase.referralPrice': 'Bonuses',
+  'store.carousel.aria': 'Store product carousel',
+  'store.carousel.buy': 'Buy',
+  'store.carousel.moreTitle': 'More Fina capabilities',
+  'store.carousel.moreCaption': 'A quick look at what Premium improves.',
+  'store.payment.sheetSubtitle': 'Choose a period and payment method.',
 } as const;
