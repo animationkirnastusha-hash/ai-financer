@@ -57,3 +57,7 @@
 @import "./features/taxonomy/taxonomy-picker.css";
 @import "./pages/dashboard-taxonomy.css";
 @import "./pages/receipt-taxonomy.css";
+@import "./animations/final-motion.css";
+@import "./layout/final-device-polish.css";
+@import "./pages/final-page-polish.css";
+@import "./features/taxonomy/taxonomy-final-polish.css";
