@@ -29,6 +29,7 @@
 @import "./pages/onboarding-setup.css";
 @import "./pages/obligations.css";
 @import "./foundations/ios-input-zoom-guard.css";
+@import "./foundations/performance.css";
 @import "./pages/notifications.css";
 @import "./pages/reports.css";
 @import "./features/chat/text-chat-overlay.css";
@@ -43,9 +44,10 @@
 @import "./pages/analytics-layout.css";
 @import "./pages/admin/ai-training.css";
 @import "./features/store/store-layout.css";
-@import "./screens/motion-polish.css";
-@import "./screens/product-final-pass.css";
-
+@import "./animations/app-motion.css";
 @import "./animations/store-motion.css";
+@import "./screens/product-final-pass.css";
 @import "./features/store/product-carousel.css";
 @import "./features/store/payment-sheet.css";
+@import "./layout/device-adaptive.css";
+@import "./pages/visual-repair.css";

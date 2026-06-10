@@ -1,0 +1,47 @@
+/* Lightweight runtime performance hints. API responses are not cached here. */
+:root {
+  --desktop-page-max: 1180px;
+  --tablet-page-max: 860px;
+}
+
+.app-page__inner,
+.drawer,
+.app-modal-sheet,
+.text-chat-overlay__panel,
+.premium-upgrade-sheet {
+  contain: layout style;
+}
+
+.app-card,
+.monetization-section,
+.limits-card,
+.referral-list-card,
+.analytics-block,
+.receipt-history-card,
+.business-mini-app-shell {
+  content-visibility: auto;
+  contain-intrinsic-size: 1px 420px;
+}
+
+img,
+svg,
+video,
+canvas {
+  max-width: 100%;
+}
+
+[hidden],
+.is-hidden {
+  display: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: .01ms !important;
+  }
+}
