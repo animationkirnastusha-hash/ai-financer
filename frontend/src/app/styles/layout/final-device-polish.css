@@ -1,0 +1,103 @@
+/* Pack 89: cross-device layout polish. */
+:root {
+  --app-page-max-width: 1180px;
+  --app-content-gap: 14px;
+}
+
+.app-page__inner,
+.app-shell__content,
+.app-screen-body {
+  min-width: 0;
+}
+
+.app-page__inner {
+  max-width: var(--app-page-max-width);
+  margin-inline: auto;
+}
+
+.app-card,
+.app-action-card,
+.app-list-button,
+.app-empty-button,
+.app-bottom-sheet,
+.drawer-panel {
+  min-width: 0;
+}
+
+.app-card > *,
+.app-action-card > *,
+.app-list-button > *,
+.app-empty-button > * {
+  min-width: 0;
+}
+
+.app-page h1,
+.app-page h2,
+.app-page h3,
+.app-page p,
+.app-card span,
+.app-card small,
+.app-card strong,
+.app-card b {
+  min-width: 0;
+}
+
+.app-page h1,
+.app-page h2,
+.app-page h3 {
+  text-wrap: balance;
+}
+
+.app-page p,
+.app-card small,
+.app-card span {
+  overflow-wrap: anywhere;
+}
+
+.app-primary-button,
+.app-secondary-button,
+button[class*='button'] {
+  -webkit-tap-highlight-color: transparent;
+}
+
+@media (min-width: 740px) {
+  .app-page__inner {
+    padding-inline: clamp(22px, 4vw, 44px);
+  }
+
+  .app-dashboard-page .app-page__inner,
+  .app-analytics-page .app-page__inner,
+  .accounts-page .app-page__inner,
+  .receipt-scans-page .app-page__inner,
+  .spending-limits-page .app-page__inner,
+  .referral-page .app-page__inner,
+  .business-workspace-page .app-page__inner,
+  .app-taxonomy-page .app-page__inner {
+    padding-bottom: 104px !important;
+  }
+}
+
+@media (min-width: 1040px) {
+  .app-dashboard-page .app-page__inner,
+  .app-analytics-page .app-page__inner,
+  .receipt-scans-page .app-page__inner,
+  .spending-limits-page .app-page__inner,
+  .referral-page .app-page__inner,
+  .business-workspace-page .app-page__inner {
+    display: grid;
+    gap: 18px;
+  }
+}
+
+@media (max-width: 390px) {
+  .app-page__inner {
+    padding-inline: 14px !important;
+  }
+
+  .app-card,
+  .app-action-card,
+  .app-empty-button,
+  .app-list-button {
+    border-radius: 24px;
+  }
+}

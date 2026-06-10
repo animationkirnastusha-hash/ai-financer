@@ -1974,6 +1974,67 @@ function tokenize(value: string) {
   return normalizeText(value).split(' ').filter((token) => token.length >= 2);
 }
 
+
+const TAXONOMY_STOP_WORDS = new Set([
+  'руб', 'рублей', 'рубля', 'р', '₽', 'коп', 'копеек', 'тысяч', 'тысячи', 'тысяча',
+  'потратил', 'потратила', 'потратилa', 'спиши', 'расход', 'доход', 'оплата', 'покупка',
+  'купил', 'купила', 'купить', 'заплатил', 'заплатила', 'перевод', 'переведи', 'положи',
+  'на', 'с', 'со', 'из', 'за', 'для', 'по', 'в', 'во', 'и', 'или', 'это', 'мой', 'моя', 'мои',
+]);
+
+function toDisplayName(value: string) {
+  const clean = value.trim().replace(/\s+/g, ' ');
+  if (!clean) return '';
+  return clean.charAt(0).toUpperCase() + clean.slice(1);
+}
+
+function buildFallbackLabel(rawText: string, type: 'income' | 'expense') {
+  const normalized = normalizeText(rawText)
+    .replace(/\b\d+[\d\s.,]*\b/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  const tokens = normalized
+    .split(' ')
+    .map((token) => token.trim())
+    .filter((token) => token.length >= 3 && !TAXONOMY_STOP_WORDS.has(token));
+
+  const label = toDisplayName(tokens.slice(0, 3).join(' '));
+  if (label) return label;
+  return type === 'income' ? 'Доход' : 'Расход';
+}
+
+function buildSemanticFallback(rawText: string, type: 'income' | 'expense'): TaxonomyIconRule {
+  const label = buildFallbackLabel(rawText, type);
+  if (type === 'income') {
+    return {
+      id: `income_custom_${normalizeText(label).replace(/\s+/g, '_') || 'income'}`,
+      type: 'income',
+      sectionId: 'income',
+      sectionName: 'Доходы',
+      sectionIcon: '💰',
+      sectionColor: '#34D399',
+      categoryName: label,
+      categoryIcon: '💰',
+      categoryColor: stableCategoryColor(`income:${label}`),
+      keywords: [],
+    };
+  }
+
+  return {
+    id: `expense_custom_${normalizeText(label).replace(/\s+/g, '_') || 'expense'}`,
+    type: 'expense',
+    sectionId: `custom_${normalizeText(label).replace(/\s+/g, '_') || 'expense'}`,
+    sectionName: label,
+    sectionIcon: '🧾',
+    sectionColor: stableCategoryColor(`section:${label}`),
+    categoryName: label,
+    categoryIcon: '🧾',
+    categoryColor: stableCategoryColor(`category:${label}`),
+    keywords: [],
+  };
+}
+
 function scoreKeyword(query: string, queryTokens: string[], keyword: string) {
   const current = normalizeText(keyword);
   if (!current) return 0;
@@ -2007,16 +2068,10 @@ export function resolveTaxonomyIcon(rawText: string, type: 'income' | 'expense')
     if (!best || score > best.score) best = { rule, score };
   }
 
-  const fallback = type === 'income'
-    ? {
-        id: 'income_other', type: 'income' as const, sectionId: 'income', sectionName: 'Доходы', sectionIcon: '💰', sectionColor: '#34D399', categoryName: 'Доход', categoryIcon: '💰', categoryColor: '#34D399', keywords: [],
-      }
-    : {
-        id: 'expense_other', type: 'expense' as const, sectionId: 'other', sectionName: 'Другое', sectionIcon: '📌', sectionColor: '#94A3B8', categoryName: 'Другое', categoryIcon: '🧾', categoryColor: '#94A3B8', keywords: [],
-      };
-
-  const chosen = best && best.score >= 70 ? best.rule : fallback;
-  const confidence = best && best.score >= 70 ? Math.min(0.99, best.score / 1000) : 0.25;
+  const hasSemanticMatch = Boolean(best && best.score >= 70);
+  const fallback = buildSemanticFallback(rawText || '', type);
+  const chosen = hasSemanticMatch ? best!.rule : fallback;
+  const confidence = hasSemanticMatch ? Math.min(0.99, best!.score / 1000) : 0.42;
 
   return {
     type,

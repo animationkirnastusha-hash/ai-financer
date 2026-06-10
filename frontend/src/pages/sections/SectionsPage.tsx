@@ -1,7 +1,7 @@
 import { useEffect, useMemo } from 'react';
 import { useAppModalStore } from '@/features/modals/model/appModal.store';
 import { useSectionsStore } from '@/features/sections/model/sections.store';
-import type { CategoryDto } from '@/features/sections/api/sections.api';
+import type { CategoryDto, SectionDto } from '@/features/sections/api/sections.api';
 import { ScreenTopBar } from '@/shared/ui/ScreenTopBar';
 import { EmptyState } from '@/shared/ui/EmptyState';
 import { SettingsGearIcon } from '@/shared/ui/AppIcons';
@@ -10,6 +10,22 @@ type Props = { onBack: () => void };
 
 function countType(categories: CategoryDto[], type: 'expense' | 'income' | 'both') {
   return categories.filter((category) => (category.type ?? 'expense') === type).length;
+}
+
+function mergeVisibleSections(sections: SectionDto[], categories: CategoryDto[]) {
+  const map = new Map<string, SectionDto>();
+  for (const section of sections) map.set(section.id, section);
+
+  for (const category of categories) {
+    if (!category.sectionId || !category.section || map.has(category.sectionId)) continue;
+    map.set(category.sectionId, category.section);
+  }
+
+  return [...map.values()].sort((a, b) => {
+    const aDate = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+    const bDate = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+    return aDate - bDate;
+  });
 }
 
 export default function SectionsPage({ onBack }: Props) {
@@ -21,6 +37,8 @@ export default function SectionsPage({ onBack }: Props) {
   const loadAll = useSectionsStore((state) => state.loadAll);
 
   useEffect(() => { void loadAll(); }, [loadAll]);
+
+  const visibleSections = useMemo(() => mergeVisibleSections(sections, categories), [sections, categories]);
 
   const categoriesBySection = useMemo(() => {
     const map = new Map<string, CategoryDto[]>();
@@ -49,7 +67,7 @@ export default function SectionsPage({ onBack }: Props) {
           </div>
 
           <div className="app-taxonomy-stats">
-            <div><span>{sections.length}</span><small>разделов</small></div>
+            <div><span>{visibleSections.length}</span><small>разделов</small></div>
             <div><span>{categories.length}</span><small>категорий</small></div>
             <div><span>{ungrouped.length}</span><small>без раздела</small></div>
           </div>
@@ -77,7 +95,7 @@ export default function SectionsPage({ onBack }: Props) {
 
         {isLoading ? (
           <div className="app-card p-5 text-sm text-white/55">Загружаю категории...</div>
-        ) : sections.length === 0 && categories.length === 0 ? (
+        ) : visibleSections.length === 0 && categories.length === 0 ? (
           <EmptyState
             eyebrow="Категории"
             title="Структура пока пустая"
@@ -87,7 +105,7 @@ export default function SectionsPage({ onBack }: Props) {
           />
         ) : (
           <section className="app-taxonomy-grid">
-            {sections.map((section) => {
+            {visibleSections.map((section) => {
               const sectionCategories = categoriesBySection.get(section.id) ?? [];
               const preview = sectionCategories.slice(0, 4);
               return (

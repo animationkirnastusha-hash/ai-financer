@@ -1,0 +1,86 @@
+/* Pack 89: taxonomy/category UX polish. */
+.app-taxonomy-page .app-taxonomy-actions,
+.app-taxonomy-page .app-taxonomy-rule-grid,
+.app-taxonomy-page .app-taxonomy-suggestions,
+.taxonomy-picker,
+.taxonomy-picker__suggestion,
+.taxonomy-picker__category-list {
+  min-width: 0;
+}
+
+.app-taxonomy-actions .app-action-card {
+  min-height: 72px;
+  padding: 14px;
+}
+
+.app-taxonomy-actions .app-action-card b,
+.app-taxonomy-actions .app-action-card small,
+.app-taxonomy-section-card__title,
+.app-taxonomy-section-card__title span,
+.taxonomy-picker__suggestion b,
+.taxonomy-picker__suggestion small {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.app-taxonomy-actions .app-action-card small,
+.taxonomy-picker__suggestion small {
+  white-space: normal;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.app-taxonomy-section-card,
+.taxonomy-picker__suggestion,
+.taxonomy-picker__category-option,
+.taxonomy-picker__auto-option {
+  border-color: rgba(255,255,255,.095);
+  background: linear-gradient(145deg, rgba(255,255,255,.075), rgba(255,255,255,.035));
+}
+
+.taxonomy-picker__suggestion,
+.taxonomy-picker__auto-option {
+  animation: app-chip-pulse 2.4s ease-in-out infinite;
+}
+
+.taxonomy-picker__category-option,
+.taxonomy-picker__auto-option {
+  min-height: 48px;
+  border-radius: 18px;
+}
+
+.taxonomy-picker__section-label,
+.taxonomy-picker__caption {
+  color: rgba(255,255,255,.56);
+}
+
+.category-edit-sheet__preview,
+.section-edit-sheet__preview {
+  overflow: hidden;
+}
+
+@media (min-width: 760px) {
+  .app-taxonomy-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .app-taxonomy-page .app-taxonomy-section-list,
+  .taxonomy-picker__category-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+}
+
+@media (max-width: 430px) {
+  .app-taxonomy-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .taxonomy-picker__category-option,
+  .taxonomy-picker__auto-option {
+    min-height: 46px;
+  }
+}
