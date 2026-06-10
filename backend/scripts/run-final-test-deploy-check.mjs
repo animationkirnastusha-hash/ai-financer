@@ -55,8 +55,16 @@ function assertBackendContext() {
     throw new Error('Run this script from backend root. Example: cd /root/ai-financer/backend');
   }
   const pkg = JSON.parse(readFileSync(packageJson, 'utf8'));
-  if (!pkg.scripts?.build || !pkg.scripts?.['smoke:full']) {
-    throw new Error('backend package.json must include build and smoke:full scripts');
+  const requiredScripts = [
+    'build',
+    'smoke:full',
+    'smoke:taxonomy-autocategory',
+    'smoke:receipt-taxonomy',
+    'audit:final',
+  ];
+  const missing = requiredScripts.filter((name) => !pkg.scripts?.[name]);
+  if (missing.length) {
+    throw new Error(`backend package.json is missing scripts: ${missing.join(', ')}`);
   }
 }
 
@@ -73,6 +81,7 @@ try {
 }
 
 await check('backend build', () => run('npm', ['run', 'build']));
+await check('final backend audit', () => run('npm', ['run', 'audit:final']));
 await check('prisma migrate status', () => run('npx', ['prisma', 'migrate', 'status']));
 await check('test token', () => run('npm', ['run', 'test:token'], {
   env: {
@@ -80,7 +89,7 @@ await check('test token', () => run('npm', ['run', 'test:token'], {
     TEST_ADMIN: process.env.TEST_ADMIN || '1',
   },
 }));
-await check('full smoke', () => run('npm', ['run', 'smoke:full'], {
+await check('full backend smoke', () => run('npm', ['run', 'smoke:full'], {
   env: {
     TEST_BASE_URL: baseUrl,
     SMOKE_STOP_ON_FAIL: process.env.SMOKE_STOP_ON_FAIL || '0',

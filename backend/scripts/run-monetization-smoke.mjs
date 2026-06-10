@@ -4,6 +4,7 @@ const checks = [
   ['store/subscription', 'scripts/smoke/check-store-subscription.mjs'],
   ['business workspace', 'scripts/smoke/check-business-workspace.mjs'],
   ['receipt scans', 'scripts/smoke/check-receipt-scans.mjs'],
+  ['receipt taxonomy preview', 'scripts/smoke/check-receipt-taxonomy-preview.mjs'],
   ['ai training', 'scripts/smoke/check-ai-training.mjs'],
 ];
 
@@ -12,6 +13,7 @@ const failed = [];
 
 console.log('AI-Financer monetization smoke');
 console.log(`Base URL: ${process.env.TEST_BASE_URL || process.env.API_BASE_URL || 'http://localhost:3000/api'}`);
+console.log(`Stop on fail: ${process.env.SMOKE_STOP_ON_FAIL === '0' ? 'no' : 'yes'}`);
 console.log('');
 
 for (const [name, script] of checks) {

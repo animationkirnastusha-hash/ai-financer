@@ -51,7 +51,11 @@
     "smoke:obligations-reports": "node scripts/smoke/check-obligations-reports.mjs",
     "smoke:voice-status": "node scripts/smoke/check-voice-status.mjs",
     "smoke:ai-training": "node scripts/smoke/check-ai-training.mjs",
-    "smoke:prisma-features": "npm run smoke:obligations-reports && npm run smoke:business && npm run smoke:receipts && npm run smoke:ai-training"
+    "smoke:prisma-features": "npm run smoke:obligations-reports && npm run smoke:business && npm run smoke:receipts && npm run smoke:ai-training",
+    "smoke:taxonomy-autocategory": "node scripts/smoke/check-taxonomy-autocategory.mjs",
+    "smoke:receipt-taxonomy": "node scripts/smoke/check-receipt-taxonomy-preview.mjs",
+    "smoke:pretest": "npm run audit:final && npm run smoke:full",
+    "predeploy:full": "node scripts/run-final-test-deploy-check.mjs"
   },
   "keywords": [],
   "author": "",
