@@ -1,21 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { CategoryDto, SectionDto } from '@/features/sections/api/sections.api';
+import { resolveCategoryIcon } from '@/features/sections/lib/categoryIcons';
 import { Drawer } from '@/shared/ui/Drawer';
 import { Button } from '@/shared/ui/Button';
-
-type Props = {
-  open: boolean;
-  category?: CategoryDto | null;
-  sections: SectionDto[];
-  isSaving?: boolean;
-  initialType?: 'expense' | 'income' | 'both';
-  initialName?: string | null;
-  initialSectionId?: string | null;
-  modalLayer?: number;
-  onClose: () => void;
-  onSave: (payload: { name: string; type: 'expense' | 'income' | 'both'; sectionId?: string | null }) => Promise<void> | void;
-  onDelete?: (category: CategoryDto) => Promise<void> | void;
-};
 
 const typeOptions: Array<{ value: 'expense' | 'income' | 'both'; label: string }> = [
   { value: 'expense', label: 'Расход' },
@@ -23,7 +10,22 @@ const typeOptions: Array<{ value: 'expense' | 'income' | 'both'; label: string }
   { value: 'both', label: 'Оба' },
 ];
 
-export function CategoryEditSheet({ open, category, sections, isSaving = false, initialType = 'expense', initialName = null, initialSectionId = null, modalLayer, onClose, onSave, onDelete }: Props) {
+type Props = {
+  open: boolean;
+  category?: CategoryDto | null;
+  sections: SectionDto[];
+  isSaving?: boolean;
+  initialType?: 'expense' | 'income' | 'both';
+  initialSectionId?: string | null;
+  initialName?: string | null;
+  prefillName?: string | null;
+  modalLayer?: number;
+  onClose: () => void;
+  onSave: (payload: { name: string; type: 'expense' | 'income' | 'both'; sectionId?: string | null }) => Promise<void> | void;
+  onDelete?: (category: CategoryDto) => Promise<void> | void;
+};
+
+export function CategoryEditSheet({ open, category, sections, isSaving = false, initialType = 'expense', initialSectionId = null, initialName = null, prefillName = null, modalLayer, onClose, onSave, onDelete }: Props) {
   const [name, setName] = useState('');
   const [type, setType] = useState<'expense' | 'income' | 'both'>('expense');
   const [sectionId, setSectionId] = useState<string | null>(null);
@@ -31,12 +33,14 @@ export function CategoryEditSheet({ open, category, sections, isSaving = false, 
 
   useEffect(() => {
     if (!open) return;
-    setName(category?.name ?? initialName ?? '');
+    setName(category?.name ?? initialName ?? prefillName ?? '');
     setType(category?.type === 'income' || category?.type === 'expense' || category?.type === 'both' ? category.type : initialType);
     setSectionId(category?.sectionId ?? initialSectionId ?? null);
     setError(null);
-  }, [open, category, initialType, initialName, initialSectionId]);
+  }, [open, category, initialType, initialSectionId, initialName, prefillName]);
 
+  const suggested = useMemo(() => resolveCategoryIcon(name || initialName || prefillName || 'категория', type === 'income' ? 'income' : 'expense'), [name, initialName, prefillName, type]);
+  const selectedSection = sectionId ? sections.find((section) => section.id === sectionId) ?? null : null;
   const canSave = useMemo(() => name.trim().length >= 2 && !isSaving, [name, isSaving]);
 
   const submit = async () => {
@@ -60,7 +64,7 @@ export function CategoryEditSheet({ open, category, sections, isSaving = false, 
       open={open}
       onClose={onClose}
       title={category ? 'Категория' : 'Новая категория'}
-      subtitle="Иконка и цвет подбираются автоматически по названию."
+      subtitle="Введи название — иконка, цвет и раздел подберутся сами."
       layer={modalLayer}
       footer={(
         <div className="grid grid-cols-2 gap-2">
@@ -75,10 +79,26 @@ export function CategoryEditSheet({ open, category, sections, isSaving = false, 
           <input value={name} onChange={(event) => setName(event.target.value)} placeholder="Например, Кофе" autoFocus />
         </label>
 
+        <div className="app-taxonomy-category-preview">
+          <div className="app-taxonomy-category-preview__row">
+            <span className="app-taxonomy-category-preview__label">Как будет выглядеть</span>
+            <span className="app-taxonomy-category-preview__pill">{selectedSection ? 'Раздел выбран' : 'Раздел автоматически'}</span>
+          </div>
+          <div className="app-taxonomy-category-preview__row">
+            <span className="app-taxonomy-category-preview__value">
+              <i className="app-taxonomy-category-preview__icon" style={{ background: suggested.color }}>{suggested.icon}</i>
+              {name.trim() || suggested.sectionName}
+            </span>
+            <span className="app-taxonomy-category-preview__pill">
+              {selectedSection ? `${selectedSection.icon ? `${selectedSection.icon} ` : ''}${selectedSection.name}` : `${suggested.sectionIcon} ${suggested.sectionName}`}
+            </span>
+          </div>
+        </div>
+
         <label className="app-field">
           <span>Раздел</span>
           <select value={sectionId ?? ''} onChange={(event) => setSectionId(event.target.value || null)}>
-            <option value="">Без раздела</option>
+            <option value="">Подобрать автоматически</option>
             {sections.map((section) => <option key={section.id} value={section.id}>{section.icon ? `${section.icon} ` : ''}{section.name}</option>)}
           </select>
         </label>
@@ -94,7 +114,6 @@ export function CategoryEditSheet({ open, category, sections, isSaving = false, 
           </div>
         </div>
 
-        <div className="app-inline-hint">Пользователю не нужно выбирать иконку из каталога — система подставит её сама.</div>
         {error ? <div className="app-error-box">{error}</div> : null}
       </div>
     </Drawer>

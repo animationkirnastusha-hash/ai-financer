@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import type { AccountDto } from '@/features/accounts/api/accounts.api';
 import type { ReceiptScanDto, ReviewReceiptScanPayload } from '@/features/receipt-scans/api/receiptScans.api';
 import { useI18n } from '@/shared/lib/i18n';
+import { formatMoney } from '@/shared/lib/money';
 
 type Props = {
   scan: ReceiptScanDto;
@@ -93,6 +94,30 @@ export function ReceiptPreviewCard({ scan, accounts = [], isSaving = false, onRe
           </div>
         ))}
       </div>
+
+      {scan.preview?.groups?.length ? (
+        <div className="receipt-taxonomy-groups">
+          {scan.preview.groups.slice(0, 4).map((group) => (
+            <section key={group.sectionName} className="receipt-taxonomy-group">
+              <div className="receipt-taxonomy-group__head">
+                <i style={{ background: group.sectionColor }}>{group.sectionIcon}</i>
+                <span>
+                  <b>{group.sectionName}</b>
+                  <small>{group.categories.length} кат.</small>
+                </span>
+                {group.amount > 0 ? <strong>{formatMoney(group.amount, scan.currency || 'RUB')}</strong> : null}
+              </div>
+              <div className="receipt-taxonomy-group__categories">
+                {group.categories.slice(0, 3).map((category) => (
+                  <span key={category.categoryName}>
+                    {category.categoryIcon} {category.categoryName}
+                  </span>
+                ))}
+              </div>
+            </section>
+          ))}
+        </div>
+      ) : null}
 
       <button type="button" className="receipt-preview-card__toggle" onClick={() => setIsOpen((value) => !value)}>
         {isOpen ? t('common.close') : t('receipts.review.open')}

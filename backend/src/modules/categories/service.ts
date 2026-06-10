@@ -26,6 +26,10 @@ function normalizeCategoryType(value?: CategoryType | string | null): CategoryTy
   return 'expense';
 }
 
+function taxonomyKind(type: CategoryType): 'income' | 'expense' {
+  return type === 'income' ? 'income' : 'expense';
+}
+
 export class CategoryService {
   async getUserCategories(userId: string) {
     return prisma.category.findMany({
@@ -38,7 +42,8 @@ export class CategoryService {
   async createCategory(userId: string, input: CreateCategoryInput) {
     const name = this.normalizeName(input.name);
     const type = normalizeCategoryType(input.type);
-    const appearance = resolveCategoryAppearance(name, type === 'income' ? 'income' : 'expense');
+    const appearance = resolveCategoryAppearance(name, taxonomyKind(type));
+    const sectionId = input.sectionId !== undefined ? input.sectionId : await this.ensureSemanticSection(userId, appearance);
 
     const existing = await prisma.category.findFirst({ where: { userId, name } });
     if (existing) {
@@ -46,7 +51,7 @@ export class CategoryService {
         where: { id: existing.id },
         data: {
           type,
-          sectionId: input.sectionId !== undefined ? input.sectionId : existing.sectionId,
+          sectionId,
           icon: input.icon ?? (shouldReplaceGenericIcon(existing.icon) ? appearance.categoryIcon : existing.icon),
           color: input.color ?? existing.color ?? appearance.categoryColor,
         },
@@ -61,7 +66,7 @@ export class CategoryService {
         type,
         icon: input.icon ?? appearance.categoryIcon,
         color: input.color ?? appearance.categoryColor,
-        sectionId: input.sectionId ?? null,
+        sectionId,
       },
       include: { section: true },
     });
@@ -76,14 +81,17 @@ export class CategoryService {
 
     const nextName = input.name !== undefined ? this.normalizeName(input.name) : existing.name;
     const nextType = input.type !== undefined ? normalizeCategoryType(input.type) : normalizeCategoryType(existing.type);
-    const appearance = resolveCategoryAppearance(nextName, nextType === 'income' ? 'income' : 'expense');
+    const appearance = resolveCategoryAppearance(nextName, taxonomyKind(nextType));
+    const nextSectionId = input.sectionId !== undefined
+      ? input.sectionId
+      : existing.sectionId ?? await this.ensureSemanticSection(userId, appearance);
 
     return prisma.category.update({
       where: { id: categoryId },
       data: {
         name: input.name !== undefined ? nextName : existing.name,
         type: nextType,
-        sectionId: input.sectionId !== undefined ? input.sectionId : existing.sectionId,
+        sectionId: nextSectionId,
         icon: input.icon !== undefined ? input.icon : shouldReplaceGenericIcon(existing.icon) ? appearance.categoryIcon : existing.icon,
         color: input.color !== undefined ? input.color : existing.color ?? appearance.categoryColor,
       },
@@ -101,6 +109,37 @@ export class CategoryService {
     ]);
 
     return existing;
+  }
+
+  private async ensureSemanticSection(
+    userId: string,
+    appearance: { sectionName: string; sectionIcon: string; sectionColor: string },
+  ) {
+    const existing = await prisma.section.findFirst({ where: { userId, name: appearance.sectionName } });
+    if (existing) {
+      if (shouldReplaceGenericIcon(existing.icon) || !existing.color) {
+        const updated = await prisma.section.update({
+          where: { id: existing.id },
+          data: {
+            icon: shouldReplaceGenericIcon(existing.icon) ? appearance.sectionIcon : existing.icon,
+            color: existing.color ?? appearance.sectionColor,
+          },
+        });
+        return updated.id;
+      }
+      return existing.id;
+    }
+
+    const section = await prisma.section.create({
+      data: {
+        userId,
+        name: appearance.sectionName,
+        icon: appearance.sectionIcon,
+        color: appearance.sectionColor,
+      },
+    });
+
+    return section.id;
   }
 
   private normalizeName(value: string) {

@@ -24,6 +24,8 @@ export type HomeSectionGroup = {
   color: string;
   icon?: string | null;
   percent: number;
+  count: number;
+  categories: HomeFinanceGroup[];
 };
 
 const colors = [
@@ -49,6 +51,7 @@ type Rates = { usd: number; eur: number };
 
 type CategoryWithSection = {
   name?: string | null;
+  sectionId?: string | null;
   section?: { name?: string | null; icon?: string | null; color?: string | null } | null;
 };
 
@@ -95,12 +98,17 @@ export function toRub(amount: number, currency: string | undefined, rates: Rates
   return convertCurrency(amount, (currency || 'RUB') as AppCurrency, 'RUB', { USD: rates.usd, EUR: rates.eur });
 }
 
+function sectionNameFor(transaction: ExtendedTransaction, mode: HomeCashflowMode) {
+  return transaction.category?.section?.name?.trim() || transaction.section?.name?.trim() || (mode === 'expense' ? 'Другое' : 'Доходы');
+}
+
+function categoryNameFor(transaction: ExtendedTransaction, mode: HomeCashflowMode) {
+  return transaction.category?.name?.trim() || (mode === 'expense' ? 'Другое' : 'Доход');
+}
 
 export function getHomeFinanceGroupKey(transaction: TransactionDto, mode: HomeCashflowMode) {
   const item = transaction as ExtendedTransaction;
-  const categoryName = item.category?.name?.trim() || (mode === 'expense' ? 'Без категории' : 'Доходы');
-  const sectionName = item.category?.section?.name?.trim() || item.section?.name?.trim() || 'Без раздела';
-  return `${sectionName}::${categoryName}`;
+  return `${sectionNameFor(item, mode)}::${categoryNameFor(item, mode)}`;
 }
 
 export function buildHomeFinanceAnalytics(
@@ -112,14 +120,14 @@ export function buildHomeFinanceAnalytics(
   const filtered = transactions.filter((transaction) => transaction.type === mode && isInPeriod(transaction.date, period));
   const total = filtered.reduce((sum, transaction) => sum + toRub(Number(transaction.amount) || 0, transaction.account?.currency, rates), 0);
   const categoryMap = new Map<string, HomeFinanceGroup>();
-  const sectionMap = new Map<string, HomeSectionGroup>();
+  const sectionMap = new Map<string, Omit<HomeSectionGroup, 'categories'>>();
 
   filtered.forEach((transaction) => {
     const item = transaction as ExtendedTransaction;
-    const categoryName = item.category?.name?.trim() || (mode === 'expense' ? 'Без категории' : 'Доходы');
-    const sectionName = item.category?.section?.name?.trim() || item.section?.name?.trim() || 'Без раздела';
+    const categoryName = categoryNameFor(item, mode);
+    const sectionName = sectionNameFor(item, mode);
     const categoryIcon = item.category?.icon || (mode === 'expense' ? '🧾' : '💵');
-    const sectionIcon = item.category?.section?.icon || item.section?.icon || '📌';
+    const sectionIcon = item.category?.section?.icon || item.section?.icon || (mode === 'expense' ? '📌' : '💰');
     const key = getHomeFinanceGroupKey(transaction, mode);
     const amount = toRub(Number(transaction.amount) || 0, transaction.account?.currency, rates);
 
@@ -147,9 +155,10 @@ export function buildHomeFinanceAnalytics(
     const existingSection = sectionMap.get(sectionKey);
     if (existingSection) {
       existingSection.amount += amount;
+      existingSection.count += 1;
     } else {
-      const color = item.category?.section?.color || item.section?.color || stableColorFromKey(sectionKey);
-      sectionMap.set(sectionKey, { key: sectionKey, name: sectionName, amount, color, icon: sectionIcon, percent: 0 });
+      const color = item.category?.section?.color || item.section?.color || stableColorFromKey(`section:${sectionKey}`);
+      sectionMap.set(sectionKey, { key: sectionKey, name: sectionName, amount, color, icon: sectionIcon, percent: 0, count: 1 });
     }
   });
 
@@ -159,7 +168,11 @@ export function buildHomeFinanceAnalytics(
 
   const sections = [...sectionMap.values()]
     .sort((a, b) => b.amount - a.amount)
-    .map((item) => ({ ...item, percent: total > 0 ? Math.round((item.amount / total) * 100) : 0 }));
+    .map((item) => ({
+      ...item,
+      percent: total > 0 ? Math.round((item.amount / total) * 100) : 0,
+      categories: categories.filter((category) => category.sectionName === item.name),
+    }));
 
   return { total, categories, sections, transactions: filtered };
 }

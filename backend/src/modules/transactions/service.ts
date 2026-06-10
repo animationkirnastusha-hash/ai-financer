@@ -302,11 +302,10 @@ export class TransactionService {
       existingCategoryId: existing.categoryId,
       existingSectionId: existing.sectionId,
       nextType,
-      nextTitle,
-      nextDescription,
-      textChanged: input.title !== undefined || input.description !== undefined || input.type !== undefined,
       categoryId: input.categoryId,
       sectionId: input.sectionId,
+      title: nextTitle,
+      description: nextDescription,
     });
 
     const nextCategoryId = taxonomy.categoryId;
@@ -464,11 +463,10 @@ export class TransactionService {
       existingCategoryId?: string | null;
       existingSectionId?: string | null;
       nextType: TransactionType;
-      nextTitle?: string | null;
-      nextDescription?: string | null;
-      textChanged?: boolean;
       categoryId?: string | null;
       sectionId?: string | null;
+      title?: string | null;
+      description?: string | null;
     },
   ) {
     if (params.nextType === 'transfer') {
@@ -478,9 +476,10 @@ export class TransactionService {
     if (params.categoryId !== undefined) {
       if (!params.categoryId) {
         return this.resolveTransactionTaxonomy(userId, {
-          type: params.nextType,
-          title: params.nextTitle,
-          description: params.nextDescription,
+          type: params.nextType as Exclude<TransactionType, 'transfer'>,
+          title: params.title,
+          description: params.description,
+          categoryId: null,
           sectionId: params.sectionId ?? null,
         });
       }
@@ -492,12 +491,13 @@ export class TransactionService {
       };
     }
 
-    if (params.nextType !== params.existingType || params.textChanged) {
+    if (params.nextType !== params.existingType) {
       return this.resolveTransactionTaxonomy(userId, {
-        type: params.nextType,
-        title: params.nextTitle,
-        description: params.nextDescription,
-        sectionId: params.sectionId ?? params.existingSectionId ?? null,
+        type: params.nextType as Exclude<TransactionType, 'transfer'>,
+        title: params.title,
+        description: params.description,
+        categoryId: null,
+        sectionId: params.sectionId ?? null,
       });
     }
 

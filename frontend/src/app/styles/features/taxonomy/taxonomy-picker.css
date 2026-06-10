@@ -1,12 +1,10 @@
 .app-taxonomy-picker {
   display: grid;
   gap: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 24px;
+  border: 1px solid rgba(255,255,255,.08);
+  background: radial-gradient(circle at top right, rgba(110,231,183,.09), transparent 42%), rgba(255,255,255,.04);
+  border-radius: 22px;
   padding: 14px;
-  background:
-    radial-gradient(circle at 14% 0%, rgba(52, 211, 153, 0.12), transparent 34%),
-    rgba(255, 255, 255, 0.035);
 }
 
 .app-taxonomy-picker__head {
@@ -16,47 +14,81 @@
   gap: 12px;
 }
 
-.app-taxonomy-picker__eyebrow {
-  font-size: 10px;
-  line-height: 1.2;
-  letter-spacing: 0.16em;
+.app-taxonomy-picker__eyebrow,
+.app-taxonomy-category-preview__label {
+  color: rgba(255,255,255,.44);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .08em;
   text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.42);
 }
 
 .app-taxonomy-picker__title {
   margin-top: 5px;
+  color: rgba(255,255,255,.92);
   font-size: 15px;
-  font-weight: 700;
-  color: rgba(255, 255, 255, 0.92);
+  font-weight: 900;
 }
 
 .app-taxonomy-picker__create {
-  flex-shrink: 0;
-  border: 1px solid rgba(52, 211, 153, 0.24);
+  min-height: 36px;
+  border: 0;
   border-radius: 999px;
-  padding: 8px 12px;
-  background: rgba(52, 211, 153, 0.1);
-  color: rgba(220, 252, 231, 0.95);
+  background: rgba(110,231,183,.14);
+  color: rgba(214,255,239,.96);
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 900;
+  padding: 0 13px;
 }
 
 .app-taxonomy-picker__meta {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  color: rgba(255, 255, 255, 0.5);
-  font-size: 12px;
 }
 
-.app-taxonomy-picker__meta span {
-  border: 1px solid rgba(255, 255, 255, 0.07);
+.app-taxonomy-picker__meta span,
+.app-taxonomy-category-preview__pill {
+  border: 1px solid rgba(255,255,255,.08);
   border-radius: 999px;
-  padding: 6px 9px;
-  background: rgba(255, 255, 255, 0.035);
+  background: rgba(255,255,255,.04);
+  color: rgba(255,255,255,.62);
+  font-size: 12px;
+  font-weight: 750;
+  padding: 7px 10px;
 }
 
-.app-taxonomy-picker__select {
-  margin: 0;
+.app-taxonomy-category-preview {
+  display: grid;
+  gap: 10px;
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 20px;
+  background: rgba(255,255,255,.035);
+  padding: 12px;
+}
+
+.app-taxonomy-category-preview__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.app-taxonomy-category-preview__value {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+  color: rgba(255,255,255,.92);
+  font-size: 14px;
+  font-weight: 900;
+}
+
+.app-taxonomy-category-preview__icon {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  background: rgba(255,255,255,.08);
 }

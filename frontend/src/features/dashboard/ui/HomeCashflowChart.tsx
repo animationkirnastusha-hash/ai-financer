@@ -29,7 +29,7 @@ export function HomeCashflowChart({
 }: Props) {
   const { t } = useI18n();
   const analytics = buildHomeFinanceAnalytics(transactions, mode, period, rates);
-  const primary = analytics.categories[0];
+  const primary = analytics.sections[0];
   const hasData = analytics.total > 0;
   const modeTitle = mode === 'expense' ? t('transaction.type.expense') : t('transaction.type.income');
   const periodTitle = (value: HomeCashflowPeriod) => value === 'day' ? t('analytics.period.day') : value === 'week' ? t('analytics.period.week') : t('analytics.period.month');
@@ -54,12 +54,12 @@ export function HomeCashflowChart({
       </div>
 
       <button type="button" className="app-home-chart-preview" onClick={onOpenDetails} aria-label={t('dashboard.cashflow.openChart')}>
-        <span className="app-home-donut" style={{ background: conicGradient(analytics.categories) }}>
+        <span className="app-home-donut" style={{ background: conicGradient(analytics.sections) }}>
           <i />
         </span>
         <span className="app-home-chart-preview__text">
           <b>{hasData ? formatMoney(analytics.total, 'RUB', { sign: mode === 'expense' ? 'minus' : 'plus' }) : t('dashboard.cashflow.empty')}</b>
-          <small>{hasData && primary ? `${primary.name} — ${primary.percent}%` : t('dashboard.cashflow.emptyCaption')}</small>
+          <small>{hasData && primary ? `${primary.icon ? `${primary.icon} ` : ``}${primary.name} — ${primary.percent}%` : t('dashboard.cashflow.emptyCaption')}</small>
         </span>
       </button>
 

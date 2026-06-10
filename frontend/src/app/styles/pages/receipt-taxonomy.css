@@ -1,0 +1,72 @@
+.receipt-taxonomy-groups {
+  display: grid;
+  gap: 9px;
+  margin-top: 12px;
+}
+
+.receipt-taxonomy-group {
+  display: grid;
+  gap: 8px;
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 18px;
+  background: rgba(255,255,255,.035);
+  padding: 10px;
+}
+
+.receipt-taxonomy-group__head {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 9px;
+}
+
+.receipt-taxonomy-group__head i {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 13px;
+  font-style: normal;
+}
+
+.receipt-taxonomy-group__head b,
+.receipt-taxonomy-group__head small {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.receipt-taxonomy-group__head b {
+  color: rgba(255,255,255,.92);
+  font-size: 13px;
+}
+
+.receipt-taxonomy-group__head small {
+  margin-top: 2px;
+  color: rgba(255,255,255,.44);
+  font-size: 11px;
+}
+
+.receipt-taxonomy-group__head strong {
+  color: rgba(255,255,255,.86);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.receipt-taxonomy-group__categories {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.receipt-taxonomy-group__categories span {
+  border: 1px solid rgba(255,255,255,.07);
+  border-radius: 999px;
+  background: rgba(255,255,255,.04);
+  color: rgba(255,255,255,.64);
+  font-size: 11px;
+  font-weight: 800;
+  padding: 6px 8px;
+}

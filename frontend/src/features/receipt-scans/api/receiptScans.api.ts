@@ -2,10 +2,25 @@ import { getAccessToken } from '@/features/auth/lib/accessToken';
 import type { SubscriptionStatusDto } from '@/features/subscription/api/subscription.api';
 import { env } from '@/shared/config/env';
 
+export type ReceiptScanPreviewGroupDto = {
+  sectionName: string;
+  sectionIcon: string;
+  sectionColor: string;
+  amount: number;
+  categories: Array<{
+    categoryName: string;
+    categoryIcon: string;
+    categoryColor: string;
+    amount: number;
+    items: Array<{ title: string; amount: number | null }>;
+  }>;
+};
+
 export type ReceiptScanPreviewDto = {
   title: string;
   caption: string;
   fields: Array<{ label: string; value: string }>;
+  groups?: ReceiptScanPreviewGroupDto[];
 };
 
 export type ReceiptScanDto = {

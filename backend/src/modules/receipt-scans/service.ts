@@ -3,6 +3,7 @@ import { prisma } from '../../lib/prisma';
 import { BadRequestError, ForbiddenError, NotFoundError } from '../../shared/core/errors';
 import { subscriptionService } from '../subscription/service';
 import { TransactionService } from '../transactions/service';
+import { buildReceiptTaxonomyItems, groupReceiptTaxonomyItems, type ReceiptTaxonomyGroup } from '../taxonomy/receipt-taxonomy';
 
 export type ReceiptScanDto = {
   id: string;
@@ -26,6 +27,7 @@ type ReceiptScanPreview = {
   title: string;
   caption: string;
   fields: Array<{ label: string; value: string }>;
+  groups?: ReceiptTaxonomyGroup[];
 };
 
 type CreateReceiptInput = {
@@ -121,14 +123,19 @@ function buildPreview(input: CreateReceiptInput): ReceiptScanPreview {
 }
 
 function buildReviewedPreview(scan: ReceiptScan): ReceiptScanPreview {
+  const items = buildReceiptTaxonomyItems(scan.rawText);
+  const groups = groupReceiptTaxonomyItems(items);
   return {
     title: scan.merchant || 'Чек проверен',
-    caption: scan.transactionId ? 'Расход уже создан.' : 'Можно создать расход из этого чека.',
+    caption: groups.length > 0
+      ? 'Позиции чека разложены по разделам и категориям. Проверь итог перед созданием расхода.'
+      : scan.transactionId ? 'Расход уже создан.' : 'Можно создать расход из этого чека.',
     fields: [
       { label: 'Сумма', value: scan.totalAmount ? `${scan.totalAmount} ${scan.currency}` : 'Не указана' },
       { label: 'Дата', value: scan.purchasedAt ? scan.purchasedAt.toISOString().slice(0, 10) : 'Не указана' },
       { label: 'Статус', value: scan.transactionId ? 'Расход создан' : 'Проверен' },
     ],
+    ...(groups.length > 0 ? { groups } : {}),
   };
 }
 

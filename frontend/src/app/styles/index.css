@@ -13,7 +13,6 @@
 @import "./pages/accounts.css";
 @import "./pages/transactions.css";
 @import "./pages/taxonomy.css";
-@import "./features/taxonomy/taxonomy-picker.css";
 @import "./pages/settings.css";
 @import "./features/ai-settings/ai-settings-panel.css";
 @import "./features/chat/ai-text.css";
@@ -52,3 +51,6 @@
 @import "./features/store/payment-sheet.css";
 @import "./layout/device-adaptive.css";
 @import "./pages/visual-repair.css";
+@import "./features/taxonomy/taxonomy-picker.css";
+@import "./pages/dashboard-taxonomy.css";
+@import "./pages/receipt-taxonomy.css";
