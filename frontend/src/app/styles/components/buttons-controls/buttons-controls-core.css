@@ -437,4 +437,4 @@
   border-radius: 999px;
   background: rgba(255,255,255,.04);
 }
-.ai-companion-avatar--idle .ai-companion-avatar__eyes span,
+.ai-companion-avatar--idle .ai-companion-avatar__eyes span { animation: aiCompanionBlink 4.8s ease-in-out infinite; }
