@@ -1,0 +1,18 @@
+export const statusRuntimeDictionary: Record<string, string> = {
+  'Что важно': 'What matters',
+  'Новых уведомлений нет': 'No new notifications',
+  'Пока пусто': 'Nothing here yet',
+  'Здесь появятся платежи, просрочки и важные события.': 'Payments, overdue items and important events will appear here.',
+  'Прочитать все': 'Mark all as read',
+  'Прочитано': 'Read',
+  'Тест напоминания': 'Reminder test',
+  'Это проверка доставки уведомления в Telegram.': 'This is a Telegram notification delivery test.',
+  'Выполнено': 'Done',
+  'Ожидает подтверждения': 'Awaiting confirmation',
+  'Черновик': 'Draft',
+  'Ошибка': 'Error',
+  'Отменено': 'Cancelled',
+  'Неизвестно': 'Unknown',
+  'Проверь соединение с сервером и попробуй ещё раз.': 'Check the server connection and try again.',
+  'Не удалось загрузить данные': 'Could not load data',
+};

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useChatController } from '@/features/chat/model/useChatController';
 import { useNavigationStore } from '@/features/navigation/model/navigation.store';
 import { useAppModalStore } from '@/features/modals/model/appModal.store';
@@ -7,30 +7,11 @@ import { logVoiceDebugEvent } from '@/features/voice/api/voice.api';
 import { useVoiceCommandDispatcher } from '@/features/voice/model/useVoiceCommandDispatcher';
 import { useVoiceInput } from '@/features/voice/model/useVoiceInput';
 import { useVoiceSessionMachine } from '@/features/voice/model/useVoiceSessionMachine';
-import { VOICE_BUBBLE_TIMEOUT_MS } from '@/features/voice/model/voiceConstants';
-import type { VoiceCompanionMood, VoiceThought, VoiceBubbleTone } from '@/features/voice/model/voiceSession.types';
-import { compactVoiceBubble } from '@/features/voice/model/voiceText';
-import { VoicePermissionIntro } from '@/features/voice/ui/VoicePermissionIntro';
-import { VoiceStatusPill } from '@/features/voice/ui/VoiceStatusPill';
-import { VoiceThoughtBubble } from '@/features/voice/ui/VoiceThoughtBubble';
+import type { VoiceCompanionMood } from '@/features/voice/model/voiceSession.types';
+import { VoiceCompanionSurface } from '@/features/voice/ui/companion/VoiceCompanionSurface';
+import { useVoiceCompanionThought } from '@/features/voice/ui/companion/useVoiceCompanionThought';
+import { useVoiceHoldGesture } from '@/features/voice/ui/companion/useVoiceHoldGesture';
 import { useI18n } from '@/shared/lib/i18n';
-import { CompanionButton } from '@/shared/ui/CompanionButton';
-
-type GestureMode = 'idle' | 'holding';
-
-type GestureRuntime = {
-  pointerId: number | null;
-  startX: number;
-  startY: number;
-  started: boolean;
-  releaseAfterStart: boolean;
-  cancelled: boolean;
-  mode: GestureMode;
-};
-
-const SWIPE_CANCEL_PX = 58;
-const TAP_GUARD_MS = 320;
-const HOLD_TO_VOICE_MS = 210;
 
 export function VoiceFirstCompanionLayer() {
   const { t } = useI18n();
@@ -51,50 +32,17 @@ export function VoiceFirstCompanionLayer() {
   const appLanguage = useSettingsStore((state) => state.appLanguage);
   const setVoicePermissionPrompted = useSettingsStore((state) => state.setVoicePermissionPrompted);
 
-  const [thought, setThought] = useState<VoiceThought | null>(null);
   const [isPriming, setIsPriming] = useState(false);
   const [permissionIntroOpen, setPermissionIntroOpen] = useState(false);
   const [permissionIntroDismissed, setPermissionIntroDismissed] = useState(false);
-  const [gestureMode, setGestureMode] = useState<GestureMode>('idle');
 
-  const bubbleTimerRef = useRef<number | null>(null);
-  const lastThoughtRef = useRef<{ text: string; tone: VoiceBubbleTone; at: number }>({ text: '', tone: 'neutral', at: 0 });
   const lastAssistantMessageKeyRef = useRef('');
-  const lastPointerDownAtRef = useRef(0);
-  const holdTimerRef = useRef<number | null>(null);
   const handleTextRef = useRef<(text: string) => Promise<void> | void>(() => undefined);
   const voiceCancelRef = useRef<() => void>(() => undefined);
   const resetVoiceMachineRef = useRef<() => void>(() => undefined);
-  const gestureRef = useRef<GestureRuntime>({
-    pointerId: null,
-    startX: 0,
-    startY: 0,
-    started: false,
-    releaseAfterStart: false,
-    cancelled: false,
-    mode: 'idle',
-  });
+  const { thought, showThought } = useVoiceCompanionThought();
 
   const wakeName = companionName || 'Фина';
-
-  const showThought = useCallback((text: string, tone: VoiceBubbleTone = 'neutral', timeoutMs = VOICE_BUBBLE_TIMEOUT_MS) => {
-    const cleanText = compactVoiceBubble(text);
-    if (!cleanText) return;
-
-    const now = Date.now();
-    const lastThought = lastThoughtRef.current;
-    if (lastThought.text === cleanText && lastThought.tone === tone && now - lastThought.at < 1400) return;
-    lastThoughtRef.current = { text: cleanText, tone, at: now };
-
-    if (bubbleTimerRef.current !== null) window.clearTimeout(bubbleTimerRef.current);
-    setThought({ id: `${tone}-${now}`, text: cleanText, tone });
-
-    bubbleTimerRef.current = window.setTimeout(() => {
-      setThought(null);
-      bubbleTimerRef.current = null;
-    }, timeoutMs);
-  }, []);
-
   const dispatchCommand = useVoiceCommandDispatcher({ chat, navigateTo, goBack, openTextChat: () => openAIWithCommand(), showThought });
 
   const machine = useVoiceSessionMachine({
@@ -173,36 +121,6 @@ export function VoiceFirstCompanionLayer() {
     voiceCancelRef.current = voice.cancel;
   }, [voice.cancel]);
 
-  const resetGesture = useCallback(() => {
-    gestureRef.current = {
-      pointerId: null,
-      startX: 0,
-      startY: 0,
-      started: false,
-      releaseAfterStart: false,
-      cancelled: false,
-      mode: 'idle',
-    };
-    setGestureMode('idle');
-  }, []);
-
-  const cancelManualRecording = useCallback((reason: string) => {
-    const gesture = gestureRef.current;
-    gesture.cancelled = true;
-    logVoiceDebugEvent('manual_voice_cancelled', { reason, mode: gesture.mode, voiceState: voice.state });
-    voice.cancel();
-    resetVoiceMachine();
-    resetGesture();
-    showThought(t('voice.thought.cancelled'), 'neutral', 1600);
-  }, [resetGesture, resetVoiceMachine, showThought, t, voice]);
-
-  const clearHoldTimer = useCallback(() => {
-    if (holdTimerRef.current !== null) {
-      window.clearTimeout(holdTimerRef.current);
-      holdTimerRef.current = null;
-    }
-  }, []);
-
   const openTextOverlay = useCallback(() => {
     openModal({ type: 'ai-text-overlay', mode: 'text', autoStartVoice: false, autoCloseOnVoiceResult: false });
   }, [openModal]);
@@ -267,110 +185,33 @@ export function VoiceFirstCompanionLayer() {
     } finally {
       setIsPriming(false);
     }
-  }, [setVoicePermissionPrompted, showThought, t, voice.primePermission]);
+  }, [setVoicePermissionPrompted, showThought, t, voice]);
 
-  const handlePointerDown = useCallback((event: PointerEvent<HTMLDivElement>) => {
-    const now = Date.now();
-    if (now - lastPointerDownAtRef.current < TAP_GUARD_MS) {
-      logVoiceDebugEvent('manual_voice_pointer_down_ignored_guard');
-      return;
-    }
-    lastPointerDownAtRef.current = now;
+  const onCancelRecording = useCallback((reason: string, mode: string) => {
+    logVoiceDebugEvent('manual_voice_cancelled', { reason, mode, voiceState: voice.state });
+    voice.cancel();
+    resetVoiceMachine();
+    showThought(t('voice.thought.cancelled'), 'neutral', 1600);
+  }, [resetVoiceMachine, showThought, t, voice]);
 
-    event.preventDefault();
-    event.stopPropagation();
-    event.currentTarget.setPointerCapture?.(event.pointerId);
-
-    clearHoldTimer();
-    resetGesture();
-    gestureRef.current = {
-      pointerId: event.pointerId,
-      startX: event.clientX,
-      startY: event.clientY,
-      started: false,
-      releaseAfterStart: false,
-      cancelled: false,
-      mode: 'holding',
-    };
-    setGestureMode('holding');
-
-    holdTimerRef.current = window.setTimeout(() => {
-      const gesture = gestureRef.current;
-      if (gesture.pointerId !== event.pointerId || gesture.cancelled || gesture.started) return;
-      gesture.started = true;
-      void startHoldRecording().then((started) => {
-        const currentGesture = gestureRef.current;
-        if (!started) {
-          resetGesture();
-          logVoiceDebugEvent('manual_voice_hold_recording_started', { pointerId: event.pointerId, started });
-          return;
-        }
-
-        if (currentGesture.releaseAfterStart) {
-          showThought(t('voice.thought.recognizing'), 'neutral', 1800);
-          voice.stop();
-          resetGesture();
-        }
-
-        logVoiceDebugEvent('manual_voice_hold_recording_started', { pointerId: event.pointerId, started, releaseAfterStart: currentGesture.releaseAfterStart });
-      });
-    }, HOLD_TO_VOICE_MS);
-  }, [clearHoldTimer, resetGesture, showThought, startHoldRecording, t, voice]);
-
-  const handlePointerMove = useCallback((event: PointerEvent<HTMLDivElement>) => {
-    const gesture = gestureRef.current;
-    if (gesture.pointerId !== event.pointerId || gesture.mode !== 'holding' || gesture.cancelled) return;
-
-    const dx = event.clientX - gesture.startX;
-    const dy = event.clientY - gesture.startY;
-
-    if (dx <= -SWIPE_CANCEL_PX && Math.abs(dx) > Math.abs(dy)) {
-      event.preventDefault();
-      clearHoldTimer();
-      cancelManualRecording('swipe_left');
-      return;
-    }
-
-  }, [cancelManualRecording, clearHoldTimer]);
-
-  const handlePointerUp = useCallback((event: PointerEvent<HTMLDivElement>) => {
-    const gesture = gestureRef.current;
-    if (gesture.pointerId !== event.pointerId) return;
-
-    event.preventDefault();
-    event.stopPropagation();
-    event.currentTarget.releasePointerCapture?.(event.pointerId);
-    clearHoldTimer();
-
-    if (gesture.cancelled) {
-      resetGesture();
-      return;
-    }
-    if (!gesture.started) {
-      resetGesture();
-      openTextOverlay();
-      logVoiceDebugEvent('manual_voice_tap_text_overlay_opened', { pointerId: event.pointerId });
-      return;
-    }
-
-    if (voice.state === 'recording') {
-      showThought(t('voice.thought.recognizing'), 'neutral', 1800);
-      voice.stop();
-      resetGesture();
-      logVoiceDebugEvent('manual_voice_hold_released_recording_stopped', { pointerId: event.pointerId, voiceState: voice.state });
-      return;
-    }
-
-    gesture.releaseAfterStart = true;
-    logVoiceDebugEvent('manual_voice_hold_release_waiting_recorder_start', { pointerId: event.pointerId, voiceState: voice.state });
-  }, [clearHoldTimer, openTextOverlay, resetGesture, showThought, t, voice]);
-
-  const handlePointerCancel = useCallback((event: PointerEvent<HTMLDivElement>) => {
-    const gesture = gestureRef.current;
-    if (gesture.pointerId !== event.pointerId) return;
-    clearHoldTimer();
-    cancelManualRecording('pointer_cancel');
-  }, [cancelManualRecording, clearHoldTimer]);
+  const {
+    gestureMode,
+    resetGesture,
+    handlePointerDown,
+    handlePointerMove,
+    handlePointerUp,
+    handlePointerCancel,
+  } = useVoiceHoldGesture({
+    voiceState: voice.state,
+    startHoldRecording,
+    stopVoice: voice.stop,
+    openTextOverlay,
+    onCancelRecording,
+    showThought,
+    labels: {
+      recognizing: t('voice.thought.recognizing'),
+    },
+  });
 
   useEffect(() => {
     if (!voice.error) return;
@@ -438,15 +279,13 @@ export function VoiceFirstCompanionLayer() {
   }, [chat.pendingActions.length, hasTextChatOverlay, openModal]);
 
   useEffect(() => () => {
-    if (bubbleTimerRef.current !== null) window.clearTimeout(bubbleTimerRef.current);
-    if (holdTimerRef.current !== null) window.clearTimeout(holdTimerRef.current);
     resetVoiceMachineRef.current();
     voiceCancelRef.current();
   }, []);
 
   const mood = useMemo<VoiceCompanionMood>(() => {
     if (chat.pendingActions.length > 0) return 'confirm';
-    if (voice.state === 'recording' || gestureMode === 'holding' || false) return 'listening';
+    if (voice.state === 'recording' || gestureMode === 'holding') return 'listening';
     if (voice.state === 'uploading' || chat.isSending || isDispatching) return 'thinking';
     if (thought?.tone === 'warning') return 'warning';
     if (thought?.tone === 'success') return 'success';
@@ -456,64 +295,31 @@ export function VoiceFirstCompanionLayer() {
   const needsIntro = microphoneNeedsAction && (!permissionIntroDismissed || permissionIntroOpen);
   const showFloatingCompanion = !hasOpenModal;
 
-  if (!showFloatingCompanion && !needsIntro) return null;
-
   return (
-    <>
-      {needsIntro ? (
-        <VoicePermissionIntro
-          wakeName={wakeName}
-          isPriming={isPriming}
-          permissionState={voice.permissionState}
-          onPrime={primeVoicePermission}
-          onSkip={() => {
-            setPermissionIntroOpen(false);
-            setPermissionIntroDismissed(true);
-          }}
-        />
-      ) : null}
-
-      {showFloatingCompanion ? (
-        <div className="voice-first-companion" data-no-swipe="true">
-          <VoiceThoughtBubble thought={thought} />
-
-          <div className="voice-first-companion__controls">
-            <div className="voice-first-companion__voice-panel">
-              <VoiceStatusPill
-                canUseVoice={canUseVoice}
-                isBusy={isBusy}
-                voiceState={voice.state}
-                captureMode={captureMode}
-                phase={phase}
-                cooldownUntil={cooldownUntil}
-              />
-            </div>
-
-            <div
-              className="voice-first-companion__press-target"
-              role="button"
-              aria-label={t('voice.fina.tapTextHoldVoice')}
-              tabIndex={0}
-              onPointerDown={handlePointerDown}
-              onPointerMove={handlePointerMove}
-              onPointerUp={handlePointerUp}
-              onPointerCancel={handlePointerCancel}
-              onContextMenu={(event) => event.preventDefault()}
-            >
-              <CompanionButton
-                mood={mood}
-                size="md"
-                label={t('voice.fina.tapTextHoldVoice')}
-                className="pointer-events-none select-none"
-                tabIndex={-1}
-                aria-hidden="true"
-              />
-            </div>
-          </div>
-
-        </div>
-      ) : null}
-
-    </>
+    <VoiceCompanionSurface
+      needsIntro={needsIntro}
+      showFloatingCompanion={showFloatingCompanion}
+      wakeName={wakeName}
+      isPriming={isPriming}
+      permissionState={voice.permissionState}
+      onPrimePermission={primeVoicePermission}
+      onSkipPermissionIntro={() => {
+        setPermissionIntroOpen(false);
+        setPermissionIntroDismissed(true);
+      }}
+      thought={thought}
+      canUseVoice={canUseVoice}
+      isBusy={isBusy}
+      voiceState={voice.state}
+      captureMode={captureMode}
+      phase={phase}
+      cooldownUntil={cooldownUntil}
+      mood={mood}
+      ariaLabel={t('voice.fina.tapTextHoldVoice')}
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
+      onPointerCancel={handlePointerCancel}
+    />
   );
 }

@@ -249,16 +249,39 @@ function collectTranslationKeyLeaks(files) {
   return findings;
 }
 
+function collectCssImports(cssFile, reachable, missing, stack = new Set()) {
+  const normalizedFile = normalizePath(cssFile);
+  if (stack.has(normalizedFile)) return;
+  stack.add(normalizedFile);
+
+  if (!fs.existsSync(cssFile)) {
+    missing.add(normalizedFile);
+    stack.delete(normalizedFile);
+    return;
+  }
+
+  reachable.add(normalizedFile);
+  const content = fs.readFileSync(cssFile, 'utf8');
+  const cssDir = path.dirname(cssFile);
+
+  for (const match of content.matchAll(/@import\s+(?:url\()?['"]?(.+?\.css)['"]?\)?/g)) {
+    const importPath = match[1];
+    if (/^(https?:)?\/\//i.test(importPath)) continue;
+    const resolved = path.normalize(path.join(cssDir, importPath));
+    collectCssImports(resolved, reachable, missing, stack);
+  }
+
+  stack.delete(normalizedFile);
+}
+
 function collectCssStructureFindings() {
   const findings = [];
   const cssFiles = walk(stylesRoot).filter((file) => CSS_EXTENSIONS.has(path.extname(file)));
   const indexPath = path.join(stylesRoot, 'index.css');
-  const indexContent = fs.existsSync(indexPath) ? fs.readFileSync(indexPath, 'utf8') : '';
-  const imported = new Set();
+  const reachable = new Set();
+  const missing = new Set();
 
-  for (const match of indexContent.matchAll(/@import\s+['"](.+?\.css)['"]/g)) {
-    imported.add(normalizePath(path.normalize(path.join(stylesRoot, match[1]))));
-  }
+  collectCssImports(indexPath, reachable, missing);
 
   for (const file of cssFiles) {
     const relative = rel(file);
@@ -276,15 +299,13 @@ function collectCssStructureFindings() {
       findings.push({ type: 'numeric-flat-css-name', file: relative, detail: 'numeric CSS filename remains' });
     }
 
-    if (!isIndex && !imported.has(normalized)) {
-      findings.push({ type: 'css-not-imported-by-manifest', file: relative, detail: 'not imported from src/app/styles/index.css' });
+    if (!isIndex && !reachable.has(normalized)) {
+      findings.push({ type: 'css-not-imported-by-manifest', file: relative, detail: 'not reachable from src/app/styles/index.css imports' });
     }
   }
 
-  for (const importedPath of imported) {
-    if (!fs.existsSync(importedPath)) {
-      findings.push({ type: 'missing-css-import', file: rel(importedPath), detail: 'imported from index.css but file does not exist' });
-    }
+  for (const missingPath of missing) {
+    findings.push({ type: 'missing-css-import', file: rel(missingPath), detail: 'imported from CSS manifest chain but file does not exist' });
   }
 
   return findings;
