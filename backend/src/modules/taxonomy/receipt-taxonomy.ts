@@ -1,4 +1,4 @@
-import { resolveTaxonomyForText } from './taxonomy-icons';
+import { resolveTransactionSemanticTaxonomy } from './transaction-taxonomy';
 
 export type ReceiptTaxonomyItem = {
   title: string;
@@ -52,7 +52,7 @@ export function buildReceiptTaxonomyItems(rawText?: string | null): ReceiptTaxon
     .slice(0, 80)
     .map((line) => {
       const parsed = extractAmount(line);
-      const resolved = resolveTaxonomyForText({ kind: 'expense', title: parsed.title });
+      const resolved = resolveTransactionSemanticTaxonomy({ kind: 'expense', title: parsed.title });
       return {
         title: parsed.title,
         amount: parsed.amount,

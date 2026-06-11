@@ -116,6 +116,8 @@ export class AIPlannerService {
       'For VOICE_SESSION_COMMAND, produce exactly one final coherent plan from all segments. Correction segments such as “нет”, “стой”, “лучше”, “замени”, “исправь” mean the later segment changes the earlier conflicting part. Keep non-conflicting details such as amount if the user did not cancel them.',
       'If the user asks to change, edit, fix, correct, rename or update an existing operation/transaction, use update_transaction. Do not create a new transaction for corrections to existing records.',
       'For every transaction, provide category and section when the meaning is clear from the whole request; leave them absent only when genuinely unclear.',
+      'Do not use a shop/place/merchant as the transaction title when the user describes what was bought. Put place/merchant into description, and keep the title/category based on the purchase meaning.',
+      'If one total amount contains several item meanings without item-level prices, create one transaction only. Do not split the amount. Put the item meanings into description so backend can show them as one mixed purchase card.',
       'If several actions are needed to satisfy one user request, return several tool calls in the correct order.',
       'Do not use previous commands as source data for names, accounts, amounts, or intent. Current USER message wins. Pending clarification is handled outside planner.',
       'If essential entity remains ambiguous after context, leave the ambiguous field missing/null so validator can ask clarification rather than inventing.',
@@ -155,6 +157,8 @@ export class AIPlannerService {
         'Edits to existing operations must use update_transaction, not create_transaction.',
         'For off-topic, return reply with empty actions.',
         'Pass user-provided natural names and amounts through as tool input values; do not manually normalize them with custom rules.',
+        'For mixed purchases with one total amount, do not create several expenses. Use one create_transaction and keep details in description.',
+        'Do not copy the raw spoken phrase as a transaction name. Use a clean description of the purchase meaning.',
         'CONTEXT:', JSON.stringify(focusedContext),
         'USER:', command,
       ].join('\n'),
@@ -287,7 +291,7 @@ export class AIPlannerService {
     const alias = this.normalizeToolAlias(rawTool);
     if (!alias) return null;
 
-    const nextInput = { ...input, ...alias.extraInput, __userText: command };
+    const nextInput = { ...input, ...alias.extraInput };
 
     const reason = typeof item.reason === 'string' && item.reason.trim() ? item.reason.trim() : undefined;
     return reason ? { tool: alias.tool, input: nextInput, reason } : { tool: alias.tool, input: nextInput };

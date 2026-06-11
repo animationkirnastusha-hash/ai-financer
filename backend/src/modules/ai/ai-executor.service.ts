@@ -6,7 +6,8 @@ import { progressionActivityBridge } from '../progression/activity-bridge.servic
 import { aiPremiumService } from './ai-premium.service';
 import { aiCompanionService } from './ai-companion.service';
 import { aiAnalyticsService } from './ai-analytics.service';
-import { resolveCategoryAppearance, resolveSectionAppearance, resolveTaxonomyForText, shouldReplaceGenericIcon } from '../taxonomy/taxonomy-icons';
+import { resolveCategoryAppearance, resolveSectionAppearance, shouldReplaceGenericIcon } from '../taxonomy/taxonomy-icons';
+import { resolveTransactionSemanticTaxonomy } from '../taxonomy/transaction-taxonomy';
 
 const transactionInclude = {
   account: {
@@ -215,18 +216,20 @@ export class AIExecutorService {
       const amount = this.toInteger(resolved.amountInAccountCurrency ?? input.amount, 0);
       if (amount <= 0) throw new BadRequestError('Transaction amount must be positive');
 
-      const taxonomy = resolveTaxonomyForText({
+      const taxonomy = resolveTransactionSemanticTaxonomy({
         kind,
         title: typeof input.category === 'string' ? input.category : undefined,
         description: typeof input.description === 'string' ? input.description : undefined,
+        sectionName: typeof input.section === 'string' ? input.section : undefined,
+        categoryName: typeof input.category === 'string' ? input.category : undefined,
       });
 
       const sectionId = typeof resolved.sectionId === 'string'
         ? resolved.sectionId
-        : await this.findOrCreateSectionId(tx, userId, typeof input.section === 'string' && input.section.trim() ? input.section : taxonomy.sectionName);
+        : await this.findOrCreateSectionId(tx, userId, taxonomy.sectionName);
 
       const categoryId = await this.findOrCreateCategoryId(tx, userId, {
-        name: typeof input.category === 'string' && input.category.trim() ? input.category : taxonomy.categoryName,
+        name: taxonomy.categoryName,
         type: kind,
         sectionId,
       });
@@ -246,11 +249,12 @@ export class AIExecutorService {
           sectionId,
           amount,
           type: kind,
-          description: typeof input.description === 'string' && input.description.trim()
+          title: taxonomy.titleFallback ?? null,
+          description: taxonomy.descriptionFallback ?? (typeof input.description === 'string' && input.description.trim()
             ? input.description.trim()
             : kind === 'income'
               ? 'Пополнение счёта'
-              : 'Расход',
+              : 'Расход'),
           date: new Date(),
           isAIGenerated: true,
         },

@@ -2,7 +2,8 @@ import { Prisma } from '@prisma/client';
 import { prisma } from '../../lib/prisma';
 import { BadRequestError, NotFoundError } from '../../shared/core/errors';
 import { progressionActivityBridge } from '../progression/activity-bridge.service';
-import { resolveTaxonomyForText, shouldReplaceGenericIcon } from '../taxonomy/taxonomy-icons';
+import { shouldReplaceGenericIcon } from '../taxonomy/taxonomy-icons';
+import { resolveTransactionSemanticTaxonomy } from '../taxonomy/transaction-taxonomy';
 
 export type TransactionType = 'income' | 'expense' | 'transfer';
 
@@ -233,7 +234,7 @@ export class TransactionService {
     }
 
     const taxonomy = input.type === 'transfer'
-      ? { categoryId: null as string | null, sectionId: null as string | null }
+      ? { categoryId: null as string | null, sectionId: null as string | null, titleFallback: null as string | null, descriptionFallback: null as string | null }
       : await this.resolveTransactionTaxonomy(userId, {
           type: input.type,
           title: input.title,
@@ -263,7 +264,7 @@ export class TransactionService {
           amount,
           type: input.type,
           title: this.buildTransactionTitleFallback(input.type, input.title, input.description, taxonomy),
-          description: input.description?.trim() || null,
+          description: taxonomy.descriptionFallback ?? (input.description?.trim() || null),
           date: input.date ?? new Date(),
           isAIGenerated: input.isAIGenerated ?? false,
         },
@@ -511,10 +512,13 @@ export class TransactionService {
     type: TransactionType,
     title?: string | null,
     description?: string | null,
-    taxonomy?: { categoryId?: string | null } | null,
+    taxonomy?: { categoryId?: string | null; titleFallback?: string | null } | null,
   ) {
     const cleanTitle = title?.trim();
     if (cleanTitle) return cleanTitle;
+
+    const semanticTitle = taxonomy?.titleFallback?.trim();
+    if (semanticTitle) return semanticTitle;
 
     const cleanDescription = description?.trim();
     if (cleanDescription) {
@@ -541,10 +545,12 @@ export class TransactionService {
       return {
         categoryId: category.id,
         sectionId: params.sectionId ?? category.sectionId ?? null,
+        titleFallback: null as string | null,
+        descriptionFallback: null as string | null,
       };
     }
 
-    const resolved = resolveTaxonomyForText({
+    const resolved = resolveTransactionSemanticTaxonomy({
       kind: params.type,
       title: params.title,
       description: params.description,
@@ -612,6 +618,8 @@ export class TransactionService {
     return {
       categoryId: category.id,
       sectionId: category.sectionId ?? section.id,
+      titleFallback: resolved.titleFallback ?? null,
+      descriptionFallback: resolved.descriptionFallback ?? null,
     };
   }
 
