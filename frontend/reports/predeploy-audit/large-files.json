@@ -1,42 +1,12 @@
 [
   {
-    "file": "src/app/styles/pages/dashboard.css",
-    "lines": 670,
-    "threshold": 420
-  },
-  {
-    "file": "src/app/styles/pages/obligations.css",
-    "lines": 669,
-    "threshold": 420
+    "file": "src/features/chat/ui/TextChatOverlay.tsx",
+    "lines": 600,
+    "threshold": 360
   },
   {
     "file": "src/features/voice/model/useVoiceRecorder.ts",
-    "lines": 615,
-    "threshold": 420
-  },
-  {
-    "file": "src/app/styles/features/chat/text-chat-overlay.css",
-    "lines": 612,
-    "threshold": 420
-  },
-  {
-    "file": "src/app/styles/pages/onboarding-setup.css",
-    "lines": 607,
-    "threshold": 420
-  },
-  {
-    "file": "src/features/chat/ui/TextChatOverlay.tsx",
-    "lines": 591,
-    "threshold": 360
-  },
-  {
-    "file": "src/features/voice/ui/VoiceFirstCompanionLayer.tsx",
-    "lines": 569,
-    "threshold": 360
-  },
-  {
-    "file": "src/app/styles/components/buttons-controls.css",
-    "lines": 528,
+    "lines": 570,
     "threshold": 420
   },
   {
@@ -45,8 +15,28 @@
     "threshold": 420
   },
   {
-    "file": "src/pages/admin/AdminPage.tsx",
-    "lines": 461,
-    "threshold": 360
+    "file": "src/app/styles/pages/dashboard/dashboard-hero.css",
+    "lines": 446,
+    "threshold": 420
+  },
+  {
+    "file": "src/app/styles/pages/obligations/obligations-summary.css",
+    "lines": 444,
+    "threshold": 420
+  },
+  {
+    "file": "src/app/styles/pages/onboarding-setup/onboarding-setup-shell.css",
+    "lines": 444,
+    "threshold": 420
+  },
+  {
+    "file": "src/app/styles/features/chat/text-chat-overlay/text-chat-overlay-shell.css",
+    "lines": 442,
+    "threshold": 420
+  },
+  {
+    "file": "src/app/styles/components/buttons-controls/buttons-controls-core.css",
+    "lines": 441,
+    "threshold": 420
   }
 ]

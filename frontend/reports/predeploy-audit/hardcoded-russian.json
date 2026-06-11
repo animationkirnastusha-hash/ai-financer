@@ -1,15 +1,5 @@
 [
   {
-    "file": "src/features/ai-core/ui/AIAssistantDock.tsx",
-    "line": 28,
-    "text": "aria-label=\"Открыть Фину\""
-  },
-  {
-    "file": "src/features/ai-core/ui/AICoreOrb.tsx",
-    "line": 101,
-    "text": "<CompanionButton size=\"lg\" mood={moodFromState(state, isActive, isVoiceLocked)} label=\"Фина\" tabIndex={-1} />"
-  },
-  {
     "file": "src/features/audit-log/lib/formatAuditLogItem.ts",
     "line": 18,
     "text": "return `Выполнено AI-действие${categoryName ? ` · ${categoryName}` : ''}${amount ? ` · ${amount}` : ''}`;"
@@ -120,474 +110,69 @@
     "text": "return `Подготовил перевод ${amount}.`;"
   },
   {
-    "file": "src/features/chat/model/useChatController.ts",
-    "line": 132,
-    "text": "const assistantText = response.message || 'Готово';"
-  },
-  {
-    "file": "src/features/chat/model/useChatController.ts",
-    "line": 180,
-    "text": "text: 'Связь нестабильна. Команда не выполнена, повтори позже или отправь текстом ещё раз.',"
-  },
-  {
-    "file": "src/features/chat/model/useChatController.ts",
-    "line": 181,
-    "text": "content: 'Связь нестабильна. Команда не выполнена, повтори позже или отправь текстом ещё раз.',"
-  },
-  {
-    "file": "src/features/chat/model/useChatController.ts",
-    "line": 201,
-    "text": "const assistantText = response?.message || '✅ Действие подтверждено.';"
-  },
-  {
-    "file": "src/features/chat/model/useChatController.ts",
-    "line": 220,
-    "text": "text: 'Не удалось подтвердить действие. Возможно, оно уже выполнено, отменено или истекло.',"
-  },
-  {
-    "file": "src/features/chat/model/useChatController.ts",
-    "line": 221,
-    "text": "content: 'Не удалось подтвердить действие. Возможно, оно уже выполнено, отменено или истекло.',"
-  },
-  {
-    "file": "src/features/chat/model/useChatController.ts",
-    "line": 242,
-    "text": "const assistantText = response?.message || 'Действие отменено.';"
-  },
-  {
-    "file": "src/features/chat/model/useChatController.ts",
-    "line": 271,
-    "text": "const assistantText = response?.message || '↩️ Операция отменена.';"
-  },
-  {
-    "file": "src/features/chat/model/useChatController.ts",
-    "line": 294,
-    "text": "text: 'Не удалось отменить операцию. Возможно, она уже отменена или изменена.',"
-  },
-  {
-    "file": "src/features/chat/model/useChatController.ts",
-    "line": 295,
-    "text": "content: 'Не удалось отменить операцию. Возможно, она уже отменена или изменена.',"
-  },
-  {
-    "file": "src/features/chat/ui/ChatScreen.tsx",
-    "line": 56,
-    "text": ": 'нет событий';"
-  },
-  {
-    "file": "src/features/chat/ui/TextChatOverlay.tsx",
-    "line": 39,
+    "file": "src/features/chat/ui/text-chat-overlay/helpers.ts",
+    "line": 9,
     "text": "const cleanName = normalizeForWake(companionName || 'Фина');"
   },
   {
-    "file": "src/features/chat/ui/TextChatOverlay.tsx",
-    "line": 40,
-    "text": "const aliases = Array.from(new Set([cleanName, 'фина', 'финна', 'фину', 'фине', 'финой', 'fina'].filter(Boolean)));"
+    "file": "src/features/chat/ui/text-chat-overlay/helpers.ts",
+    "line": 12,
+    "text": "[cleanName, 'фина', 'финна', 'фину', 'фине', 'финой', 'fina'].filter("
   },
   {
-    "file": "src/features/chat/ui/TextChatOverlay.tsx",
-    "line": 70,
-    "text": "?? accounts.find((account) => String(account.name ?? '').toLowerCase().includes('нал'))"
+    "file": "src/features/chat/ui/text-chat-overlay/helpers.ts",
+    "line": 75,
+    "text": ".includes('нал'),"
   },
   {
-    "file": "src/features/chat/ui/TextChatOverlay.tsx",
-    "line": 71,
-    "text": "?? accounts.find((account) => String(account.name ?? '').toLowerCase().includes('карт'))"
+    "file": "src/features/chat/ui/text-chat-overlay/helpers.ts",
+    "line": 80,
+    "text": ".includes('карт'),"
   },
   {
-    "file": "src/features/chat/ui/TextChatOverlay.tsx",
-    "line": 82,
-    "text": "const [voiceHint, setVoiceHint] = useState<string | null>(mode === 'voice' ? 'Слушаю' : null);"
+    "file": "src/features/chat/ui/text-chat-overlay/useTextChatContextualPrompts.ts",
+    "line": 22,
+    "text": "latest?.title || latest?.description || 'последнюю операцию';"
   },
   {
-    "file": "src/features/chat/ui/TextChatOverlay.tsx",
-    "line": 106,
-    "text": "const companionName = useSettingsStore((state) => state.companionName || 'Фина');"
-  },
-  {
-    "file": "src/features/chat/ui/TextChatOverlay.tsx",
-    "line": 140,
-    "text": "setVoiceHint('Не расслышала');"
-  },
-  {
-    "file": "src/features/chat/ui/TextChatOverlay.tsx",
-    "line": 143,
-    "text": "setVoiceHint('Думаю');"
-  },
-  {
-    "file": "src/features/chat/ui/TextChatOverlay.tsx",
-    "line": 173,
-    "text": "const latestTitle = latest?.title || latest?.description || 'последнюю операцию';"
-  },
-  {
-    "file": "src/features/chat/ui/TextChatOverlay.tsx",
-    "line": 176,
+    "file": "src/features/chat/ui/text-chat-overlay/useTextChatContextualPrompts.ts",
+    "line": 25,
     "text": "accountName ? `расход 300 кофе с ${accountName}` : 'расход 300 кофе',"
   },
   {
-    "file": "src/features/chat/ui/TextChatOverlay.tsx",
-    "line": 177,
+    "file": "src/features/chat/ui/text-chat-overlay/useTextChatContextualPrompts.ts",
+    "line": 26,
     "text": "accountName ? `доход 5000 на ${accountName}` : 'доход 5000',"
   },
   {
-    "file": "src/features/chat/ui/TextChatOverlay.tsx",
-    "line": 178,
-    "text": "accountName ? `поставь лимит на ${accountName} 20000 в месяц` : 'поставь общий лимит расходов 80000 в месяц',"
+    "file": "src/features/chat/ui/text-chat-overlay/useTextChatContextualPrompts.ts",
+    "line": 28,
+    "text": "? `поставь лимит на ${accountName} 20000 в месяц`"
   },
   {
-    "file": "src/features/chat/ui/TextChatOverlay.tsx",
-    "line": 179,
+    "file": "src/features/chat/ui/text-chat-overlay/useTextChatContextualPrompts.ts",
+    "line": 29,
+    "text": ": 'поставь общий лимит расходов 80000 в месяц',"
+  },
+  {
+    "file": "src/features/chat/ui/text-chat-overlay/useTextChatContextualPrompts.ts",
+    "line": 30,
     "text": "'покажи лимиты',"
   },
   {
-    "file": "src/features/chat/ui/TextChatOverlay.tsx",
-    "line": 180,
+    "file": "src/features/chat/ui/text-chat-overlay/useTextChatContextualPrompts.ts",
+    "line": 31,
     "text": "'создай цель отпуск 120000',"
   },
   {
-    "file": "src/features/chat/ui/TextChatOverlay.tsx",
-    "line": 183,
-    "text": "if (latest?.id && latestAmount) prompts.unshift(`измени ${latestTitle} на ${latestAmount}`);"
-  },
-  {
-    "file": "src/features/chat/ui/TextChatOverlay.tsx",
-    "line": 199,
-    "text": "setVoiceHint('Распознаю');"
-  },
-  {
-    "file": "src/features/chat/ui/TextChatOverlay.tsx",
-    "line": 214,
-    "text": "setVoiceHint('Слушаю');"
-  },
-  {
-    "file": "src/features/chat/ui/TextChatOverlay.tsx",
-    "line": 230,
-    "text": "setVoiceHint('Нужен доступ к микрофону');"
-  },
-  {
-    "file": "src/features/chat/ui/TextChatOverlay.tsx",
-    "line": 232,
-    "text": "setVoiceHint('Секунду');"
-  },
-  {
-    "file": "src/features/chat/ui/TextChatOverlay.tsx",
-    "line": 234,
-    "text": "setVoiceHint('Не удалось начать запись');"
-  },
-  {
-    "file": "src/features/chat/ui/TextChatOverlay.tsx",
-    "line": 282,
-    "text": "setVoiceHint('Думаю');"
-  },
-  {
-    "file": "src/features/commands/model/commandCatalog.ts",
-    "line": 12,
-    "text": "label: 'Добавить расход',"
-  },
-  {
-    "file": "src/features/commands/model/commandCatalog.ts",
-    "line": 13,
-    "text": "description: 'AI поймёт сумму, категорию и счёт из обычной фразы.',"
-  },
-  {
-    "file": "src/features/commands/model/commandCatalog.ts",
-    "line": 14,
-    "text": "command: 'кофе 300',"
-  },
-  {
-    "file": "src/features/commands/model/commandCatalog.ts",
-    "line": 19,
-    "text": "label: 'Добавить доход',"
-  },
-  {
-    "file": "src/features/commands/model/commandCatalog.ts",
-    "line": 20,
-    "text": "description: 'AI покажет проверку и попросит подтверждение, если оно нужно.',"
-  },
-  {
-    "file": "src/features/commands/model/commandCatalog.ts",
-    "line": 21,
-    "text": "command: 'доход 50000 на основной счет',"
-  },
-  {
-    "file": "src/features/commands/model/commandCatalog.ts",
-    "line": 26,
-    "text": "label: 'Перевести деньги',"
-  },
-  {
-    "file": "src/features/commands/model/commandCatalog.ts",
-    "line": 27,
-    "text": "description: 'AI подготовит безопасное действие с подтверждением.',"
-  },
-  {
-    "file": "src/features/commands/model/commandCatalog.ts",
-    "line": 28,
-    "text": "command: 'переведи 3000 с карты на накопительный',"
-  },
-  {
-    "file": "src/features/commands/model/commandCatalog.ts",
-    "line": 33,
-    "text": "label: 'Создать цель',"
-  },
-  {
-    "file": "src/features/commands/model/commandCatalog.ts",
-    "line": 34,
-    "text": "description: 'Цели можно создать голосом или вручную.',"
-  },
-  {
-    "file": "src/features/commands/model/commandCatalog.ts",
+    "file": "src/features/chat/ui/text-chat-overlay/useTextChatContextualPrompts.ts",
     "line": 35,
-    "text": "command: 'создай цель отпуск 120000',"
+    "text": "prompts.unshift(`измени ${latestTitle} на ${latestAmount}`);"
   },
   {
-    "file": "src/features/commands/model/commandCatalog.ts",
-    "line": 40,
-    "text": "label: 'Переименовать счёт',"
-  },
-  {
-    "file": "src/features/commands/model/commandCatalog.ts",
-    "line": 41,
-    "text": "description: 'AI изменит существующий счёт, а не создаст новый.',"
-  },
-  {
-    "file": "src/features/commands/model/commandCatalog.ts",
-    "line": 42,
-    "text": "command: 'переименуй счет карта в основная карта',"
-  },
-  {
-    "file": "src/features/commands/model/commandCatalog.ts",
-    "line": 47,
-    "text": "label: 'Удалить все счета',"
-  },
-  {
-    "file": "src/features/commands/model/commandCatalog.ts",
-    "line": 48,
-    "text": "description: 'Опасное действие. AI обязательно покажет подтверждение.',"
-  },
-  {
-    "file": "src/features/commands/model/commandCatalog.ts",
-    "line": 49,
-    "text": "command: 'удали все счета',"
-  },
-  {
-    "file": "src/features/commands/model/commandCatalog.ts",
-    "line": 54,
-    "text": "label: 'Создать счёт',"
-  },
-  {
-    "file": "src/features/commands/model/commandCatalog.ts",
-    "line": 55,
-    "text": "description: 'Счета можно создавать через AI без поиска нужной формы.',"
-  },
-  {
-    "file": "src/features/commands/model/commandCatalog.ts",
-    "line": 56,
-    "text": "command: 'создай счет отпуск',"
-  },
-  {
-    "file": "src/features/commands/model/commandCatalog.ts",
-    "line": 61,
-    "text": "label: 'Сделать счёт основным',"
-  },
-  {
-    "file": "src/features/commands/model/commandCatalog.ts",
-    "line": 62,
-    "text": "description: 'Настройки финансов доступны обычным языком.',"
-  },
-  {
-    "file": "src/features/commands/model/commandCatalog.ts",
-    "line": 63,
-    "text": "command: 'сделай наличку основной',"
-  },
-  {
-    "file": "src/features/commands/model/commandCatalog.ts",
-    "line": 68,
-    "text": "label: 'Включить строгий режим',"
-  },
-  {
-    "file": "src/features/commands/model/commandCatalog.ts",
-    "line": 69,
-    "text": "description: 'AI-поведение можно менять без ручного поиска настроек.',"
-  },
-  {
-    "file": "src/features/commands/model/commandCatalog.ts",
-    "line": 70,
-    "text": "command: 'включи строгий финансовый режим',"
-  },
-  {
-    "file": "src/features/commands/model/commandCatalog.ts",
-    "line": 75,
-    "text": "label: 'Спросить статистику',"
-  },
-  {
-    "file": "src/features/commands/model/commandCatalog.ts",
-    "line": 76,
-    "text": "description: 'Базовая аналитика остаётся понятной и не похожей на BI-панель.',"
-  },
-  {
-    "file": "src/features/commands/model/commandCatalog.ts",
-    "line": 77,
-    "text": "command: 'сколько я потратил за неделю',"
-  },
-  {
-    "file": "src/features/commands/model/commandCatalog.ts",
-    "line": 82,
-    "text": "label: 'Сравнить месяцы',"
-  },
-  {
-    "file": "src/features/commands/model/commandCatalog.ts",
-    "line": 83,
-    "text": "description: 'AI помогает увидеть финансовую динамику человеческим языком.',"
-  },
-  {
-    "file": "src/features/commands/model/commandCatalog.ts",
-    "line": 84,
-    "text": "command: 'сравни этот месяц с прошлым',"
-  },
-  {
-    "file": "src/features/commands/model/commandCatalog.ts",
-    "line": 89,
-    "text": "label: 'Открыть главную',"
-  },
-  {
-    "file": "src/features/commands/model/commandCatalog.ts",
+    "file": "src/features/chat/ui/TextChatOverlay.tsx",
     "line": 90,
-    "text": "description: 'Быстрый переход к живой финансовой сводке.',"
-  },
-  {
-    "file": "src/features/commands/model/commandCatalog.ts",
-    "line": 91,
-    "text": "command: 'покажи главную',"
-  },
-  {
-    "file": "src/features/commands/model/commandCatalog.ts",
-    "line": 96,
-    "text": "label: 'Открыть операции',"
-  },
-  {
-    "file": "src/features/commands/model/commandCatalog.ts",
-    "line": 97,
-    "text": "description: 'Переход к истории операций.',"
-  },
-  {
-    "file": "src/features/commands/model/commandCatalog.ts",
-    "line": 98,
-    "text": "command: 'покажи историю операций',"
-  },
-  {
-    "file": "src/features/commands/model/commandCatalog.ts",
-    "line": 103,
-    "text": "label: 'Открыть счета',"
-  },
-  {
-    "file": "src/features/commands/model/commandCatalog.ts",
-    "line": 104,
-    "text": "description: 'Быстрый переход к счетам и балансам.',"
-  },
-  {
-    "file": "src/features/commands/model/commandCatalog.ts",
-    "line": 105,
-    "text": "command: 'открой мои счета',"
-  },
-  {
-    "file": "src/features/commands/model/commandCatalog.ts",
-    "line": 110,
-    "text": "label: 'Открыть аналитику',"
-  },
-  {
-    "file": "src/features/commands/model/commandCatalog.ts",
-    "line": 111,
-    "text": "description: 'Переход к понятной финансовой аналитике.',"
-  },
-  {
-    "file": "src/features/commands/model/commandCatalog.ts",
-    "line": 112,
-    "text": "command: 'покажи аналитику',"
-  },
-  {
-    "file": "src/features/commands/model/commandCatalog.ts",
-    "line": 117,
-    "text": "label: 'Открыть цели',"
-  },
-  {
-    "file": "src/features/commands/model/commandCatalog.ts",
-    "line": 118,
-    "text": "description: 'Переход к спокойным долгосрочным целям.',"
-  },
-  {
-    "file": "src/features/commands/model/commandCatalog.ts",
-    "line": 119,
-    "text": "command: 'открой цели',"
-  },
-  {
-    "file": "src/features/commands/model/commandCatalog.ts",
-    "line": 124,
-    "text": "label: 'Открыть помощника',"
-  },
-  {
-    "file": "src/features/commands/model/commandCatalog.ts",
-    "line": 125,
-    "text": "description: 'Переход к помощнику.',"
-  },
-  {
-    "file": "src/features/commands/model/commandCatalog.ts",
-    "line": 126,
-    "text": "command: 'открой помощника',"
-  },
-  {
-    "file": "src/features/commands/model/commandCatalog.ts",
-    "line": 131,
-    "text": "label: 'Открыть настройки',"
-  },
-  {
-    "file": "src/features/commands/model/commandCatalog.ts",
-    "line": 132,
-    "text": "description: 'Переход к настройкам AI, голоса и финансов.',"
-  },
-  {
-    "file": "src/features/commands/model/commandCatalog.ts",
-    "line": 133,
-    "text": "command: 'открой настройки',"
-  },
-  {
-    "file": "src/features/commands/model/commandCatalog.ts",
-    "line": 138,
-    "text": "label: 'Открыть разделы и категории',"
-  },
-  {
-    "file": "src/features/commands/model/commandCatalog.ts",
-    "line": 139,
-    "text": "description: 'Переход во вложенную настройку структуры финансов.',"
-  },
-  {
-    "file": "src/features/commands/model/commandCatalog.ts",
-    "line": 140,
-    "text": "command: 'открой разделы и категории',"
-  },
-  {
-    "file": "src/features/commands/ui/CommandListSheet.tsx",
-    "line": 4,
-    "text": "money: 'Деньги',"
-  },
-  {
-    "file": "src/features/commands/ui/CommandListSheet.tsx",
-    "line": 5,
-    "text": "organization: 'Структура',"
-  },
-  {
-    "file": "src/features/commands/ui/CommandListSheet.tsx",
-    "line": 6,
-    "text": "analysis: 'Аналитика',"
-  },
-  {
-    "file": "src/features/commands/ui/CommandListSheet.tsx",
-    "line": 7,
-    "text": "navigation: 'Навигация',"
-  },
-  {
-    "file": "src/features/commands/ui/CommandListSheet.tsx",
-    "line": 8,
-    "text": "settings: 'Настройки',"
+    "text": "(state) => state.companionName || \"Фина\","
   },
   {
     "file": "src/features/companion/ui/CompanionPresence.tsx",
@@ -651,43 +236,33 @@
   },
   {
     "file": "src/features/dashboard/lib/homeFinanceAnalytics.ts",
-    "line": 61,
+    "line": 64,
     "text": "if (period === 'day') return 'День';"
   },
   {
     "file": "src/features/dashboard/lib/homeFinanceAnalytics.ts",
-    "line": 62,
+    "line": 65,
     "text": "if (period === 'week') return 'Неделя';"
   },
   {
     "file": "src/features/dashboard/lib/homeFinanceAnalytics.ts",
-    "line": 63,
+    "line": 66,
     "text": "return 'Месяц';"
   },
   {
     "file": "src/features/dashboard/lib/homeFinanceAnalytics.ts",
-    "line": 67,
+    "line": 70,
     "text": "return mode === 'expense' ? 'Расходы' : 'Доходы';"
   },
   {
     "file": "src/features/dashboard/lib/homeFinanceAnalytics.ts",
-    "line": 101,
-    "text": "const categoryName = item.category?.name?.trim() || (mode === 'expense' ? 'Без категории' : 'Доходы');"
-  },
-  {
-    "file": "src/features/dashboard/lib/homeFinanceAnalytics.ts",
     "line": 102,
-    "text": "const sectionName = item.category?.section?.name?.trim() || item.section?.name?.trim() || 'Без раздела';"
+    "text": "return transaction.category?.section?.name?.trim() || transaction.section?.name?.trim() || (mode === 'expense' ? 'Другое' : 'Доходы');"
   },
   {
     "file": "src/features/dashboard/lib/homeFinanceAnalytics.ts",
-    "line": 119,
-    "text": "const categoryName = item.category?.name?.trim() || (mode === 'expense' ? 'Без категории' : 'Доходы');"
-  },
-  {
-    "file": "src/features/dashboard/lib/homeFinanceAnalytics.ts",
-    "line": 120,
-    "text": "const sectionName = item.category?.section?.name?.trim() || item.section?.name?.trim() || 'Без раздела';"
+    "line": 106,
+    "text": "return transaction.category?.name?.trim() || (mode === 'expense' ? 'Другое' : 'Доход');"
   },
   {
     "file": "src/features/dashboard/ui/HomeCategoryOperationsModal.tsx",
@@ -713,36 +288,6 @@
     "file": "src/features/dashboard/ui/HomeCategoryOperationsModal.tsx",
     "line": 53,
     "text": "<div className=\"mt-1 truncate text-xs text-white/40\">{formatTransactionDate(transaction.date)} · {transaction.account?.name ?? 'Счёт'}</div>"
-  },
-  {
-    "file": "src/features/dashboard/ui/HomeChartDetailsModal.tsx",
-    "line": 32,
-    "text": "<p>{analytics.total > 0 ? formatMoney(analytics.total, 'RUB') : 'Операций пока нет'}</p>"
-  },
-  {
-    "file": "src/features/dashboard/ui/HomeChartDetailsModal.tsx",
-    "line": 34,
-    "text": "<button type=\"button\" className=\"app-icon-button\" onClick={onClose} aria-label=\"Закрыть\">×</button>"
-  },
-  {
-    "file": "src/features/dashboard/ui/HomeChartDetailsModal.tsx",
-    "line": 42,
-    "text": "<button type=\"button\" onClick={(event) => { event.stopPropagation(); onOpenAnalytics(); }}>Открыть полную аналитику</button>"
-  },
-  {
-    "file": "src/features/dashboard/ui/HomeChartDetailsModal.tsx",
-    "line": 43,
-    "text": "<button type=\"button\" onClick={(event) => { event.stopPropagation(); onOpenReport(); }}>Скачать отчёт</button>"
-  },
-  {
-    "file": "src/features/dashboard/ui/HomeChartDetailsModal.tsx",
-    "line": 48,
-    "text": "<div className=\"app-empty-button\">Добавь первую операцию — здесь появится разбор по категориям.</div>"
-  },
-  {
-    "file": "src/features/dashboard/ui/HomeChartDetailsModal.tsx",
-    "line": 54,
-    "text": "<small>{group.sectionName} · {group.count} опер.</small>"
   },
   {
     "file": "src/features/insights/lib/buildInsights.ts",
@@ -1266,72 +811,72 @@
   },
   {
     "file": "src/features/onboarding/ui/LaunchOnboardingSheet.tsx",
-    "line": 33,
+    "line": 31,
     "text": "{ id: 'welcome', title: 'Старт' },"
   },
   {
     "file": "src/features/onboarding/ui/LaunchOnboardingSheet.tsx",
-    "line": 34,
+    "line": 32,
     "text": "{ id: 'microphone', title: 'Микрофон' },"
   },
   {
     "file": "src/features/onboarding/ui/LaunchOnboardingSheet.tsx",
-    "line": 35,
+    "line": 33,
     "text": "{ id: 'voice_intro', title: 'Фина' },"
   },
   {
     "file": "src/features/onboarding/ui/LaunchOnboardingSheet.tsx",
-    "line": 36,
+    "line": 34,
     "text": "{ id: 'currency', title: 'Валюта' },"
   },
   {
     "file": "src/features/onboarding/ui/LaunchOnboardingSheet.tsx",
-    "line": 37,
+    "line": 35,
     "text": "{ id: 'accounts', title: 'Счета' },"
   },
   {
     "file": "src/features/onboarding/ui/LaunchOnboardingSheet.tsx",
-    "line": 38,
+    "line": 36,
     "text": "{ id: 'loans', title: 'Кредиты' },"
   },
   {
     "file": "src/features/onboarding/ui/LaunchOnboardingSheet.tsx",
-    "line": 39,
+    "line": 37,
     "text": "{ id: 'goals', title: 'Цели' },"
   },
   {
     "file": "src/features/onboarding/ui/LaunchOnboardingSheet.tsx",
-    "line": 40,
+    "line": 38,
     "text": "{ id: 'reminders', title: 'Напоминания' },"
   },
   {
     "file": "src/features/onboarding/ui/LaunchOnboardingSheet.tsx",
-    "line": 42,
+    "line": 39,
     "text": "{ id: 'finish', title: 'Готово' },"
   },
   {
     "file": "src/features/onboarding/ui/LaunchOnboardingSheet.tsx",
-    "line": 51,
+    "line": 48,
     "text": "return user?.firstName || user?.username || 'друг';"
   },
   {
     "file": "src/features/onboarding/ui/LaunchOnboardingSheet.tsx",
-    "line": 162,
+    "line": 158,
     "text": "note: 'Создано при первом запуске',"
   },
   {
     "file": "src/features/onboarding/ui/LaunchOnboardingSheet.tsx",
-    "line": 171,
+    "line": 167,
     "text": "setFinishError(error instanceof Error ? error.message : 'Не удалось завершить настройку');"
   },
   {
     "file": "src/features/onboarding/ui/LaunchOnboardingSheet.tsx",
-    "line": 193,
+    "line": 189,
     "text": "<div className=\"onboarding-step-tabs\" aria-label=\"Шаги настройки\">"
   },
   {
     "file": "src/features/onboarding/ui/LaunchOnboardingSheet.tsx",
-    "line": 230,
+    "line": 225,
     "text": "{isFinishing ? 'Сохраняю…' : isLastStep ? 'Завершить' : 'Дальше'}"
   },
   {
@@ -2581,8 +2126,8 @@
   },
   {
     "file": "src/features/receipt-scans/ui/ReceiptPreviewCard.tsx",
-    "line": 9,
-    "text": "return `${Math.max(1, Math.round(sizeBytes / 1024))} КБ`;"
+    "line": 119,
+    "text": "<small>{group.categories.length} кат.</small>"
   },
   {
     "file": "src/features/referral/model/referral.store.ts",
@@ -2606,78 +2151,88 @@
   },
   {
     "file": "src/features/sections/ui/CategoryEditSheet.tsx",
-    "line": 20,
+    "line": 8,
     "text": "{ value: 'expense', label: 'Расход' },"
   },
   {
     "file": "src/features/sections/ui/CategoryEditSheet.tsx",
-    "line": 21,
+    "line": 9,
     "text": "{ value: 'income', label: 'Доход' },"
   },
   {
     "file": "src/features/sections/ui/CategoryEditSheet.tsx",
-    "line": 22,
+    "line": 10,
     "text": "{ value: 'both', label: 'Оба' },"
   },
   {
     "file": "src/features/sections/ui/CategoryEditSheet.tsx",
-    "line": 43,
+    "line": 42,
+    "text": "const suggested = useMemo(() => resolveCategoryIcon(name || initialName || prefillName || 'категория', type === 'income' ? 'income' : 'expense'), [name, initialName, prefillName, type]);"
+  },
+  {
+    "file": "src/features/sections/ui/CategoryEditSheet.tsx",
+    "line": 48,
     "text": "setError('Название должно быть не короче двух символов.');"
   },
   {
     "file": "src/features/sections/ui/CategoryEditSheet.tsx",
-    "line": 52,
+    "line": 57,
     "text": "if (!window.confirm(`Удалить категорию «${category.name}»?`)) return;"
   },
   {
     "file": "src/features/sections/ui/CategoryEditSheet.tsx",
-    "line": 61,
+    "line": 66,
     "text": "title={category ? 'Категория' : 'Новая категория'}"
   },
   {
     "file": "src/features/sections/ui/CategoryEditSheet.tsx",
-    "line": 62,
-    "text": "subtitle=\"Иконка и цвет подбираются автоматически по названию.\""
+    "line": 67,
+    "text": "subtitle=\"Введи название — иконка, цвет и раздел подберутся сами.\""
   },
   {
     "file": "src/features/sections/ui/CategoryEditSheet.tsx",
-    "line": 66,
+    "line": 71,
     "text": "{category && onDelete ? <Button variant=\"secondary\" onClick={remove} disabled={isSaving}>Удалить</Button> : <Button variant=\"secondary\" onClick={onClose} disabled={isSaving}>Отмена</Button>}"
   },
   {
     "file": "src/features/sections/ui/CategoryEditSheet.tsx",
-    "line": 67,
+    "line": 72,
     "text": "<Button onClick={submit} disabled={!canSave}>{isSaving ? 'Сохраняю...' : 'Сохранить'}</Button>"
   },
   {
     "file": "src/features/sections/ui/CategoryEditSheet.tsx",
-    "line": 73,
+    "line": 78,
     "text": "<span>Название</span>"
   },
   {
     "file": "src/features/sections/ui/CategoryEditSheet.tsx",
-    "line": 74,
+    "line": 79,
     "text": "<input value={name} onChange={(event) => setName(event.target.value)} placeholder=\"Например, Кофе\" autoFocus />"
   },
   {
     "file": "src/features/sections/ui/CategoryEditSheet.tsx",
-    "line": 78,
+    "line": 84,
+    "text": "<span className=\"app-taxonomy-category-preview__label\">Как будет выглядеть</span>"
+  },
+  {
+    "file": "src/features/sections/ui/CategoryEditSheet.tsx",
+    "line": 85,
+    "text": "<span className=\"app-taxonomy-category-preview__pill\">{selectedSection ? 'Раздел выбран' : 'Раздел автоматически'}</span>"
+  },
+  {
+    "file": "src/features/sections/ui/CategoryEditSheet.tsx",
+    "line": 99,
     "text": "<span>Раздел</span>"
   },
   {
     "file": "src/features/sections/ui/CategoryEditSheet.tsx",
-    "line": 80,
-    "text": "<option value=\"\">Без раздела</option>"
+    "line": 101,
+    "text": "<option value=\"\">Подобрать автоматически</option>"
   },
   {
     "file": "src/features/sections/ui/CategoryEditSheet.tsx",
-    "line": 86,
+    "line": 107,
     "text": "<div className=\"mb-2 text-xs text-white/42\">Тип</div>"
-  },
-  {
-    "file": "src/features/sections/ui/CategoryEditSheet.tsx",
-    "line": 96,
-    "text": "<div className=\"app-inline-hint\">Пользователю не нужно выбирать иконку из каталога — система подставит её сама.</div>"
   },
   {
     "file": "src/features/sections/ui/CreateSectionSheet.tsx",
@@ -3216,147 +2771,142 @@
   },
   {
     "file": "src/features/transactions/ui/TransactionEditSheet.tsx",
-    "line": 37,
+    "line": 38,
     "text": "if (!transaction) return 'Операция';"
   },
   {
     "file": "src/features/transactions/ui/TransactionEditSheet.tsx",
-    "line": 41,
+    "line": 42,
     "text": "if (transaction.type === 'income') return 'Доход';"
   },
   {
     "file": "src/features/transactions/ui/TransactionEditSheet.tsx",
-    "line": 42,
+    "line": 43,
     "text": "if (transaction.type === 'transfer') return 'Перевод';"
   },
   {
     "file": "src/features/transactions/ui/TransactionEditSheet.tsx",
-    "line": 43,
+    "line": 44,
     "text": "return 'Расход';"
   },
   {
     "file": "src/features/transactions/ui/TransactionEditSheet.tsx",
-    "line": 118,
+    "line": 121,
     "text": "setLocalError('Введи сумму больше нуля.');"
   },
   {
     "file": "src/features/transactions/ui/TransactionEditSheet.tsx",
-    "line": 123,
+    "line": 126,
     "text": "setLocalError('Выбери счёт.');"
   },
   {
     "file": "src/features/transactions/ui/TransactionEditSheet.tsx",
-    "line": 128,
+    "line": 131,
     "text": "setLocalError('Напиши название операции. По нему Фина обновит категорию и иконку.');"
   },
   {
     "file": "src/features/transactions/ui/TransactionEditSheet.tsx",
-    "line": 133,
+    "line": 136,
     "text": "setLocalError('Для перевода нужен другой счёт получателя.');"
   },
   {
     "file": "src/features/transactions/ui/TransactionEditSheet.tsx",
-    "line": 152,
+    "line": 155,
     "text": "`Удалить операцию «${titleText}» и вернуть деньги на счёт?\\n\\nОК — удалить и пересчитать баланс.\\nОтмена — выбрать следующий вариант.`,"
   },
   {
     "file": "src/features/transactions/ui/TransactionEditSheet.tsx",
-    "line": 161,
+    "line": 164,
     "text": "`Удалить только запись «${titleText}», не меняя баланс счёта?`,"
   },
   {
     "file": "src/features/transactions/ui/TransactionEditSheet.tsx",
-    "line": 181,
+    "line": 184,
     "text": "<div className=\"app-eyebrow\">Операция</div>"
   },
   {
     "file": "src/features/transactions/ui/TransactionEditSheet.tsx",
-    "line": 184,
+    "line": 187,
     "text": "{selectedAccount ? selectedAccount.name : 'Счёт'} · {selectedAccount?.currency || 'RUB'}"
   },
   {
     "file": "src/features/transactions/ui/TransactionEditSheet.tsx",
-    "line": 187,
+    "line": 190,
     "text": "<button type=\"button\" onClick={onClose} className=\"app-icon-button\" aria-label=\"Закрыть\">×</button>"
   },
   {
     "file": "src/features/transactions/ui/TransactionEditSheet.tsx",
-    "line": 191,
+    "line": 194,
     "text": "<div className=\"text-xs text-white/42\">Сумма</div>"
   },
   {
     "file": "src/features/transactions/ui/TransactionEditSheet.tsx",
-    "line": 198,
+    "line": 201,
     "text": "{selectedSection ? <Badge>{selectedSection.icon ? `${selectedSection.icon} ` : ''}{selectedSection.name}</Badge> : <Badge muted>Раздел появится автоматически</Badge>}"
   },
   {
     "file": "src/features/transactions/ui/TransactionEditSheet.tsx",
-    "line": 199,
+    "line": 202,
     "text": "{selectedCategory ? <Badge>{selectedCategory.icon ? `${selectedCategory.icon} ` : ''}{selectedCategory.name}</Badge> : <Badge muted>Категория появится автоматически</Badge>}"
   },
   {
     "file": "src/features/transactions/ui/TransactionEditSheet.tsx",
-    "line": 200,
+    "line": 203,
     "text": "{transaction.isAIGenerated ? <Badge tone=\"violet\">Фина</Badge> : null}"
   },
   {
     "file": "src/features/transactions/ui/TransactionEditSheet.tsx",
-    "line": 215,
+    "line": 218,
     "text": "{item === 'expense' ? 'Расход' : item === 'income' ? 'Доход' : 'Перевод'}"
   },
   {
     "file": "src/features/transactions/ui/TransactionEditSheet.tsx",
-    "line": 222,
+    "line": 225,
     "text": "<span>Название</span>"
   },
   {
     "file": "src/features/transactions/ui/TransactionEditSheet.tsx",
-    "line": 223,
+    "line": 226,
     "text": "<input value={title} onChange={(event) => setTitle(event.target.value)} placeholder=\"Например: колбаса\" />"
   },
   {
     "file": "src/features/transactions/ui/TransactionEditSheet.tsx",
-    "line": 228,
+    "line": 231,
     "text": "<span>Сумма</span>"
   },
   {
     "file": "src/features/transactions/ui/TransactionEditSheet.tsx",
-    "line": 229,
+    "line": 232,
     "text": "<input inputMode=\"decimal\" value={amount} onChange={(event) => setAmount(event.target.value)} placeholder=\"Например 350\" />"
   },
   {
     "file": "src/features/transactions/ui/TransactionEditSheet.tsx",
-    "line": 234,
+    "line": 237,
     "text": "<span>Описание</span>"
   },
   {
     "file": "src/features/transactions/ui/TransactionEditSheet.tsx",
-    "line": 235,
+    "line": 238,
     "text": "<textarea value={description} onChange={(event) => setDescription(event.target.value)} placeholder=\"Необязательно: магазин, детали покупки, комментарий\" />"
   },
   {
     "file": "src/features/transactions/ui/TransactionEditSheet.tsx",
-    "line": 240,
+    "line": 243,
     "text": "<span>Дата</span>"
   },
   {
     "file": "src/features/transactions/ui/TransactionEditSheet.tsx",
-    "line": 245,
+    "line": 248,
     "text": "<div className=\"mb-3 text-xs uppercase tracking-[0.16em] text-white/35\">Счёт</div>"
   },
   {
     "file": "src/features/transactions/ui/TransactionEditSheet.tsx",
-    "line": 258,
+    "line": 261,
     "text": "<div className=\"mb-3 text-xs uppercase tracking-[0.16em] text-white/35\">Куда</div>"
   },
   {
     "file": "src/features/transactions/ui/TransactionEditSheet.tsx",
-    "line": 269,
-    "text": "<div className=\"app-inline-hint\">После сохранения Фина пересоберёт категорию, раздел, цвет и иконку по названию и описанию.</div>"
-  },
-  {
-    "file": "src/features/transactions/ui/TransactionEditSheet.tsx",
-    "line": 278,
+    "line": 287,
     "text": "{isSaving ? 'Сохраняю…' : 'Сохранить'}"
   },
   {
@@ -3443,6 +2993,11 @@
     "file": "src/features/transactions/ui/TransactionsTimeline.tsx",
     "line": 61,
     "text": "<div className=\"rounded-2xl border border-white/8 bg-black/20 p-4 text-sm leading-6 text-white/55\">Пока нет операций. Скажи Фине: “кофе 300”.</div>"
+  },
+  {
+    "file": "src/features/transactions/ui/TransactionTaxonomyPicker.tsx",
+    "line": 33,
+    "text": "const suggestion = useMemo(() => resolveTaxonomyIcon(text || (type === 'income' ? 'доход' : 'расход'), type), [text, type]);"
   },
   {
     "file": "src/features/voice/model/useVoiceCommandDispatcher.ts",
@@ -3631,118 +3186,13 @@
   },
   {
     "file": "src/features/voice/ui/VoiceFirstCompanionLayer.tsx",
-    "line": 51,
+    "line": 31,
     "text": "const companionName = useSettingsStore((state) => state.companionName || 'Фина');"
   },
   {
     "file": "src/features/voice/ui/VoiceFirstCompanionLayer.tsx",
-    "line": 79,
+    "line": 45,
     "text": "const wakeName = companionName || 'Фина';"
-  },
-  {
-    "file": "src/features/voice/ui/VoiceFirstCompanionLayer.tsx",
-    "line": 154,
-    "text": "showThought('Не расслышала команду.', 'warning', 2200);"
-  },
-  {
-    "file": "src/features/voice/ui/VoiceFirstCompanionLayer.tsx",
-    "line": 160,
-    "text": "showThought('Думаю.', 'neutral', 1400);"
-  },
-  {
-    "file": "src/features/voice/ui/VoiceFirstCompanionLayer.tsx",
-    "line": 200,
-    "text": "showThought('Отменено.', 'neutral', 1600);"
-  },
-  {
-    "file": "src/features/voice/ui/VoiceFirstCompanionLayer.tsx",
-    "line": 215,
-    "text": "if (!canUseVoice) showThought('Голос недоступен.', 'warning', 2400);"
-  },
-  {
-    "file": "src/features/voice/ui/VoiceFirstCompanionLayer.tsx",
-    "line": 219,
-    "text": "showThought('Сначала разреши микрофон.', 'warning', 2400);"
-  },
-  {
-    "file": "src/features/voice/ui/VoiceFirstCompanionLayer.tsx",
-    "line": 220,
-    "text": "} else if (hasPending) showThought('Сначала закрой действие.', 'warning', 2400);"
-  },
-  {
-    "file": "src/features/voice/ui/VoiceFirstCompanionLayer.tsx",
-    "line": 230,
-    "text": "showThought('Слушаю.', 'listening', 1600);"
-  },
-  {
-    "file": "src/features/voice/ui/VoiceFirstCompanionLayer.tsx",
-    "line": 259,
-    "text": "showThought('Слушаю. Сессия открыта.', 'listening', 1600);"
-  },
-  {
-    "file": "src/features/voice/ui/VoiceFirstCompanionLayer.tsx",
-    "line": 272,
-    "text": "showThought('Готово. Зажми Фину и говори.', 'success', 3200);"
-  },
-  {
-    "file": "src/features/voice/ui/VoiceFirstCompanionLayer.tsx",
-    "line": 276,
-    "text": "showThought('Микрофон будет доступен после разрешения.', 'neutral', 3200);"
-  },
-  {
-    "file": "src/features/voice/ui/VoiceFirstCompanionLayer.tsx",
-    "line": 282,
-    "text": "showThought('Нужен доступ к микрофону.', 'warning', 3600);"
-  },
-  {
-    "file": "src/features/voice/ui/VoiceFirstCompanionLayer.tsx",
-    "line": 326,
-    "text": "showThought('Распознаю.', 'neutral', 1800);"
-  },
-  {
-    "file": "src/features/voice/ui/VoiceFirstCompanionLayer.tsx",
-    "line": 391,
-    "text": "showThought('Распознаю.', 'neutral', 1800);"
-  },
-  {
-    "file": "src/features/voice/ui/VoiceFirstCompanionLayer.tsx",
-    "line": 420,
-    "text": "showThought('Распознавание ещё не настроено.', 'warning', 4200);"
-  },
-  {
-    "file": "src/features/voice/ui/VoiceFirstCompanionLayer.tsx",
-    "line": 430,
-    "text": "showThought('Нужен доступ к микрофону.', 'warning', 3600);"
-  },
-  {
-    "file": "src/features/voice/ui/VoiceFirstCompanionLayer.tsx",
-    "line": 437,
-    "text": "showThought(voice.error === 'rate-limited' ? 'Слишком много запросов. Попробуй позже.' : 'Не расслышала команду.', 'warning', 2600);"
-  },
-  {
-    "file": "src/features/voice/ui/VoiceFirstCompanionLayer.tsx",
-    "line": 454,
-    "text": "showThought('Проверь действие.', 'warning', 3600);"
-  },
-  {
-    "file": "src/features/voice/ui/VoiceFirstCompanionLayer.tsx",
-    "line": 459,
-    "text": "showThought(lastMessage.text || 'Нужно уточнение.', 'warning', 5000);"
-  },
-  {
-    "file": "src/features/voice/ui/VoiceFirstCompanionLayer.tsx",
-    "line": 463,
-    "text": "showThought(lastMessage.text || 'Готово.', 'success', 2600);"
-  },
-  {
-    "file": "src/features/voice/ui/VoiceFirstCompanionLayer.tsx",
-    "line": 543,
-    "text": "aria-label={isLocked ? 'Нажми, чтобы отправить запись' : 'Зажми для голосовой команды'}"
-  },
-  {
-    "file": "src/features/voice/ui/VoiceFirstCompanionLayer.tsx",
-    "line": 554,
-    "text": "label={isLocked ? 'Нажми, чтобы отправить' : 'Зажми для голосовой команды'}"
   },
   {
     "file": "src/features/voice/ui/VoiceLockActions.tsx",
@@ -3785,379 +3235,349 @@
     "text": "<div className=\"voice-clarification-card__hint\">Например: «с налички» или «с карты».</div>"
   },
   {
-    "file": "src/features/voice/ui/VoicePermissionIntro.tsx",
-    "line": 16,
-    "text": "<div className=\"voice-first-intro\" data-no-swipe=\"true\" role=\"dialog\" aria-modal=\"true\" aria-label=\"Разрешение микрофона\">"
-  },
-  {
-    "file": "src/features/voice/ui/VoicePermissionIntro.tsx",
-    "line": 21,
-    "text": "<div className=\"voice-first-intro__eyebrow\">Голосовой ввод</div>"
-  },
-  {
-    "file": "src/features/voice/ui/VoicePermissionIntro.tsx",
-    "line": 22,
-    "text": "<div className=\"voice-first-intro__title\">{denied ? 'Микрофон заблокирован' : 'Разреши микрофон'}</div>"
-  },
-  {
-    "file": "src/features/voice/ui/VoicePermissionIntro.tsx",
-    "line": 25,
-    "text": "<p>В этом браузере или WebView запись голоса недоступна. Используй текстовый ввод.</p>"
-  },
-  {
-    "file": "src/features/voice/ui/VoicePermissionIntro.tsx",
-    "line": 27,
-    "text": "<p>Доступ к микрофону запрещён. Открой настройки Telegram или браузера, разреши микрофон для этого сайта и вернись в приложение.</p>"
-  },
-  {
-    "file": "src/features/voice/ui/VoicePermissionIntro.tsx",
-    "line": 29,
-    "text": "<p>Нажми кнопку ниже и подтверди системный запрос. После этого запись будет начинаться только вручную.</p>"
-  },
-  {
-    "file": "src/features/voice/ui/VoicePermissionIntro.tsx",
-    "line": 33,
-    "text": "<div><b>1</b><span>Нажми “Разрешить микрофон”</span></div>"
-  },
-  {
-    "file": "src/features/voice/ui/VoicePermissionIntro.tsx",
-    "line": 34,
-    "text": "<div><b>2</b><span>Подтверди системное окно</span></div>"
-  },
-  {
-    "file": "src/features/voice/ui/VoicePermissionIntro.tsx",
-    "line": 35,
-    "text": "<div><b>3</b><span>Зажми Фину и говори команду</span></div>"
-  },
-  {
-    "file": "src/features/voice/ui/VoicePermissionIntro.tsx",
-    "line": 43,
-    "text": "<button type=\"button\" onClick={onPrime} disabled={isPriming || unsupported}>{isPriming ? 'Запрашиваю...' : denied ? 'Проверить снова' : 'Разрешить микрофон'}</button>"
-  },
-  {
-    "file": "src/features/voice/ui/VoicePermissionIntro.tsx",
-    "line": 44,
-    "text": "<button type=\"button\" onClick={onSkip}>Позже</button>"
-  },
-  {
-    "file": "src/features/voice/ui/VoiceStatusPill.tsx",
-    "line": 21,
-    "text": "let label = 'Голос выключен';"
-  },
-  {
-    "file": "src/features/voice/ui/VoiceStatusPill.tsx",
-    "line": 24,
-    "text": "if (isBusy || phase === 'dispatching') label = 'Выполняю';"
-  },
-  {
-    "file": "src/features/voice/ui/VoiceStatusPill.tsx",
-    "line": 25,
-    "text": "else if (voiceState === 'uploading' || phase === 'uploading') label = 'Распознаю';"
-  },
-  {
-    "file": "src/features/voice/ui/VoiceStatusPill.tsx",
-    "line": 26,
-    "text": "else if (isLocked || phase === 'locked') label = 'Запись закреплена';"
-  },
-  {
-    "file": "src/features/voice/ui/VoiceStatusPill.tsx",
-    "line": 27,
-    "text": "else if (voiceState === 'recording' || phase === 'holding') label = 'Слушаю';"
-  },
-  {
-    "file": "src/features/voice/ui/VoiceStatusPill.tsx",
-    "line": 28,
-    "text": "else if (phase === 'cooldown') label = 'Готова';"
-  },
-  {
-    "file": "src/features/voice/ui/VoiceStatusPill.tsx",
-    "line": 29,
-    "text": "else label = 'Зажми для голоса';"
-  },
-  {
-    "file": "src/pages/admin/AdminPage.tsx",
-    "line": 42,
-    "text": "if (ms < 1000) return `${ms} мс`;"
-  },
-  {
-    "file": "src/pages/admin/AdminPage.tsx",
-    "line": 44,
-    "text": "if (sec < 60) return `${sec} сек`;"
-  },
-  {
-    "file": "src/pages/admin/AdminPage.tsx",
-    "line": 45,
-    "text": "return `${Math.round(sec / 60)} мин`;"
-  },
-  {
-    "file": "src/pages/admin/AdminPage.tsx",
-    "line": 56,
-    "text": "return 'Неизвестная ошибка';"
-  },
-  {
-    "file": "src/pages/admin/AdminPage.tsx",
-    "line": 127,
-    "text": "? 'Очистить финансы этого пользователя? Прогресс останется.'"
-  },
-  {
-    "file": "src/pages/admin/AdminPage.tsx",
-    "line": 128,
-    "text": ": 'Полностью обнулить тестера? Профиль останется, но прогресс будет сброшен.';"
-  },
-  {
-    "file": "src/pages/admin/AdminPage.tsx",
-    "line": 178,
-    "text": "{ id: 'overview', title: 'Обзор' },"
-  },
-  {
-    "file": "src/pages/admin/AdminPage.tsx",
-    "line": 179,
-    "text": "{ id: 'users', title: 'Пользователи' },"
-  },
-  {
-    "file": "src/pages/admin/AdminPage.tsx",
-    "line": 180,
-    "text": "{ id: 'events', title: 'События' },"
-  },
-  {
-    "file": "src/pages/admin/AdminPage.tsx",
-    "line": 181,
-    "text": "{ id: 'monitoring', title: 'Сервер' },"
-  },
-  {
-    "file": "src/pages/admin/AdminPage.tsx",
-    "line": 182,
-    "text": "{ id: 'tools', title: 'Инструменты' },"
-  },
-  {
-    "file": "src/pages/admin/AdminPage.tsx",
-    "line": 191,
+    "file": "src/pages/admin/admin-page/AdminAccessDenied.tsx",
+    "line": 7,
     "text": "<ScreenTopBar title=\"Админ\" left=\"back\" right={['home']} />"
   },
   {
-    "file": "src/pages/admin/AdminPage.tsx",
-    "line": 193,
+    "file": "src/pages/admin/admin-page/AdminAccessDenied.tsx",
+    "line": 9,
     "text": "<div className=\"text-lg font-semibold\">Недоступно</div>"
   },
   {
-    "file": "src/pages/admin/AdminPage.tsx",
-    "line": 194,
+    "file": "src/pages/admin/admin-page/AdminAccessDenied.tsx",
+    "line": 10,
     "text": "<div className=\"mt-2 text-sm text-white/50\">Этот раздел скрыт для обычных пользователей.</div>"
   },
   {
-    "file": "src/pages/admin/AdminPage.tsx",
-    "line": 204,
-    "text": "<ScreenTopBar title=\"Админ\" left=\"back\" right={['home']} />"
+    "file": "src/pages/admin/admin-page/AdminEventsPanel.tsx",
+    "line": 16,
+    "text": "<div className=\"mt-1 text-xs text-white/42\">{item.user?.firstName ?? 'Без пользователя'} · @{item.user?.username ?? '—'}</div>"
   },
   {
-    "file": "src/pages/admin/AdminPage.tsx",
-    "line": 207,
-    "text": "<div className=\"app-eyebrow\">Закрытый раздел</div>"
-  },
-  {
-    "file": "src/pages/admin/AdminPage.tsx",
-    "line": 208,
-    "text": "<h1 className=\"mt-3 text-[32px] font-semibold tracking-[-0.05em]\">Админ-панель</h1>"
-  },
-  {
-    "file": "src/pages/admin/AdminPage.tsx",
-    "line": 209,
-    "text": "<p className=\"mt-2 text-sm leading-6 text-white/50\">Пользователи, события, воронка и состояние сервиса.</p>"
-  },
-  {
-    "file": "src/pages/admin/AdminPage.tsx",
-    "line": 227,
+    "file": "src/pages/admin/admin-page/AdminLoadState.tsx",
+    "line": 13,
     "text": "{isLoading ? <div className=\"app-card text-sm text-white/50\">Загрузка…</div> : null}"
   },
   {
-    "file": "src/pages/admin/AdminPage.tsx",
-    "line": 230,
+    "file": "src/pages/admin/admin-page/AdminLoadState.tsx",
+    "line": 16,
     "text": "{errors.overview ? <div>Обзор: {errors.overview}</div> : null}"
   },
   {
-    "file": "src/pages/admin/AdminPage.tsx",
-    "line": 231,
+    "file": "src/pages/admin/admin-page/AdminLoadState.tsx",
+    "line": 17,
     "text": "{errors.users ? <div>Пользователи: {errors.users}</div> : null}"
   },
   {
-    "file": "src/pages/admin/AdminPage.tsx",
-    "line": 232,
+    "file": "src/pages/admin/admin-page/AdminLoadState.tsx",
+    "line": 18,
     "text": "{errors.events ? <div>События: {errors.events}</div> : null}"
   },
   {
-    "file": "src/pages/admin/AdminPage.tsx",
-    "line": 239,
+    "file": "src/pages/admin/admin-page/AdminMonitoringPanel.tsx",
+    "line": 12,
+    "text": "<MetricCard title=\"Статус\" value={monitoring.status} caption={`uptime ${Math.round(monitoring.uptimeSec / 60)} мин`} />"
+  },
+  {
+    "file": "src/pages/admin/admin-page/AdminMonitoringPanel.tsx",
+    "line": 13,
+    "text": "<MetricCard title=\"Ошибки\" value={`${Math.round(monitoring.totals.errorRate * 100)}%`} caption={`${monitoring.totals.errors}/${monitoring.totals.requests} запросов`} />"
+  },
+  {
+    "file": "src/pages/admin/admin-page/AdminMonitoringPanel.tsx",
+    "line": 14,
+    "text": "<MetricCard title=\"p95\" value={`${monitoring.totals.p95Ms} мс`} caption=\"медленные ответы\" />"
+  },
+  {
+    "file": "src/pages/admin/admin-page/AdminMonitoringPanel.tsx",
+    "line": 15,
+    "text": "<MetricCard title=\"Среднее\" value={`${monitoring.totals.avgMs} мс`} caption={`${monitoring.totals.slowRequests} slow`} />"
+  },
+  {
+    "file": "src/pages/admin/admin-page/AdminMonitoringPanel.tsx",
+    "line": 24,
+    "text": "<small>{item.avgMs} мс</small>"
+  },
+  {
+    "file": "src/pages/admin/admin-page/AdminMonitoringPanel.tsx",
+    "line": 32,
+    "text": "<div className=\"app-section-title\">Алерты</div>"
+  },
+  {
+    "file": "src/pages/admin/admin-page/AdminMonitoringPanel.tsx",
+    "line": 39,
+    "text": ")) : <div className=\"text-sm text-white/42\">Алертов нет.</div>}"
+  },
+  {
+    "file": "src/pages/admin/admin-page/AdminOverviewPanel.tsx",
+    "line": 13,
     "text": "<MetricCard title=\"Пользователи\" value={overview.metrics.usersTotal} caption={`+${overview.metrics.usersToday} сегодня`} />"
   },
   {
-    "file": "src/pages/admin/AdminPage.tsx",
-    "line": 240,
+    "file": "src/pages/admin/admin-page/AdminOverviewPanel.tsx",
+    "line": 14,
     "text": "<MetricCard title=\"Активные 30д\" value={overview.metrics.activeUsers30d} caption={`+${overview.metrics.users7d} за 7 дней`} />"
   },
   {
-    "file": "src/pages/admin/AdminPage.tsx",
-    "line": 241,
+    "file": "src/pages/admin/admin-page/AdminOverviewPanel.tsx",
+    "line": 15,
     "text": "<MetricCard title=\"Операции\" value={overview.metrics.transactionsTotal} caption={`+${overview.metrics.transactionsToday} сегодня`} />"
   },
   {
-    "file": "src/pages/admin/AdminPage.tsx",
-    "line": 242,
+    "file": "src/pages/admin/admin-page/AdminOverviewPanel.tsx",
+    "line": 16,
     "text": "<MetricCard title=\"События\" value={overview.metrics.eventsToday} caption=\"сегодня\" />"
   },
   {
-    "file": "src/pages/admin/AdminPage.tsx",
-    "line": 246,
+    "file": "src/pages/admin/admin-page/AdminOverviewPanel.tsx",
+    "line": 20,
     "text": "<div className=\"app-section-title\">Откуда пришли</div>"
   },
   {
-    "file": "src/pages/admin/AdminPage.tsx",
-    "line": 253,
+    "file": "src/pages/admin/admin-page/AdminOverviewPanel.tsx",
+    "line": 27,
     "text": ")) : <div className=\"text-sm text-white/42\">Пока нет данных.</div>}"
   },
   {
-    "file": "src/pages/admin/AdminPage.tsx",
-    "line": 258,
+    "file": "src/pages/admin/admin-page/AdminOverviewPanel.tsx",
+    "line": 32,
     "text": "<div className=\"app-section-title\">Где бывают чаще</div>"
   },
   {
-    "file": "src/pages/admin/AdminPage.tsx",
-    "line": 265,
+    "file": "src/pages/admin/admin-page/AdminOverviewPanel.tsx",
+    "line": 39,
     "text": ")) : <div className=\"text-sm text-white/42\">Переходы ещё не записаны.</div>}"
   },
   {
-    "file": "src/pages/admin/AdminPage.tsx",
-    "line": 270,
+    "file": "src/pages/admin/admin-page/AdminOverviewPanel.tsx",
+    "line": 44,
     "text": "<div className=\"app-section-title\">Где отваливаются</div>"
   },
   {
-    "file": "src/pages/admin/AdminPage.tsx",
-    "line": 278,
+    "file": "src/pages/admin/admin-page/AdminOverviewPanel.tsx",
+    "line": 52,
     "text": ")) : <div className=\"text-sm text-white/42\">Данные появятся после нескольких переходов между экранами.</div>}"
   },
   {
-    "file": "src/pages/admin/AdminPage.tsx",
-    "line": 283,
+    "file": "src/pages/admin/admin-page/AdminOverviewPanel.tsx",
+    "line": 57,
     "text": "<div className=\"app-section-title\">Воронка</div>"
   },
   {
-    "file": "src/pages/admin/AdminPage.tsx",
-    "line": 308,
+    "file": "src/pages/admin/admin-page/adminPage.formatters.ts",
+    "line": 19,
+    "text": "if (ms < 1000) return `${ms} мс`;"
+  },
+  {
+    "file": "src/pages/admin/admin-page/adminPage.formatters.ts",
+    "line": 21,
+    "text": "if (sec < 60) return `${sec} сек`;"
+  },
+  {
+    "file": "src/pages/admin/admin-page/adminPage.formatters.ts",
+    "line": 22,
+    "text": "return `${Math.round(sec / 60)} мин`;"
+  },
+  {
+    "file": "src/pages/admin/admin-page/adminPage.formatters.ts",
+    "line": 33,
+    "text": "return 'Неизвестная ошибка';"
+  },
+  {
+    "file": "src/pages/admin/admin-page/AdminTabs.tsx",
+    "line": 4,
+    "text": "{ id: 'overview', title: 'Обзор' },"
+  },
+  {
+    "file": "src/pages/admin/admin-page/AdminTabs.tsx",
+    "line": 5,
+    "text": "{ id: 'users', title: 'Пользователи' },"
+  },
+  {
+    "file": "src/pages/admin/admin-page/AdminTabs.tsx",
+    "line": 6,
+    "text": "{ id: 'events', title: 'События' },"
+  },
+  {
+    "file": "src/pages/admin/admin-page/AdminTabs.tsx",
+    "line": 7,
+    "text": "{ id: 'monitoring', title: 'Сервер' },"
+  },
+  {
+    "file": "src/pages/admin/admin-page/AdminTabs.tsx",
+    "line": 8,
+    "text": "{ id: 'training', title: 'Фина' },"
+  },
+  {
+    "file": "src/pages/admin/admin-page/AdminTabs.tsx",
+    "line": 9,
+    "text": "{ id: 'tools', title: 'Инструменты' },"
+  },
+  {
+    "file": "src/pages/admin/admin-page/AdminToolsPanel.tsx",
+    "line": 11,
+    "text": "<div className=\"app-section-title\">Онбординг</div>"
+  },
+  {
+    "file": "src/pages/admin/admin-page/AdminToolsPanel.tsx",
+    "line": 34,
+    "text": "{premiumPreviewEnabled ? 'Выключить Premium-вид' : 'Включить Premium-вид'}"
+  },
+  {
+    "file": "src/pages/admin/admin-page/AdminTrainingPanel.tsx",
+    "line": 28,
+    "text": "<div className=\"app-eyebrow\">Разбор Фины</div>"
+  },
+  {
+    "file": "src/pages/admin/admin-page/AdminTrainingPanel.tsx",
+    "line": 29,
+    "text": "<h2>Ошибки и уточнения</h2>"
+  },
+  {
+    "file": "src/pages/admin/admin-page/AdminTrainingPanel.tsx",
+    "line": 30,
+    "text": "<p>Здесь собираются команды, где Фина ошиблась, попросила уточнение или подготовила действие на проверку.</p>"
+  },
+  {
+    "file": "src/pages/admin/admin-page/AdminTrainingPanel.tsx",
+    "line": 33,
+    "text": "{isTrainingLoading ? 'Обновляю…' : 'Обновить'}"
+  },
+  {
+    "file": "src/pages/admin/admin-page/AdminTrainingPanel.tsx",
+    "line": 37,
+    "text": "{isTrainingLoading && !trainingExamples.length ? <div className=\"app-card text-sm text-white/50\">Загрузка…</div> : null}"
+  },
+  {
+    "file": "src/pages/admin/admin-page/AdminTrainingPanel.tsx",
+    "line": 43,
+    "text": "{item.success ? 'Размечено' : 'Нужно проверить'}"
+  },
+  {
+    "file": "src/pages/admin/admin-page/AdminTrainingPanel.tsx",
+    "line": 49,
+    "text": "<span>Команда</span>"
+  },
+  {
+    "file": "src/pages/admin/admin-page/AdminTrainingPanel.tsx",
+    "line": 55,
+    "text": "<span>Ответ Фины</span>"
+  },
+  {
+    "file": "src/pages/admin/admin-page/AdminTrainingPanel.tsx",
+    "line": 65,
+    "text": "<span>Как должно быть</span>"
+  },
+  {
+    "file": "src/pages/admin/admin-page/AdminTrainingPanel.tsx",
+    "line": 70,
+    "text": "placeholder=\"Коротко опиши правильное действие или ответ.\""
+  },
+  {
+    "file": "src/pages/admin/admin-page/AdminTrainingPanel.tsx",
+    "line": 94,
+    "text": "<div className=\"app-card text-sm text-white/50\">Пока нет примеров для разбора.</div>"
+  },
+  {
+    "file": "src/pages/admin/admin-page/AdminUsersPanel.tsx",
+    "line": 40,
     "text": "<div className=\"rounded-[16px] bg-black/18 p-2\">Счета<br /><b className=\"text-white\">{item._count.accounts}</b></div>"
   },
   {
-    "file": "src/pages/admin/AdminPage.tsx",
-    "line": 309,
+    "file": "src/pages/admin/admin-page/AdminUsersPanel.tsx",
+    "line": 41,
     "text": "<div className=\"rounded-[16px] bg-black/18 p-2\">Операции<br /><b className=\"text-white\">{item._count.transactions}</b></div>"
   },
   {
-    "file": "src/pages/admin/AdminPage.tsx",
-    "line": 310,
+    "file": "src/pages/admin/admin-page/AdminUsersPanel.tsx",
+    "line": 42,
     "text": "<div className=\"rounded-[16px] bg-black/18 p-2\">Рефералы<br /><b className=\"text-white\">{item._count.referrals}</b></div>"
   },
   {
-    "file": "src/pages/admin/AdminPage.tsx",
-    "line": 312,
+    "file": "src/pages/admin/admin-page/AdminUsersPanel.tsx",
+    "line": 45,
     "text": "<div className=\"mt-3 text-xs text-white/38\">Создан: {formatDate(item.createdAt)} · активность: {formatDate(item.lastActiveAt)}</div>"
   },
   {
-    "file": "src/pages/admin/AdminPage.tsx",
-    "line": 317,
+    "file": "src/pages/admin/admin-page/AdminUsersPanel.tsx",
+    "line": 50,
     "text": "<div className=\"text-xs font-semibold text-white/80\">Доступ</div>"
   },
   {
-    "file": "src/pages/admin/AdminPage.tsx",
-    "line": 318,
-    "text": "<div className=\"mt-1 text-[11px] text-white/40\">Premium: {item.subscription?.premiumLifetime ? 'навсегда' : formatSubscriptionDate(item.subscription?.premiumUntil)} · Business: {item.subscription?.businessLifetime ? 'навсегда' : formatSubsc"
+    "file": "src/pages/admin/admin-page/AdminUsersPanel.tsx",
+    "line": 52,
+    "text": "Premium: {item.subscription?.premiumLifetime ? 'навсегда' : formatSubscriptionDate(item.subscription?.premiumUntil)} · Business: {item.subscription?.businessLifetime ? 'навсегда' : formatSubscriptionDate(item.subscription?.businessUntil)}"
   },
   {
-    "file": "src/pages/admin/AdminPage.tsx",
-    "line": 326,
+    "file": "src/pages/admin/admin-page/AdminUsersPanel.tsx",
+    "line": 61,
     "text": "{subscriptionBusy === `${item.id}:trial` ? 'Включаю…' : 'Триал'}"
   },
   {
-    "file": "src/pages/admin/AdminPage.tsx",
-    "line": 336,
+    "file": "src/pages/admin/admin-page/AdminUsersPanel.tsx",
+    "line": 72,
     "text": "<span className=\"text-[11px] text-white/38\">дней</span>"
   },
   {
-    "file": "src/pages/admin/AdminPage.tsx",
-    "line": 341,
-    "text": "<button type=\"button\" className=\"rounded-2xl border border-emerald-300/20 bg-emerald-400/10 px-3 py-2 text-[11px] font-semibold text-emerald-100\" disabled={subscriptionBusy !== null} onClick={() => handleGrantSubscription(item.id, 'premium'"
+    "file": "src/pages/admin/admin-page/AdminUsersPanel.tsx",
+    "line": 78,
+    "text": "<button type=\"button\" className=\"rounded-2xl border border-emerald-300/20 bg-emerald-400/10 px-3 py-2 text-[11px] font-semibold text-emerald-100\" disabled={subscriptionBusy !== null} onClick={() => onGrantSubscription(item.id, 'premium', tr"
   },
   {
-    "file": "src/pages/admin/AdminPage.tsx",
-    "line": 342,
-    "text": "<button type=\"button\" className=\"rounded-2xl border border-sky-300/20 bg-sky-400/10 px-3 py-2 text-[11px] font-semibold text-sky-100\" disabled={subscriptionBusy !== null} onClick={() => handleGrantSubscription(item.id, 'business', true)}>Bu"
+    "file": "src/pages/admin/admin-page/AdminUsersPanel.tsx",
+    "line": 79,
+    "text": "<button type=\"button\" className=\"rounded-2xl border border-sky-300/20 bg-sky-400/10 px-3 py-2 text-[11px] font-semibold text-sky-100\" disabled={subscriptionBusy !== null} onClick={() => onGrantSubscription(item.id, 'business', true)}>Busine"
   },
   {
-    "file": "src/pages/admin/AdminPage.tsx",
-    "line": 343,
-    "text": "<button type=\"button\" className=\"rounded-2xl border border-white/10 bg-white/[0.055] px-3 py-2 text-[11px] font-semibold text-white/60\" disabled={subscriptionBusy !== null} onClick={() => handleRevokeSubscription(item.id, 'premium')}>Снять "
+    "file": "src/pages/admin/admin-page/AdminUsersPanel.tsx",
+    "line": 80,
+    "text": "<button type=\"button\" className=\"rounded-2xl border border-white/10 bg-white/[0.055] px-3 py-2 text-[11px] font-semibold text-white/60\" disabled={subscriptionBusy !== null} onClick={() => onRevokeSubscription(item.id, 'premium')}>Снять Prem"
   },
   {
-    "file": "src/pages/admin/AdminPage.tsx",
-    "line": 344,
-    "text": "<button type=\"button\" className=\"rounded-2xl border border-white/10 bg-white/[0.055] px-3 py-2 text-[11px] font-semibold text-white/60\" disabled={subscriptionBusy !== null} onClick={() => handleRevokeSubscription(item.id, 'business')}>Снять"
+    "file": "src/pages/admin/admin-page/AdminUsersPanel.tsx",
+    "line": 81,
+    "text": "<button type=\"button\" className=\"rounded-2xl border border-white/10 bg-white/[0.055] px-3 py-2 text-[11px] font-semibold text-white/60\" disabled={subscriptionBusy !== null} onClick={() => onRevokeSubscription(item.id, 'business')}>Снять Bus"
   },
   {
-    "file": "src/pages/admin/AdminPage.tsx",
-    "line": 355,
+    "file": "src/pages/admin/admin-page/AdminUsersPanel.tsx",
+    "line": 92,
     "text": "{resettingUserId === item.id + ':finance' ? 'Сбрасываю…' : 'Сбросить финансы'}"
   },
   {
-    "file": "src/pages/admin/AdminPage.tsx",
-    "line": 363,
+    "file": "src/pages/admin/admin-page/AdminUsersPanel.tsx",
+    "line": 100,
     "text": "{resettingUserId === item.id + ':full' ? 'Обнуляю…' : 'Обнулить всё'}"
   },
   {
     "file": "src/pages/admin/AdminPage.tsx",
-    "line": 378,
-    "text": "<div className=\"mt-1 text-xs text-white/42\">{item.user?.firstName ?? 'Без пользователя'} · @{item.user?.username ?? '—'}</div>"
+    "line": 68,
+    "text": "? `Чтобы очистить финансы пользователя, введи ${confirmText}`"
   },
   {
     "file": "src/pages/admin/AdminPage.tsx",
-    "line": 393,
-    "text": "<div className=\"app-section-title\">Онбординг</div>"
+    "line": 69,
+    "text": ": `Чтобы полностью обнулить тестера, введи ${confirmText}`;"
   },
   {
     "file": "src/pages/admin/AdminPage.tsx",
-    "line": 416,
-    "text": "{premiumPreviewEnabled ? 'Выключить Premium-вид' : 'Включить Premium-вид'}"
+    "line": 117,
+    "text": "<ScreenTopBar title=\"Админ\" left=\"back\" right={['home']} />"
   },
   {
     "file": "src/pages/admin/AdminPage.tsx",
-    "line": 425,
-    "text": "<MetricCard title=\"Статус\" value={monitoring.status} caption={`uptime ${Math.round(monitoring.uptimeSec / 60)} мин`} />"
+    "line": 120,
+    "text": "<div className=\"app-eyebrow\">Закрытый раздел</div>"
   },
   {
     "file": "src/pages/admin/AdminPage.tsx",
-    "line": 426,
-    "text": "<MetricCard title=\"Ошибки\" value={`${Math.round(monitoring.totals.errorRate * 100)}%`} caption={`${monitoring.totals.errors}/${monitoring.totals.requests} запросов`} />"
+    "line": 121,
+    "text": "<h1 className=\"mt-3 text-[32px] font-semibold tracking-[-0.05em]\">Админ-панель</h1>"
   },
   {
     "file": "src/pages/admin/AdminPage.tsx",
-    "line": 427,
-    "text": "<MetricCard title=\"p95\" value={`${monitoring.totals.p95Ms} мс`} caption=\"медленные ответы\" />"
-  },
-  {
-    "file": "src/pages/admin/AdminPage.tsx",
-    "line": 428,
-    "text": "<MetricCard title=\"Среднее\" value={`${monitoring.totals.avgMs} мс`} caption={`${monitoring.totals.slowRequests} slow`} />"
-  },
-  {
-    "file": "src/pages/admin/AdminPage.tsx",
-    "line": 437,
-    "text": "<small>{item.avgMs} мс</small>"
-  },
-  {
-    "file": "src/pages/admin/AdminPage.tsx",
-    "line": 445,
-    "text": "<div className=\"app-section-title\">Алерты</div>"
-  },
-  {
-    "file": "src/pages/admin/AdminPage.tsx",
-    "line": 452,
-    "text": ")) : <div className=\"text-sm text-white/42\">Алертов нет.</div>}"
+    "line": 122,
+    "text": "<p className=\"mt-2 text-sm leading-6 text-white/50\">Пользователи, события, воронка и состояние сервиса.</p>"
   },
   {
     "file": "src/pages/companion/CompanionPage.tsx",
@@ -4456,147 +3876,162 @@
   },
   {
     "file": "src/pages/obligations/ObligationsPage.tsx",
-    "line": 57,
+    "line": 58,
     "text": "<ScreenTopBar title=\"Обязательства\" left=\"back\" right={['notifications', 'home']} />"
   },
   {
     "file": "src/pages/obligations/ObligationsPage.tsx",
-    "line": 60,
+    "line": 61,
     "text": "<div className=\"app-eyebrow\">Кредиты, рассрочки и подписки</div>"
   },
   {
     "file": "src/pages/obligations/ObligationsPage.tsx",
-    "line": 63,
+    "line": 64,
     "text": "<h1 className=\"app-hero-title\">Обязательства</h1>"
   },
   {
     "file": "src/pages/obligations/ObligationsPage.tsx",
-    "line": 64,
+    "line": 65,
     "text": "<p className=\"app-hero-caption\">Следи за обязательными платежами и не держи даты в голове.</p>"
   },
   {
     "file": "src/pages/obligations/ObligationsPage.tsx",
-    "line": 66,
+    "line": 67,
     "text": "<button type=\"button\" className=\"app-primary-button shrink-0\" onClick={handleCreate}>+ Добавить</button>"
   },
   {
     "file": "src/pages/obligations/ObligationsPage.tsx",
-    "line": 69,
+    "line": 70,
     "text": "<div><strong>{summary?.activeLoansCount ?? activeLoans.length}</strong><small>активных</small></div>"
   },
   {
     "file": "src/pages/obligations/ObligationsPage.tsx",
-    "line": 70,
+    "line": 71,
     "text": "<div><strong>{formatMoney(summary?.monthlyPaymentTotal ?? 0, 'RUB')}</strong><small>в месяц</small></div>"
   },
   {
     "file": "src/pages/obligations/ObligationsPage.tsx",
-    "line": 71,
+    "line": 72,
     "text": "<div><strong>{formatMoney(summary?.totalDebt ?? 0, 'RUB')}</strong><small>остаток</small></div>"
   },
   {
     "file": "src/pages/obligations/ObligationsPage.tsx",
-    "line": 81,
+    "line": 73,
+    "text": "<div><strong>{recurringPayments.length}</strong><small>регулярных</small></div>"
+  },
+  {
+    "file": "src/pages/obligations/ObligationsPage.tsx",
+    "line": 83,
     "text": "<div className=\"app-eyebrow\">Следующий платёж</div>"
   },
   {
     "file": "src/pages/obligations/ObligationsPage.tsx",
-    "line": 88,
+    "line": 90,
     "text": "<button type=\"button\" className=\"app-secondary-button\" onClick={() => handleEdit(summary.nearest!)}>Изменить</button>"
   },
   {
     "file": "src/pages/obligations/ObligationsPage.tsx",
-    "line": 89,
+    "line": 91,
     "text": "<button type=\"button\" className=\"app-primary-button\" disabled={isMutating} onClick={() => markPaid(summary.nearest!.id)}>Оплатил</button>"
   },
   {
     "file": "src/pages/obligations/ObligationsPage.tsx",
-    "line": 95,
-    "text": "<div className=\"app-card p-5 text-sm text-white/55\">Загружаю обязательства...</div>"
-  },
-  {
-    "file": "src/pages/obligations/ObligationsPage.tsx",
-    "line": 98,
-    "text": "eyebrow=\"Обязательства\""
-  },
-  {
-    "file": "src/pages/obligations/ObligationsPage.tsx",
-    "line": 99,
-    "text": "title=\"Платежей пока нет\""
-  },
-  {
-    "file": "src/pages/obligations/ObligationsPage.tsx",
     "line": 100,
-    "text": "description=\"Добавь кредит, ипотеку, рассрочку или подписку. Фина будет держать срок платежа рядом.\""
+    "text": "<div className=\"app-eyebrow\">Регулярные платежи</div>"
   },
   {
     "file": "src/pages/obligations/ObligationsPage.tsx",
-    "line": 111,
-    "text": "<p>{loan.nextPaymentDate ? formatTransactionDate(loan.nextPaymentDate) : 'Дата платежа не указана'} · {daysLabel(loan.daysUntilPayment)}</p>"
-  },
-  {
-    "file": "src/pages/obligations/ObligationsPage.tsx",
-    "line": 119,
-    "text": "<span>Остаток: {formatMoney(loan.currentDebt, loan.currency)}</span>"
+    "line": 101,
+    "text": "<h2>Списания и подписки</h2>"
   },
   {
     "file": "src/pages/obligations/ObligationsPage.tsx",
     "line": 120,
-    "text": "<span>{loan.progress || 0}% закрыто</span>"
+    "text": "<div className=\"app-card p-5 text-sm text-white/55\">Загружаю обязательства...</div>"
+  },
+  {
+    "file": "src/pages/obligations/ObligationsPage.tsx",
+    "line": 123,
+    "text": "eyebrow=\"Обязательства\""
+  },
+  {
+    "file": "src/pages/obligations/ObligationsPage.tsx",
+    "line": 124,
+    "text": "title=\"Платежей пока нет\""
   },
   {
     "file": "src/pages/obligations/ObligationsPage.tsx",
     "line": 125,
+    "text": "description=\"Добавь кредит, ипотеку, рассрочку или подписку. Фина будет держать срок платежа рядом.\""
+  },
+  {
+    "file": "src/pages/obligations/ObligationsPage.tsx",
+    "line": 136,
+    "text": "<p>{loan.nextPaymentDate ? formatTransactionDate(loan.nextPaymentDate) : 'Дата платежа не указана'} · {daysLabel(loan.daysUntilPayment)}</p>"
+  },
+  {
+    "file": "src/pages/obligations/ObligationsPage.tsx",
+    "line": 144,
+    "text": "<span>Остаток: {formatMoney(loan.currentDebt, loan.currency)}</span>"
+  },
+  {
+    "file": "src/pages/obligations/ObligationsPage.tsx",
+    "line": 145,
+    "text": "<span>{loan.progress || 0}% закрыто</span>"
+  },
+  {
+    "file": "src/pages/obligations/ObligationsPage.tsx",
+    "line": 150,
     "text": "<span>Регулярный платёж</span>"
   },
   {
     "file": "src/pages/obligations/ObligationsPage.tsx",
-    "line": 126,
+    "line": 151,
     "text": "<span>{loan.account ? `Счёт: ${loan.account.name}` : 'Счёт не выбран'}</span>"
   },
   {
     "file": "src/pages/obligations/ObligationsPage.tsx",
-    "line": 131,
+    "line": 156,
     "text": "<button type=\"button\" className=\"app-secondary-button\" onClick={() => handleEdit(loan)}>Подробнее</button>"
   },
   {
     "file": "src/pages/obligations/ObligationsPage.tsx",
-    "line": 132,
+    "line": 157,
     "text": "<button type=\"button\" className=\"app-primary-button\" disabled={isMutating} onClick={() => markPaid(loan.id)}>Оплатил</button>"
   },
   {
     "file": "src/pages/obligations/ObligationsPage.tsx",
-    "line": 142,
+    "line": 167,
     "text": "<div className=\"app-eyebrow\">Напоминания</div>"
   },
   {
     "file": "src/pages/obligations/ObligationsPage.tsx",
-    "line": 143,
+    "line": 168,
     "text": "<h2>Ближайшие</h2>"
   },
   {
     "file": "src/pages/obligations/ObligationsPage.tsx",
-    "line": 148,
+    "line": 173,
     "text": "<p className=\"app-muted-text\">Напоминаний пока нет. Они появятся после добавления обязательства с датой платежа.</p>"
   },
   {
     "file": "src/pages/obligations/ObligationsPage.tsx",
-    "line": 155,
+    "line": 180,
     "text": "<small>{formatTransactionDate(reminder.remindAt)} · платёж {formatTransactionDate(reminder.dueDate)}</small>"
   },
   {
     "file": "src/pages/obligations/ObligationsPage.tsx",
-    "line": 157,
+    "line": 182,
     "text": "<button type=\"button\" className=\"app-secondary-button\" disabled={isMutating} onClick={() => updateReminderStatus(reminder.id, 'done')}>Готово</button>"
   },
   {
     "file": "src/pages/obligations/ObligationsPage.tsx",
-    "line": 166,
+    "line": 191,
     "text": "<div className=\"app-eyebrow\">Закрытые</div>"
   },
   {
     "file": "src/pages/obligations/ObligationsPage.tsx",
-    "line": 167,
+    "line": 192,
     "text": "<p>{closedLoans.length} обязательств закрыто. Они не участвуют в ближайших платежах.</p>"
   },
   {
@@ -4611,343 +4046,318 @@
   },
   {
     "file": "src/pages/sections/SectionsPage.tsx",
-    "line": 39,
+    "line": 57,
     "text": "<ScreenTopBar title=\"Категории\" left={{ label: 'Назад', onClick: onBack }} right={['notifications', 'home']} />"
   },
   {
     "file": "src/pages/sections/SectionsPage.tsx",
-    "line": 44,
+    "line": 62,
     "text": "<div className=\"app-eyebrow\">Структура расходов</div>"
   },
   {
     "file": "src/pages/sections/SectionsPage.tsx",
-    "line": 45,
+    "line": 63,
     "text": "<h1 className=\"app-hero-title\">Разделы и категории</h1>"
   },
   {
     "file": "src/pages/sections/SectionsPage.tsx",
-    "line": 46,
+    "line": 64,
     "text": "<p className=\"app-hero-caption\">Разделы помогают видеть расходы и доходы в понятном порядке.</p>"
   },
   {
     "file": "src/pages/sections/SectionsPage.tsx",
-    "line": 48,
+    "line": 66,
     "text": "<button type=\"button\" onClick={() => openModal({ type: 'taxonomy-tools' })} className=\"app-icon-button app-icon-button--lg\" aria-label=\"Правила категорий\"><SettingsGearIcon className=\"app-icon-button__svg\" /></button>"
   },
   {
     "file": "src/pages/sections/SectionsPage.tsx",
-    "line": 52,
-    "text": "<div><span>{sections.length}</span><small>разделов</small></div>"
-  },
-  {
-    "file": "src/pages/sections/SectionsPage.tsx",
-    "line": 53,
-    "text": "<div><span>{categories.length}</span><small>категорий</small></div>"
-  },
-  {
-    "file": "src/pages/sections/SectionsPage.tsx",
-    "line": 54,
-    "text": "<div><span>{ungrouped.length}</span><small>без раздела</small></div>"
-  },
-  {
-    "file": "src/pages/sections/SectionsPage.tsx",
-    "line": 61,
-    "text": "<span><b>Новый раздел</b><small>Группа для категорий</small></span>"
-  },
-  {
-    "file": "src/pages/sections/SectionsPage.tsx",
-    "line": 65,
-    "text": "<span><b>Новая категория</b><small>Расход, доход или оба типа</small></span>"
-  },
-  {
-    "file": "src/pages/sections/SectionsPage.tsx",
     "line": 70,
-    "text": "<div className=\"app-taxonomy-rule-tile\"><small>Расходные</small><b>{countType(categories, 'expense')} категорий</b></div>"
+    "text": "<div><span>{visibleSections.length}</span><small>разделов</small></div>"
   },
   {
     "file": "src/pages/sections/SectionsPage.tsx",
     "line": 71,
-    "text": "<div className=\"app-taxonomy-rule-tile\"><small>Доходные</small><b>{countType(categories, 'income')} категорий</b></div>"
+    "text": "<div><span>{categories.length}</span><small>категорий</small></div>"
   },
   {
     "file": "src/pages/sections/SectionsPage.tsx",
     "line": 72,
-    "text": "<div className=\"app-taxonomy-rule-tile\"><small>Универсальные</small><b>{countType(categories, 'both')} категорий</b></div>"
-  },
-  {
-    "file": "src/pages/sections/SectionsPage.tsx",
-    "line": 73,
-    "text": "<div className=\"app-taxonomy-rule-tile\"><small>Без раздела</small><b>{ungrouped.length}</b></div>"
+    "text": "<div><span>{ungrouped.length}</span><small>без раздела</small></div>"
   },
   {
     "file": "src/pages/sections/SectionsPage.tsx",
     "line": 79,
-    "text": "<div className=\"app-card p-5 text-sm text-white/55\">Загружаю категории...</div>"
-  },
-  {
-    "file": "src/pages/sections/SectionsPage.tsx",
-    "line": 82,
-    "text": "eyebrow=\"Категории\""
+    "text": "<span><b>Новый раздел</b><small>Группа для категорий</small></span>"
   },
   {
     "file": "src/pages/sections/SectionsPage.tsx",
     "line": 83,
-    "text": "title=\"Структура пока пустая\""
+    "text": "<span><b>Новая категория</b><small>Расход, доход или оба типа</small></span>"
   },
   {
     "file": "src/pages/sections/SectionsPage.tsx",
-    "line": 84,
-    "text": "description=\"Создай раздел и категории, чтобы диаграммы на главной стали полезнее.\""
+    "line": 88,
+    "text": "<div className=\"app-taxonomy-rule-tile\"><small>Расходные</small><b>{countType(categories, 'expense')} категорий</b></div>"
   },
   {
     "file": "src/pages/sections/SectionsPage.tsx",
-    "line": 85,
-    "text": "actionLabel=\"Создать категорию\""
+    "line": 89,
+    "text": "<div className=\"app-taxonomy-rule-tile\"><small>Доходные</small><b>{countType(categories, 'income')} категорий</b></div>"
   },
   {
     "file": "src/pages/sections/SectionsPage.tsx",
-    "line": 98,
-    "text": "<span><b>{section.name}</b><small>{section.description || 'Раздел для категорий'}</small></span>"
+    "line": 90,
+    "text": "<div className=\"app-taxonomy-rule-tile\"><small>Универсальные</small><b>{countType(categories, 'both')} категорий</b></div>"
+  },
+  {
+    "file": "src/pages/sections/SectionsPage.tsx",
+    "line": 91,
+    "text": "<div className=\"app-taxonomy-rule-tile\"><small>Без раздела</small><b>{ungrouped.length}</b></div>"
+  },
+  {
+    "file": "src/pages/sections/SectionsPage.tsx",
+    "line": 97,
+    "text": "<div className=\"app-card p-5 text-sm text-white/55\">Загружаю категории...</div>"
   },
   {
     "file": "src/pages/sections/SectionsPage.tsx",
     "line": 100,
+    "text": "eyebrow=\"Категории\""
+  },
+  {
+    "file": "src/pages/sections/SectionsPage.tsx",
+    "line": 101,
+    "text": "title=\"Структура пока пустая\""
+  },
+  {
+    "file": "src/pages/sections/SectionsPage.tsx",
+    "line": 102,
+    "text": "description=\"Создай раздел и категории, чтобы диаграммы на главной стали полезнее.\""
+  },
+  {
+    "file": "src/pages/sections/SectionsPage.tsx",
+    "line": 103,
+    "text": "actionLabel=\"Создать категорию\""
+  },
+  {
+    "file": "src/pages/sections/SectionsPage.tsx",
+    "line": 116,
+    "text": "<span><b>{section.name}</b><small>{section.description || 'Раздел для категорий'}</small></span>"
+  },
+  {
+    "file": "src/pages/sections/SectionsPage.tsx",
+    "line": 118,
     "text": "<button type=\"button\" onClick={() => openModal({ type: 'category-edit', sectionId: section.id })} className=\"app-icon-button\" aria-label=\"Добавить категорию\">+</button>"
   },
   {
     "file": "src/pages/sections/SectionsPage.tsx",
-    "line": 104,
+    "line": 122,
     "text": "{preview.length === 0 ? <span className=\"app-chip app-chip--muted\">Категорий нет</span> : null}"
   },
   {
     "file": "src/pages/sections/SectionsPage.tsx",
-    "line": 109,
+    "line": 127,
     "text": "<button type=\"button\" onClick={() => openModal({ type: 'taxonomy-section', section })} className=\"app-secondary-button\">Открыть</button>"
   },
   {
     "file": "src/pages/sections/SectionsPage.tsx",
-    "line": 119,
+    "line": 137,
     "text": "<span><b>Без раздела</b><small>Категории, которые ещё нужно разложить</small></span>"
   },
   {
     "file": "src/pages/sections/SectionsPage.tsx",
-    "line": 125,
+    "line": 143,
     "text": "<button type=\"button\" onClick={() => openModal({ type: 'taxonomy-section', section: 'ungrouped' })} className=\"app-secondary-button\">Разобрать</button>"
   },
   {
     "file": "src/pages/settings/SettingsPage.tsx",
-    "line": 24,
+    "line": 25,
     "text": "<div className=\"app-eyebrow\">Настройки</div>"
   },
   {
     "file": "src/pages/settings/SettingsPage.tsx",
-    "line": 28,
+    "line": 29,
     "text": "<button type=\"button\" className=\"app-icon-button\" onClick={onClose} aria-label=\"Закрыть\">×</button>"
   },
   {
     "file": "src/pages/settings/SettingsPage.tsx",
-    "line": 121,
+    "line": 120,
     "text": "? 'Очистить все финансовые данные? XP, уровень и прогресс останутся.'"
   },
   {
     "file": "src/pages/settings/SettingsPage.tsx",
-    "line": 122,
+    "line": 121,
     "text": ": 'Сбросить всё по аккаунту? Финансы, XP, уровень, достижения и прогресс будут обнулены. Профиль останется.';"
   },
   {
     "file": "src/pages/settings/SettingsPage.tsx",
-    "line": 131,
+    "line": 130,
     "text": "setResetStatus(mode === 'finance' ? 'Финансовые данные очищены.' : 'Аккаунт обнулён.');"
   },
   {
     "file": "src/pages/settings/SettingsPage.tsx",
-    "line": 134,
+    "line": 133,
     "text": "setResetStatus(error instanceof Error ? error.message : 'Не удалось выполнить сброс.');"
   },
   {
     "file": "src/pages/settings/SettingsPage.tsx",
-    "line": 143,
-    "text": "{ title: 'Фина', caption: language === 'en' ? 'Progress and habit' : 'Прогресс и привычка', screen: 'companion' as const },"
-  },
-  {
-    "file": "src/pages/settings/SettingsPage.tsx",
-    "line": 158,
+    "line": 146,
     "text": "<div className=\"app-eyebrow\">Настройки</div>"
   },
   {
     "file": "src/pages/settings/SettingsPage.tsx",
-    "line": 195,
+    "line": 171,
     "text": "<p>{user.firstName || user.username || 'Пользователь'}</p>"
   },
   {
     "file": "src/pages/settings/SettingsPage.tsx",
-    "line": 202,
+    "line": 178,
     "text": "<ModalShell title=\"Голос\" caption=\"Запись начинается только когда ты зажимаешь Фину. Фон не отправляется в распознавание.\" onClose={() => setModal(null)}>"
   },
   {
     "file": "src/pages/settings/SettingsPage.tsx",
-    "line": 204,
+    "line": 180,
     "text": "<ToggleLine title=\"Голосовой ввод\" caption=\"Микрофон включается только на время удержания кнопки Фины.\" checked={voiceEnabled} onChange={setVoiceEnabled} />"
   },
   {
     "file": "src/pages/settings/SettingsPage.tsx",
-    "line": 205,
+    "line": 181,
     "text": "<ToggleLine title=\"Голос Фины\" caption=\"Короткие ответы голосом Nova: «Я здесь», «Слушаю», «Готово».\" checked={voiceRepliesEnabled} onChange={setVoiceRepliesEnabled} />"
   },
   {
     "file": "src/pages/settings/SettingsPage.tsx",
-    "line": 206,
+    "line": 182,
     "text": "<ToggleLine title=\"Распознавание голоса\" caption=\"Единое распознавание голоса для iPhone и Android.\" checked={voiceBetaEnabled} onChange={setVoiceBetaEnabled} />"
   },
   {
     "file": "src/pages/settings/SettingsPage.tsx",
-    "line": 208,
+    "line": 184,
     "text": "<p className=\"app-settings-note mt-4\">Подтверждения остаются в обычных модалках. После отпускания запись отправляется в распознавание один раз.</p>"
   },
   {
     "file": "src/pages/settings/SettingsPage.tsx",
-    "line": 213,
+    "line": 189,
     "text": "<ModalShell title=\"Фина\" caption=\"Фина работает как голосовая кнопка и не слушает фон.\" onClose={() => setModal(null)}>"
   },
   {
     "file": "src/pages/settings/SettingsPage.tsx",
-    "line": 215,
+    "line": 191,
     "text": "<div><b>1</b><span>Зажми Фину</span></div>"
   },
   {
     "file": "src/pages/settings/SettingsPage.tsx",
-    "line": 216,
+    "line": 192,
     "text": "<div><b>2</b><span>Скажи финансовую команду</span></div>"
   },
   {
     "file": "src/pages/settings/SettingsPage.tsx",
-    "line": 217,
+    "line": 193,
     "text": "<div><b>3</b><span>Отпусти, чтобы отправить</span></div>"
   },
   {
     "file": "src/pages/settings/SettingsPage.tsx",
-    "line": 219,
+    "line": 195,
     "text": "<p className=\"app-settings-note\">Фон не распознаётся. Все проверки, отмены и изменения остаются в обычных модалках приложения.</p>"
   },
   {
     "file": "src/pages/settings/SettingsPage.tsx",
-    "line": 224,
+    "line": 200,
     "text": "<ModalShell title=\"Валюты\" caption=\"Выбери, что показывать на главной карточке баланса.\" onClose={() => setModal(null)}>"
   },
   {
     "file": "src/pages/settings/SettingsPage.tsx",
-    "line": 227,
+    "line": 203,
     "text": "<div className=\"app-currency-row__head\"><b>Главная валюта</b><small>{mainCurrency}</small></div>"
   },
   {
     "file": "src/pages/settings/SettingsPage.tsx",
-    "line": 235,
+    "line": 211,
     "text": "<ToggleLine title=\"Конвертация\" caption=\"Показывать пересчёт выбранного счёта в другой валюте.\" checked={secondaryCurrencyEnabled} onChange={setSecondaryCurrencyEnabled} />"
   },
   {
     "file": "src/pages/settings/SettingsPage.tsx",
-    "line": 238,
+    "line": 214,
     "text": "<div className=\"app-currency-row__head\"><b>Дополнительная</b><small>{secondaryCurrency}</small></div>"
   },
   {
     "file": "src/pages/settings/SettingsPage.tsx",
-    "line": 247,
+    "line": 223,
     "text": "<div className=\"app-currency-row__head\"><b>Курс доллара</b><small>1 USD в рублях</small></div>"
   },
   {
     "file": "src/pages/settings/SettingsPage.tsx",
-    "line": 252,
+    "line": 228,
     "text": "<div className=\"app-currency-row__head\"><b>Курс евро</b><small>1 EUR в рублях</small></div>"
   },
   {
     "file": "src/pages/settings/SettingsPage.tsx",
-    "line": 260,
-    "text": "<ModalShell title=\"Подсказки\" caption=\"Запасной ввод и короткие наблюдения по финансам.\" onClose={() => setModal(null)}>"
-  },
-  {
-    "file": "src/pages/settings/SettingsPage.tsx",
-    "line": 262,
-    "text": "<ToggleLine title=\"Текстовый ввод\" caption=\"Показывать поле, если говорить неудобно.\" checked={textInputEnabled} onChange={setTextInputEnabled} />"
-  },
-  {
-    "file": "src/pages/settings/SettingsPage.tsx",
-    "line": 263,
-    "text": "<ToggleLine title=\"Наблюдения\" caption=\"Показывать короткие финансовые выводы.\" checked={aiInsightsEnabled} onChange={setAIInsightsEnabled} />"
-  },
-  {
-    "file": "src/pages/settings/SettingsPage.tsx",
-    "line": 270,
+    "line": 249,
     "text": "<ModalShell title=\"Уведомления\" caption=\"Каналы и важные события. Срок напоминания задаётся в самом платеже.\" onClose={() => setModal(null)}>"
   },
   {
     "file": "src/pages/settings/SettingsPage.tsx",
-    "line": 273,
+    "line": 252,
     "text": "title=\"В приложении\""
   },
   {
     "file": "src/pages/settings/SettingsPage.tsx",
-    "line": 274,
+    "line": 253,
     "text": "caption=\"Показывать уведомления в панели сверху.\""
   },
   {
     "file": "src/pages/settings/SettingsPage.tsx",
-    "line": 279,
+    "line": 258,
     "text": "title=\"В Telegram\""
   },
   {
     "file": "src/pages/settings/SettingsPage.tsx",
-    "line": 280,
+    "line": 259,
     "text": "caption=\"Отправлять напоминания в бота.\""
   },
   {
     "file": "src/pages/settings/SettingsPage.tsx",
-    "line": 285,
+    "line": 264,
     "text": "title=\"В день платежа\""
   },
   {
     "file": "src/pages/settings/SettingsPage.tsx",
-    "line": 286,
+    "line": 265,
     "text": "caption=\"Напоминать в дату списания.\""
   },
   {
     "file": "src/pages/settings/SettingsPage.tsx",
-    "line": 291,
+    "line": 270,
     "text": "title=\"Просрочка\""
   },
   {
     "file": "src/pages/settings/SettingsPage.tsx",
-    "line": 292,
+    "line": 271,
     "text": "caption=\"Показывать, если платёж не отмечен.\""
   },
   {
     "file": "src/pages/settings/SettingsPage.tsx",
-    "line": 302,
+    "line": 281,
     "text": "<ModalShell title=\"Данные\" caption=\"Для тестов можно начать заново без удаления профиля.\" onClose={() => setModal(null)}>"
   },
   {
     "file": "src/pages/settings/SettingsPage.tsx",
-    "line": 305,
+    "line": 284,
     "text": "<b>Очистить финансы</b>"
   },
   {
     "file": "src/pages/settings/SettingsPage.tsx",
-    "line": 306,
+    "line": 285,
     "text": "<small>Счета, операции, цели, категории, разделы и финансовый контекст. XP останется.</small>"
   },
   {
     "file": "src/pages/settings/SettingsPage.tsx",
-    "line": 309,
+    "line": 288,
     "text": "<b>Сбросить всё</b>"
   },
   {
     "file": "src/pages/settings/SettingsPage.tsx",
-    "line": 310,
+    "line": 289,
     "text": "<small>Финансы, XP, уровень, достижения и прогресс. Профиль останется.</small>"
-  },
-  {
-    "file": "src/pages/settings/TaxonomySettingsPage.tsx",
-    "line": 7,
-    "text": "<PageHeader title=\"Разделы\" subtitle=\"Категории и структура\" />"
   },
   {
     "file": "src/pages/spending-limits/SpendingLimitsPage.tsx",
@@ -4958,6 +4368,1621 @@
     "file": "src/shared/api/companion.api.ts",
     "line": 23,
     "text": "message: 'Финансовая картина собирается. Начни с одного действия.',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/accounts-transactions.ts",
+    "line": 2,
+    "text": "'Общий баланс': 'Total balance',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/accounts-transactions.ts",
+    "line": 3,
+    "text": "'Все счета объединены': 'All accounts combined',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/accounts-transactions.ts",
+    "line": 4,
+    "text": "'Все деньги по местам': 'All money in place',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/accounts-transactions.ts",
+    "line": 5,
+    "text": "'Счета, наличные, карты и накопления без лишнего шума.': 'Accounts, cash, cards and savings without clutter.',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/accounts-transactions.ts",
+    "line": 6,
+    "text": "'Кошелёк': 'Wallet',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/accounts-transactions.ts",
+    "line": 7,
+    "text": "'Баланс и структура': 'Balance and structure',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/accounts-transactions.ts",
+    "line": 8,
+    "text": "'Создать счёт': 'Create account',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/accounts-transactions.ts",
+    "line": 9,
+    "text": "'Создать счет': 'Create account',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/accounts-transactions.ts",
+    "line": 10,
+    "text": "'Новый счёт': 'New account',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/accounts-transactions.ts",
+    "line": 11,
+    "text": "'Новый счет': 'New account',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/accounts-transactions.ts",
+    "line": 12,
+    "text": "'Карта, наличные или цель': 'Card, cash or goal',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/accounts-transactions.ts",
+    "line": 13,
+    "text": "'Перевод': 'Transfer',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/accounts-transactions.ts",
+    "line": 14,
+    "text": "'Между своими счетами': 'Between your accounts',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/accounts-transactions.ts",
+    "line": 15,
+    "text": "'главная валюта': 'main currency',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/accounts-transactions.ts",
+    "line": 16,
+    "text": "'главный': 'primary',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/accounts-transactions.ts",
+    "line": 17,
+    "text": "'Главный': 'Primary',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/accounts-transactions.ts",
+    "line": 18,
+    "text": "'Доход сюда': 'Income here',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/accounts-transactions.ts",
+    "line": 19,
+    "text": "'Имя защищено': 'Name protected',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/accounts-transactions.ts",
+    "line": 20,
+    "text": "'Без трат': 'No spending',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/accounts-transactions.ts",
+    "line": 21,
+    "text": "'Без переводов': 'No transfers',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/accounts-transactions.ts",
+    "line": 22,
+    "text": "'Загружаю счета...': 'Loading accounts...',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/accounts-transactions.ts",
+    "line": 23,
+    "text": "'Счета не загрузились': 'Accounts failed to load',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/accounts-transactions.ts",
+    "line": 24,
+    "text": "'Наличные': 'Cash',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/accounts-transactions.ts",
+    "line": 25,
+    "text": "'Карта': 'Card',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/accounts-transactions.ts",
+    "line": 26,
+    "text": "'Накопления': 'Savings',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/accounts-transactions.ts",
+    "line": 27,
+    "text": "'Счёт': 'Account',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/accounts-transactions.ts",
+    "line": 28,
+    "text": "'Счет': 'Account',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/accounts-transactions.ts",
+    "line": 29,
+    "text": "'счёт': 'account',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/accounts-transactions.ts",
+    "line": 30,
+    "text": "'счет': 'account',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/accounts-transactions.ts",
+    "line": 31,
+    "text": "'карта': 'card',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/accounts-transactions.ts",
+    "line": 32,
+    "text": "'наличные': 'cash',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/accounts-transactions.ts",
+    "line": 33,
+    "text": "'накопления': 'savings',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/accounts-transactions.ts",
+    "line": 34,
+    "text": "'Стартовый баланс': 'Starting balance',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/accounts-transactions.ts",
+    "line": 35,
+    "text": "'Сделать перевод': 'Make transfer',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/accounts-transactions.ts",
+    "line": 36,
+    "text": "'Выбери счёт, куда перевести деньги.': 'Choose the account to transfer money to.',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/accounts-transactions.ts",
+    "line": 37,
+    "text": "'Не удалось сделать перевод.': 'Could not make the transfer.',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/accounts-transactions.ts",
+    "line": 39,
+    "text": "'Доход': 'Income',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/accounts-transactions.ts",
+    "line": 40,
+    "text": "'Доходы': 'Income',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/accounts-transactions.ts",
+    "line": 41,
+    "text": "'Расход': 'Expense',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/accounts-transactions.ts",
+    "line": 42,
+    "text": "'Расходы': 'Expenses',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/accounts-transactions.ts",
+    "line": 43,
+    "text": "'Переводы': 'Transfers',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/accounts-transactions.ts",
+    "line": 44,
+    "text": "'Все': 'All',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/accounts-transactions.ts",
+    "line": 45,
+    "text": "'Оба': 'Both',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/accounts-transactions.ts",
+    "line": 46,
+    "text": "'Итого': 'Total',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/accounts-transactions.ts",
+    "line": 47,
+    "text": "'Итог': 'Balance',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/accounts-transactions.ts",
+    "line": 48,
+    "text": "'Сумма': 'Amount',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/accounts-transactions.ts",
+    "line": 49,
+    "text": "'Описание': 'Description',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/accounts-transactions.ts",
+    "line": 50,
+    "text": "'Название': 'Name',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/accounts-transactions.ts",
+    "line": 51,
+    "text": "'Заметка': 'Note',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/accounts-transactions.ts",
+    "line": 52,
+    "text": "'Тип': 'Type',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/accounts-transactions.ts",
+    "line": 53,
+    "text": "'Баланс': 'Balance',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/accounts-transactions.ts",
+    "line": 54,
+    "text": "'Откуда': 'From',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/accounts-transactions.ts",
+    "line": 55,
+    "text": "'Куда': 'To',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/accounts-transactions.ts",
+    "line": 56,
+    "text": "'Дата': 'Date',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/accounts-transactions.ts",
+    "line": 57,
+    "text": "'Без даты': 'No date',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/accounts-transactions.ts",
+    "line": 58,
+    "text": "'Сегодня': 'Today',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/accounts-transactions.ts",
+    "line": 59,
+    "text": "'Вчера': 'Yesterday',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/accounts-transactions.ts",
+    "line": 60,
+    "text": "'сегодня': 'today',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/accounts-transactions.ts",
+    "line": 61,
+    "text": "'завтра': 'tomorrow',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/accounts-transactions.ts",
+    "line": 62,
+    "text": "'Введите сумму больше нуля': 'Enter an amount greater than zero',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/accounts-transactions.ts",
+    "line": 63,
+    "text": "'Введи сумму больше нуля.': 'Enter an amount greater than zero.',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/accounts-transactions.ts",
+    "line": 64,
+    "text": "'Выбери счёт.': 'Choose an account.',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/accounts-transactions.ts",
+    "line": 65,
+    "text": "'Для перевода нужен другой счёт получателя.': 'A different destination account is required for transfer.',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/accounts-transactions.ts",
+    "line": 66,
+    "text": "'Изменить операцию': 'Edit transaction',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/accounts-transactions.ts",
+    "line": 67,
+    "text": "'Операция': 'Transaction',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/accounts-transactions.ts",
+    "line": 68,
+    "text": "'Живая лента операций': 'Live transaction feed',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/accounts-transactions.ts",
+    "line": 69,
+    "text": "'Добавить расход': 'Add expense',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/accounts-transactions.ts",
+    "line": 70,
+    "text": "'Добавить доход': 'Add income',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/accounts-transactions.ts",
+    "line": 71,
+    "text": "'Открыть диаграмму': 'Open chart',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/accounts-transactions.ts",
+    "line": 72,
+    "text": "'Открыть полную аналитику': 'Open full analytics',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/accounts-transactions.ts",
+    "line": 73,
+    "text": "'Скачать отчёт': 'Download report',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/accounts-transactions.ts",
+    "line": 74,
+    "text": "'Скачать отчет': 'Download report',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/accounts-transactions.ts",
+    "line": 75,
+    "text": "'Операций пока нет': 'No transactions yet',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/accounts-transactions.ts",
+    "line": 76,
+    "text": "'Добавь первую операцию — здесь появится разбор по категориям.': 'Add the first transaction — category breakdown will appear here.',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/accounts-transactions.ts",
+    "line": 78,
+    "text": "'Месяц': 'Month',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/accounts-transactions.ts",
+    "line": 79,
+    "text": "'3 месяца': '3 months',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/accounts-transactions.ts",
+    "line": 80,
+    "text": "'Год': 'Year',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/accounts-transactions.ts",
+    "line": 81,
+    "text": "'Всё': 'All time',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/accounts-transactions.ts",
+    "line": 82,
+    "text": "'Свой': 'Custom',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/accounts-transactions.ts",
+    "line": 83,
+    "text": "'День': 'Day',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/accounts-transactions.ts",
+    "line": 84,
+    "text": "'Неделя': 'Week',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/accounts-transactions.ts",
+    "line": 85,
+    "text": "'Формат': 'Format',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/accounts-transactions.ts",
+    "line": 86,
+    "text": "'Период': 'Period',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/accounts-transactions.ts",
+    "line": 87,
+    "text": "'Расширенный отчёт': 'Advanced report',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/accounts-transactions.ts",
+    "line": 88,
+    "text": "'Расширенный отчет': 'Advanced report',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/accounts-transactions.ts",
+    "line": 89,
+    "text": "'Бизнес-отчёт': 'Business report',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/accounts-transactions.ts",
+    "line": 90,
+    "text": "'Бизнес-отчет': 'Business report',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/accounts-transactions.ts",
+    "line": 91,
+    "text": "'Экспорт операций': 'Transaction export',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/accounts-transactions.ts",
+    "line": 92,
+    "text": "'Простая выгрузка доходов, расходов и переводов за выбранный период.': 'Simple export of income, expenses and transfers for the selected period.',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/accounts-transactions.ts",
+    "line": 93,
+    "text": "'Подробный финансовый отчёт с категориями, счетами, целями и обязательствами.': 'Detailed financial report with categories, accounts, goals and obligations.',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/accounts-transactions.ts",
+    "line": 94,
+    "text": "'Сводка для себя, партнёра или бухгалтера: доходы, расходы и итог периода.': 'Summary for yourself, a partner or an accountant: income, expenses and period total.',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/accounts-transactions.ts",
+    "line": 95,
+    "text": "'В расширенный отчёт входят счета, категории, цели и обязательства. Для бизнес-режима добавляется отдельная сводка по прибыли.': 'The advanced report includes accounts, categories, goals and obligations. Business mode adds a separate profit"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/accounts-transactions.ts",
+    "line": 96,
+    "text": "'Готовлю…': 'Preparing…',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/auth-navigation.ts",
+    "line": 2,
+    "text": "'Авторизация через Telegram...': 'Authorization through Telegram...',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/auth-navigation.ts",
+    "line": 3,
+    "text": "'Введи 6 цифр из сообщения бота.': 'Enter the 6 digits from the bot message.',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/auth-navigation.ts",
+    "line": 4,
+    "text": "'Вход через Telegram': 'Telegram sign in',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/auth-navigation.ts",
+    "line": 5,
+    "text": "'Не удалось подтвердить вход через Telegram.': 'Could not confirm Telegram sign in.',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/auth-navigation.ts",
+    "line": 6,
+    "text": "'Если используешь сторонний Telegram-клиент, войди через одноразовый код из бота.': 'If you use a third-party Telegram client, sign in with a one-time code from the bot.',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/auth-navigation.ts",
+    "line": 7,
+    "text": "'1. Открой бота и отправь команду /login.': '1. Open the bot and send /login.',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/auth-navigation.ts",
+    "line": 8,
+    "text": "'2. Скопируй 6-значный код.': '2. Copy the 6-digit code.',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/auth-navigation.ts",
+    "line": 9,
+    "text": "'3. Введи код здесь.': '3. Enter the code here.',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/auth-navigation.ts",
+    "line": 10,
+    "text": "'Открыть бота': 'Open bot',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/auth-navigation.ts",
+    "line": 11,
+    "text": "'Ссылка на бота не настроена. Можно открыть бота вручную и отправить /login.': 'The bot link is not configured. You can open the bot manually and send /login.',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/auth-navigation.ts",
+    "line": 12,
+    "text": "'Код из бота': 'Code from bot',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/auth-navigation.ts",
+    "line": 13,
+    "text": "'Проверяю...': 'Checking...',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/auth-navigation.ts",
+    "line": 14,
+    "text": "'Войти': 'Sign in',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/auth-navigation.ts",
+    "line": 15,
+    "text": "'Официальный Telegram продолжит входить автоматически. Код нужен только если клиент не передал безопасные данные входа.': 'The official Telegram app will continue signing in automatically. The code is only needed if the client did not pass "
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/auth-navigation.ts",
+    "line": 17,
+    "text": "'Главная': 'Home',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/auth-navigation.ts",
+    "line": 18,
+    "text": "'Счета': 'Accounts',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/auth-navigation.ts",
+    "line": 19,
+    "text": "'Операции': 'Transactions',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/auth-navigation.ts",
+    "line": 20,
+    "text": "'Аналитика': 'Analytics',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/auth-navigation.ts",
+    "line": 21,
+    "text": "'Настройки': 'Settings',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/auth-navigation.ts",
+    "line": 22,
+    "text": "'Цели': 'Goals',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/auth-navigation.ts",
+    "line": 23,
+    "text": "'Категории': 'Categories',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/auth-navigation.ts",
+    "line": 24,
+    "text": "'Разделы': 'Sections',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/auth-navigation.ts",
+    "line": 25,
+    "text": "'Обязательства': 'Obligations',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/auth-navigation.ts",
+    "line": 27,
+    "text": "'Премиум': 'Premium',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/auth-navigation.ts",
+    "line": 28,
+    "text": "'ИИ-бухгалтер': 'AI accountant',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/auth-navigation.ts",
+    "line": 29,
+    "text": "'Админка': 'Admin',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/auth-navigation.ts",
+    "line": 30,
+    "text": "'Рефералы': 'Referrals',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/auth-navigation.ts",
+    "line": 31,
+    "text": "'Меню': 'Menu',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/auth-navigation.ts",
+    "line": 32,
+    "text": "'Назад': 'Back',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/auth-navigation.ts",
+    "line": 33,
+    "text": "'Домой': 'Home',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/auth-navigation.ts",
+    "line": 34,
+    "text": "'Закрыть': 'Close',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/auth-navigation.ts",
+    "line": 35,
+    "text": "'Готово': 'Done',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/auth-navigation.ts",
+    "line": 36,
+    "text": "'Сохранить': 'Save',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/auth-navigation.ts",
+    "line": 37,
+    "text": "'Скачать': 'Download',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/auth-navigation.ts",
+    "line": 38,
+    "text": "'Предпросмотр': 'Preview',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/auth-navigation.ts",
+    "line": 39,
+    "text": "'Повторить': 'Retry',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/auth-navigation.ts",
+    "line": 40,
+    "text": "'Удалить': 'Delete',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/auth-navigation.ts",
+    "line": 41,
+    "text": "'Удалить счёт': 'Delete account',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/auth-navigation.ts",
+    "line": 42,
+    "text": "'Отмена': 'Cancel',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/auth-navigation.ts",
+    "line": 43,
+    "text": "'Отменить': 'Cancel',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/auth-navigation.ts",
+    "line": 44,
+    "text": "'Изменить': 'Edit',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/auth-navigation.ts",
+    "line": 45,
+    "text": "'Подробнее': 'Details',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/auth-navigation.ts",
+    "line": 46,
+    "text": "'Скрыть': 'Hide',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/auth-navigation.ts",
+    "line": 47,
+    "text": "'Свернуть': 'Collapse',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/auth-navigation.ts",
+    "line": 48,
+    "text": "'Раскрыть': 'Expand',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/auth-navigation.ts",
+    "line": 49,
+    "text": "'Дальше': 'Next',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/auth-navigation.ts",
+    "line": 50,
+    "text": "'Пропустить': 'Skip',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/auth-navigation.ts",
+    "line": 51,
+    "text": "'Выбрать': 'Select',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/auth-navigation.ts",
+    "line": 52,
+    "text": "'Скопировать': 'Copy',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/auth-navigation.ts",
+    "line": 54,
+    "text": "'Куда перейти': 'Where to go',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/auth-navigation.ts",
+    "line": 55,
+    "text": "'Баланс, счета и картина денег': 'Balance, accounts and money picture',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/auth-navigation.ts",
+    "line": 56,
+    "text": "'Карты, наличные и накопления': 'Cards, cash and savings',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/auth-navigation.ts",
+    "line": 57,
+    "text": "'Накопления и планы': 'Savings and plans',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/auth-navigation.ts",
+    "line": 58,
+    "text": "'Кредиты, подписки и напоминания': 'Loans, subscriptions and reminders',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/auth-navigation.ts",
+    "line": 59,
+    "text": "'Разделы расходов и доходов': 'Expense and income sections',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/auth-navigation.ts",
+    "line": 60,
+    "text": "'Тарифы и возможности': 'Plans and features',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/auth-navigation.ts",
+    "line": 61,
+    "text": "'Для ИП, самозанятых и бизнеса': 'For freelancers and business',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/auth-navigation.ts",
+    "line": 62,
+    "text": "'Приглашения и бонусы': 'Invites and bonuses',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/auth-navigation.ts",
+    "line": 63,
+    "text": "'Пользователи и инструменты': 'Users and tools',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/goals-obligations.ts",
+    "line": 2,
+    "text": "'Цель': 'Goal',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/goals-obligations.ts",
+    "line": 3,
+    "text": "'Новая цель': 'New goal',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/goals-obligations.ts",
+    "line": 4,
+    "text": "'Добавить цель': 'Add goal',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/goals-obligations.ts",
+    "line": 5,
+    "text": "'Цели не загрузились': 'Goals failed to load',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/goals-obligations.ts",
+    "line": 6,
+    "text": "'Укажи название и сумму цели.': 'Specify the goal name and amount.',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/goals-obligations.ts",
+    "line": 7,
+    "text": "'Короткая форма. Можно также сказать: “создай цель отпуск 120000”.': 'Short form. You can also say: “create a goal vacation 120000”.',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/goals-obligations.ts",
+    "line": 8,
+    "text": "'Цели помогают видеть, зачем ты экономишь и сколько осталось до результата.': 'Goals help you see why you save and how much is left.',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/goals-obligations.ts",
+    "line": 9,
+    "text": "'Подушка безопасности': 'Safety cushion',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/goals-obligations.ts",
+    "line": 10,
+    "text": "'Отпуск': 'Vacation',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/goals-obligations.ts",
+    "line": 11,
+    "text": "'Ноутбук': 'Laptop',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/goals-obligations.ts",
+    "line": 12,
+    "text": "'Погасить кредит быстрее': 'Pay off the loan faster',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/goals-obligations.ts",
+    "line": 14,
+    "text": "'Кредит': 'Loan',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/goals-obligations.ts",
+    "line": 15,
+    "text": "'Ипотека': 'Mortgage',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/goals-obligations.ts",
+    "line": 16,
+    "text": "'Рассрочка': 'Installment',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/goals-obligations.ts",
+    "line": 17,
+    "text": "'Подписка': 'Subscription',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/goals-obligations.ts",
+    "line": 18,
+    "text": "'Другое': 'Other',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/goals-obligations.ts",
+    "line": 19,
+    "text": "'Новое обязательство': 'New obligation',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/goals-obligations.ts",
+    "line": 20,
+    "text": "'Изменить обязательство': 'Edit obligation',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/goals-obligations.ts",
+    "line": 21,
+    "text": "'Тип обязательства': 'Obligation type',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/goals-obligations.ts",
+    "line": 22,
+    "text": "'Счёт списания': 'Payment account',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/goals-obligations.ts",
+    "line": 23,
+    "text": "'Счет списания': 'Payment account',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/goals-obligations.ts",
+    "line": 24,
+    "text": "'Суммы': 'Amounts',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/goals-obligations.ts",
+    "line": 25,
+    "text": "'Платёж': 'Payment',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/goals-obligations.ts",
+    "line": 26,
+    "text": "'Платеж': 'Payment',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/goals-obligations.ts",
+    "line": 27,
+    "text": "'Условия': 'Terms',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/goals-obligations.ts",
+    "line": 28,
+    "text": "'Ставка, %': 'Rate, %',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/goals-obligations.ts",
+    "line": 29,
+    "text": "'Срок': 'Term',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/goals-obligations.ts",
+    "line": 30,
+    "text": "'Оплачено': 'Paid',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/goals-obligations.ts",
+    "line": 31,
+    "text": "'Ближайший': 'Next',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/goals-obligations.ts",
+    "line": 32,
+    "text": "'За дней': 'Days before',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/goals-obligations.ts",
+    "line": 33,
+    "text": "'Дата платежа не указана': 'Payment date is not set',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/goals-obligations.ts",
+    "line": 34,
+    "text": "'Счёт не выбран': 'Account not selected',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/goals-obligations.ts",
+    "line": 35,
+    "text": "'Счет не выбран': 'Account not selected',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/goals-obligations.ts",
+    "line": 36,
+    "text": "'Укажи название обязательства.': 'Specify the obligation name.',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/goals-obligations.ts",
+    "line": 37,
+    "text": "'Укажи название подписки.': 'Specify the subscription name.',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/goals-obligations.ts",
+    "line": 38,
+    "text": "'Укажи сумму регулярного платежа.': 'Specify the recurring payment amount.',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/goals-obligations.ts",
+    "line": 39,
+    "text": "'Не удалось сохранить обязательство': 'Could not save obligation',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/settings-premium-onboarding.ts",
+    "line": 2,
+    "text": "'Управление': 'Control',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/settings-premium-onboarding.ts",
+    "line": 3,
+    "text": "'Язык': 'Language',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/settings-premium-onboarding.ts",
+    "line": 4,
+    "text": "'Валюты': 'Currencies',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/settings-premium-onboarding.ts",
+    "line": 5,
+    "text": "'Главная валюта и курсы': 'Main currency and rates',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/settings-premium-onboarding.ts",
+    "line": 6,
+    "text": "'Данные': 'Data',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/settings-premium-onboarding.ts",
+    "line": 7,
+    "text": "'Очистка финансов или полный сброс': 'Clear finance data or full reset',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/settings-premium-onboarding.ts",
+    "line": 8,
+    "text": "'Профиль': 'Profile',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/settings-premium-onboarding.ts",
+    "line": 9,
+    "text": "'Разделы приложения': 'App sections',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/settings-premium-onboarding.ts",
+    "line": 10,
+    "text": "'Очистить финансы': 'Clear finance data',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/settings-premium-onboarding.ts",
+    "line": 11,
+    "text": "'Сбросить всё': 'Reset all',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/settings-premium-onboarding.ts",
+    "line": 12,
+    "text": "'Сбросить все': 'Reset all',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/settings-premium-onboarding.ts",
+    "line": 13,
+    "text": "'Очистить все финансовые данные? XP, уровень и прогресс останутся.': 'Clear all finance data? XP, level and progress will remain.',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/settings-premium-onboarding.ts",
+    "line": 14,
+    "text": "'Сбросить всё по аккаунту? Финансы, XP, уровень, достижения и прогресс будут обнулены. Профиль останется.': 'Reset the whole account? Finance data, XP, level, achievements and progress will be reset. The profile will remain.',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/settings-premium-onboarding.ts",
+    "line": 15,
+    "text": "'Финансовые данные очищены.': 'Finance data cleared.',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/settings-premium-onboarding.ts",
+    "line": 16,
+    "text": "'Аккаунт обнулён.': 'Account reset.',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/settings-premium-onboarding.ts",
+    "line": 17,
+    "text": "'Не удалось выполнить сброс.': 'Could not reset data.',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/settings-premium-onboarding.ts",
+    "line": 18,
+    "text": "'Конвертация': 'Conversion',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/settings-premium-onboarding.ts",
+    "line": 19,
+    "text": "'Показывать пересчёт выбранного счёта в другой валюте.': 'Show selected account converted to another currency.',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/settings-premium-onboarding.ts",
+    "line": 21,
+    "text": "'Пробный период': 'Trial period',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/settings-premium-onboarding.ts",
+    "line": 22,
+    "text": "'Статус подписки': 'Subscription status',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/settings-premium-onboarding.ts",
+    "line": 23,
+    "text": "'Premium-возможности': 'Premium features',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/settings-premium-onboarding.ts",
+    "line": 24,
+    "text": "'Лимиты голосовых команд': 'Voice command limits',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/settings-premium-onboarding.ts",
+    "line": 25,
+    "text": "'Выдача Premium из админки': 'Grant Premium from admin',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/settings-premium-onboarding.ts",
+    "line": 26,
+    "text": "'Реферальные награды': 'Referral rewards',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/settings-premium-onboarding.ts",
+    "line": 27,
+    "text": "'Оплата': 'Payment',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/settings-premium-onboarding.ts",
+    "line": 28,
+    "text": "'оплата': 'payment',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/settings-premium-onboarding.ts",
+    "line": 29,
+    "text": "'Попробовать Premium 7 дней': 'Try Premium for 7 days',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/settings-premium-onboarding.ts",
+    "line": 30,
+    "text": "'Глубокий финансовый анализ': 'Deep financial analysis',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/settings-premium-onboarding.ts",
+    "line": 31,
+    "text": "'Фото чека': 'Receipt scan',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/settings-premium-onboarding.ts",
+    "line": 32,
+    "text": "'Красивые отчёты PDF / Excel': 'Beautiful PDF / Excel reports',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/settings-premium-onboarding.ts",
+    "line": 33,
+    "text": "'Банковские интеграции': 'Bank integrations',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/settings-premium-onboarding.ts",
+    "line": 34,
+    "text": "'Фина Бухгалтер': 'Fina Accountant',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/settings-premium-onboarding.ts",
+    "line": 35,
+    "text": "'Текущий план': 'Current plan',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/settings-premium-onboarding.ts",
+    "line": 37,
+    "text": "'Самозанятый': 'Self-employed',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/settings-premium-onboarding.ts",
+    "line": 38,
+    "text": "'ИП': 'Sole proprietor',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/settings-premium-onboarding.ts",
+    "line": 39,
+    "text": "'Малый бизнес': 'Small business',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/settings-premium-onboarding.ts",
+    "line": 40,
+    "text": "'Профиль бизнеса': 'Business profile',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/settings-premium-onboarding.ts",
+    "line": 41,
+    "text": "'Налоговый режим': 'Tax regime',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/settings-premium-onboarding.ts",
+    "line": 42,
+    "text": "'Налоговые напоминания': 'Tax reminders',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/settings-premium-onboarding.ts",
+    "line": 43,
+    "text": "'Экспорт для бухгалтера': 'Export for accountant',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/settings-premium-onboarding.ts",
+    "line": 44,
+    "text": "'Доходы бизнеса': 'Business income',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/settings-premium-onboarding.ts",
+    "line": 45,
+    "text": "'Расходы бизнеса': 'Business expenses',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/settings-premium-onboarding.ts",
+    "line": 46,
+    "text": "'Документы': 'Documents',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/settings-premium-onboarding.ts",
+    "line": 47,
+    "text": "'Отчёты': 'Reports',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/settings-premium-onboarding.ts",
+    "line": 48,
+    "text": "'Отчеты': 'Reports',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/settings-premium-onboarding.ts",
+    "line": 50,
+    "text": "'Первый запуск': 'First launch',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/settings-premium-onboarding.ts",
+    "line": 51,
+    "text": "'Старт': 'Start',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/settings-premium-onboarding.ts",
+    "line": 52,
+    "text": "'Можно начинать': 'Ready to start',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/settings-premium-onboarding.ts",
+    "line": 53,
+    "text": "'Завершить': 'Finish',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/settings-premium-onboarding.ts",
+    "line": 54,
+    "text": "'Что будет настроено': 'What will be set up',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/settings-premium-onboarding.ts",
+    "line": 55,
+    "text": "'Выбери основную валюту': 'Choose the main currency',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/settings-premium-onboarding.ts",
+    "line": 56,
+    "text": "'В ней будут показываться баланс, цели и первые счета. Потом валюту можно изменить в настройках.': 'Balance, goals and first accounts will use it. You can change currency later in settings.',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/settings-premium-onboarding.ts",
+    "line": 57,
+    "text": "'Через голос': 'By voice',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/settings-premium-onboarding.ts",
+    "line": 58,
+    "text": "'Позже': 'Later',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/settings-premium-onboarding.ts",
+    "line": 59,
+    "text": "'Россия': 'Russia',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/settings-premium-onboarding.ts",
+    "line": 60,
+    "text": "'Доллары': 'Dollars',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/settings-premium-onboarding.ts",
+    "line": 61,
+    "text": "'Евро': 'Euro',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/settings-premium-onboarding.ts",
+    "line": 62,
+    "text": "'Казахстан': 'Kazakhstan',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/settings-premium-onboarding.ts",
+    "line": 63,
+    "text": "'Узбекистан': 'Uzbekistan',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/settings-premium-onboarding.ts",
+    "line": 64,
+    "text": "'Кыргызстан': 'Kyrgyzstan',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/settings-premium-onboarding.ts",
+    "line": 65,
+    "text": "'Армения': 'Armenia',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/settings-premium-onboarding.ts",
+    "line": 66,
+    "text": "'Грузия': 'Georgia',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/settings-premium-onboarding.ts",
+    "line": 67,
+    "text": "'Азербайджан': 'Azerbaijan',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/settings-premium-onboarding.ts",
+    "line": 68,
+    "text": "'Есть кредиты или рассрочки?': 'Have loans or installments?',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/settings-premium-onboarding.ts",
+    "line": 69,
+    "text": "'Да, добавить': 'Yes, add',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/settings-premium-onboarding.ts",
+    "line": 70,
+    "text": "'Нет или позже': 'No or later',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/settings-premium-onboarding.ts",
+    "line": 71,
+    "text": "'Можно добавить в приложении': 'Can be added later',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/settings-premium-onboarding.ts",
+    "line": 72,
+    "text": "'Когда напоминать о важном?': 'When to remind about important things?',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/settings-premium-onboarding.ts",
+    "line": 73,
+    "text": "'В день события': 'On the day',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/settings-premium-onboarding.ts",
+    "line": 74,
+    "text": "'За 1 день': '1 day before',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/settings-premium-onboarding.ts",
+    "line": 75,
+    "text": "'За 3 дня': '3 days before',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/settings-premium-onboarding.ts",
+    "line": 76,
+    "text": "'Не напоминать': 'Do not remind',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/status.ts",
+    "line": 2,
+    "text": "'Что важно': 'What matters',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/status.ts",
+    "line": 3,
+    "text": "'Новых уведомлений нет': 'No new notifications',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/status.ts",
+    "line": 4,
+    "text": "'Пока пусто': 'Nothing here yet',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/status.ts",
+    "line": 5,
+    "text": "'Здесь появятся платежи, просрочки и важные события.': 'Payments, overdue items and important events will appear here.',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/status.ts",
+    "line": 6,
+    "text": "'Прочитать все': 'Mark all as read',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/status.ts",
+    "line": 7,
+    "text": "'Прочитано': 'Read',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/status.ts",
+    "line": 8,
+    "text": "'Тест напоминания': 'Reminder test',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/status.ts",
+    "line": 9,
+    "text": "'Это проверка доставки уведомления в Telegram.': 'This is a Telegram notification delivery test.',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/status.ts",
+    "line": 10,
+    "text": "'Выполнено': 'Done',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/status.ts",
+    "line": 11,
+    "text": "'Ожидает подтверждения': 'Awaiting confirmation',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/status.ts",
+    "line": 12,
+    "text": "'Черновик': 'Draft',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/status.ts",
+    "line": 13,
+    "text": "'Ошибка': 'Error',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/status.ts",
+    "line": 14,
+    "text": "'Отменено': 'Cancelled',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/status.ts",
+    "line": 15,
+    "text": "'Неизвестно': 'Unknown',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/status.ts",
+    "line": 16,
+    "text": "'Проверь соединение с сервером и попробуй ещё раз.': 'Check the server connection and try again.',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/status.ts",
+    "line": 17,
+    "text": "'Не удалось загрузить данные': 'Could not load data',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/voice-taxonomy.ts",
+    "line": 2,
+    "text": "'Голос': 'Voice',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/voice-taxonomy.ts",
+    "line": 3,
+    "text": "'Голосовой ввод': 'Voice input',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/voice-taxonomy.ts",
+    "line": 4,
+    "text": "'Голос выключен': 'Voice off',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/voice-taxonomy.ts",
+    "line": 5,
+    "text": "'Разреши микрофон': 'Allow microphone',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/voice-taxonomy.ts",
+    "line": 6,
+    "text": "'Микрофон': 'Microphone',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/voice-taxonomy.ts",
+    "line": 7,
+    "text": "'Микрофон включается только на время удержания кнопки Фины.': 'The microphone turns on only while holding Fina.',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/voice-taxonomy.ts",
+    "line": 8,
+    "text": "'Ответы голосом': 'Voice replies',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/voice-taxonomy.ts",
+    "line": 9,
+    "text": "'Текстовое поле': 'Text field',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/voice-taxonomy.ts",
+    "line": 10,
+    "text": "'Зажми для голоса': 'Hold to speak',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/voice-taxonomy.ts",
+    "line": 11,
+    "text": "'Зажми Фину': 'Hold Fina',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/voice-taxonomy.ts",
+    "line": 12,
+    "text": "'Слушаю': 'Listening',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/voice-taxonomy.ts",
+    "line": 13,
+    "text": "'Распознаю': 'Recognizing',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/voice-taxonomy.ts",
+    "line": 14,
+    "text": "'Выполняю': 'Processing',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/voice-taxonomy.ts",
+    "line": 15,
+    "text": "'Готова': 'Ready',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/voice-taxonomy.ts",
+    "line": 16,
+    "text": "'Готово.': 'Done.',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/voice-taxonomy.ts",
+    "line": 17,
+    "text": "'Проверь действие.': 'Check the action.',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/voice-taxonomy.ts",
+    "line": 18,
+    "text": "'Нужно уточнение.': 'Need clarification.',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/voice-taxonomy.ts",
+    "line": 19,
+    "text": "'Открыть текстовый ввод': 'Open text input',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/voice-taxonomy.ts",
+    "line": 20,
+    "text": "'Отменить запись': 'Cancel recording',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/voice-taxonomy.ts",
+    "line": 21,
+    "text": "'Управление записью': 'Recording controls',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/voice-taxonomy.ts",
+    "line": 22,
+    "text": "'Напиши, что нужно сделать...': 'Write what needs to be done...',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/voice-taxonomy.ts",
+    "line": 23,
+    "text": "'Очистить ввод': 'Clear input',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/voice-taxonomy.ts",
+    "line": 24,
+    "text": "'Отправить': 'Send',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/voice-taxonomy.ts",
+    "line": 25,
+    "text": "'Подсказки': 'Hints',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/voice-taxonomy.ts",
+    "line": 26,
+    "text": "'История': 'History',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/voice-taxonomy.ts",
+    "line": 27,
+    "text": "'Открыть чат, если сейчас неудобно говорить': 'Open chat if speaking is inconvenient now',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/voice-taxonomy.ts",
+    "line": 28,
+    "text": "'Список быстрых команд для навигации': 'Quick command list for navigation',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/voice-taxonomy.ts",
+    "line": 29,
+    "text": "'Что сделать?': 'What to do?',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/voice-taxonomy.ts",
+    "line": 31,
+    "text": "'Категория': 'Category',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/voice-taxonomy.ts",
+    "line": 32,
+    "text": "'Без категории': 'Uncategorized',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/voice-taxonomy.ts",
+    "line": 33,
+    "text": "'Без раздела': 'No section',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/voice-taxonomy.ts",
+    "line": 34,
+    "text": "'Раздел': 'Section',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/voice-taxonomy.ts",
+    "line": 35,
+    "text": "'Новая категория': 'New category',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/voice-taxonomy.ts",
+    "line": 36,
+    "text": "'Новый раздел': 'New section',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/voice-taxonomy.ts",
+    "line": 37,
+    "text": "'Создать категорию': 'Create category',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/voice-taxonomy.ts",
+    "line": 38,
+    "text": "'Создать раздел': 'Create section',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/voice-taxonomy.ts",
+    "line": 39,
+    "text": "'Добавить раздел': 'Add section',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/voice-taxonomy.ts",
+    "line": 40,
+    "text": "'Категории и структура': 'Categories and structure',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/voice-taxonomy.ts",
+    "line": 41,
+    "text": "'Продукты': 'Groceries',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/voice-taxonomy.ts",
+    "line": 42,
+    "text": "'Кофе': 'Coffee',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/voice-taxonomy.ts",
+    "line": 43,
+    "text": "'Такси': 'Taxi',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/voice-taxonomy.ts",
+    "line": 44,
+    "text": "'Зарплата': 'Salary',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/voice-taxonomy.ts",
+    "line": 45,
+    "text": "'Развлечения': 'Entertainment',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/voice-taxonomy.ts",
+    "line": 46,
+    "text": "'Работа': 'Work',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/voice-taxonomy.ts",
+    "line": 47,
+    "text": "'Дом': 'Home',"
+  },
+  {
+    "file": "src/shared/lib/i18n/runtime-dictionary/voice-taxonomy.ts",
+    "line": 48,
+    "text": "'Подписки': 'Subscriptions',"
   },
   {
     "file": "src/shared/lib/money.ts",
@@ -4978,21 +6003,6 @@
     "file": "src/shared/ui/Drawer.tsx",
     "line": 116,
     "text": "<button type=\"button\" onClick={onClose} className=\"app-modal-close-floating app-icon-button\" aria-label=\"Закрыть\">"
-  },
-  {
-    "file": "src/shared/ui/ErrorState.tsx",
-    "line": 10,
-    "text": "title = 'Не удалось загрузить данные',"
-  },
-  {
-    "file": "src/shared/ui/ErrorState.tsx",
-    "line": 12,
-    "text": "retryLabel = 'Повторить',"
-  },
-  {
-    "file": "src/shared/ui/ErrorState.tsx",
-    "line": 16,
-    "text": "const safeMessage = message?.trim() || 'Проверь соединение с сервером и попробуй ещё раз.';"
   },
   {
     "file": "src/shared/ui/LanguageSwitcher.tsx",
