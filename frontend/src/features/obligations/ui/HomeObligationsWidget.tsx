@@ -20,6 +20,10 @@ function writeWidgetState(value: WidgetState) {
   window.localStorage.setItem(HOME_OBLIGATION_WIDGET_STATE_KEY, value);
 }
 
+function hasDebtRemainder(type?: string | null) {
+  return type === 'loan' || type === 'mortgage' || type === 'installment';
+}
+
 export function HomeObligationsWidget() {
   const navigateTo = useNavigationStore((state) => state.navigateTo);
   const openModal = useAppModalStore((state) => state.openModal);
@@ -35,6 +39,7 @@ export function HomeObligationsWidget() {
 
   const nearest = summary?.nearest ?? null;
   const days = nearest?.daysUntilPayment;
+  const showDebtRemainder = hasDebtRemainder(nearest?.type);
 
   useEffect(() => {
     if (!nearest && widgetState === 'hidden') {
@@ -90,9 +95,9 @@ export function HomeObligationsWidget() {
 
       {widgetState === 'expanded' ? (
         <>
-          <div className="app-obligations-widget__meta">
+          <div className="app-obligations-widget__meta" data-has-debt={showDebtRemainder ? 'true' : 'false'}>
             <span>В месяц: {formatMoney(summary.monthlyPaymentTotal, nearest.currency)}</span>
-            <span>Остаток: {formatMoney(summary.totalDebt, nearest.currency)}</span>
+            {showDebtRemainder ? <span>Остаток: {formatMoney(summary.totalDebt, nearest.currency)}</span> : null}
           </div>
           <div className="app-obligations-widget__actions">
             <button type="button" className="app-secondary-button" onClick={() => openModal({ type: 'obligation-edit', loan: nearest })}>Изменить</button>

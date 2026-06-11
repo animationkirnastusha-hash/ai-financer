@@ -20,7 +20,7 @@ export function normalizeVoiceText(text: string) {
     .trim();
 }
 
-export function normalizeForWake(text: string) {
+export function normalizeForVoiceText(text: string) {
   return text
     .toLowerCase()
     .replace(/ё/g, 'е')
@@ -30,8 +30,8 @@ export function normalizeForWake(text: string) {
 }
 
 export function shouldIgnoreVoiceCommand(text: string) {
-  const normalized = normalizeForWake(text);
+  const normalized = normalizeForVoiceText(text);
   if (!normalized) return true;
   if (normalized.length < VOICE_MIN_COMMAND_TEXT_LENGTH) return true;
-  return ['фина', 'финна', 'fina', 'а', 'и', 'ну', 'ээ', 'эм'].includes(normalized);
+  return ['а', 'и', 'ну', 'ээ', 'эм'].includes(normalized);
 }

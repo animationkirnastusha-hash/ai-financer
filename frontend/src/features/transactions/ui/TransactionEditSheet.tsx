@@ -1,4 +1,5 @@
-import { type ReactNode, useEffect, useMemo, useState } from 'react';
+import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
+import type React from 'react';
 
 import { useAccountsStore } from '@/features/accounts/model/accounts.store';
 import { useSectionsStore } from '@/features/sections/model/sections.store';
@@ -7,6 +8,13 @@ import type { DeleteTransactionBalanceMode, TransactionDto } from '@/features/tr
 import { formatMoney } from '@/shared/lib/money';
 
 type TransactionType = 'income' | 'expense' | 'transfer';
+
+const DISMISS_DRAG_PX = 72;
+
+function isInteractiveTarget(target: EventTarget | null) {
+  if (!(target instanceof HTMLElement)) return false;
+  return Boolean(target.closest('input, textarea, select, button, a, [role=\"button\"], [data-modal-drag-ignore=\"true\"]'));
+}
 
 type Props = {
   open: boolean;
@@ -78,6 +86,9 @@ export function TransactionEditSheet({
   const [toAccountId, setToAccountId] = useState<string | null>(null);
   const [categoryId, setCategoryId] = useState('');
   const [localError, setLocalError] = useState<string | null>(null);
+  const dragStartYRef = useRef<number | null>(null);
+  const dragPointerIdRef = useRef<number | null>(null);
+  const [dragOffset, setDragOffset] = useState(0);
 
   useEffect(() => {
     if (!open) return;
@@ -90,7 +101,7 @@ export function TransactionEditSheet({
 
     setType(transaction.type);
     setAmount(String(transaction.amount ?? ''));
-    setTitle(transaction.title ?? '');
+    setTitle(transaction.title?.trim() || getTransactionTitle(transaction));
     setDescription(transaction.description ?? '');
     setDate(toDateInput(transaction.date));
     setAccountId(transaction.accountId ?? '');
@@ -149,6 +160,39 @@ export function TransactionEditSheet({
     });
   }
 
+  function finishDrag() {
+    if (dragOffset >= DISMISS_DRAG_PX) onClose();
+    dragStartYRef.current = null;
+    dragPointerIdRef.current = null;
+    setDragOffset(0);
+  }
+
+  function handleSheetPointerDown(event: React.PointerEvent<HTMLDivElement>) {
+    if (isInteractiveTarget(event.target)) return;
+    const sheet = event.currentTarget;
+    const rect = sheet.getBoundingClientRect();
+    const relativeY = event.clientY - rect.top;
+    const body = sheet.querySelector('.app-modal-body');
+    const bodyScrollTop = body instanceof HTMLElement ? body.scrollTop : 0;
+    if (relativeY > Math.max(168, rect.height * 0.56) || bodyScrollTop > 0) return;
+    dragStartYRef.current = event.clientY;
+    dragPointerIdRef.current = event.pointerId;
+    setDragOffset(0);
+    sheet.setPointerCapture?.(event.pointerId);
+  }
+
+  function handleSheetPointerMove(event: React.PointerEvent<HTMLDivElement>) {
+    if (dragPointerIdRef.current !== event.pointerId || dragStartYRef.current === null) return;
+    const dy = Math.max(0, event.clientY - dragStartYRef.current);
+    if (dy > 4) event.preventDefault();
+    setDragOffset(Math.min(180, dy));
+  }
+
+  function handleSheetPointerEnd(event: React.PointerEvent<HTMLDivElement>) {
+    if (dragPointerIdRef.current !== event.pointerId) return;
+    finishDrag();
+  }
+
   async function remove() {
     const titleText = getTransactionTitle(currentTransaction);
     const shouldRevertBalance = window.confirm(
@@ -175,7 +219,16 @@ export function TransactionEditSheet({
       data-no-swipe="true"
       onClick={onClose}
     >
-      <div className="app-modal-sheet app-transaction-edit-sheet" data-no-swipe="true" onClick={(event) => event.stopPropagation()}>
+      <div
+        className="app-modal-sheet app-transaction-edit-sheet"
+        data-no-swipe="true"
+        style={{ transform: dragOffset ? `translateY(${dragOffset}px)` : undefined }}
+        onClick={(event) => event.stopPropagation()}
+        onPointerDown={handleSheetPointerDown}
+        onPointerMove={handleSheetPointerMove}
+        onPointerUp={handleSheetPointerEnd}
+        onPointerCancel={handleSheetPointerEnd}
+      >
         <div className="app-modal-handle" />
 
         <div className="app-modal-body mx-auto max-w-[560px] space-y-4">

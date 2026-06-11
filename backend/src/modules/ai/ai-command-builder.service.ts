@@ -3,6 +3,15 @@ import { AIHandleOptions } from './types';
 export class AICommandBuilderService {
   build(command: string, options: AIHandleOptions = {}) {
     const voiceSession = options.voiceSession;
+
+    if (options.source === 'voice' && (!voiceSession || !Array.isArray(voiceSession.segments) || !voiceSession.segments.length)) {
+      return [
+        'VOICE_TRANSCRIPT_COMMAND.',
+        'The user dictated this by voice. Speech recognition can confuse amounts, account names and short financial words. If a critical field is not explicit enough, leave it missing so validator asks one clarification instead of guessing.',
+        `Transcript: ${command}`,
+      ].join('\n');
+    }
+
     if (options.source !== 'voice_session' || !voiceSession || !Array.isArray(voiceSession.segments) || !voiceSession.segments.length) {
       return command;
     }

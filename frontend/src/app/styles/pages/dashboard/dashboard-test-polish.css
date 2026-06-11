@@ -1,0 +1,49 @@
+/* Pack 110: small dashboard fixes from device testing. */
+.app-home-cashflow-card__head h2,
+.app-home-chart-modal__head h2 {
+  max-width: min(100%, 10ch);
+  overflow-wrap: anywhere;
+  hyphens: auto;
+  font-size: clamp(26px, 7vw, 38px);
+  line-height: 1.02;
+}
+
+.app-home-cashflow-card__head {
+  align-items: start;
+}
+
+@media (max-width: 430px) {
+  .app-home-cashflow-card__head {
+    grid-template-columns: 1fr;
+  }
+
+  .app-home-period-switch {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .app-home-period-switch button {
+    flex: 1;
+  }
+}
+
+.app-home-chart-modal__actions {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.app-home-chart-modal__actions button {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 390px) {
+  .app-home-chart-modal__actions {
+    grid-template-columns: 1fr;
+  }
+}
+
+.app-obligations-widget__meta[data-has-debt="false"] {
+  grid-template-columns: 1fr;
+}

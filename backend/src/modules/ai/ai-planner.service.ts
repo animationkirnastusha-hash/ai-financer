@@ -287,7 +287,7 @@ export class AIPlannerService {
     const alias = this.normalizeToolAlias(rawTool);
     if (!alias) return null;
 
-    const nextInput = { ...input, ...alias.extraInput };
+    const nextInput = { ...input, ...alias.extraInput, __userText: command };
 
     const reason = typeof item.reason === 'string' && item.reason.trim() ? item.reason.trim() : undefined;
     return reason ? { tool: alias.tool, input: nextInput, reason } : { tool: alias.tool, input: nextInput };

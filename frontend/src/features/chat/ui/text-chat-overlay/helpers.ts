@@ -1,4 +1,4 @@
-import { normalizeForWake, normalizeVoiceText } from '@/features/voice/model/voiceText';
+import { normalizeForVoiceText, normalizeVoiceText } from '@/features/voice/model/voiceText';
 
 function escapeRegExp(value: string) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -6,30 +6,23 @@ function escapeRegExp(value: string) {
 
 export function stripOptionalCompanionName(text: string, companionName: string) {
   const cleanText = normalizeVoiceText(text);
-  const cleanName = normalizeForWake(companionName || 'Фина');
-  const aliases = Array.from(
-    new Set(
-      [cleanName, 'фина', 'финна', 'фину', 'фине', 'финой', 'fina'].filter(
-        Boolean,
-      ),
-    ),
-  );
+  const cleanName = normalizeForVoiceText(companionName || 'Фина');
+  if (!cleanName) return cleanText;
 
-  for (const alias of aliases) {
-    const pattern = new RegExp(`^\\s*${escapeRegExp(alias)}[\\s,.:;!—-]*`, 'i');
-    if (pattern.test(cleanText))
-      return normalizeVoiceText(cleanText.replace(pattern, ''));
-  }
+  const originalPattern = new RegExp(`^\\s*${escapeRegExp(companionName || 'Фина')}[\\s,.:;!—-]+`, 'i');
+  if (originalPattern.test(cleanText)) return normalizeVoiceText(cleanText.replace(originalPattern, ''));
 
-  return cleanText;
+  const normalized = normalizeForVoiceText(cleanText);
+  const normalizedPattern = new RegExp(`^${escapeRegExp(cleanName)}(?:\\s|$)`, 'i');
+  if (!normalizedPattern.test(normalized)) return cleanText;
+
+  return normalizeVoiceText(cleanText.replace(/^\S+[\s,.:;!—-]*/i, ''));
 }
 
 export function formatAmount(value: number | string | null | undefined) {
   const amount = Number(value);
   if (!Number.isFinite(amount) || amount <= 0) return '';
-  return new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 0 }).format(
-    amount,
-  );
+  return new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 0 }).format(amount);
 }
 
 export function pickRotatingStatus(

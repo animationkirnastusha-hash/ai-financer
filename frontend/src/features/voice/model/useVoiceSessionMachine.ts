@@ -10,7 +10,7 @@ import type {
   VoiceSessionPhase,
   VoiceSessionSegment,
 } from '@/features/voice/model/voiceSession.types';
-import { normalizeForWake, normalizeVoiceText, shouldIgnoreVoiceCommand } from '@/features/voice/model/voiceText';
+import { normalizeForVoiceText, normalizeVoiceText, shouldIgnoreVoiceCommand } from '@/features/voice/model/voiceText';
 
 type UseVoiceSessionMachineParams = {
   companionName: string;
@@ -29,32 +29,17 @@ function escapeRegExp(value: string) {
 
 function stripOptionalCompanionName(text: string, companionName: string) {
   const cleanText = normalizeVoiceText(text);
-  const cleanName = normalizeForWake(companionName || 'Фина');
-  const aliases = Array.from(new Set([
-    cleanName,
-    'фина',
-    'финна',
-    'фину',
-    'фине',
-    'финой',
-    'fina',
-  ].filter(Boolean)));
+  const cleanName = normalizeForVoiceText(companionName || 'Фина');
+  if (!cleanName) return cleanText;
 
-  let result = cleanText;
-  for (const alias of aliases) {
-    const pattern = new RegExp(`^\\s*${escapeRegExp(alias)}[\\s,.:;!—-]*`, 'i');
-    const normalizedPattern = new RegExp(`^\\s*${escapeRegExp(alias)}[\\s,.:;!—-]*`, 'i');
-    if (pattern.test(result)) {
-      result = result.replace(pattern, '').trim();
-      break;
-    }
-    const normalized = normalizeForWake(result);
-    if (normalizedPattern.test(normalized)) {
-      result = result.replace(/^\S+[\s,.:;!—-]*/i, '').trim();
-      break;
-    }
-  }
-  return normalizeVoiceText(result);
+  const originalPattern = new RegExp(`^\\s*${escapeRegExp(companionName)}[\\s,.:;!—-]+`, 'i');
+  if (originalPattern.test(cleanText)) return normalizeVoiceText(cleanText.replace(originalPattern, ''));
+
+  const normalized = normalizeForVoiceText(cleanText);
+  const normalizedPattern = new RegExp(`^${escapeRegExp(cleanName)}(?:\\s|$)`, 'i');
+  if (!normalizedPattern.test(normalized)) return cleanText;
+
+  return normalizeVoiceText(cleanText.replace(/^\S+[\s,.:;!—-]*/i, ''));
 }
 
 export function useVoiceSessionMachine({ companionName, showThought, dispatchCommand }: UseVoiceSessionMachineParams) {

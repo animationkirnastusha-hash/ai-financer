@@ -262,7 +262,7 @@ export class TransactionService {
           sectionId: taxonomy.sectionId,
           amount,
           type: input.type,
-          title: input.title?.trim() || null,
+          title: this.buildTransactionTitleFallback(input.type, input.title, input.description, taxonomy),
           description: input.description?.trim() || null,
           date: input.date ?? new Date(),
           isAIGenerated: input.isAIGenerated ?? false,
@@ -365,7 +365,7 @@ export class TransactionService {
           sectionId: nextSectionId,
           amount: nextAmount,
           type: nextType,
-          title: nextTitle,
+          title: this.buildTransactionTitleFallback(nextType, nextTitle, nextDescription, taxonomy),
           description: nextDescription,
           date: nextDate,
         },
@@ -505,6 +505,25 @@ export class TransactionService {
       categoryId: params.existingCategoryId ?? null,
       sectionId: params.sectionId !== undefined ? params.sectionId : (params.existingSectionId ?? null),
     };
+  }
+
+  private buildTransactionTitleFallback(
+    type: TransactionType,
+    title?: string | null,
+    description?: string | null,
+    taxonomy?: { categoryId?: string | null } | null,
+  ) {
+    const cleanTitle = title?.trim();
+    if (cleanTitle) return cleanTitle;
+
+    const cleanDescription = description?.trim();
+    if (cleanDescription) {
+      return cleanDescription.length > 64 ? cleanDescription.slice(0, 64).trim() : cleanDescription;
+    }
+
+    if (type === 'income') return 'Доход';
+    if (type === 'transfer') return 'Перевод';
+    return 'Расход';
   }
 
   private async resolveTransactionTaxonomy(
