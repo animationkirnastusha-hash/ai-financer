@@ -12,7 +12,8 @@
     "audit:i18n:strict": "node scripts/audit-i18n.mjs --strict",
     "audit:predeploy": "node scripts/predeploy-audit.mjs",
     "audit:predeploy:strict": "node scripts/predeploy-audit.mjs --strict",
-    "predeploy:full": "node scripts/run-final-frontend-check.mjs"
+    "predeploy:full": "node scripts/run-final-frontend-check.mjs",
+    "audit:css:strict": "node scripts/audit-css.mjs --strict"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.59.0",

@@ -149,21 +149,21 @@ export function VoiceFirstCompanionLayer() {
     handleTextRef.current = async (text: string) => {
       const command = text.trim();
       if (!command) {
-        showThought('Не расслышала команду.', 'warning', 2200);
+        showThought(t('voice.thought.notHeard'), 'warning', 2200);
         resetVoiceMachine();
         return;
       }
 
       const sessionId = crypto.randomUUID();
       resetVoiceMachine();
-      showThought('Думаю.', 'neutral', 1400);
+      showThought(t('voice.thought.thinking'), 'neutral', 1400);
       await dispatchCommand({
         sessionId,
         finalText: command,
         segments: [{ text: command, role: 'initial', at: Date.now() }],
       });
     };
-  }, [dispatchCommand, resetVoiceMachine, showThought]);
+  }, [dispatchCommand, resetVoiceMachine, showThought, t]);
 
   useEffect(() => {
     resetVoiceMachineRef.current = resetVoiceMachine;
@@ -193,8 +193,8 @@ export function VoiceFirstCompanionLayer() {
     voice.cancel();
     resetVoiceMachine();
     resetGesture();
-    showThought('Отменено.', 'neutral', 1600);
-  }, [resetGesture, resetVoiceMachine, showThought, voice]);
+    showThought(t('voice.thought.cancelled'), 'neutral', 1600);
+  }, [resetGesture, resetVoiceMachine, showThought, t, voice]);
 
   const clearHoldTimer = useCallback(() => {
     if (holdTimerRef.current !== null) {
@@ -208,13 +208,13 @@ export function VoiceFirstCompanionLayer() {
   }, [openModal]);
 
   const explainVoiceUnavailable = useCallback(() => {
-    if (!canUseVoice) showThought('Голос недоступен.', 'warning', 2400);
+    if (!canUseVoice) showThought(t('voice.thought.unavailable'), 'warning', 2400);
     else if (!voicePermissionReady) {
       setPermissionIntroOpen(true);
       setPermissionIntroDismissed(false);
-      showThought('Сначала разреши микрофон.', 'warning', 2400);
-    } else if (hasPending) showThought('Сначала закрой действие.', 'warning', 2400);
-  }, [canUseVoice, hasPending, showThought, voicePermissionReady]);
+      showThought(t('voice.thought.allowMicFirst'), 'warning', 2400);
+    } else if (hasPending) showThought(t('voice.thought.closeActionFirst'), 'warning', 2400);
+  }, [canUseVoice, hasPending, showThought, t, voicePermissionReady]);
 
   const startHoldRecording = useCallback(async () => {
     if (!canStartManualRecording) {
@@ -223,7 +223,7 @@ export function VoiceFirstCompanionLayer() {
     }
 
     resetVoiceMachine();
-    showThought('Слушаю.', 'listening', 1600);
+    showThought(t('voice.thought.listening'), 'listening', 1600);
     const result = await voice.start();
 
     if (result === 'started') return true;
@@ -243,7 +243,7 @@ export function VoiceFirstCompanionLayer() {
 
     explainVoiceUnavailable();
     return false;
-  }, [canStartManualRecording, explainVoiceUnavailable, resetVoiceMachine, setVoicePermissionPrompted, showThought, voice]);
+  }, [canStartManualRecording, explainVoiceUnavailable, resetVoiceMachine, setVoicePermissionPrompted, showThought, t, voice]);
 
   const primeVoicePermission = useCallback(async () => {
     setIsPriming(true);
@@ -253,21 +253,21 @@ export function VoiceFirstCompanionLayer() {
         setVoicePermissionPrompted(true);
         setPermissionIntroOpen(false);
         setPermissionIntroDismissed(false);
-        showThought('Готово. Зажми Фину и говори.', 'success', 3200);
+        showThought(t('voice.thought.micReady'), 'success', 3200);
       } else {
         setVoicePermissionPrompted(false);
         setPermissionIntroOpen(true);
-        showThought('Микрофон будет доступен после разрешения.', 'neutral', 3200);
+        showThought(t('voice.thought.micAfterPermission'), 'neutral', 3200);
       }
     } catch {
       setVoicePermissionPrompted(false);
       setPermissionIntroOpen(true);
       setPermissionIntroDismissed(false);
-      showThought('Нужен доступ к микрофону.', 'warning', 3600);
+      showThought(t('voice.thought.micNeeded'), 'warning', 3600);
     } finally {
       setIsPriming(false);
     }
-  }, [setVoicePermissionPrompted, showThought, voice.primePermission]);
+  }, [setVoicePermissionPrompted, showThought, t, voice.primePermission]);
 
   const handlePointerDown = useCallback((event: PointerEvent<HTMLDivElement>) => {
     const now = Date.now();
@@ -307,7 +307,7 @@ export function VoiceFirstCompanionLayer() {
         }
 
         if (currentGesture.releaseAfterStart) {
-          showThought('Распознаю.', 'neutral', 1800);
+          showThought(t('voice.thought.recognizing'), 'neutral', 1800);
           voice.stop();
           resetGesture();
         }
@@ -315,7 +315,7 @@ export function VoiceFirstCompanionLayer() {
         logVoiceDebugEvent('manual_voice_hold_recording_started', { pointerId: event.pointerId, started, releaseAfterStart: currentGesture.releaseAfterStart });
       });
     }, HOLD_TO_VOICE_MS);
-  }, [clearHoldTimer, resetGesture, showThought, startHoldRecording, voice]);
+  }, [clearHoldTimer, resetGesture, showThought, startHoldRecording, t, voice]);
 
   const handlePointerMove = useCallback((event: PointerEvent<HTMLDivElement>) => {
     const gesture = gestureRef.current;
@@ -354,7 +354,7 @@ export function VoiceFirstCompanionLayer() {
     }
 
     if (voice.state === 'recording') {
-      showThought('Распознаю.', 'neutral', 1800);
+      showThought(t('voice.thought.recognizing'), 'neutral', 1800);
       voice.stop();
       resetGesture();
       logVoiceDebugEvent('manual_voice_hold_released_recording_stopped', { pointerId: event.pointerId, voiceState: voice.state });
@@ -363,7 +363,7 @@ export function VoiceFirstCompanionLayer() {
 
     gesture.releaseAfterStart = true;
     logVoiceDebugEvent('manual_voice_hold_release_waiting_recorder_start', { pointerId: event.pointerId, voiceState: voice.state });
-  }, [clearHoldTimer, openTextOverlay, resetGesture, showThought, voice]);
+  }, [clearHoldTimer, openTextOverlay, resetGesture, showThought, t, voice]);
 
   const handlePointerCancel = useCallback((event: PointerEvent<HTMLDivElement>) => {
     const gesture = gestureRef.current;
@@ -376,7 +376,7 @@ export function VoiceFirstCompanionLayer() {
     if (!voice.error) return;
 
     if (voice.error === 'transcription-not-configured') {
-      showThought('Распознавание ещё не настроено.', 'warning', 4200);
+      showThought(t('voice.thought.recognitionUnavailable'), 'warning', 4200);
       resetGesture();
       resetVoiceMachine();
       return;
@@ -386,18 +386,18 @@ export function VoiceFirstCompanionLayer() {
       setVoicePermissionPrompted(false);
       setPermissionIntroOpen(true);
       setPermissionIntroDismissed(false);
-      showThought('Нужен доступ к микрофону.', 'warning', 3600);
+      showThought(t('voice.thought.micNeeded'), 'warning', 3600);
       resetGesture();
       resetVoiceMachine();
       return;
     }
 
     if (voice.error === 'no-speech' || voice.error === 'transcription-timeout' || voice.error === 'transcription-error' || voice.error === 'rate-limited') {
-      showThought(voice.error === 'rate-limited' ? 'Слишком много запросов. Попробуй позже.' : 'Не расслышала команду.', 'warning', 2600);
+      showThought(voice.error === 'rate-limited' ? t('voice.thought.tooManyRequests') : t('voice.thought.notHeard'), 'warning', 2600);
       resetGesture();
       resetVoiceMachine();
     }
-  }, [resetGesture, resetVoiceMachine, showThought, voice.error]);
+  }, [resetGesture, resetVoiceMachine, showThought, t, voice.error]);
 
   useEffect(() => {
     const lastMessage = chat.messages.filter((message) => message.role === 'assistant').at(-1);
@@ -410,17 +410,17 @@ export function VoiceFirstCompanionLayer() {
     voice.stopSpeaking();
 
     if (lastMessage.kind === 'preview') {
-      showThought('Проверь действие.', 'warning', 3600);
+      showThought(t('voice.thought.reviewAction'), 'warning', 3600);
       return;
     }
 
     if (lastMessage.kind === 'error') {
-      showThought(lastMessage.text || 'Нужно уточнение.', 'warning', 5000);
+      showThought(lastMessage.text || t('voice.thought.needDetails'), 'warning', 5000);
       return;
     }
 
-    showThought(lastMessage.text || 'Готово.', 'success', 2600);
-  }, [chat.messages, showThought, voice]);
+    showThought(lastMessage.text || t('voice.thought.done'), 'success', 2600);
+  }, [chat.messages, showThought, t, voice]);
 
   useEffect(() => {
     if (chat.pendingActions.length <= 0) return;

@@ -1,3 +1,5 @@
+import { useI18n } from '@/shared/lib/i18n';
+
 type ErrorStateProps = {
   title?: string;
   message?: string | null;
@@ -7,13 +9,16 @@ type ErrorStateProps = {
 };
 
 export function ErrorState({
-  title = 'Не удалось загрузить данные',
+  title,
   message,
-  retryLabel = 'Повторить',
+  retryLabel,
   onRetry,
   onOpenAI,
 }: ErrorStateProps) {
-  const safeMessage = message?.trim() || 'Проверь соединение с сервером и попробуй ещё раз.';
+  const { t } = useI18n();
+  const safeTitle = title?.trim() || t('errorState.title');
+  const safeMessage = message?.trim() || t('errorState.message');
+  const safeRetryLabel = retryLabel?.trim() || t('common.retry');
 
   return (
     <section className="rounded-[28px] border border-red-300/15 bg-red-400/8 p-5 text-white shadow-[0_24px_80px_rgba(0,0,0,0.22)]">
@@ -24,11 +29,11 @@ export function ErrorState({
 
         <div className="min-w-0 flex-1">
           <div className="text-[11px] uppercase tracking-[0.16em] text-red-200/70">
-            System status
+            {t('errorState.eyebrow')}
           </div>
 
           <h2 className="mt-2 text-xl font-semibold leading-tight text-white">
-            {title}
+            {safeTitle}
           </h2>
 
           <p className="mt-2 text-sm leading-6 text-white/58">{safeMessage}</p>
@@ -41,7 +46,7 @@ export function ErrorState({
                   onClick={onRetry}
                   className="rounded-2xl border border-white/10 bg-white/10 px-4 py-2 text-sm font-medium text-white transition active:scale-[0.98]"
                 >
-                  {retryLabel}
+                  {safeRetryLabel}
                 </button>
               ) : null}
 
@@ -51,7 +56,7 @@ export function ErrorState({
                   onClick={onOpenAI}
                   className="rounded-2xl border border-emerald-300/20 bg-emerald-300/12 px-4 py-2 text-sm font-medium text-white transition active:scale-[0.98]"
                 >
-                  Открыть AI Core
+                  {t('errorState.openAssistant')}
                 </button>
               ) : null}
             </div>

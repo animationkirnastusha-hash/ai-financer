@@ -40,4 +40,13 @@ export const commonDictionary = {
   'common.edit': 'Изменить',
   'common.loading': 'Загружаю...',
   'common.delete': 'Удалить',
+  'common.retry': 'Повторить',
+  'errorState.eyebrow': 'Нужно внимание',
+  'errorState.title': 'Не удалось загрузить данные',
+  'errorState.message': 'Проверь соединение и попробуй ещё раз.',
+  'errorState.openAssistant': 'Написать Фине',
+  'screen.companion': 'Фина',
+  'screen.settings': 'Настройки',
+  'screen.referral': 'Рефералы',
+  'common.section': 'раздел',
 } as const;

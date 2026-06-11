@@ -1,4 +1,5 @@
 import { prisma } from '../../lib/prisma';
+import { BadRequestError } from '../../shared/core/errors';
 import { monitoringService } from '../monitoring/monitoring.instance';
 import { dataResetService } from '../data-reset/service';
 import { subscriptionService } from '../subscription/service';
@@ -46,6 +47,40 @@ function parseRevokeBody(input: unknown) {
   return {
     product: body.product === 'business' ? 'business' as const : 'premium' as const,
   };
+}
+
+function normalizeResetMode(value: unknown) {
+  return value === 'full' ? 'full' as const : 'finance' as const;
+}
+
+function parseAdminResetBody(input: unknown, expectedConfirm: string) {
+  if (!input || typeof input !== 'object') {
+    throw new BadRequestError('Reset confirmation is required');
+  }
+
+  const body = input as { mode?: unknown; confirm?: unknown; dryRun?: unknown };
+  const mode = normalizeResetMode(body.mode);
+  const confirm = typeof body.confirm === 'string' ? body.confirm.trim() : '';
+
+  if (confirm !== expectedConfirm) {
+    throw new BadRequestError('Invalid reset confirmation', { expectedConfirm });
+  }
+
+  return {
+    mode,
+    confirm,
+    dryRun: body.dryRun === true,
+  };
+}
+
+async function logAdminResetAction(actorUserId: string | undefined, event: string, data: Record<string, unknown>) {
+  await prisma.productEvent.create({
+    data: {
+      userId: actorUserId ?? null,
+      event,
+      data: JSON.stringify(data),
+    },
+  });
 }
 
 export class AdminService {
@@ -221,12 +256,54 @@ export class AdminService {
     return monitoringService.getSnapshot();
   }
 
-  async resetUser(userId: string, mode: unknown) {
-    return dataResetService.reset({ userId }, mode);
+  async resetUser(userId: string, input: unknown, actorUserId?: string) {
+    const mode = normalizeResetMode((input as { mode?: unknown } | null | undefined)?.mode);
+    const body = parseAdminResetBody(input, `RESET_USER:${userId}:${mode}`);
+
+    await logAdminResetAction(actorUserId, 'admin_reset_user_requested', {
+      targetUserId: userId,
+      mode: body.mode,
+      dryRun: body.dryRun,
+    });
+
+    if (body.dryRun) {
+      return { mode: body.mode, scope: 'single', userId, dryRun: true };
+    }
+
+    const result = await dataResetService.reset({ userId }, body.mode);
+
+    await logAdminResetAction(actorUserId, 'admin_reset_user_completed', {
+      targetUserId: userId,
+      mode: body.mode,
+      deleted: result.deleted,
+      updated: result.updated,
+    });
+
+    return result;
   }
 
-  async resetAllUsers(mode: unknown) {
-    return dataResetService.reset({ allUsers: true }, mode);
+  async resetAllUsers(input: unknown, actorUserId?: string) {
+    const mode = normalizeResetMode((input as { mode?: unknown } | null | undefined)?.mode);
+    const body = parseAdminResetBody(input, `RESET_ALL_USERS:${mode}`);
+
+    await logAdminResetAction(actorUserId, 'admin_reset_all_requested', {
+      mode: body.mode,
+      dryRun: body.dryRun,
+    });
+
+    if (body.dryRun) {
+      return { mode: body.mode, scope: 'all', userId: null, dryRun: true };
+    }
+
+    const result = await dataResetService.reset({ allUsers: true }, body.mode);
+
+    await logAdminResetAction(actorUserId, 'admin_reset_all_completed', {
+      mode: body.mode,
+      deleted: result.deleted,
+      updated: result.updated,
+    });
+
+    return result;
   }
 
   async grantSubscription(userId: string, input: unknown) {

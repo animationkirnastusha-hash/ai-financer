@@ -1,6 +1,6 @@
 import { Prisma } from '@prisma/client';
 import { prisma } from '../../lib/prisma';
-import { BadRequestError, NotFoundError } from '../../shared/core/errors';
+import { BadRequestError, ConflictError, NotFoundError } from '../../shared/core/errors';
 import { AIParsedCommand, AIValidatedAction } from './types';
 import { progressionActivityBridge } from '../progression/activity-bridge.service';
 import { aiPremiumService } from './ai-premium.service';
@@ -1311,6 +1311,25 @@ export class AIExecutorService {
 
     if (accounts.length === 0) throw new NotFoundError('Accounts not found');
 
+    const linkedTransactionsCount = await tx.transaction.count({
+      where: {
+        userId,
+        OR: [{ accountId: { in: uniqueIds } }, { toAccountId: { in: uniqueIds } }],
+      },
+    });
+
+    if (linkedTransactionsCount > 0) {
+      throw new ConflictError('Cannot delete account with linked transactions');
+    }
+
+    const linkedRecurringCount = await tx.recurringPayment.count({
+      where: { userId, accountId: { in: uniqueIds } },
+    });
+
+    if (linkedRecurringCount > 0) {
+      throw new ConflictError('Cannot delete account with recurring payments');
+    }
+
     await tx.userAISettings.updateMany({
       where: {
         userId,
@@ -1322,13 +1341,6 @@ export class AIExecutorService {
       data: { defaultExpenseAccountId: null, defaultIncomeAccountId: null },
     });
 
-    await tx.recurringPayment.deleteMany({ where: { userId, accountId: { in: uniqueIds } } });
-    await tx.transaction.deleteMany({
-      where: {
-        userId,
-        OR: [{ accountId: { in: uniqueIds } }, { toAccountId: { in: uniqueIds } }],
-      },
-    });
     await tx.goal.updateMany({ where: { userId, accountId: { in: uniqueIds } }, data: { accountId: null } });
     await tx.account.deleteMany({ where: { userId, id: { in: uniqueIds } } });
 

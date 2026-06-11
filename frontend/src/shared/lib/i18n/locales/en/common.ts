@@ -40,4 +40,13 @@ export const commonDictionary = {
   'common.edit': 'Edit',
   'common.loading': 'Loading...',
   'common.delete': 'Delete',
+  'common.retry': 'Retry',
+  'errorState.eyebrow': 'Needs attention',
+  'errorState.title': 'Could not load data',
+  'errorState.message': 'Check the connection and try again.',
+  'errorState.openAssistant': 'Message Fina',
+  'screen.companion': 'Fina',
+  'screen.settings': 'Settings',
+  'screen.referral': 'Referrals',
+  'common.section': 'section',
 } as const;

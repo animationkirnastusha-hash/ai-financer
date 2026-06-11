@@ -21,16 +21,16 @@ export const getAdminMonitoring = asyncHandler(async (_req: AuthRequest, res: Re
   res.json(adminService.getMonitoring());
 });
 
-export const resetAdminUser = asyncHandler(async (req: Request, res: Response) => {
+export const resetAdminUser = asyncHandler(async (req: AuthRequest, res: Response) => {
   const rawUserId = req.params.userId;
   const userId = Array.isArray(rawUserId) ? rawUserId[0] : rawUserId;
 
-  const result = await adminService.resetUser(userId, req.body?.mode);
+  const result = await adminService.resetUser(userId, req.body, req.userId);
   res.json({ success: true, result });
 });
 
-export const resetAdminAllUsers = asyncHandler(async (req: Request, res: Response) => {
-  const result = await adminService.resetAllUsers(req.body?.mode);
+export const resetAdminAllUsers = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const result = await adminService.resetAllUsers(req.body, req.userId);
   res.json({ success: true, result });
 });
 

@@ -12,15 +12,16 @@ type Props = {
   onCreateExpense?: (receiptScanId: string, payload: { accountId: string; amount?: number | null; title?: string | null; date?: string | null }) => Promise<ReceiptScanDto | null>;
 };
 
-function formatSize(sizeBytes: number) {
-  return `${Math.max(1, Math.round(sizeBytes / 1024))} КБ`;
+function formatSize(sizeBytes: number, unitLabel: string) {
+  return `${Math.max(1, Math.round(sizeBytes / 1024))} ${unitLabel}`;
 }
 
-function formatDate(value: string | null | undefined) {
+function formatDate(value: string | null | undefined, language: string) {
   if (!value) return '—';
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return '—';
-  return new Intl.DateTimeFormat('ru-RU', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }).format(date);
+  const locale = language === 'en' ? 'en-US' : 'ru-RU';
+  return new Intl.DateTimeFormat(locale, { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }).format(date);
 }
 
 function toInputDate(value: string | null | undefined) {
@@ -31,7 +32,7 @@ function toInputDate(value: string | null | undefined) {
 }
 
 export function ReceiptPreviewCard({ scan, accounts = [], isSaving = false, onReview, onCreateExpense }: Props) {
-  const { t } = useI18n();
+  const { t, language } = useI18n();
   const [isOpen, setIsOpen] = useState(false);
   const [merchant, setMerchant] = useState(scan.merchant ?? '');
   const [amount, setAmount] = useState(scan.totalAmount ? String(scan.totalAmount) : '');
@@ -44,7 +45,7 @@ export function ReceiptPreviewCard({ scan, accounts = [], isSaving = false, onRe
 
   const fields = scan.preview?.fields ?? [
     { label: t('receipts.preview.file'), value: scan.fileName },
-    { label: t('receipts.preview.size'), value: formatSize(scan.sizeBytes) },
+    { label: t('receipts.preview.size'), value: formatSize(scan.sizeBytes, t('receipts.preview.kb')) },
   ];
 
   const amountValue = useMemo(() => {
@@ -53,6 +54,18 @@ export function ReceiptPreviewCard({ scan, accounts = [], isSaving = false, onRe
   }, [amount]);
 
   const canCreateExpense = Boolean(accountId && amountValue && scan.status !== 'expense_created');
+
+  const previewTitle = scan.status === 'expense_created'
+    ? t('receipts.preview.title.expenseCreated')
+    : scan.status === 'reviewed'
+      ? (scan.merchant || t('receipts.preview.title.reviewed'))
+      : t('receipts.preview.title.uploaded');
+
+  const previewCaption = scan.status === 'expense_created'
+    ? t('receipts.preview.caption.expenseCreated')
+    : scan.preview?.groups?.length
+      ? t('receipts.preview.caption.grouped')
+      : t('receipts.preview.caption.manual');
 
   const handleReview = async () => {
     if (!onReview) return;
@@ -80,12 +93,12 @@ export function ReceiptPreviewCard({ scan, accounts = [], isSaving = false, onRe
     <article className="receipt-preview-card">
       <div className="receipt-preview-card__head">
         <div>
-          <strong>{scan.preview?.title ?? t('receipts.preview.title')}</strong>
-          <span>{formatDate(scan.createdAt)}</span>
+          <strong>{previewTitle}</strong>
+          <span>{formatDate(scan.createdAt, language)}</span>
         </div>
         <em>{t(`receipts.status.${scan.status}` as never)}</em>
       </div>
-      <p>{scan.preview?.caption ?? t('receipts.preview.caption')}</p>
+      <p>{previewCaption}</p>
       <div className="receipt-preview-card__fields">
         {fields.map((field) => (
           <div key={`${field.label}-${field.value}`}>

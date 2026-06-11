@@ -160,15 +160,16 @@ export default function AdminPage() {
   };
 
   const handleResetUser = async (userId: string, mode: 'finance' | 'full') => {
+    const confirmText = `RESET_USER:${userId}:${mode}`;
     const text = mode === 'finance'
-      ? 'Очистить финансы этого пользователя? Прогресс останется.'
-      : 'Полностью обнулить тестера? Профиль останется, но прогресс будет сброшен.';
+      ? `Чтобы очистить финансы пользователя, введи ${confirmText}`
+      : `Чтобы полностью обнулить тестера, введи ${confirmText}`;
 
-    if (!window.confirm(text)) return;
+    if (window.prompt(text) !== confirmText) return;
 
     setResettingUserId(userId + ':' + mode);
     try {
-      await adminApi.resetUser(userId, mode);
+      await adminApi.resetUser(userId, mode, confirmText);
       await reloadUsers();
       if (overview) setOverview(await adminApi.overview());
     } finally {

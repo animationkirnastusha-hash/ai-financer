@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 
 import { pendingActionsApi } from "@/features/pending-actions/api/pendingActions.api";
 import { auditLogApi } from "@/features/audit-log/api/auditLog.api";
@@ -20,6 +20,7 @@ import {
   sleep,
 } from "@/features/chat/model/chatController.utils";
 import { useChatStore } from "@/features/chat/model/chat.store";
+import { useChatControllerStore } from "@/features/chat/model/chatController.store";
 import { parseNavigationIntent } from "@/features/navigation/lib/parseNavigationIntent";
 import {
   useNavigationStore,
@@ -27,26 +28,44 @@ import {
 } from "@/features/navigation/model/navigation.store";
 import { useI18n } from "@/shared/lib/i18n";
 
-function getScreenLabel(screen: AppScreen) {
-  const labels: Record<AppScreen, string> = {
-    dashboard: "главную",
-    accounts: "счета",
-    analytics: "аналитику",
-    goals: "цели",
-    obligations: "обязательства",
-    "spending-limits": "лимиты",
-    companion: "компаньона",
-    settings: "настройки",
-    store: "магазин",
-    premium: "Premium",
-    "business-accountant": "Business",
-    "receipt-scans": "чеки",
-    sections: "категории",
-    admin: "админку",
-    referral: "рефералы",
+function getScreenLabel(screen: AppScreen, t: (key: string) => string) {
+  const keys: Partial<Record<AppScreen, string>> = {
+    dashboard: 'screen.dashboard',
+    accounts: 'screen.accounts',
+    analytics: 'screen.analytics',
+    goals: 'screen.goals',
+    obligations: 'screen.obligations',
+    'spending-limits': 'screen.limits',
+    companion: 'screen.companion',
+    settings: 'screen.settings',
+    store: 'screen.store',
+    premium: 'screen.premium',
+    'business-accountant': 'screen.business',
+    'receipt-scans': 'screen.receipts',
+    sections: 'screen.sections',
+    admin: 'screen.admin',
+    referral: 'screen.referral',
   };
 
-  return labels[screen] ?? "раздел";
+  return t(keys[screen] ?? 'common.section');
+}
+
+
+let refreshInFlight = false;
+let refreshQueued = false;
+let requestAbortController: AbortController | null = null;
+let requestSeq = 0;
+const handlingPendingActionIds = new Set<string>();
+
+function createClientCommandId(payload: SendChatMessagePayload, text: string) {
+  if (payload.idempotencyKey?.trim()) return payload.idempotencyKey.trim();
+  if (payload.voiceSession?.id) return `voice:${payload.voiceSession.id}:parse`;
+  const randomId = typeof crypto !== "undefined" && "randomUUID" in crypto
+    ? crypto.randomUUID()
+    : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  const source = payload.source ?? "text";
+  const normalized = text.trim().toLowerCase().replace(/\s+/g, " ").slice(0, 80);
+  return `${source}:${randomId}:${normalized.length}`;
 }
 
 export function useChatController() {
@@ -55,16 +74,16 @@ export function useChatController() {
   const setMessages = useChatStore((state) => state.setMessages) as (
     value: ChatMessage[] | ((messages: ChatMessage[]) => ChatMessage[]),
   ) => void;
-  const [pendingActions, setPendingActions] = useState<any[]>([]);
-  const [auditLogs, setAuditLogs] = useState<any[]>([]);
-  const [isPendingOpen, setIsPendingOpen] = useState(false);
-  const [isAuditOpen, setIsAuditOpen] = useState(false);
-  const [isSending, setIsSending] = useState(false);
-  const refreshInFlightRef = useRef(false);
-  const refreshQueuedRef = useRef(false);
-  const requestAbortRef = useRef<AbortController | null>(null);
-  const requestSeqRef = useRef(0);
-  const handlingPendingActionIdsRef = useRef(new Set<string>());
+  const pendingActions = useChatControllerStore((state) => state.pendingActions);
+  const setPendingActions = useChatControllerStore((state) => state.setPendingActions);
+  const auditLogs = useChatControllerStore((state) => state.auditLogs);
+  const setAuditLogs = useChatControllerStore((state) => state.setAuditLogs);
+  const isPendingOpen = useChatControllerStore((state) => state.isPendingOpen);
+  const setIsPendingOpen = useChatControllerStore((state) => state.setIsPendingOpen);
+  const isAuditOpen = useChatControllerStore((state) => state.isAuditOpen);
+  const setIsAuditOpen = useChatControllerStore((state) => state.setIsAuditOpen);
+  const isSending = useChatControllerStore((state) => state.isSending);
+  const setIsSending = useChatControllerStore((state) => state.setIsSending);
 
   const loadAccounts = useAccountsStore((state) => state.loadAccounts);
   const refreshTransactions = useTransactionsStore((state) => state.refreshAll);
@@ -98,25 +117,25 @@ export function useChatController() {
   }, [hasAuthToken]);
 
   const refreshFinanceState = useCallback(async () => {
-    if (refreshInFlightRef.current) {
-      refreshQueuedRef.current = true;
+    if (refreshInFlight) {
+      refreshQueued = true;
       return;
     }
 
-    refreshInFlightRef.current = true;
+    refreshInFlight = true;
 
     try {
       do {
-        refreshQueuedRef.current = false;
+        refreshQueued = false;
         await Promise.allSettled([
           loadPendingActions(),
           loadAuditLogs(),
           loadAccounts(true),
           refreshTransactions(),
         ]);
-      } while (refreshQueuedRef.current);
+      } while (refreshQueued);
     } finally {
-      refreshInFlightRef.current = false;
+      refreshInFlight = false;
     }
   }, [loadAccounts, loadAuditLogs, loadPendingActions, refreshTransactions]);
 
@@ -144,14 +163,14 @@ export function useChatController() {
       if (!text) return;
 
       if (isSending && !options.supersedeInFlight) return;
-      if (options.supersedeInFlight && requestAbortRef.current) {
-        requestAbortRef.current.abort();
+      if (options.supersedeInFlight && requestAbortController) {
+        requestAbortController.abort();
       }
 
-      const requestSeq = requestSeqRef.current + 1;
-      requestSeqRef.current = requestSeq;
+      const currentRequestSeq = requestSeq + 1;
+      requestSeq = currentRequestSeq;
       const controller = new AbortController();
-      requestAbortRef.current = controller;
+      requestAbortController = controller;
       setIsSending(true);
 
       const userMessage: ChatMessage = {
@@ -173,18 +192,18 @@ export function useChatController() {
             id: crypto.randomUUID(),
             role: "assistant",
             text: t("textChat.nav.openScreen", {
-              screen: getScreenLabel(navigationIntent.screen),
+              screen: getScreenLabel(navigationIntent.screen, t),
             }),
             content: t("textChat.nav.openScreen", {
-              screen: getScreenLabel(navigationIntent.screen),
+              screen: getScreenLabel(navigationIntent.screen, t),
             }),
             createdAt: new Date().toISOString(),
             kind: "success",
             actionType: "navigation",
           }),
         );
-        if (requestAbortRef.current === controller)
-          requestAbortRef.current = null;
+        if (requestAbortController === controller)
+          requestAbortController = null;
         setIsSending(false);
         return;
       }
@@ -202,8 +221,8 @@ export function useChatController() {
             actionType: "navigation",
           }),
         );
-        if (requestAbortRef.current === controller)
-          requestAbortRef.current = null;
+        if (requestAbortController === controller)
+          requestAbortController = null;
         setIsSending(false);
         return;
       }
@@ -220,17 +239,24 @@ export function useChatController() {
             actionType: "navigation",
           }),
         );
-        if (requestAbortRef.current === controller)
-          requestAbortRef.current = null;
+        if (requestAbortController === controller)
+          requestAbortController = null;
         setIsSending(false);
         return;
       }
+
+      const commandId = createClientCommandId(payload, text);
+      const outboundPayload: SendChatMessagePayload = {
+        ...payload,
+        text,
+        idempotencyKey: commandId,
+      };
 
       try {
         let response;
         try {
           response = await chatApi.sendMessage(
-            { ...payload, text },
+            outboundPayload,
             controller.signal,
           );
         } catch (error) {
@@ -239,15 +265,15 @@ export function useChatController() {
           await sleep(navigator.onLine ? 1400 : 2400);
           if (controller.signal.aborted) return;
           response = await chatApi.sendMessage(
-            { ...payload, text },
+            outboundPayload,
             controller.signal,
           );
         }
 
-        if (requestSeqRef.current !== requestSeq || controller.signal.aborted)
+        if (requestSeq !== currentRequestSeq || controller.signal.aborted)
           return;
 
-        const assistantText = response.message || "Готово";
+        const assistantText = response.message || t("textChat.result.done");
         const responseData =
           response.parsed && typeof response.parsed === "object"
             ? (response.parsed as Record<string, unknown>)
@@ -299,17 +325,16 @@ export function useChatController() {
           appendLocalMessages(prev, {
             id: crypto.randomUUID(),
             role: "assistant",
-            text: "Связь нестабильна. Команда не выполнена, повтори позже или отправь текстом ещё раз.",
-            content:
-              "Связь нестабильна. Команда не выполнена, повтори позже или отправь текстом ещё раз.",
+            text: t("textChat.error.network"),
+            content: t("textChat.error.network"),
             createdAt: new Date().toISOString(),
             kind: "error",
           }),
         );
       } finally {
-        if (requestAbortRef.current === controller)
-          requestAbortRef.current = null;
-        if (requestSeqRef.current === requestSeq) setIsSending(false);
+        if (requestAbortController === controller)
+          requestAbortController = null;
+        if (requestSeq === currentRequestSeq) setIsSending(false);
       }
     },
     [goBack, isSending, navigateTo, refreshFinanceState, t],
@@ -317,15 +342,15 @@ export function useChatController() {
 
   const confirmAction = useCallback(
     async (actionId: string) => {
-      if (!actionId || handlingPendingActionIdsRef.current.has(actionId))
+      if (!actionId || handlingPendingActionIds.has(actionId))
         return;
-      handlingPendingActionIdsRef.current.add(actionId);
+      handlingPendingActionIds.add(actionId);
 
       setPendingActions((prev) => prev.filter((item) => item.id !== actionId));
 
       try {
         const response: any = await pendingActionsApi.confirm(actionId);
-        const assistantText = response?.message || "Действие выполнено.";
+        const assistantText = response?.message || t("textChat.result.actionDone");
 
         setMessages((prev) =>
           appendLocalMessages(prev, {
@@ -350,9 +375,8 @@ export function useChatController() {
           appendLocalMessages(prev, {
             id: crypto.randomUUID(),
             role: "assistant",
-            text: "Действие не выполнено. Проверь данные и создай его заново.",
-            content:
-              "Действие не выполнено. Проверь данные и создай его заново.",
+            text: t("textChat.error.confirm"),
+            content: t("textChat.error.confirm"),
             createdAt: new Date().toISOString(),
             kind: "error",
           }),
@@ -363,20 +387,20 @@ export function useChatController() {
         emitPendingSync();
       }
     },
-    [refreshFinanceState],
+    [refreshFinanceState, t],
   );
 
   const cancelAction = useCallback(
     async (actionId: string) => {
-      if (!actionId || handlingPendingActionIdsRef.current.has(actionId))
+      if (!actionId || handlingPendingActionIds.has(actionId))
         return;
-      handlingPendingActionIdsRef.current.add(actionId);
+      handlingPendingActionIds.add(actionId);
 
       setPendingActions((prev) => prev.filter((item) => item.id !== actionId));
 
       try {
         const response: any = await pendingActionsApi.cancel(actionId);
-        const assistantText = response?.message || "Действие отменено.";
+        const assistantText = response?.message || t("textChat.result.actionCancelled");
 
         setMessages((prev) =>
           appendLocalMessages(prev, {
@@ -398,7 +422,7 @@ export function useChatController() {
         emitPendingSync();
       }
     },
-    [refreshFinanceState],
+    [refreshFinanceState, t],
   );
 
   const undoMessageAction = useCallback(
@@ -407,7 +431,7 @@ export function useChatController() {
 
       try {
         const response = await chatApi.undoByAuditLog(auditLogId);
-        const assistantText = response?.message || "↩️ Операция отменена.";
+        const assistantText = response?.message || t("textChat.result.undoDone");
 
         setMessages((prev) =>
           appendLocalMessages(
@@ -433,9 +457,8 @@ export function useChatController() {
           appendLocalMessages(prev, {
             id: crypto.randomUUID(),
             role: "assistant",
-            text: "Не удалось отменить операцию. Возможно, она уже отменена или изменена.",
-            content:
-              "Не удалось отменить операцию. Возможно, она уже отменена или изменена.",
+            text: t("textChat.error.undo"),
+            content: t("textChat.error.undo"),
             createdAt: new Date().toISOString(),
             kind: "error",
           }),
@@ -444,7 +467,7 @@ export function useChatController() {
         await refreshFinanceState();
       }
     },
-    [refreshFinanceState],
+    [refreshFinanceState, t],
   );
 
   const updatePendingAction = useCallback(

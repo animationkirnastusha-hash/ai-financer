@@ -53,11 +53,23 @@ const obsoleteOneShotScripts = [
   'backend/scripts/apply-mega-foundation-schema.mjs',
 ];
 
+
+const confirmedOrphanFiles = [
+  'frontend/src/app/App.tsx',
+  'frontend/src/pages/settings/TaxonomySettingsPage.tsx',
+  'frontend/src/pages/settings/TaxonomySettingsPage.css',
+  'frontend/src/shared/lib/queryProvider.tsx',
+  'frontend/src/features/payments/ui/PaymentStatusBanner.tsx',
+];
+
 for (const item of forbiddenRepoArtifacts) {
   if (exists(item)) addProblem(`remove local/repo artifact: ${item}`);
 }
 for (const item of obsoleteOneShotScripts) {
   if (exists(item)) addProblem(`remove obsolete one-shot script: ${item}`);
+}
+for (const item of confirmedOrphanFiles) {
+  if (exists(item)) addProblem(`remove confirmed orphan file: ${item}`);
 }
 
 const tokenScriptPath = 'backend/scripts/create-test-token.mjs';
@@ -111,6 +123,31 @@ if (!exists(frontendPackagePath)) {
   else addWarning('frontend audit:css script is missing');
 }
 
+
+const backendFinalRunnerPath = 'backend/scripts/run-final-test-deploy-check.mjs';
+if (!exists(backendFinalRunnerPath)) {
+  addProblem(`${backendFinalRunnerPath} is missing`);
+} else {
+  const source = read(backendFinalRunnerPath);
+  const hasBuild = source.includes("npm', ['run', 'build']") || source.includes('backend build');
+  const hasAudit = source.includes("npm', ['run', 'audit:final']") || source.includes('final backend audit');
+  const hasSmoke = source.includes("npm', ['run', 'smoke:full']") || source.includes('full backend smoke');
+  if (hasBuild && hasAudit && hasSmoke) addOk('backend predeploy runner executes build, audit and smoke');
+  else addProblem('backend predeploy runner must execute build, audit and smoke checks');
+}
+
+const frontendFinalRunnerPath = 'frontend/scripts/run-final-frontend-check.mjs';
+if (!exists(frontendFinalRunnerPath)) {
+  addProblem(`${frontendFinalRunnerPath} is missing`);
+} else {
+  const source = read(frontendFinalRunnerPath);
+  const hasCssAudit = source.includes("npm', ['run', 'audit:css']") || source.includes('CSS audit report');
+  const hasPredeployAudit = source.includes("npm', ['run', 'audit:predeploy:strict']") || source.includes('predeploy strict audit');
+  const hasBuild = source.includes("npm', ['run', 'build']") || source.includes('frontend build');
+  if (hasCssAudit && hasPredeployAudit && hasBuild) addOk('frontend predeploy runner executes CSS audit, strict audit and build');
+  else addProblem('frontend predeploy runner must execute CSS audit, strict audit and build');
+}
+
 const rootGitignore = exists('.gitignore') ? read('.gitignore') : '';
 for (const pattern of ['.env', '.env.*', '!.env.example', '*.db', '*.sqlite', '*.sqlite3', 'desktop.ini', '*.tsbuildinfo']) {
   if (rootGitignore.includes(pattern)) addOk(`root .gitignore contains ${pattern}`);
@@ -120,7 +157,7 @@ for (const pattern of ['.env', '.env.*', '!.env.example', '*.db', '*.sqlite', '*
 const problems = checks.filter((item) => !item.ok);
 const passed = checks.filter((item) => item.ok);
 
-console.log('AI-Financer final audit');
+console.log('AI-Financer repository safety audit');
 console.log(`Project root: ${projectRoot}`);
 console.log('');
 
@@ -135,8 +172,8 @@ console.log(`Problems: ${problems.length}`);
 
 if (problems.length > 0) {
   console.log('');
-  console.log('Final audit failed. Remove the listed artifacts or apply the missing files, then run npm run audit:final again.');
+  console.log('Repository safety audit failed. Remove listed artifacts/orphans or apply missing files, then run npm run audit:final again.');
   process.exit(1);
 }
 
-console.log('Final audit passed.');
+console.log('Repository safety audit passed. Run npm run predeploy:full for build, Prisma and smoke checks.');

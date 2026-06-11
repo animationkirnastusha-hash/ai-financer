@@ -47,8 +47,8 @@ function assertFrontendContext() {
   const packageJson = resolve(root, 'package.json');
   if (!existsSync(packageJson)) throw new Error('Run this script from frontend root. Example: cd /root/ai-financer/frontend');
   const pkg = JSON.parse(readFileSync(packageJson, 'utf8'));
-  if (!pkg.scripts?.build || !pkg.scripts?.['audit:predeploy:strict']) {
-    throw new Error('frontend package.json must include build and audit:predeploy:strict scripts');
+  if (!pkg.scripts?.build || !pkg.scripts?.['audit:predeploy:strict'] || !pkg.scripts?.['audit:css']) {
+    throw new Error('frontend package.json must include build, audit:css and audit:predeploy:strict scripts');
   }
 }
 
@@ -63,6 +63,7 @@ try {
   process.exit(1);
 }
 
+await check('CSS audit report', () => run('npm', ['run', 'audit:css']));
 await check('predeploy strict audit', () => run('npm', ['run', 'audit:predeploy:strict']));
 await check('frontend build', () => run('npm', ['run', 'build']));
 

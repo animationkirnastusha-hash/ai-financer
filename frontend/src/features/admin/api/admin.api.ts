@@ -105,8 +105,8 @@ export const adminApi = {
   users: () => apiClient.get<{ users: AdminUser[] }>('/admin/users'),
   events: () => apiClient.get<{ events: AdminEvent[] }>('/admin/events'),
   monitoring: () => apiClient.get<AdminMonitoring>('/admin/monitoring'),
-  resetUser: (userId: string, mode: AdminResetMode) => apiClient.post<{ success: boolean }>('/admin/users/' + userId + '/reset', { mode }),
-  resetAll: (mode: AdminResetMode) => apiClient.post<{ success: boolean }>('/admin/reset', { mode }),
+  resetUser: (userId: string, mode: AdminResetMode, confirm: string) => apiClient.post<{ success: boolean }>('/admin/users/' + userId + '/reset', { mode, confirm }),
+  resetAll: (mode: AdminResetMode, confirm: string) => apiClient.post<{ success: boolean }>('/admin/reset', { mode, confirm }),
   grantSubscription: (userId: string, product: AdminSubscriptionProduct, days: number) =>
     apiClient.post<{ success: boolean }>('/admin/users/' + userId + '/subscription/grant', { product, days }),
   grantLifetimeSubscription: (userId: string, product: AdminSubscriptionProduct) =>
