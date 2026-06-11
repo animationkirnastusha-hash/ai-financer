@@ -40,6 +40,7 @@ const forbiddenRepoArtifacts = [
   'backend/desktop.ini',
   'frontend/desktop.ini',
   'frontend/tsconfig.node.tsbuildinfo',
+  'backend/tsconfig.tsbuildinfo',
   'backend/.test-auth-token',
   'backend/.test-auth-token.env',
   'backend/scripts/create-test-token copy.mjs',
@@ -52,7 +53,6 @@ const obsoleteOneShotScripts = [
   'backend/scripts/apply-final-hardening-schema.mjs',
   'backend/scripts/apply-mega-foundation-schema.mjs',
 ];
-
 
 const confirmedOrphanFiles = [
   'frontend/src/app/App.tsx',
@@ -93,6 +93,7 @@ if (!exists(backendPackagePath)) {
   const pkg = JSON.parse(read(backendPackagePath));
   const scripts = pkg.scripts || {};
   for (const scriptName of [
+    'build',
     'db:deploy',
     'db:status',
     'smoke:predeploy',
@@ -104,7 +105,12 @@ if (!exists(backendPackagePath)) {
     'smoke:taxonomy',
     'smoke:analytics',
     'smoke:reset-admin',
+    'smoke:full',
     'audit:final',
+    'repo:clean',
+    'audit:final:clean',
+    'release:check',
+    'predeploy:full',
   ]) {
     if (scripts[scriptName]) addOk(`backend script exists: ${scriptName}`);
     else addProblem(`missing backend npm script: ${scriptName}`);
@@ -121,19 +127,32 @@ if (!exists(frontendPackagePath)) {
   else addProblem('missing frontend build script');
   if (scripts['audit:css']) addOk('frontend audit:css script exists');
   else addWarning('frontend audit:css script is missing');
+  if (scripts['audit:predeploy:strict']) addOk('frontend audit:predeploy:strict script exists');
+  else addWarning('frontend audit:predeploy:strict script is missing');
 }
 
-
-const backendFinalRunnerPath = 'backend/scripts/run-final-test-deploy-check.mjs';
+const backendFinalRunnerPath = 'backend/scripts/run-backend-release-check.mjs';
 if (!exists(backendFinalRunnerPath)) {
   addProblem(`${backendFinalRunnerPath} is missing`);
 } else {
   const source = read(backendFinalRunnerPath);
   const hasBuild = source.includes("npm', ['run', 'build']") || source.includes('backend build');
   const hasAudit = source.includes("npm', ['run', 'audit:final']") || source.includes('final backend audit');
-  const hasSmoke = source.includes("npm', ['run', 'smoke:full']") || source.includes('full backend smoke');
-  if (hasBuild && hasAudit && hasSmoke) addOk('backend predeploy runner executes build, audit and smoke');
-  else addProblem('backend predeploy runner must execute build, audit and smoke checks');
+  const hasPredeploySmoke = source.includes("npm', ['run', 'smoke:predeploy']") || source.includes('predeploy smoke');
+  const hasMonetizationSmoke = source.includes("npm', ['run', 'smoke:monetization']") || source.includes('monetization smoke');
+  const hasReport = source.includes('backend-release-check') && source.includes('release-check.md');
+  if (hasBuild && hasAudit && hasPredeploySmoke && hasMonetizationSmoke && hasReport) {
+    addOk('backend release runner executes build, audit, smoke checks and writes report');
+  } else {
+    addProblem('backend release runner must execute build, audit, predeploy smoke, monetization smoke and write a report');
+  }
+}
+
+const legacyBackendFinalRunnerPath = 'backend/scripts/run-final-test-deploy-check.mjs';
+if (!exists(legacyBackendFinalRunnerPath)) {
+  addWarning(`${legacyBackendFinalRunnerPath} is missing; predeploy:full should point to run-backend-release-check.mjs`);
+} else {
+  addOk('legacy backend final runner still exists for compatibility');
 }
 
 const frontendFinalRunnerPath = 'frontend/scripts/run-final-frontend-check.mjs';
@@ -149,7 +168,20 @@ if (!exists(frontendFinalRunnerPath)) {
 }
 
 const rootGitignore = exists('.gitignore') ? read('.gitignore') : '';
-for (const pattern of ['.env', '.env.*', '!.env.example', '*.db', '*.sqlite', '*.sqlite3', 'desktop.ini', '*.tsbuildinfo']) {
+for (const pattern of [
+  '.env',
+  '.env.*',
+  '!.env.example',
+  '*.db',
+  '*.sqlite',
+  '*.sqlite3',
+  'desktop.ini',
+  '*.tsbuildinfo',
+  '.tmp.drivedownload/',
+  '.tmp.driveupload/',
+  'backend/reports',
+  'frontend/reports',
+]) {
   if (rootGitignore.includes(pattern)) addOk(`root .gitignore contains ${pattern}`);
   else addWarning(`root .gitignore should contain ${pattern}`);
 }
@@ -172,7 +204,7 @@ console.log(`Problems: ${problems.length}`);
 
 if (problems.length > 0) {
   console.log('');
-  console.log('Repository safety audit failed. Remove listed artifacts/orphans or apply missing files, then run npm run audit:final again.');
+  console.log('Repository safety audit failed. Run npm run repo:clean, remove listed orphans if needed, then run npm run audit:final again.');
   process.exit(1);
 }
 

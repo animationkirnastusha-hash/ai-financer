@@ -55,7 +55,11 @@
     "smoke:taxonomy-autocategory": "node scripts/smoke/check-taxonomy-autocategory.mjs",
     "smoke:receipt-taxonomy": "node scripts/smoke/check-receipt-taxonomy-preview.mjs",
     "smoke:pretest": "npm run audit:final && npm run smoke:full",
-    "predeploy:full": "node scripts/run-final-test-deploy-check.mjs"
+    "predeploy:full": "node scripts/run-backend-release-check.mjs",
+    "repo:clean": "node scripts/clean-local-artifacts.mjs",
+    "repo:clean:dry": "node scripts/clean-local-artifacts.mjs --dry-run",
+    "audit:final:clean": "npm run repo:clean && npm run audit:final",
+    "release:check": "node scripts/run-backend-release-check.mjs"
   },
   "keywords": [],
   "author": "",

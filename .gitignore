@@ -1,38 +1,40 @@
-# Dependencies / builds
 node_modules
 dist
-dist-ssr
+build
+coverage
 
-# Environment files
 .env
 .env.*
 !.env.example
 
-# Local databases / runtime files
 *.db
 *.db-journal
 *.db-wal
 *.db-shm
 *.sqlite
 *.sqlite3
-backend/prisma/*.db
-backend/prisma/*.db-journal
-backend/prisma/*.db-wal
-backend/prisma/*.db-shm
-backend/prod.db
-prod.db
+*.sqlite-journal
+*.sqlite-wal
+*.sqlite-shm
+
+*.tsbuildinfo
+*.log
+.DS_Store
+desktop.ini
+Thumbs.db
+
+.tmp.drivedownload/
+.tmp.driveupload/
+
+backend/prisma/dev.db
+backend/prisma/dev.db-journal
+backend/prisma/dev.db-wal
+backend/prisma/dev.db-shm
+backend/uploads
 backend/.test-auth-token
 backend/.test-auth-token.env
-backend/uploads
+backend/reports
+frontend/reports
 
-# OS / editor artifacts
-.DS_Store
-Thumbs.db
-desktop.ini
 .vscode
 .idea
-*.tsbuildinfo
-
-# Temporary cloud-drive artifacts
-.tmp.drivedownload
-.tmp.driveupload
