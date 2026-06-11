@@ -9,6 +9,7 @@ const ACCOUNT_TYPE_KEYS: Record<string, string> = {
   savings: "accounts.type.savings",
   credit: "accounts.type.credit",
   investment: "accounts.type.investment",
+  default: "accounts.type.default",
 };
 
 type Props = {
@@ -51,7 +52,7 @@ export function AccountDetailsSheet({
 
   const transactionCount = Number(account.transactionCount ?? 0);
   const typeLabel = t(
-    ACCOUNT_TYPE_KEYS[String(account.type ?? "")] ?? "accounts.type.default",
+    ACCOUNT_TYPE_KEYS[String(account.type ?? "")] ?? ACCOUNT_TYPE_KEYS.default,
   );
 
   const handleDelete = async () => {

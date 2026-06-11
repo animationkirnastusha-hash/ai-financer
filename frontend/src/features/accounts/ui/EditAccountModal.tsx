@@ -126,7 +126,7 @@ export function EditAccountModal({
               >
                 {ACCOUNT_TYPES.map((item) => (
                   <option key={item} value={item}>
-                    {t(ACCOUNT_TYPE_KEYS[item] ?? "accounts.type.default")}
+                    {t(ACCOUNT_TYPE_KEYS[item] ?? ACCOUNT_TYPE_KEYS.default)}
                   </option>
                 ))}
               </select>

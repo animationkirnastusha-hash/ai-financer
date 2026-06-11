@@ -25,7 +25,13 @@ function getScreenLabel(screen: AppScreen, t: TranslateFn) {
     referral: "screen.referral",
   };
 
-  return t(keys[screen] ?? "common.section");
+  const labelKey = keys[screen];
+
+  if (!labelKey) {
+    return t("common.section");
+  }
+
+  return t(labelKey);
 }
 
 function appendAssistantNavigationMessage(
