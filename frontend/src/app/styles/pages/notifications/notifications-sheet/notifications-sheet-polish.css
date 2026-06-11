@@ -1,0 +1,58 @@
+/* pack-33b: notification sheet visual polish */
+.notification-sheet {
+  max-height: min(68dvh, 590px);
+  border-top-left-radius: 30px;
+  border-top-right-radius: 30px !important;
+}
+
+.notification-sheet__body {
+  gap: 12px !important;
+  padding: 16px 16px calc(16px + env(safe-area-inset-bottom)) !important;
+}
+
+.notification-sheet__head {
+  align-items: start !important;
+}
+
+.notification-sheet__head h2 {
+  font-size: clamp(28px, 8vw, 38px) !important;
+  letter-spacing: -0.075em !important;
+}
+
+.notification-sheet__icon-button {
+  width: 46px !important;
+  height: 46px !important;
+  min-width: 46px !important;
+  min-height: 46px !important;
+  padding: 0 !important;
+  border-radius: 18px !important;
+}
+
+.notification-sheet__toolbar {
+  display: flex !important;
+  justify-content: flex-start !important;
+  min-height: 0 !important;
+  margin-top: -2px !important;
+}
+
+.notification-sheet .notification-sheet__read-all {
+  appearance: none !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: auto !important;
+  max-width: max-content !important;
+  height: 34px !important;
+  min-width: 0 !important;
+  min-height: 34px !important;
+  padding: 0 13px !important;
+  border: 1px solid rgba(129, 239, 208, 0.16) !important;
+  border-radius: 999px !important;
+  background: rgba(129, 239, 208, 0.10) !important;
+  color: rgba(167, 255, 229, 0.94) !important;
+  box-shadow: none !important;
+  font-size: 12px !important;
+  font-weight: 820 !important;
+  line-height: 1 !important;
+  text-align: center !important;
+}

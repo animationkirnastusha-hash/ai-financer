@@ -1,0 +1,15 @@
+
+.notification-card__action--muted {
+  color: rgba(255, 255, 255, 0.48) !important;
+}
+
+.notification-empty {
+  min-height: 150px !important;
+  padding: 18px 16px !important;
+}
+
+.notification-empty::before {
+  width: 58px !important;
+  height: 58px !important;
+  border-radius: 22px !important;
+}

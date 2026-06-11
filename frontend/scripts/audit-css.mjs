@@ -40,18 +40,33 @@ function read(filePath) {
 function collectManifestImports() {
   const imported = new Set();
   const missingImports = [];
+  const visited = new Set();
+
+  function collectFrom(filePath, sourceLabel) {
+    const normalizedFile = normalize(filePath);
+    if (visited.has(normalizedFile)) return;
+    visited.add(normalizedFile);
+
+    if (!fs.existsSync(filePath)) {
+      missingImports.push({ file: relative(filePath), detail: `imported from ${sourceLabel} but file does not exist` });
+      return;
+    }
+
+    const fileText = read(filePath);
+    const baseDir = path.dirname(filePath);
+    for (const match of fileText.matchAll(/@import\s+["'](.+?\.css)["'];?/g)) {
+      const absolutePath = path.normalize(path.join(baseDir, match[1]));
+      const normalizedImport = normalize(absolutePath);
+      imported.add(normalizedImport);
+      collectFrom(absolutePath, relative(filePath));
+    }
+  }
+
   if (!fs.existsSync(indexPath)) {
     return { imported, missingImports: [{ file: relative(indexPath), detail: 'src/app/styles/index.css is missing' }] };
   }
 
-  const indexText = read(indexPath);
-  for (const match of indexText.matchAll(/@import\s+["'](.+?\.css)["'];?/g)) {
-    const absolute = normalize(path.normalize(path.join(stylesDir, match[1])));
-    imported.add(absolute);
-    if (!fs.existsSync(absolute)) {
-      missingImports.push({ file: relative(absolute), detail: 'imported from src/app/styles/index.css but file does not exist' });
-    }
-  }
+  collectFrom(indexPath, 'src/app/styles/index.css');
   return { imported, missingImports };
 }
 

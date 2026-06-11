@@ -1,0 +1,170 @@
+
+.text-chat-overlay__lock {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.055);
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 20px;
+  line-height: 1;
+}
+
+.text-chat-overlay__lock--active {
+  border-color: rgba(52, 211, 153, 0.34);
+  background: rgba(52, 211, 153, 0.14);
+  color: rgba(209, 250, 229, 0.96);
+  box-shadow: 0 14px 38px rgba(16, 185, 129, 0.16);
+}
+
+.text-chat-overlay__status[data-state='locked'] .text-chat-overlay__dot {
+  background: rgba(110, 231, 183, 0.95);
+  box-shadow: 0 0 22px rgba(110, 231, 183, 0.55);
+}
+
+@keyframes textChatCompanionGlow {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-1px) scale(1.035); }
+}
+
+/* pack-52: Fina work overlay polish */
+.text-chat-overlay {
+  animation: textChatBackdropIn .2s ease both;
+}
+
+.text-chat-overlay__stage {
+  will-change: transform, opacity;
+  animation: textChatStageIn .32s cubic-bezier(.16,.94,.22,1) both;
+  transition: transform 180ms cubic-bezier(.2,.9,.2,1);
+}
+
+.text-chat-overlay__handle {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 100px;
+  height: 28px;
+  margin: calc(env(safe-area-inset-top) + 6px) auto 0;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  cursor: grab;
+  touch-action: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.text-chat-overlay__handle span {
+  width: 56px;
+  height: 5px;
+  border-radius: 999px;
+  background: rgba(255,255,255,.24);
+  box-shadow: 0 1px 0 rgba(255,255,255,.08), 0 10px 28px rgba(0,0,0,.26);
+  transition: width 160ms ease, background 160ms ease, transform 160ms ease;
+}
+
+.text-chat-overlay__handle:active span {
+  width: 68px;
+  background: rgba(255,255,255,.36);
+  transform: translateY(1px);
+}
+
+.text-chat-overlay__head {
+  padding-top: 8px;
+}
+
+.text-chat-overlay__receipt-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+}
+
+.text-chat-overlay__receipt-main,
+.text-chat-overlay__receipt-mini {
+  border: 1px solid rgba(255,255,255,.11) !important;
+  background: rgba(255,255,255,.07) !important;
+  color: rgba(255,255,255,.86) !important;
+  box-shadow: none !important;
+}
+
+.text-chat-overlay__receipt-main {
+  width: auto !important;
+  min-width: 52px;
+  padding: 0 12px;
+  font-size: 13px !important;
+  font-weight: 700;
+}
+
+.text-chat-overlay__receipt-mini {
+  width: 42px !important;
+  height: 52px !important;
+  font-size: 16px !important;
+}
+
+.text-chat-overlay__receipt-hint {
+  position: absolute;
+  left: 18px;
+  right: 18px;
+  bottom: calc(env(safe-area-inset-bottom) + 84px);
+  z-index: 3;
+  border: 1px solid rgba(110,231,183,.18);
+  border-radius: 18px;
+  background: rgba(8,13,20,.84);
+  color: rgba(236,255,250,.92);
+  padding: 10px 12px;
+  font-size: 13px;
+  line-height: 1.35;
+  box-shadow: 0 18px 46px rgba(0,0,0,.28);
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+  animation: textChatHintIn .22s ease both;
+}
+
+.text-chat-message__bubble,
+.text-chat-overlay__typing,
+.text-chat-overlay__empty,
+.text-chat-overlay__composer {
+  animation: textChatSoftRise .24s ease both;
+}
+
+.text-chat-overlay__status[data-state='ready'] .text-chat-overlay__dot {
+  animation: textChatReadyBreath 2.4s ease-in-out infinite;
+}
+
+.text-chat-overlay__status[data-state='listening'] {
+  border-color: rgba(52,211,153,.18);
+  background: rgba(52,211,153,.08);
+}
+
+.text-chat-overlay__status[data-state='thinking'] {
+  border-color: rgba(125,211,252,.18);
+  background: rgba(14,165,233,.08);
+}
+
+.text-chat-overlay__status[data-state='confirm'] {
+  border-color: rgba(251,191,36,.20);
+  background: rgba(251,191,36,.08);
+}
+
+@keyframes textChatBackdropIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes textChatStageIn { from { opacity: 0; transform: translateY(28px) scale(.985); } to { opacity: 1; transform: translateY(0) scale(1); } }
+@keyframes textChatSoftRise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes textChatHintIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes textChatReadyBreath { 0%,100% { opacity: .7; transform: scale(1); } 50% { opacity: 1; transform: scale(1.18); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .text-chat-overlay,
+  .text-chat-overlay__stage,
+  .text-chat-overlay__handle span,
+  .text-chat-message__bubble,
+  .text-chat-overlay__typing,
+  .text-chat-overlay__empty,
+  .text-chat-overlay__composer,
+  .text-chat-overlay__receipt-hint,
+  .text-chat-overlay__dot {
+    animation: none !important;
+    transition: none !important;
+  }
+}

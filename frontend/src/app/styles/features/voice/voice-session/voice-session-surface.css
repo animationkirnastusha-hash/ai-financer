@@ -1,0 +1,242 @@
+/* Voice session controls: press target, locked mode actions and voice action buttons. */
+.voice-first-companion {
+  touch-action: none !important;
+  user-select: none !important;
+  -webkit-user-select: none !important;
+  -webkit-touch-callout: none !important;
+}
+
+.voice-first-companion__press-target {
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  background: transparent;
+  outline: none;
+  cursor: pointer;
+  border-radius: 999px;
+}
+
+.voice-first-companion__press-target:active .ai-companion-control,
+.voice-first-companion--locked .ai-companion-control {
+  transform: scale(1.06) !important;
+  filter: saturate(1.12) brightness(1.08);
+}
+
+.voice-first-companion--locked .ai-companion-control {
+  box-shadow: 0 0 0 8px rgba(139, 199, 255, .10), 0 18px 52px rgba(60, 120, 255, .32) !important;
+}
+
+.voice-first-lock-actions {
+  position: absolute;
+  right: 2px;
+  bottom: 72px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 7px;
+  border-radius: 999px;
+  background: rgba(8, 12, 22, .82);
+  border: 1px solid rgba(255, 255, 255, .12);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, .34);
+  backdrop-filter: blur(18px);
+  z-index: 4;
+}
+
+.voice-first-lock-action {
+  width: 42px;
+  height: 42px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, .14);
+  display: grid;
+  place-items: center;
+  color: rgba(255, 255, 255, .94);
+  background: rgba(255, 255, 255, .08);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.08);
+}
+
+.voice-first-lock-action svg {
+  width: 23px;
+  height: 23px;
+  fill: currentColor;
+}
+
+.voice-first-lock-action--cancel {
+  background: rgba(255, 111, 111, .15);
+  color: rgb(255, 188, 188);
+}
+
+.voice-first-lock-action--send {
+  background: rgba(109, 236, 190, .18);
+  color: rgb(178, 255, 226);
+}
+
+.voice-first-lock-action:active {
+  transform: scale(.94);
+}
+
+.voice-first-status {
+  display: inline-flex !important;
+  max-width: 180px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 390px) {
+  .voice-first-lock-actions {
+    bottom: 66px;
+    right: 0;
+  }
+  .voice-first-lock-action {
+    width: 40px;
+    height: 40px;
+  }
+}
+
+/* Patch 127: locked voice input sends by tapping Fina again; only cancel remains as a separate action. */
+.voice-first-lock-actions--cancel-only {
+  right: 10px;
+  bottom: 76px;
+  padding: 6px;
+  gap: 0;
+}
+
+.voice-first-companion--locked .voice-first-companion__press-target {
+  cursor: pointer;
+}
+
+.voice-first-companion--locked .voice-first-companion__press-target::after {
+  content: '';
+  position: absolute;
+  inset: -8px;
+  border-radius: 999px;
+  border: 1px solid rgba(139, 199, 255, .28);
+  pointer-events: none;
+  animation: voiceLockedTapPulse 1.55s ease-in-out infinite;
+}
+
+@keyframes voiceLockedTapPulse {
+  0%, 100% { opacity: .38; transform: scale(.98); }
+  50% { opacity: .78; transform: scale(1.06); }
+}
+
+@media (max-width: 390px) {
+  .voice-first-lock-actions--cancel-only {
+    right: 7px;
+    bottom: 70px;
+  }
+}
+
+/* Patch 128: explicit-send voice UX. During manual recording, no legacy thought/status overlays. */
+.voice-first-companion--locked .voice-first-companion__voice-panel {
+  pointer-events: none;
+}
+
+.voice-first-locked-hint {
+  display: grid;
+  gap: 2px;
+  min-width: 178px;
+  max-width: min(230px, calc(100vw - 112px));
+  padding: 10px 12px;
+  border-radius: 18px;
+  border: 1px solid rgba(139, 199, 255, .22);
+  background: rgba(8, 13, 24, .88);
+  box-shadow: 0 16px 44px rgba(0, 0, 0, .32), inset 0 1px 0 rgba(255,255,255,.08);
+  -webkit-backdrop-filter: blur(18px);
+  backdrop-filter: blur(18px);
+  color: rgba(255,255,255,.92);
+}
+
+.voice-first-locked-hint b {
+  font-size: 12px;
+  line-height: 1.1;
+  letter-spacing: .02em;
+  font-weight: 750;
+}
+
+.voice-first-locked-hint span {
+  font-size: 11px;
+  line-height: 1.25;
+  color: rgba(255,255,255,.62);
+  white-space: normal;
+}
+
+.voice-first-companion--locked .voice-first-status {
+  display: none !important;
+}
+
+.voice-first-companion--locked .voice-first-bubble {
+  display: none !important;
+}
+
+@media (max-width: 390px) {
+  .voice-first-locked-hint {
+    min-width: 154px;
+    max-width: calc(100vw - 100px);
+    padding: 9px 10px;
+  }
+}
+
+/* Patch 130: permission is requested only by explicit intro button, never by holding Fina. */
+.voice-first-intro {
+  z-index: 320 !important;
+  pointer-events: auto !important;
+}
+
+.voice-first-intro__card {
+  max-height: min(86dvh, 620px);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.voice-first-intro__actions button:disabled {
+  opacity: .56;
+  pointer-events: none;
+}
+
+.voice-first-intro__hint--warning {
+  border-color: rgba(255, 196, 112, .26) !important;
+  background: rgba(255, 196, 112, .09) !important;
+  color: rgba(255, 228, 190, .86) !important;
+}
+
+.voice-first-companion--locked .voice-first-lock-actions--cancel-only {
+  right: 4px !important;
+  bottom: -58px !important;
+  z-index: 12 !important;
+}
+
+@media (max-width: 390px) {
+  .voice-first-companion--locked .voice-first-lock-actions--cancel-only {
+    right: 0 !important;
+    bottom: -54px !important;
+  }
+}
+
+
+/* Patch 131: locked voice cancel is detached from the companion box so it cannot be clipped. */
+.voice-first-companion,
+.voice-first-companion--locked {
+  overflow: visible !important;
+  contain: layout style !important;
+}
+
+.voice-first-lock-actions--detached {
+  position: fixed !important;
+  right: 30px !important;
+  bottom: calc(6px + env(safe-area-inset-bottom)) !important;
+  z-index: 92 !important;
+  display: flex !important;
+  pointer-events: auto !important;
+  padding: 6px !important;
+  border-radius: 999px !important;
+  background: rgba(8, 12, 22, .90) !important;
+  border: 1px solid rgba(255, 255, 255, .14) !important;
+  box-shadow: 0 18px 48px rgba(0, 0, 0, .42), inset 0 1px 0 rgba(255,255,255,.08) !important;
+  -webkit-backdrop-filter: blur(18px);
+  backdrop-filter: blur(18px);
+}

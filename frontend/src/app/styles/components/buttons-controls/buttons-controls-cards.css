@@ -1,0 +1,87 @@
+.ai-companion-avatar--calm .ai-companion-avatar__eyes span { animation: aiCompanionBlink 4.8s ease-in-out infinite; }
+.ai-companion-avatar--listening .ai-companion-avatar__fallback,
+.ai-companion-avatar--focused .ai-companion-avatar__fallback {
+  box-shadow: 0 0 0 1px rgba(167,243,208,.20), 0 0 68px rgba(110,231,183,.32), inset 0 0 44px rgba(110,231,183,.10);
+  animation: aiCompanionListening 1.15s ease-in-out infinite;
+}
+.ai-companion-avatar--thinking .ai-companion-avatar__halo { animation-duration: 1.3s; }
+.ai-companion-avatar--thinking .ai-companion-avatar__eyes span { animation: aiCompanionThinking .9s ease-in-out infinite; }
+.ai-companion-avatar--confirm .ai-companion-avatar__eyes span { background: rgba(251,191,36,.95); box-shadow: 0 0 14px rgba(251,191,36,.72); }
+.ai-companion-avatar--success .ai-companion-avatar__mouth { height: 3px; bottom: 24%; background: rgba(110,231,183,.72); }
+.ai-companion-avatar--warning .ai-companion-avatar__fallback { box-shadow: 0 0 0 1px rgba(253,230,138,.20), 0 0 58px rgba(253,230,138,.18), inset 0 0 38px rgba(253,230,138,.08); }
+.ai-companion-avatar--warning .ai-companion-avatar__eyes span { background: rgba(253,230,138,.95); box-shadow: 0 0 12px rgba(253,230,138,.7); }
+
+@keyframes aiCompanionIdleFloat { 0%,100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-2px) scale(1.015); } }
+@keyframes aiCompanionAura { 0%,100% { opacity: .48; transform: scale(.92); } 50% { opacity: .88; transform: scale(1.06); } }
+@keyframes aiCompanionBreathe { 0%,100% { opacity: .68; transform: scale(.96); } 50% { opacity: 1; transform: scale(1.04); } }
+@keyframes aiCompanionListening { 0%,100% { transform: scale(1); } 50% { transform: scale(1.045); } }
+@keyframes aiCompanionBlink { 0%,70%,100% { transform: scaleY(1); } 82% { transform: scaleY(.22); } }
+@keyframes aiCompanionThinking { 0%,100% { opacity: .35; transform: translateY(0); } 50% { opacity: 1; transform: translateY(-1px); } }
+
+@media (max-width: 380px) {
+  .app-secondary-links { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .app-companion-presence__main { grid-template-columns: 64px minmax(0, 1fr); gap: 12px; }
+  .app-companion-presence__avatar,
+  .app-companion-presence__avatar .ai-companion-control { width: 64px !important; height: 64px !important; }
+}
+
+
+/* 04-buttons-and-controls.css — стабильные кнопки и touch-зоны. */
+.app-primary-button,
+.app-secondary-button,
+.app-danger-card,
+.app-list-button,
+.app-action-card,
+.app-icon-button {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.app-primary-button,
+.app-secondary-button {
+  min-height: 52px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 18px;
+  font-weight: 650;
+}
+
+.app-primary-button {
+  background: linear-gradient(135deg, rgba(52, 211, 153, 0.96), rgba(16, 185, 129, 0.82));
+  color: rgba(2, 10, 10, 0.92);
+  box-shadow: 0 20px 44px rgba(16, 185, 129, 0.20);
+}
+
+.app-secondary-button {
+  border: 1px solid rgba(255,255,255,.1);
+  background: rgba(255,255,255,.055);
+  color: rgba(255,255,255,.82);
+}
+
+.app-compact-menu-button {
+  width: 100%;
+  min-height: 58px;
+  border-radius: 24px;
+  border: 1px solid rgba(255,255,255,.09);
+  background: rgba(255,255,255,.045);
+  color: rgba(255,255,255,.88);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+}
+
+/* Pack 34: unified SVG icon buttons. */
+.app-icon-button__svg {
+  width: 22px;
+  height: 22px;
+  color: currentColor;
+  display: block;
+}
+
+.app-icon-button > svg {
+  flex: 0 0 auto;
+}

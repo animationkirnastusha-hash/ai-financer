@@ -4,14 +4,11 @@ import {
   useMemo,
   useRef,
   useState,
-  type KeyboardEvent,
   type PointerEvent,
 } from "react";
 
 import { useAccountsStore } from "@/features/accounts/model/accounts.store";
 import { AuditLogDrawer } from "@/features/audit-log/ui/AuditLogDrawer";
-import { FinancePreviewCard } from "@/features/chat/ui/FinancePreviewCard";
-import { MessageCard } from "@/features/chat/ui/MessageCard";
 import { useChatController } from "@/features/chat/model/useChatController";
 import { useSettingsStore } from "@/features/settings/model/settings.store";
 import { useReceiptScansStore } from "@/features/receipt-scans/model/receiptScans.store";
@@ -19,18 +16,22 @@ import { useSubscriptionStore } from "@/features/subscription/model/subscription
 import { useTransactionsStore } from "@/features/transactions/model/transactions.store";
 import { useVoiceInput } from "@/features/voice/model/useVoiceInput";
 import { VOICE_MANUAL_SESSION_MS } from "@/features/voice/model/voiceConstants";
-import {
-  normalizeForWake,
-  normalizeVoiceText,
-  shouldIgnoreVoiceCommand,
-} from "@/features/voice/model/voiceText";
+import { shouldIgnoreVoiceCommand } from "@/features/voice/model/voiceText";
 import { useI18n } from "@/shared/lib/i18n";
-
-const SCROLL_BOTTOM_THRESHOLD_PX = 120;
-const OVERLAY_DISMISS_DRAG_PX = 82;
-const RECEIPT_MAX_FILE_BYTES = 8 * 1024 * 1024;
-const RECEIPT_ACCEPTED_TYPES =
-  "image/jpeg,image/png,image/webp,image/heic,image/heif,application/pdf";
+import {
+  OVERLAY_DISMISS_DRAG_PX,
+  RECEIPT_MAX_FILE_BYTES,
+  SCROLL_BOTTOM_THRESHOLD_PX,
+} from "@/features/chat/ui/text-chat-overlay/constants";
+import {
+  pickRotatingStatus,
+  stripOptionalCompanionName,
+} from "@/features/chat/ui/text-chat-overlay/helpers";
+import { useTextChatContextualPrompts } from "@/features/chat/ui/text-chat-overlay/useTextChatContextualPrompts";
+import { TextChatOverlayHeader } from "@/features/chat/ui/text-chat-overlay/TextChatOverlayHeader";
+import { TextChatMessages } from "@/features/chat/ui/text-chat-overlay/TextChatMessages";
+import { TextChatEmptyState } from "@/features/chat/ui/text-chat-overlay/TextChatEmptyState";
+import { TextChatComposer } from "@/features/chat/ui/text-chat-overlay/TextChatComposer";
 
 type TextChatOverlayProps = {
   open: boolean;
@@ -42,89 +43,6 @@ type TextChatOverlayProps = {
   layer?: number;
   onClose: () => void;
 };
-
-function escapeRegExp(value: string) {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-
-function stripOptionalCompanionName(text: string, companionName: string) {
-  const cleanText = normalizeVoiceText(text);
-  const cleanName = normalizeForWake(companionName || "Фина");
-  const aliases = Array.from(
-    new Set(
-      [cleanName, "фина", "финна", "фину", "фине", "финой", "fina"].filter(
-        Boolean,
-      ),
-    ),
-  );
-
-  for (const alias of aliases) {
-    const pattern = new RegExp(`^\\s*${escapeRegExp(alias)}[\\s,.:;!—-]*`, "i");
-    if (pattern.test(cleanText))
-      return normalizeVoiceText(cleanText.replace(pattern, ""));
-  }
-
-  return cleanText;
-}
-
-function formatAmount(value: number | string | null | undefined) {
-  const amount = Number(value);
-  if (!Number.isFinite(amount) || amount <= 0) return "";
-  return new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 0 }).format(
-    amount,
-  );
-}
-
-function pickRotatingStatus(
-  t: (key: string, params?: Record<string, string | number>) => string,
-  group: "listening" | "thinking" | "ready" | "confirm",
-  seed = 0,
-) {
-  const variants =
-    group === "listening"
-      ? [
-          "textChat.status.listening.a",
-          "textChat.status.listening.b",
-          "textChat.status.listening.c",
-        ]
-      : group === "thinking"
-        ? [
-            "textChat.status.thinking.a",
-            "textChat.status.thinking.b",
-            "textChat.status.thinking.c",
-          ]
-        : group === "confirm"
-          ? [
-              "textChat.status.confirm.a",
-              "textChat.status.confirm.b",
-              "textChat.status.confirm.c",
-            ]
-          : [
-              "textChat.status.ready.a",
-              "textChat.status.ready.b",
-              "textChat.status.ready.c",
-            ];
-  return t(variants[Math.abs(seed) % variants.length]);
-}
-
-function chooseAccountName(
-  accounts: Array<{ name?: string | null; type?: string | null }>,
-) {
-  const preferred =
-    accounts.find((account) => String(account.type).toLowerCase() === "cash") ??
-    accounts.find((account) =>
-      String(account.name ?? "")
-        .toLowerCase()
-        .includes("нал"),
-    ) ??
-    accounts.find((account) =>
-      String(account.name ?? "")
-        .toLowerCase()
-        .includes("карт"),
-    ) ??
-    accounts[0];
-  return preferred?.name?.trim() || "";
-}
 
 export function TextChatOverlay({
   open,
@@ -262,28 +180,7 @@ export function TextChatOverlay({
           ? "confirm"
           : "ready";
 
-  const contextualPrompts = useMemo(() => {
-    const accountName = chooseAccountName(accounts);
-    const latest = transactions[0];
-    const latestAmount = formatAmount(latest?.amount);
-    const latestTitle =
-      latest?.title || latest?.description || "последнюю операцию";
-
-    const prompts = [
-      accountName ? `расход 300 кофе с ${accountName}` : "расход 300 кофе",
-      accountName ? `доход 5000 на ${accountName}` : "доход 5000",
-      accountName
-        ? `поставь лимит на ${accountName} 20000 в месяц`
-        : "поставь общий лимит расходов 80000 в месяц",
-      "покажи лимиты",
-      "создай цель отпуск 120000",
-    ];
-
-    if (latest?.id && latestAmount)
-      prompts.unshift(`измени ${latestTitle} на ${latestAmount}`);
-
-    return Array.from(new Set(prompts)).slice(0, 3);
-  }, [accounts, transactions]);
+  const contextualPrompts = useTextChatContextualPrompts(accounts, transactions);
 
   const scrollToBottom = useCallback((behavior: ScrollBehavior = "smooth") => {
     const list = listRef.current;
@@ -589,12 +486,6 @@ export function TextChatOverlay({
     window.setTimeout(() => inputRef.current?.blur(), 40);
   };
 
-  const handleKeyDown = async (event: KeyboardEvent<HTMLTextAreaElement>) => {
-    if (event.key !== "Enter" || event.shiftKey) return;
-    event.preventDefault();
-    await submit();
-  };
-
   const handleMessagesScroll = () => {
     const list = listRef.current;
     if (!list) return;
@@ -619,114 +510,43 @@ export function TextChatOverlay({
         }}
         onClick={(event) => event.stopPropagation()}
       >
-        <button
-          type="button"
-          className="text-chat-overlay__handle"
-          aria-label={t("common.close")}
-          onPointerDown={handleDragPointerDown}
-          onPointerMove={handleDragPointerMove}
-          onPointerUp={handleDragPointerEnd}
-          onPointerCancel={handleDragPointerEnd}
-        >
-          <span />
-        </button>
-        <header className="text-chat-overlay__head text-chat-overlay__head--compact">
-          <div className="text-chat-overlay__status" data-state={statusState}>
-            <span className="text-chat-overlay__dot" />
-            <span>{statusText}</span>
-          </div>
-          <div className="text-chat-overlay__head-actions">
-            <button
-              type="button"
-              className="app-icon-button"
-              onClick={closeOverlay}
-              aria-label={t("common.close")}
-            >
-              ×
-            </button>
-          </div>
-        </header>
+        <TextChatOverlayHeader
+          statusState={statusState}
+          statusText={statusText}
+          closeLabel={t("common.close")}
+          onClose={closeOverlay}
+          onDragPointerDown={handleDragPointerDown}
+          onDragPointerMove={handleDragPointerMove}
+          onDragPointerEnd={handleDragPointerEnd}
+        />
 
-        <div
-          ref={listRef}
-          className="text-chat-overlay__messages"
+        <TextChatMessages
+          listRef={listRef}
+          messages={chat.messages}
+          inlinePendingActions={inlinePendingActions}
+          isSending={chat.isSending}
+          isVoiceUploading={voice.state === "uploading"}
+          pendingTitle={t("textChat.pending.title")}
           onScroll={handleMessagesScroll}
-        >
-          {chat.messages.length > 0 || inlinePendingActions.length > 0 ? (
-            <div className="text-chat-overlay__message-stack">
-              {chat.messages.map((message, index) => (
-                <MessageCard
-                  key={
-                    message.id ||
-                    `${message.role}-${message.createdAt}-${index}`
-                  }
-                  message={message}
-                  onConfirm={chat.confirmAction}
-                  onCancel={chat.cancelAction}
-                  onUndo={chat.undoMessageAction}
-                />
-              ))}
-              {inlinePendingActions.map((action) => (
-                <FinancePreviewCard
-                  key={action.id}
-                  title={
-                    action.title ||
-                    action.message ||
-                    t("textChat.pending.title")
-                  }
-                  intent={action.intent || action.type}
-                  actionId={action.id}
-                  data={
-                    (action.parsed ||
-                      action.payload ||
-                      action.data ||
-                      {}) as Record<string, unknown>
-                  }
-                  onConfirm={chat.confirmAction}
-                  onCancel={chat.cancelAction}
-                />
-              ))}
-              {chat.isSending || voice.state === "uploading" ? (
-                <div className="text-chat-overlay__typing">
-                  <span />
-                  <span />
-                  <span />
-                </div>
-              ) : null}
-            </div>
-          ) : (
-            <div className="text-chat-overlay__empty">
-              <button
-                type="button"
-                className={
-                  isVoicePressed || voice.state === "recording"
-                    ? "text-chat-overlay__orb text-chat-overlay__orb--active"
-                    : "text-chat-overlay__orb"
-                }
-                aria-label={t("textChat.voice.hold")}
-                onPointerDown={handleVoicePointerDown}
-                onPointerMove={handleVoicePointerMove}
-                onPointerUp={handleVoicePointerEnd}
-                onPointerCancel={handleVoicePointerCancel}
-              >
-                ⌁
-              </button>
-              <h3>{t("textChat.empty.title")}</h3>
-              <p>{t("textChat.empty.caption")}</p>
-              <div className="text-chat-overlay__chips">
-                {contextualPrompts.map((prompt) => (
-                  <button
-                    key={prompt}
-                    type="button"
-                    onClick={() => void sendText(prompt, "text")}
-                  >
-                    {prompt}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
+          onConfirm={chat.confirmAction}
+          onCancel={chat.cancelAction}
+          onUndo={chat.undoMessageAction}
+          emptyState={
+            <TextChatEmptyState
+              isVoicePressed={isVoicePressed}
+              voiceState={voice.state}
+              prompts={contextualPrompts}
+              voiceLabel={t("textChat.voice.hold")}
+              title={t("textChat.empty.title")}
+              caption={t("textChat.empty.caption")}
+              onPrompt={(prompt) => void sendText(prompt, "text")}
+              onVoicePointerDown={handleVoicePointerDown}
+              onVoicePointerMove={handleVoicePointerMove}
+              onVoicePointerEnd={handleVoicePointerEnd}
+              onVoicePointerCancel={handleVoicePointerCancel}
+            />
+          }
+        />
 
         {receiptHint ? (
           <div className="text-chat-overlay__receipt-hint">{receiptHint}</div>
@@ -743,88 +563,30 @@ export function TextChatOverlay({
           </button>
         ) : null}
 
-        <form
-          className="text-chat-overlay__composer"
-          onSubmit={(event) => {
-            event.preventDefault();
-            void submit();
-          }}
-        >
-          {hasReceiptAccess ? (
-            <div className="text-chat-overlay__receipt-actions">
-              <button
-                type="button"
-                className="text-chat-overlay__receipt-main"
-                disabled={isReceiptUploading}
-                onClick={() => receiptFileInputRef.current?.click()}
-              >
-                {t("textChat.receipt.action")}
-              </button>
-              <button
-                type="button"
-                className="text-chat-overlay__receipt-mini"
-                disabled={isReceiptUploading}
-                onClick={() => receiptCameraInputRef.current?.click()}
-                aria-label={t("textChat.receipt.camera")}
-              >
-                ◉
-              </button>
-              <input
-                ref={receiptCameraInputRef}
-                type="file"
-                accept={RECEIPT_ACCEPTED_TYPES}
-                capture="environment"
-                className="sr-only"
-                onChange={(event) =>
-                  void handleReceiptFile(event.target.files?.[0] ?? null)
-                }
-              />
-              <input
-                ref={receiptFileInputRef}
-                type="file"
-                accept={RECEIPT_ACCEPTED_TYPES}
-                className="sr-only"
-                onChange={(event) =>
-                  void handleReceiptFile(event.target.files?.[0] ?? null)
-                }
-              />
-            </div>
-          ) : null}
-          <textarea
-            ref={inputRef}
-            value={value}
-            onChange={(event) => setValue(event.target.value)}
-            onKeyDown={handleKeyDown}
-            rows={1}
-            placeholder={t("textChat.placeholder")}
-            disabled={chat.isSending}
-          />
-          {value.trim() ? (
-            <button
-              type="submit"
-              disabled={chat.isSending}
-              aria-label={t("textChat.send")}
-            >
-              ↑
-            </button>
-          ) : (
-            <button
-              type="button"
-              className="text-chat-overlay__voice-send"
-              data-recording={
-                isVoicePressed || voice.state === "recording" ? "true" : "false"
-              }
-              disabled={chat.isSending || voice.state === "uploading"}
-              aria-label={t("textChat.voice.hold")}
-              onPointerDown={handleVoicePointerDown}
-              onPointerMove={handleVoicePointerMove}
-              onPointerUp={handleVoicePointerEnd}
-              onPointerCancel={handleVoicePointerCancel}
-            >
-              {voiceCancelledBySwipeRef.current ? "×" : "●"}
-            </button>
-          )}
-        </form>
+        <TextChatComposer
+          value={value}
+          inputRef={inputRef}
+          receiptCameraInputRef={receiptCameraInputRef}
+          receiptFileInputRef={receiptFileInputRef}
+          hasReceiptAccess={hasReceiptAccess}
+          isReceiptUploading={isReceiptUploading}
+          isSending={chat.isSending}
+          voiceState={voice.state}
+          isVoicePressed={isVoicePressed}
+          isVoiceCancelledBySwipe={voiceCancelledBySwipeRef.current}
+          placeholder={t("textChat.placeholder")}
+          sendLabel={t("textChat.send")}
+          voiceLabel={t("textChat.voice.hold")}
+          receiptActionLabel={t("textChat.receipt.action")}
+          receiptCameraLabel={t("textChat.receipt.camera")}
+          onValueChange={setValue}
+          onSubmit={submit}
+          onReceiptFile={handleReceiptFile}
+          onVoicePointerDown={handleVoicePointerDown}
+          onVoicePointerMove={handleVoicePointerMove}
+          onVoicePointerEnd={handleVoicePointerEnd}
+          onVoicePointerCancel={handleVoicePointerCancel}
+        />
       </div>
 
       <AuditLogDrawer

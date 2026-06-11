@@ -1,0 +1,103 @@
+/* Mobile adaptive layout: safe areas, companion placement and compact screen guards. */
+/* from ui-fix54.css */
+/* patch-54: final Russian mobile layout corrections */
+:root {
+  --ai-companion-size: 86px;
+  --ai-companion-bottom: calc(52px + env(safe-area-inset-bottom));
+  --ai-bottom-reserve: calc(172px + env(safe-area-inset-bottom));
+}
+
+.telegram-app-content { isolation: isolate; }
+.app-page {
+  padding-bottom: var(--ai-bottom-reserve) !important;
+  scroll-padding-bottom: calc(var(--ai-bottom-reserve) + 22px) !important;
+}
+
+/* bottom dots are below Fina, not on top of her */
+.app-main-menu-dots {
+  z-index: 58 !important;
+  bottom: calc(env(safe-area-inset-bottom) + 8px) !important;
+  pointer-events: auto;
+}
+.app-main-menu-dots__panel {
+  min-height: 30px;
+  border-radius: 999px;
+  background: rgba(5,11,16,.82) !important;
+  box-shadow: 0 16px 34px rgba(0,0,0,.32);
+}
+
+.voice-first-companion {
+  right: 10px !important;
+  bottom: var(--ai-companion-bottom) !important;
+  z-index: 74 !important;
+  transform: translate3d(0,0,0) !important;
+  backface-visibility: hidden;
+  contain: layout paint;
+}
+.voice-first-companion .ai-companion-control {
+  width: var(--ai-companion-size) !important;
+  height: var(--ai-companion-size) !important;
+}
+.voice-first-companion .ai-companion-avatar {
+  width: calc(var(--ai-companion-size) - 8px) !important;
+  height: calc(var(--ai-companion-size) - 8px) !important;
+}
+.voice-first-companion__controls { align-items: flex-end !important; }
+.voice-first-status { display: none !important; }
+.voice-first-mic-toggle { display: none !important; }
+.voice-first-bubble {
+  max-width: min(246px, calc(100vw - 116px)) !important;
+  margin-right: 6px;
+  margin-bottom: 2px;
+  transform: translate3d(0,0,0) !important;
+  filter: none !important;
+  animation: voiceBubbleStable54 .18s cubic-bezier(.2,.8,.2,1) both !important;
+  will-change: opacity, transform;
+}
+@keyframes voiceBubbleStable54 {
+  from { opacity: 0; transform: translate3d(4px, 5px, 0) scale(.985); }
+  to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+}
+body:has(.app-modal-backdrop) .voice-first-companion,
+body:has(.app-bottom-sheet) .voice-first-companion,
+body:has(.drawer-backdrop) .voice-first-companion,
+body:has([role="dialog"]) .voice-first-companion,
+body.ai-modal-open .voice-first-companion,
+body.ai-any-modal-open .voice-first-companion,
+body.ai-core-modal-open .voice-first-companion { display: none !important; }
+
+/* restore main page and action cards */
+.app-card,
+.app-nav-card,
+.app-action-card,
+.app-list-button,
+.app-small-link,
+.app-toggle-row,
+.app-account-card,
+.app-taxonomy-section-card {
+  min-width: 0;
+}
+.app-card * { min-width: 0; }
+.app-action-card {
+  display: grid !important;
+  grid-template-columns: auto minmax(0,1fr);
+  align-items: center;
+  align-content: center !important;
+  gap: 12px !important;
+  min-height: 70px !important;
+  padding: 13px !important;
+  text-align: left;
+}
+.app-action-card--wide { grid-template-columns: auto minmax(0,1fr) !important; }
+.app-action-card__icon {
+  display: grid !important;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  flex: none;
+  border-radius: 14px;
+  background: rgba(129,239,208,.11);
+  color: rgba(218,255,245,.94) !important;
+  font-size: 18px !important;
+  line-height: 1 !important;
+}

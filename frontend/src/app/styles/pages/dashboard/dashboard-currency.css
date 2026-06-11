@@ -1,0 +1,224 @@
+
+.app-home-chart-preview__text small {
+  min-width: 0;
+  color: rgba(255,255,255,.54);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.app-home-cashflow-card__action {
+  width: 100%;
+  min-height: 52px;
+}
+
+.app-home-finance-insight {
+  display: grid;
+  gap: 8px;
+  background: radial-gradient(circle at top right, rgba(129,239,208,.10), transparent 42%), rgba(255,255,255,.04);
+}
+
+.app-home-finance-insight p {
+  color: rgba(255,255,255,.68);
+  font-size: 14px;
+  line-height: 1.65;
+}
+
+.app-home-chart-backdrop {
+  z-index: 130;
+}
+
+.app-home-chart-modal,
+.app-home-category-modal {
+  max-height: 92dvh;
+  overflow: auto;
+}
+
+.app-home-chart-modal__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.app-home-chart-modal__head p {
+  margin-top: 7px;
+  color: rgba(255,255,255,.55);
+  font-size: 14px;
+}
+
+.app-home-chart-modal__visual {
+  position: relative;
+  min-height: 286px;
+  display: grid;
+  place-items: center;
+  margin: 12px 0 2px;
+}
+
+.app-home-chart-modal__actions {
+  display: grid;
+  grid-template-columns: minmax(0,1fr) auto;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.app-home-chart-modal__actions button {
+  min-height: 48px;
+  border-radius: 20px;
+  border: 1px solid rgba(255,255,255,.08);
+  background: rgba(255,255,255,.045);
+  color: rgba(255,255,255,.86);
+  font-size: 13px;
+  font-weight: 800;
+  padding: 0 14px;
+}
+
+.app-home-chart-modal__actions button:first-child {
+  border-color: rgba(110,231,183,.18);
+  background: rgba(110,231,183,.075);
+  color: rgba(205,255,235,.92);
+}
+
+.app-home-chart-groups,
+.app-home-category-operation-list {
+  display: grid;
+  gap: 9px;
+}
+
+.app-home-chart-group {
+  width: 100%;
+  min-width: 0;
+  min-height: 68px;
+  display: grid;
+  grid-template-columns: 12px minmax(0,1fr) auto;
+  gap: 12px;
+  align-items: center;
+  border-radius: 22px;
+  border: 1px solid rgba(255,255,255,.08);
+  background: rgba(255,255,255,.045);
+  padding: 12px;
+  text-align: left;
+}
+
+.app-home-chart-group i {
+  width: 12px;
+  height: 36px;
+  border-radius: 999px;
+}
+
+.app-home-chart-group b,
+.app-home-chart-group small {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-home-chart-group b {
+  font-size: 14px;
+  color: rgba(255,255,255,.92);
+}
+
+.app-home-chart-group small {
+  margin-top: 4px;
+  font-size: 12px;
+  color: rgba(255,255,255,.45);
+}
+
+.app-home-chart-group strong {
+  font-size: 13px;
+  color: rgba(255,255,255,.86);
+  white-space: nowrap;
+}
+
+@media (max-width: 390px) {
+  .app-home-cashflow-card__head { grid-template-columns: 1fr; }
+  .app-home-period-switch { width: 100%; justify-content: space-between; }
+  .app-home-period-switch button { flex: 1; }
+  .app-home-chart-preview { grid-template-columns: 1fr; justify-items: center; text-align: center; }
+  .app-home-chart-modal__actions { grid-template-columns: 1fr; }
+}
+
+/* Pack 13: icon-only diagram markers. */
+.app-home-donut {
+  position: relative;
+}
+
+.app-home-donut-icon {
+  position: absolute;
+  display: grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  border: 1px solid rgba(255,255,255,.18);
+  border-radius: 999px;
+  background: rgba(5, 10, 18, .74);
+  box-shadow: 0 10px 22px rgba(0,0,0,.32);
+  font-size: 15px;
+  font-style: normal;
+  line-height: 1;
+  pointer-events: none;
+}
+
+.app-home-donut-icon--0 { top: 2%; left: 50%; transform: translateX(-50%); }
+.app-home-donut-icon--1 { top: 24%; right: 4%; }
+.app-home-donut-icon--2 { right: 14%; bottom: 10%; }
+.app-home-donut-icon--3 { bottom: 10%; left: 14%; }
+.app-home-donut-icon--4 { top: 24%; left: 4%; }
+
+.app-home-donut--large .app-home-donut-icon {
+  width: 30px;
+  height: 30px;
+  font-size: 16px;
+}
+
+.app-transaction-edit-sheet {
+  max-height: calc(100dvh - env(safe-area-inset-top, 0px));
+  min-height: min(720px, 100dvh);
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 18px);
+}
+
+/* Pack 15: диаграмма без иконок внутри круга */
+.app-home-donut-icon {
+  display: none !important;
+}
+
+.app-home-chart-modal__visual--single {
+  min-height: min(62vw, 360px);
+  align-items: center;
+  justify-content: center;
+}
+
+.app-delete-choice {
+  border: 1px solid rgba(248, 113, 113, 0.22);
+  border-radius: 26px;
+  background:
+    radial-gradient(circle at top right, rgba(248, 113, 113, 0.14), transparent 44%),
+    rgba(255, 255, 255, 0.045);
+  padding: 16px;
+  display: grid;
+  gap: 14px;
+}
+
+.app-delete-choice b {
+  display: block;
+  color: rgba(255, 255, 255, 0.94);
+  font-size: 15px;
+}
+
+.app-delete-choice p {
+  margin: 6px 0 0;
+  color: rgba(255, 255, 255, 0.52);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.app-ghost-button {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 20px;
+  min-height: 46px;
+  padding: 0 16px;
+  color: rgba(255, 255, 255, 0.66);
+  background: rgba(255, 255, 255, 0.035);
+  font-weight: 800;
+}

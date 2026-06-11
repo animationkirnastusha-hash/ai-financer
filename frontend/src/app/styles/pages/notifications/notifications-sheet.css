@@ -1,0 +1,3 @@
+/* notifications sheet: logical CSS manifest. */
+@import "./notifications-sheet/notifications-sheet-base.css";
+@import "./notifications-sheet/notifications-sheet-polish.css";
