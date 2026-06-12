@@ -17,14 +17,14 @@ const PRESETS: Record<AISettingsPreset, {
     companionTone: 'calm',
   },
   balanced: {
-    autoConfirmExpenseLimit: 500,
-    autoConfirmIncomeLimit: 100000,
+    autoConfirmExpenseLimit: 5000,
+    autoConfirmIncomeLimit: 200000,
     autoConfirmTransferLimit: 0,
     requireConfirmForAccountActions: true,
     companionTone: 'friendly',
   },
   simple: {
-    autoConfirmExpenseLimit: 1000,
+    autoConfirmExpenseLimit: 5000,
     autoConfirmIncomeLimit: 250000,
     autoConfirmTransferLimit: 0,
     requireConfirmForAccountActions: true,
@@ -226,7 +226,7 @@ export class AISettingsService {
   private async ensureSettings(userId: string) {
     await prisma.userAISettings.upsert({
       where: { userId },
-      create: { userId },
+      create: { userId, autoConfirmExpenseLimit: 5000, autoConfirmIncomeLimit: 200000 },
       update: {},
     });
   }

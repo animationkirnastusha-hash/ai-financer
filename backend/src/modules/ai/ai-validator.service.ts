@@ -93,7 +93,7 @@ export class AIValidatorService {
       }),
       prisma.userAISettings.upsert({
         where: { userId },
-        create: { userId },
+        create: { userId, autoConfirmExpenseLimit: 5000, autoConfirmIncomeLimit: 200000 },
         update: {},
       }),
     ]);
@@ -112,8 +112,6 @@ export class AIValidatorService {
 
       const input = { ...action.input };
       const resolved: Record<string, unknown> = {};
-      const userText = this.cleanString(input.__userText);
-      const isVoiceCommand = userText.includes('VOICE_TRANSCRIPT_COMMAND') || userText.includes('VOICE_SESSION_COMMAND');
       delete input.__userText;
 
     if (action.tool === 'create_account') {
@@ -216,11 +214,10 @@ export class AIValidatorService {
         const explicitAccountRef = this.cleanString(input.account);
         const plannedAccountRef = this.lastPlannedAccountName(plannedAccounts);
         const defaultAccount = this.resolveDefaultTransactionAccount(accounts, kind, aiSettings);
-        const shouldClarifyVoiceExpenseAccount = isVoiceCommand && kind === 'expense' && !explicitAccountRef && !plannedAccountRef && accounts.length > 1;
-        const shouldAskAccount = (!explicitAccountRef && !plannedAccountRef && !defaultAccount && kind === 'expense' && accounts.length > 0) || shouldClarifyVoiceExpenseAccount;
+        const shouldAskAccount = !explicitAccountRef && !plannedAccountRef && !defaultAccount && kind === 'expense' && accounts.length > 0;
         const accountRef = explicitAccountRef
           || plannedAccountRef
-          || (shouldAskAccount ? '' : (defaultAccount?.name ?? ''))
+          || (defaultAccount?.name ?? '')
           || (shouldAskAccount ? '' : accounts[0]?.name || '');
 
         const account = this.resolveAccount(accounts, accountRef) ?? defaultAccount;
@@ -259,10 +256,6 @@ export class AIValidatorService {
         input.category = rawCategory || null;
         input.section = rawSection || null;
         input.description = rawDescription || rawCategory || (kind === 'income' ? 'Доход' : 'Расход');
-
-        if (isVoiceCommand && amount !== null && amount >= 10000) {
-          resolved.voiceAmountNeedsConfirmation = true;
-        }
 
         const amountInAccountCurrency = amount ? convertMoney(amount, moneyCurrency, targetCurrency) : 0;
 
@@ -929,7 +922,6 @@ export class AIValidatorService {
     if (tool === 'update_ai_settings' || tool === 'apply_ai_settings_preset') return true;
 
     if (tool === 'create_transaction') {
-      if (resolved.voiceAmountNeedsConfirmation) return true;
       const amount = Number(resolved.amountInAccountCurrency ?? input.amount ?? 0);
       const kind = input.kind === 'income' ? 'income' : 'expense';
       const fallbackLimit = Number(process.env.AI_AUTO_EXECUTE_TRANSACTION_LIMIT ?? DEFAULT_AUTO_TRANSACTION_LIMIT);

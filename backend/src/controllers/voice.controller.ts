@@ -29,8 +29,6 @@ function sanitizeVoiceDebugDetails(details: unknown) {
     'permissionState',
     'recordingState',
     'elapsedMs',
-    'userAgent',
-    'url',
     'visibilityState',
     'textLength',
     'hasText',
@@ -53,7 +51,6 @@ function sanitizeVoiceDebugDetails(details: unknown) {
     'target',
     'kind',
     'reason',
-    'transcriptPreview',
     'visualOnly',
     'cooldownMs',
     'missCount',
@@ -87,7 +84,7 @@ export async function logVoiceDebug(req: Request, res: Response) {
     ? (req as Request & { userId?: string }).userId
     : undefined;
 
-  if (process.env.VOICE_DEBUG_LOGS !== '0') {
+  if (process.env.VOICE_DEBUG_LOGS === '1') {
     console.info('[voice-debug]', JSON.stringify({
       at: new Date().toISOString(),
       userId,
@@ -122,7 +119,7 @@ export async function transcribeVoice(req: Request, res: Response) {
       });
     }
 
-    if (process.env.VOICE_DEBUG_LOGS !== '0') {
+    if (process.env.VOICE_DEBUG_LOGS === '1') {
       console.info('[voice-transcribe]', JSON.stringify({
         at: new Date().toISOString(),
         userId,
@@ -142,7 +139,7 @@ export async function transcribeVoice(req: Request, res: Response) {
       language: typeof req.body?.language === 'string' ? req.body.language : undefined,
     });
 
-    if (process.env.VOICE_DEBUG_LOGS !== '0') {
+    if (process.env.VOICE_DEBUG_LOGS === '1') {
       console.info('[voice-transcribe]', JSON.stringify({
         at: new Date().toISOString(),
         userId,
@@ -166,7 +163,7 @@ export async function transcribeVoice(req: Request, res: Response) {
       language: result.language,
     });
   } catch (error) {
-    if (process.env.VOICE_DEBUG_LOGS !== '0') {
+    if (process.env.VOICE_DEBUG_LOGS === '1') {
       console.info('[voice-transcribe]', JSON.stringify({
         at: new Date().toISOString(),
         userId,
@@ -244,7 +241,7 @@ export async function getVoiceCueAudio(req: Request, res: Response) {
   try {
     const result = await voiceTtsService.getCueAudio(rawCue);
 
-    if (process.env.VOICE_DEBUG_LOGS !== '0') {
+    if (process.env.VOICE_DEBUG_LOGS === '1') {
       const userId = typeof (req as Request & { userId?: unknown }).userId === 'string'
         ? (req as Request & { userId?: string }).userId
         : undefined;

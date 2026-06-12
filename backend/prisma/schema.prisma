@@ -659,7 +659,7 @@ model UserAISettings {
   preset                          String  @default("balanced")
   defaultExpenseAccountId         String?
   defaultIncomeAccountId          String?
-  autoConfirmExpenseLimit         Int     @default(500)
+  autoConfirmExpenseLimit         Int     @default(5000)
   autoConfirmIncomeLimit          Int     @default(100000)
   autoConfirmTransferLimit        Int     @default(0)
   requireConfirmForAccountActions Boolean @default(true)

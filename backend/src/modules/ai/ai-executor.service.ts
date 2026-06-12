@@ -6,8 +6,7 @@ import { progressionActivityBridge } from '../progression/activity-bridge.servic
 import { aiPremiumService } from './ai-premium.service';
 import { aiCompanionService } from './ai-companion.service';
 import { aiAnalyticsService } from './ai-analytics.service';
-import { resolveCategoryAppearance, resolveSectionAppearance, shouldReplaceGenericIcon } from '../taxonomy/taxonomy-icons';
-import { resolveTransactionSemanticTaxonomy } from '../taxonomy/transaction-taxonomy';
+import { resolveCategoryAppearance, resolveSectionAppearance, resolveTaxonomyForText, shouldReplaceGenericIcon } from '../taxonomy/taxonomy-icons';
 
 const transactionInclude = {
   account: {
@@ -216,20 +215,18 @@ export class AIExecutorService {
       const amount = this.toInteger(resolved.amountInAccountCurrency ?? input.amount, 0);
       if (amount <= 0) throw new BadRequestError('Transaction amount must be positive');
 
-      const taxonomy = resolveTransactionSemanticTaxonomy({
+      const taxonomy = resolveTaxonomyForText({
         kind,
         title: typeof input.category === 'string' ? input.category : undefined,
         description: typeof input.description === 'string' ? input.description : undefined,
-        sectionName: typeof input.section === 'string' ? input.section : undefined,
-        categoryName: typeof input.category === 'string' ? input.category : undefined,
       });
 
       const sectionId = typeof resolved.sectionId === 'string'
         ? resolved.sectionId
-        : await this.findOrCreateSectionId(tx, userId, taxonomy.sectionName);
+        : await this.findOrCreateSectionId(tx, userId, typeof input.section === 'string' && input.section.trim() ? input.section : taxonomy.sectionName);
 
       const categoryId = await this.findOrCreateCategoryId(tx, userId, {
-        name: taxonomy.categoryName,
+        name: typeof input.category === 'string' && input.category.trim() ? input.category : taxonomy.categoryName,
         type: kind,
         sectionId,
       });
@@ -249,12 +246,11 @@ export class AIExecutorService {
           sectionId,
           amount,
           type: kind,
-          title: taxonomy.titleFallback ?? null,
-          description: taxonomy.descriptionFallback ?? (typeof input.description === 'string' && input.description.trim()
+          description: typeof input.description === 'string' && input.description.trim()
             ? input.description.trim()
             : kind === 'income'
               ? 'Пополнение счёта'
-              : 'Расход'),
+              : 'Расход',
           date: new Date(),
           isAIGenerated: true,
         },
@@ -625,7 +621,7 @@ export class AIExecutorService {
 
     if (tool === 'show_ai_settings') {
       const [settings, onboarding, accounts] = await Promise.all([
-        tx.userAISettings.upsert({ where: { userId }, create: { userId }, update: {} }),
+        tx.userAISettings.upsert({ where: { userId }, create: { userId, autoConfirmExpenseLimit: 5000, autoConfirmIncomeLimit: 200000 }, update: {} }),
         tx.onboardingState.upsert({
           where: { userId },
           create: { userId, status: 'not_started', currentStep: 'create_first_account' },
@@ -1292,7 +1288,7 @@ export class AIExecutorService {
 
     if (preset === 'simple') {
       return {
-        autoConfirmExpenseLimit: 1000,
+        autoConfirmExpenseLimit: 5000,
         autoConfirmIncomeLimit: 250000,
         autoConfirmTransferLimit: 0,
         requireConfirmForAccountActions: true,
@@ -1301,8 +1297,8 @@ export class AIExecutorService {
     }
 
     return {
-      autoConfirmExpenseLimit: 500,
-      autoConfirmIncomeLimit: 100000,
+      autoConfirmExpenseLimit: 5000,
+      autoConfirmIncomeLimit: 200000,
       autoConfirmTransferLimit: 0,
       requireConfirmForAccountActions: true,
       companionTone: 'friendly',

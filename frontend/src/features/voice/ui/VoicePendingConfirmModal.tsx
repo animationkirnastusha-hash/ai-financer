@@ -1,4 +1,5 @@
 import { PendingActionCard } from '@/features/pending-actions/ui/PendingActionCard';
+import { useI18n } from '@/shared/lib/i18n';
 
 type VoicePendingConfirmModalProps = {
   pendingActions: any[];
@@ -19,12 +20,14 @@ function getClarification(item: any): Record<string, unknown> | null {
     : null;
 }
 
-function getClarificationQuestion(item: any) {
+function getClarificationQuestion(item: any, fallback: string) {
   const question = getClarification(item)?.question;
-  return typeof question === 'string' && question.trim() ? question.trim() : 'Нужно уточнить.';
+  return typeof question === 'string' && question.trim() ? question.trim() : fallback;
 }
 
 export function VoicePendingConfirmModal({ pendingActions, onConfirm, onCancel, onUpdate }: VoicePendingConfirmModalProps) {
+  const { t } = useI18n();
+
   if (pendingActions.length === 0) return null;
 
   const item = pendingActions[0];
@@ -37,22 +40,26 @@ export function VoicePendingConfirmModal({ pendingActions, onConfirm, onCancel, 
         <div className="app-modal-body">
           <div className="app-pending-confirm-head">
             <div>
-              <div className="app-eyebrow">{clarification ? 'Уточнение' : 'Проверка'}</div>
-              <h2>{clarification ? 'Нужно уточнить' : 'Подтверди действие'}</h2>
+              <div className="app-eyebrow">
+                {clarification ? t('voicePending.eyebrow.clarification') : t('voicePending.eyebrow.review')}
+              </div>
+              <h2>{clarification ? t('voicePending.title.clarification') : t('voicePending.title.review')}</h2>
               <p>
                 {clarification
-                  ? 'Ответь голосом или напиши в чате.'
-                  : 'После подтверждения действие будет выполнено.'}
+                  ? t('voicePending.caption.clarification')
+                  : t('voicePending.caption.review')}
               </p>
             </div>
           </div>
 
           {clarification ? (
             <div className="voice-clarification-card">
-              <div className="voice-clarification-card__question">{getClarificationQuestion(item)}</div>
-              <div className="voice-clarification-card__hint">Например: «с налички» или «с карты».</div>
+              <div className="voice-clarification-card__question">
+                {getClarificationQuestion(item, t('voicePending.clarification.fallback'))}
+              </div>
+              <div className="voice-clarification-card__hint">{t('voicePending.clarification.hint')}</div>
               <button className="app-secondary-button" type="button" onClick={() => onCancel(item.id)}>
-                Отменить
+                {t('voicePending.action.cancel')}
               </button>
             </div>
           ) : (

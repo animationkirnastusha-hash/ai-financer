@@ -61,6 +61,7 @@ export const env = {
   databaseUrl: getEnv('DATABASE_URL'),
   jwtSecret,
   telegramBotToken: getRequiredInProduction('TELEGRAM_BOT_TOKEN'),
+  telegramPaymentsWebhookSecret: getRequiredInProduction('TELEGRAM_PAYMENTS_WEBHOOK_SECRET'),
   adminTelegramId: process.env.ADMIN_TELEGRAM_ID ?? '',
   adminTelegramIds: getListEnv('ADMIN_TELEGRAM_IDS', [process.env.ADMIN_TELEGRAM_ID ?? ''].filter(Boolean)),
 

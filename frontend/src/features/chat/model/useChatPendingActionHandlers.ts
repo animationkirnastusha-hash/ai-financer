@@ -64,6 +64,7 @@ export function useChatPendingActionHandlers({
           }),
         );
       } finally {
+        handlingPendingActionIds.delete(actionId);
         setIsPendingOpen(false);
         await refreshFinanceState();
         emitPendingSync();
@@ -98,6 +99,7 @@ export function useChatPendingActionHandlers({
       } catch (error) {
         console.error("Cancel action failed", error);
       } finally {
+        handlingPendingActionIds.delete(actionId);
         setIsPendingOpen(false);
         await refreshFinanceState();
         emitPendingSync();

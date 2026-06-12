@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { asyncHandler } from '../../shared/utils/asyncHandler';
 import { BadRequestError, UnauthorizedError } from '../../shared/core/errors';
+import { env } from '../../config/env';
 import { paymentService } from './service';
 
 function requireUserId(req: Request) {
@@ -9,12 +10,13 @@ function requireUserId(req: Request) {
 }
 
 function getWebhookSecret() {
-  return process.env.TELEGRAM_PAYMENTS_WEBHOOK_SECRET?.trim() || '';
+  return env.telegramPaymentsWebhookSecret.trim();
 }
 
 function assertTelegramWebhook(req: Request) {
   const expected = getWebhookSecret();
-  if (!expected) return;
+  if (!expected) throw new UnauthorizedError('Telegram payment webhook is not configured');
+
   const received = String(req.header('x-telegram-bot-api-secret-token') || '');
   if (received !== expected) throw new UnauthorizedError('Invalid Telegram webhook secret');
 }
