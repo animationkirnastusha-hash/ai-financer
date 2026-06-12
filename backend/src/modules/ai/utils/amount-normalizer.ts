@@ -80,11 +80,15 @@ export function convertMoney(amount: number, from: AICurrency, to: AICurrency) {
 
 
 function normalizeStructuredAmountText(value: string) {
-  const raw = value
-    .trim()
-    .toLowerCase()
+  const trimmed = value.trim().toLowerCase();
+
+  const withoutTrailingCurrency = trimmed
+    .replace(/(\d)\s*(₽|\$|€)\s*$/gu, '$1')
+    .replace(/(\d)\s*(рублей|рубля|рубль|руб\.?|р\.?|rub|rur|долларов|доллара|доллар|usd|eur|евро|vnd|донгов|донга|донг)\s*$/giu, '$1');
+
+  const raw = withoutTrailingCurrency
     .replace(/[₽$€]/g, ' ')
-    .replace(/\b(rub|rur|руб|руб\.|рублей|рубля|доллар|доллара|долларов|usd|eur|евро|vnd|донг|донгов)\b/giu, ' ')
+    .replace(/(^|[^\p{L}\p{N}_])(рублей|рубля|рубль|руб\.?|р\.?|rub|rur|долларов|доллара|доллар|usd|eur|евро|vnd|донгов|донга|донг)(?=$|[^\p{L}\p{N}_])/giu, '$1')
     .replace(/\s+/g, ' ')
     .trim();
 
