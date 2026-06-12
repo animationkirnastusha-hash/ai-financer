@@ -28,3 +28,35 @@
     max-height: calc(100dvh - 10px);
   }
 }
+
+/* Pack 116: sheet-wide swipe down without blocking modal body scroll. */
+.app-modal-backdrop {
+  touch-action: auto;
+}
+
+.app-modal-sheet {
+  max-height: calc(100dvh - max(10px, env(safe-area-inset-top)));
+  touch-action: pan-y;
+}
+
+.app-modal-handle {
+  touch-action: none;
+}
+
+.app-modal-body {
+  min-height: 0;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.app-modal-footer {
+  flex-shrink: 0;
+}
+
+@media (max-width: 560px) {
+  .app-modal-sheet,
+  .app-settings-modal,
+  .app-transaction-edit-sheet {
+    max-height: calc(100dvh - max(8px, env(safe-area-inset-top)));
+  }
+}

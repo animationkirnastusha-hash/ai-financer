@@ -122,6 +122,7 @@ try {
 
 await check('repository cleanup', () => run('npm', ['run', 'repo:clean']));
 await check('backend build', () => run('npm', ['run', 'build']));
+await check('AI money contract tests', () => run('npm', ['run', 'test:ai-money-contract']));
 await check('final backend audit', () => run('npm', ['run', 'audit:final']));
 await check('prisma migrate status', () => run('npx', ['prisma', 'migrate', 'status']));
 await check('test token', () => run('npm', ['run', 'test:token'], {

@@ -3,6 +3,7 @@ import { useAppModalStore } from '@/features/modals/model/appModal.store';
 import { useNavigationStore } from '@/features/navigation/model/navigation.store';
 import { useObligationsStore } from '@/features/obligations/model/obligations.store';
 import { formatMoney, formatTransactionDate } from '@/shared/lib/money';
+import { useI18n } from '@/shared/lib/i18n';
 
 const HOME_OBLIGATION_WIDGET_STATE_KEY = 'fina.home.obligationsWidget.state.v1';
 
@@ -25,6 +26,7 @@ function hasDebtRemainder(type?: string | null) {
 }
 
 export function HomeObligationsWidget() {
+  const { t } = useI18n();
   const navigateTo = useNavigationStore((state) => state.navigateTo);
   const openModal = useAppModalStore((state) => state.openModal);
   const summary = useObligationsStore((state) => state.summary);
@@ -49,14 +51,14 @@ export function HomeObligationsWidget() {
   }, [nearest, widgetState]);
 
   const dateLabel = useMemo(() => {
-    if (!nearest?.nextPaymentDate) return 'дата не указана';
+    if (!nearest?.nextPaymentDate) return t('dashboard.obligations.dateMissing');
     const base = formatTransactionDate(nearest.nextPaymentDate);
     if (typeof days !== 'number') return base;
-    if (days < 0) return `${base} · просрочено`;
-    if (days === 0) return `${base} · сегодня`;
-    if (days === 1) return `${base} · завтра`;
-    return `${base} · через ${days} дн.`;
-  }, [days, nearest?.nextPaymentDate]);
+    if (days < 0) return `${base} · ${t('dashboard.obligations.overdue')}`;
+    if (days === 0) return `${base} · ${t('dashboard.obligations.today')}`;
+    if (days === 1) return `${base} · ${t('dashboard.obligations.tomorrow')}`;
+    return `${base} · ${t('dashboard.obligations.inDays', { count: days })}`;
+  }, [days, nearest?.nextPaymentDate, t]);
 
   function setState(next: WidgetState) {
     setWidgetState(next);
@@ -69,10 +71,10 @@ export function HomeObligationsWidget() {
     return (
       <section className="app-card app-obligations-widget app-obligations-widget--hidden">
         <button type="button" className="app-obligations-widget__hidden-main" onClick={() => setState('compact')}>
-          <span>Ближайший платёж скрыт</span>
+          <span>{t('dashboard.obligations.hidden')}</span>
           <strong>{formatMoney(nearest.monthlyPayment, nearest.currency)}</strong>
         </button>
-        <button type="button" className="app-obligations-widget__ghost" onClick={() => navigateTo('obligations')}>Открыть</button>
+        <button type="button" className="app-obligations-widget__ghost" onClick={() => navigateTo('obligations')}>{t('dashboard.obligations.open')}</button>
       </section>
     );
   }
@@ -81,13 +83,13 @@ export function HomeObligationsWidget() {
     <section className={widgetState === 'expanded' ? 'app-card app-obligations-widget app-obligations-widget--expanded' : 'app-card app-obligations-widget app-obligations-widget--compact'}>
       <div className="app-obligations-widget__line">
         <button type="button" className="app-obligations-widget__main" onClick={() => navigateTo('obligations')}>
-          <span className="app-obligations-widget__label">Ближайший платёж</span>
+          <span className="app-obligations-widget__label">{t('dashboard.obligations.nearest')}</span>
           <span className="app-obligations-widget__title">{nearest.title}</span>
           <small>{dateLabel}</small>
         </button>
         <div className="app-obligations-widget__side">
           <strong>{formatMoney(nearest.monthlyPayment, nearest.currency)}</strong>
-          <button type="button" className="app-obligations-widget__icon" aria-label={widgetState === 'expanded' ? 'Свернуть' : 'Раскрыть'} onClick={() => setState(widgetState === 'expanded' ? 'compact' : 'expanded')}>
+          <button type="button" className="app-obligations-widget__icon" aria-label={widgetState === 'expanded' ? t('dashboard.obligations.collapse') : t('dashboard.obligations.expand')} onClick={() => setState(widgetState === 'expanded' ? 'compact' : 'expanded')}>
             {widgetState === 'expanded' ? '⌃' : '⌄'}
           </button>
         </div>
@@ -96,19 +98,19 @@ export function HomeObligationsWidget() {
       {widgetState === 'expanded' ? (
         <>
           <div className="app-obligations-widget__meta" data-has-debt={showDebtRemainder ? 'true' : 'false'}>
-            <span>В месяц: {formatMoney(summary.monthlyPaymentTotal, nearest.currency)}</span>
-            {showDebtRemainder ? <span>Остаток: {formatMoney(summary.totalDebt, nearest.currency)}</span> : null}
+            <span>{t('dashboard.obligations.monthly', { amount: formatMoney(summary.monthlyPaymentTotal, nearest.currency) })}</span>
+            {showDebtRemainder ? <span>{t('dashboard.obligations.remainder', { amount: formatMoney(summary.totalDebt, nearest.currency) })}</span> : null}
           </div>
           <div className="app-obligations-widget__actions">
-            <button type="button" className="app-secondary-button" onClick={() => openModal({ type: 'obligation-edit', loan: nearest })}>Изменить</button>
-            <button type="button" className="app-secondary-button" onClick={() => setState('hidden')}>Скрыть</button>
-            <button type="button" className="app-primary-button" disabled={isMutating} onClick={() => markPaid(nearest.id)}>Оплатил</button>
+            <button type="button" className="app-secondary-button" onClick={() => openModal({ type: 'obligation-edit', loan: nearest })}>{t('common.edit')}</button>
+            <button type="button" className="app-secondary-button" onClick={() => setState('hidden')}>{t('dashboard.obligations.hide')}</button>
+            <button type="button" className="app-primary-button" disabled={isMutating} onClick={() => markPaid(nearest.id)}>{t('dashboard.obligations.paid')}</button>
           </div>
         </>
       ) : (
         <div className="app-obligations-widget__compact-actions">
-          <button type="button" className="app-secondary-button" onClick={() => setState('hidden')}>Скрыть</button>
-          <button type="button" className="app-primary-button" disabled={isMutating} onClick={() => markPaid(nearest.id)}>Оплатил</button>
+          <button type="button" className="app-secondary-button" onClick={() => setState('hidden')}>{t('dashboard.obligations.hide')}</button>
+          <button type="button" className="app-primary-button" disabled={isMutating} onClick={() => markPaid(nearest.id)}>{t('dashboard.obligations.paid')}</button>
         </div>
       )}
     </section>

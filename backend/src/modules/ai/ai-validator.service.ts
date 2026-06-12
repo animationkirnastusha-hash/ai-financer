@@ -248,14 +248,17 @@ export class AIValidatorService {
         const rawCategory = this.cleanEntityName(input.category);
         const rawSection = this.cleanEntityName(input.section);
         const rawDescription = this.cleanEntityName(input.description);
+        const rawTitle = this.cleanTransactionTitle(input.title, kind, rawCategory, rawDescription);
+        const description = this.cleanTransactionDescription(rawDescription, rawTitle, rawCategory, kind);
 
         input.kind = kind ?? 'expense';
         input.amount = amount ?? 0;
         input.account = accountRef || input.account || null;
         input.currency = moneyCurrency;
+        input.title = rawTitle || null;
         input.category = rawCategory || null;
         input.section = rawSection || null;
-        input.description = rawDescription || rawCategory || (kind === 'income' ? 'Доход' : 'Расход');
+        input.description = description;
 
         const amountInAccountCurrency = amount ? convertMoney(amount, moneyCurrency, targetCurrency) : 0;
 
@@ -1063,6 +1066,54 @@ export class AIValidatorService {
 
 
 
+  private cleanTransactionTitle(value: unknown, kind: 'income' | 'expense' | null, category: string, description: string) {
+    const raw = this.cleanEntityName(value);
+    if (!raw) return '';
+
+    const normalized = this.key(raw);
+    const tooLong = raw.length > 48;
+    const looksLikeCommandEcho = this.looksLikeTransactionCommandEcho(normalized);
+    const duplicatesDescription = Boolean(description) && this.key(description) === normalized;
+
+    if (tooLong || looksLikeCommandEcho || duplicatesDescription) return '';
+    return raw;
+  }
+
+  private cleanTransactionDescription(description: string, title: string, category: string, kind: 'income' | 'expense' | null) {
+    const fallback = category || title || (kind === 'income' ? 'Доход' : 'Расход');
+    const clean = description || fallback;
+    if (!clean) return kind === 'income' ? 'Доход' : 'Расход';
+
+    if (this.looksLikeTransactionCommandEcho(this.key(clean)) && fallback) return fallback;
+    return clean.length > 160 ? `${clean.slice(0, 157).trim()}...` : clean;
+  }
+
+  private looksLikeTransactionCommandEcho(value: string) {
+    if (!value) return false;
+    const commandWords = [
+      'потратил',
+      'потратила',
+      'потратить',
+      'израсходовал',
+      'запиши',
+      'записать',
+      'добавь',
+      'добавить',
+      'создай',
+      'создать',
+      'расход',
+      'доход',
+      'трата',
+      'руб',
+      'рублей',
+    ];
+
+    const words = value.split(' ').filter(Boolean);
+    if (words.length >= 6) return true;
+    return commandWords.some((word) => value.includes(word));
+  }
+
+
   private normalizeSpendingLimitTargetType(value: unknown, input: Record<string, unknown>, optional = false) {
     const raw = this.cleanString(value).toLowerCase();
     if (SPENDING_LIMIT_TARGET_TYPES.includes(raw)) return raw as 'account' | 'category' | 'total';
@@ -1122,11 +1173,8 @@ export class AIValidatorService {
   }
 
   private resolveLoan(loans: LoanLite[], rawName: string) {
-    const name = this.key(rawName);
-    if (!name) return null;
-    return loans.find((loan) => this.key(loan.title) === name)
-      ?? loans.find((loan) => this.key(loan.title).includes(name) || name.includes(this.key(loan.title)))
-      ?? null;
+    const resolved = this.findBestByText(loans, rawName, (loan) => loan.title);
+    return resolved?.item ?? null;
   }
 
   private normalizeObligationType(value: unknown) {
@@ -1171,18 +1219,72 @@ export class AIValidatorService {
   }
 
   private findGoalByName<T extends { id?: string | null; title: string }>(items: T[], raw: string) {
-    const ref = raw.trim().toLowerCase();
-    if (!ref) return null;
-    return items.find((item) => item.title.toLowerCase() === ref)
-      ?? items.find((item) => item.title.toLowerCase().includes(ref) || ref.includes(item.title.toLowerCase()))
-      ?? null;
+    const resolved = this.findBestByText(items, raw, (item) => item.title);
+    return resolved?.item ?? null;
   }
 
   private findByName<T extends { id?: string | null; name: string }>(items: T[], raw: string) {
-    const ref = raw.trim().toLowerCase();
-    return items.find((item) => item.name.toLowerCase() === ref)
-      ?? items.find((item) => item.name.toLowerCase().includes(ref) || ref.includes(item.name.toLowerCase()))
-      ?? null;
+    const resolved = this.findBestByText(items, raw, (item) => item.name);
+    return resolved?.item ?? null;
+  }
+
+  private findBestByText<T>(items: T[], raw: string, getLabel: (item: T) => string) {
+    const ref = this.key(raw);
+    if (!ref) return null;
+
+    let best: { item: T; score: number } | null = null;
+
+    for (const item of items) {
+      const label = this.key(getLabel(item));
+      if (!label) continue;
+
+      const score = this.textSimilarityScore(ref, label);
+      if (!best || score > best.score) best = { item, score };
+    }
+
+    if (!best) return null;
+    return best.score >= this.fuzzyThreshold(ref) ? best : null;
+  }
+
+  private textSimilarityScore(query: string, label: string) {
+    if (!query || !label) return 0;
+    if (query === label) return 1;
+
+    if (query.includes(label) || label.includes(query)) {
+      const ratio = Math.min(query.length, label.length) / Math.max(query.length, label.length);
+      return Math.max(0.74, ratio);
+    }
+
+    const distance = this.levenshtein(query, label);
+    const max = Math.max(query.length, label.length);
+    return max > 0 ? 1 - distance / max : 0;
+  }
+
+  private fuzzyThreshold(value: string) {
+    if (value.length <= 3) return 0.88;
+    if (value.length <= 5) return 0.78;
+    return 0.68;
+  }
+
+  private levenshtein(a: string, b: string) {
+    const matrix: number[][] = [];
+
+    for (let i = 0; i <= b.length; i += 1) matrix[i] = [i];
+    for (let j = 0; j <= a.length; j += 1) matrix[0][j] = j;
+
+    for (let i = 1; i <= b.length; i += 1) {
+      for (let j = 1; j <= a.length; j += 1) {
+        matrix[i][j] = b.charAt(i - 1) === a.charAt(j - 1)
+          ? matrix[i - 1][j - 1]
+          : Math.min(
+            matrix[i - 1][j - 1] + 1,
+            matrix[i][j - 1] + 1,
+            matrix[i - 1][j] + 1,
+          );
+      }
+    }
+
+    return matrix[b.length][a.length];
   }
 
   private maxRisk(levels: AIRiskLevel[]): AIRiskLevel {
@@ -1203,7 +1305,7 @@ export class AIValidatorService {
       const kind = input.kind === 'income' ? 'Доход' : 'Расход';
       const amount = Number(input.amount ?? 0);
       const currency = typeof input.currency === 'string' ? input.currency : 'RUB';
-      const description = this.cleanString(input.description || input.category) || 'операция';
+      const description = this.cleanString(input.title || input.description || input.category) || 'операция';
       const account = this.cleanString(input.account);
       return `${kind}: ${description} — ${amount} ${currency}${account ? `, счёт: ${account}` : ''}.`;
     }

@@ -59,7 +59,12 @@
     "repo:clean": "node scripts/clean-local-artifacts.mjs",
     "repo:clean:dry": "node scripts/clean-local-artifacts.mjs --dry-run",
     "audit:final:clean": "npm run repo:clean && npm run audit:final",
-    "release:check": "node scripts/run-backend-release-check.mjs"
+    "release:check": "node scripts/run-backend-release-check.mjs",
+    "test:ai-money-contract": "tsx scripts/check-ai-money-contract.ts",
+    "test:tester-contracts": "npm run test:ai-money-contract",
+    "test:tester-final": "node scripts/run-final-tester-check.mjs",
+    "test:final-tester": "node scripts/run-final-tester-check.mjs",
+    "pretest:full": "node scripts/run-final-tester-check.mjs"
   },
   "keywords": [],
   "author": "",

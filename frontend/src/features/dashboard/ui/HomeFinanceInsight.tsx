@@ -13,7 +13,11 @@ type Props = {
 
 export function HomeFinanceInsight({ transactions, mode, period, rates }: Props) {
   const { t } = useI18n();
-  const analytics = buildHomeFinanceAnalytics(transactions, mode, period, rates);
+  const analytics = buildHomeFinanceAnalytics(transactions, mode, period, rates, {
+    otherExpense: t('dashboard.analytics.otherExpense'),
+    incomeSection: t('dashboard.analytics.incomeSection'),
+    incomeCategory: t('dashboard.analytics.incomeCategory'),
+  });
   const first = analytics.categories[0];
   const modeTitle = mode === 'expense' ? t('transaction.type.expense') : t('transaction.type.income');
   const periodTitle = period === 'day' ? t('analytics.period.day') : period === 'week' ? t('analytics.period.week') : t('analytics.period.month');

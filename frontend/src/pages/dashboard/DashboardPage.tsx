@@ -35,8 +35,12 @@ export default function DashboardPage() {
   const navigateTo = useNavigationStore((state) => state.navigateTo);
   const openModal = useAppModalStore((state) => state.openModal);
   const accounts = useAccountsStore((state) => state.items);
+  const accountsLoading = useAccountsStore((state) => state.isLoading);
+  const accountsError = useAccountsStore((state) => state.error);
   const loadAccounts = useAccountsStore((state) => state.loadAccounts);
   const transactions = useTransactionsStore((state) => state.items);
+  const transactionsLoading = useTransactionsStore((state) => state.isLoading);
+  const transactionsError = useTransactionsStore((state) => state.error);
   const loadTransactions = useTransactionsStore((state) => state.loadTransactions);
   const subscription = useSubscriptionStore((state) => state.status);
   const loadSubscription = useSubscriptionStore((state) => state.load);
@@ -56,6 +60,12 @@ export default function DashboardPage() {
 
   const rates = useMemo(() => ({ usd: rubToUsdRate || 90, eur: rubToEurRate || 100 }), [rubToEurRate, rubToUsdRate]);
   const hasBusiness = Boolean(subscription?.access?.hasBusiness);
+  const financeIsInitiallyLoading = (accountsLoading || transactionsLoading) && accounts.length === 0 && transactions.length === 0;
+  const financeLoadError = accounts.length === 0 && transactions.length === 0 ? accountsError || transactionsError : null;
+
+  const retryFinanceLoad = () => {
+    void Promise.allSettled([loadAccounts(true), loadTransactions(true), loadSubscription()]);
+  };
 
   const month = useMemo(() => {
     const currentMonth = transactions.filter((item) => isCurrentMonth(item.date));
@@ -69,7 +79,7 @@ export default function DashboardPage() {
   return (
     <div className="app-page app-dashboard-page text-white">
       <div className="app-page__inner app-home-layout">
-        <ScreenTopBar title="Главная" right={['notifications', 'analytics', 'settings']} />
+        <ScreenTopBar title={t('screen.dashboard')} right={['notifications', 'analytics', 'settings']} />
 
         {hasBusiness ? (
           <section className="home-workspace-switch app-card">
@@ -78,6 +88,25 @@ export default function DashboardPage() {
               <strong>{t('dashboard.workspace.personal')}</strong>
             </div>
             <button type="button" onClick={() => navigateTo('business-accountant')}>{t('dashboard.workspace.business')}</button>
+          </section>
+        ) : null}
+
+        {financeLoadError ? (
+          <section className="app-card app-home-load-state app-home-load-state--error">
+            <div>
+              <span>{t('dashboard.data.errorEyebrow')}</span>
+              <strong>{t('dashboard.data.errorTitle')}</strong>
+              <p>{t('dashboard.data.errorCaption')}</p>
+            </div>
+            <button type="button" onClick={retryFinanceLoad}>{t('common.retry')}</button>
+          </section>
+        ) : financeIsInitiallyLoading ? (
+          <section className="app-card app-home-load-state">
+            <div>
+              <span>{t('dashboard.data.loadingEyebrow')}</span>
+              <strong>{t('dashboard.data.loadingTitle')}</strong>
+              <p>{t('dashboard.data.loadingCaption')}</p>
+            </div>
           </section>
         ) : null}
 

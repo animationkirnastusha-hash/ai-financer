@@ -1,6 +1,6 @@
 import type { TransactionDto } from '@/features/transactions/api/transactions.api';
 import type { HomeCashflowMode, HomeCashflowPeriod, HomeFinanceGroup } from '@/features/dashboard/lib/homeFinanceAnalytics';
-import { buildHomeFinanceAnalytics, conicGradient, modeLabel, periodLabel } from '@/features/dashboard/lib/homeFinanceAnalytics';
+import { buildHomeFinanceAnalytics, conicGradient } from '@/features/dashboard/lib/homeFinanceAnalytics';
 import { formatMoney } from '@/shared/lib/money';
 import { useI18n } from '@/shared/lib/i18n';
 
@@ -23,7 +23,14 @@ export function HomeChartDetailsModal({ open, transactions, mode, period, rates,
   const { t } = useI18n();
   if (!open) return null;
 
-  const analytics = buildHomeFinanceAnalytics(transactions, mode, period, rates);
+  const analytics = buildHomeFinanceAnalytics(transactions, mode, period, rates, {
+    otherExpense: t('dashboard.analytics.otherExpense'),
+    incomeSection: t('dashboard.analytics.incomeSection'),
+    incomeCategory: t('dashboard.analytics.incomeCategory'),
+  });
+  const periodTitle = period === 'day' ? t('analytics.period.day') : period === 'week' ? t('analytics.period.week') : t('analytics.period.month');
+  const modeTitle = mode === 'expense' ? t('transaction.type.expense') : t('transaction.type.income');
+
   return (
     <div className="app-modal-backdrop app-home-chart-backdrop" style={{ zIndex: modalLayer }} data-no-swipe="true" onClick={onClose}>
       <div className="app-modal-sheet app-home-chart-modal" data-no-swipe="true" onClick={(event) => event.stopPropagation()}>
@@ -31,8 +38,8 @@ export function HomeChartDetailsModal({ open, transactions, mode, period, rates,
         <div className="app-modal-body">
           <div className="app-home-chart-modal__head">
             <div>
-              <div className="app-eyebrow">{periodLabel(period)}</div>
-              <h2>{modeLabel(mode)}</h2>
+              <div className="app-eyebrow">{periodTitle}</div>
+              <h2>{modeTitle}</h2>
               <p>{analytics.total > 0 ? formatMoney(analytics.total, 'RUB') : t('dashboard.chart.empty')}</p>
             </div>
             <button type="button" className="app-icon-button" onClick={onClose} aria-label={t('common.close')}>×</button>
@@ -63,7 +70,7 @@ export function HomeChartDetailsModal({ open, transactions, mode, period, rates,
                   <i style={{ background: section.color }}>{section.icon || ''}</i>
                   <span>
                     <b>{section.name}</b>
-                    <small>{section.count} · {section.percent}%</small>
+                    <small>{t('dashboard.chart.operationsCount', { count: section.count })} · {section.percent}%</small>
                   </span>
                   <strong>{formatMoney(section.amount, 'RUB')}</strong>
                 </div>
@@ -74,7 +81,7 @@ export function HomeChartDetailsModal({ open, transactions, mode, period, rates,
                       <i style={{ background: group.color }}>{group.icon || ''}</i>
                       <span className="min-w-0">
                         <b>{group.name}</b>
-                        <small>{group.count} · {group.percent}%</small>
+                        <small>{t('dashboard.chart.operationsCount', { count: group.count })} · {group.percent}%</small>
                       </span>
                       <strong>{formatMoney(group.amount, 'RUB')}</strong>
                     </button>

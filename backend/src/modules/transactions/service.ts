@@ -3,7 +3,7 @@ import { prisma } from '../../lib/prisma';
 import { BadRequestError, NotFoundError } from '../../shared/core/errors';
 import { progressionActivityBridge } from '../progression/activity-bridge.service';
 import { shouldReplaceGenericIcon } from '../taxonomy/taxonomy-icons';
-import { resolveTransactionSemanticTaxonomy } from '../taxonomy/transaction-taxonomy';
+import { looksLikePlaceOrMerchant, resolveTransactionSemanticTaxonomy } from '../taxonomy/transaction-taxonomy';
 
 export type TransactionType = 'income' | 'expense' | 'transfer';
 
@@ -515,9 +515,15 @@ export class TransactionService {
     taxonomy?: { categoryId?: string | null; titleFallback?: string | null } | null,
   ) {
     const cleanTitle = title?.trim();
-    if (cleanTitle) return cleanTitle;
-
     const semanticTitle = taxonomy?.titleFallback?.trim();
+
+    if (cleanTitle) {
+      if (semanticTitle && (looksLikePlaceOrMerchant(cleanTitle) || cleanTitle.length > 48)) {
+        return semanticTitle;
+      }
+      return cleanTitle;
+    }
+
     if (semanticTitle) return semanticTitle;
 
     const cleanDescription = description?.trim();

@@ -28,7 +28,11 @@ export function HomeCashflowChart({
   onCreate,
 }: Props) {
   const { t } = useI18n();
-  const analytics = buildHomeFinanceAnalytics(transactions, mode, period, rates);
+  const analytics = buildHomeFinanceAnalytics(transactions, mode, period, rates, {
+    otherExpense: t('dashboard.analytics.otherExpense'),
+    incomeSection: t('dashboard.analytics.incomeSection'),
+    incomeCategory: t('dashboard.analytics.incomeCategory'),
+  });
   const primary = analytics.sections[0];
   const hasData = analytics.total > 0;
   const modeTitle = mode === 'expense' ? t('transaction.type.expense') : t('transaction.type.income');

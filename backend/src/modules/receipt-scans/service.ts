@@ -232,13 +232,25 @@ export class ReceiptScanService {
     if (!reviewed.accountId) throw new BadRequestError('Account is required to create expense from receipt');
     if (!reviewed.totalAmount) throw new BadRequestError('Receipt amount is required to create expense');
 
+    const receiptGroups = groupReceiptTaxonomyItems(buildReceiptTaxonomyItems((await prisma.receiptScan.findFirst({ where: { id: receiptScanId, userId } }))?.rawText));
+    const primaryCategory = receiptGroups[0]?.categories[0]?.categoryName ?? null;
+    const receiptTitle = input.title?.trim()
+      || primaryCategory
+      || 'Расход по чеку';
+    const receiptDescription = input.description?.trim()
+      || [
+        `Расход из чека ${reviewed.fileName}`,
+        reviewed.merchant ? `Место: ${reviewed.merchant}` : '',
+        primaryCategory ? `Основная категория: ${primaryCategory}` : '',
+      ].filter(Boolean).join(' · ');
+
     const transaction = await this.transactionService.createTransaction(userId, {
       accountId: reviewed.accountId,
       categoryId: reviewed.categoryId,
       amount: reviewed.totalAmount,
       type: 'expense',
-      title: input.title?.trim() || reviewed.merchant || 'Чек',
-      description: input.description?.trim() || `Расход из чека ${reviewed.fileName}`,
+      title: receiptTitle,
+      description: receiptDescription,
       date: reviewed.purchasedAt ? new Date(reviewed.purchasedAt) : new Date(),
       isAIGenerated: false,
     });

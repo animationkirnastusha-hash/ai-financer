@@ -47,3 +47,97 @@
 .app-obligations-widget__meta[data-has-debt="false"] {
   grid-template-columns: 1fr;
 }
+
+/* Pack 116: tester-facing dashboard polish. */
+.app-home-cashflow-card__head h2 {
+  max-width: 100%;
+  overflow-wrap: normal;
+  word-break: keep-all;
+  hyphens: manual;
+  white-space: nowrap;
+}
+
+.app-home-cashflow-card__head {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.app-home-period-switch,
+.app-home-mode-switch {
+  max-width: 100%;
+  min-width: 0;
+}
+
+.app-home-period-switch button,
+.app-home-mode-switch button {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.app-home-load-state {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: center;
+  border-color: rgba(110, 231, 183, .13);
+  background: radial-gradient(circle at top right, rgba(110, 231, 183, .08), transparent 44%), rgba(255,255,255,.04);
+}
+
+.app-home-load-state span,
+.app-home-load-state strong,
+.app-home-load-state p {
+  display: block;
+  min-width: 0;
+}
+
+.app-home-load-state span {
+  color: rgba(255,255,255,.45);
+  font-size: 11px;
+  font-weight: 850;
+  letter-spacing: .13em;
+  text-transform: uppercase;
+}
+
+.app-home-load-state strong {
+  margin-top: 5px;
+  color: rgba(255,255,255,.94);
+  font-size: 17px;
+  line-height: 1.15;
+}
+
+.app-home-load-state p {
+  margin-top: 5px;
+  color: rgba(255,255,255,.56);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.app-home-load-state button {
+  min-height: 40px;
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 999px;
+  background: rgba(255,255,255,.055);
+  color: rgba(255,255,255,.84);
+  padding: 0 14px;
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.app-home-load-state--error {
+  border-color: rgba(251, 191, 36, .18);
+  background: radial-gradient(circle at top right, rgba(251, 191, 36, .10), transparent 44%), rgba(255,255,255,.04);
+}
+
+@media (max-width: 390px) {
+  .app-home-cashflow-card__head h2 {
+    font-size: clamp(23px, 7vw, 32px);
+  }
+
+  .app-home-load-state {
+    grid-template-columns: 1fr;
+  }
+
+  .app-home-load-state button {
+    width: 100%;
+  }
+}

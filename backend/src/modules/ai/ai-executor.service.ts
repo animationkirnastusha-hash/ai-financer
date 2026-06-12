@@ -6,7 +6,8 @@ import { progressionActivityBridge } from '../progression/activity-bridge.servic
 import { aiPremiumService } from './ai-premium.service';
 import { aiCompanionService } from './ai-companion.service';
 import { aiAnalyticsService } from './ai-analytics.service';
-import { resolveCategoryAppearance, resolveSectionAppearance, resolveTaxonomyForText, shouldReplaceGenericIcon } from '../taxonomy/taxonomy-icons';
+import { resolveCategoryAppearance, resolveSectionAppearance, shouldReplaceGenericIcon } from '../taxonomy/taxonomy-icons';
+import { looksLikePlaceOrMerchant, resolveTransactionSemanticTaxonomy } from '../taxonomy/transaction-taxonomy';
 
 const transactionInclude = {
   account: {
@@ -79,6 +80,43 @@ export class AIExecutorService {
     };
   }
 
+
+
+  private buildAITransactionTitle(params: {
+    kind: 'income' | 'expense';
+    rawTitle?: string | null;
+    categoryName: string;
+    taxonomyTitle?: string | null;
+  }) {
+    const rawTitle = this.cleanString(params.rawTitle);
+    const taxonomyTitle = this.cleanString(params.taxonomyTitle);
+
+    if (rawTitle && rawTitle.length <= 48 && !this.looksLikeTransactionCommandEcho(rawTitle)) {
+      return rawTitle;
+    }
+
+    if (taxonomyTitle) return taxonomyTitle;
+    if (params.kind === 'income') return 'Доход';
+    return params.categoryName || 'Расход';
+  }
+
+  private looksLikeTransactionCommandEcho(value: string) {
+    const text = value.toLowerCase();
+    if (text.split(/\s+/).filter(Boolean).length >= 6) return true;
+    return [
+      'потратил',
+      'потратила',
+      'потратить',
+      'добавь',
+      'добавить',
+      'запиши',
+      'записать',
+      'создай',
+      'создать',
+      'руб',
+      'рублей',
+    ].some((word) => text.includes(word));
+  }
 
   private applyStructuredBatchGuards(actions: AIValidatedAction[]) {
     const createAccounts = actions.filter((action) => action.tool === 'create_account');
@@ -215,18 +253,32 @@ export class AIExecutorService {
       const amount = this.toInteger(resolved.amountInAccountCurrency ?? input.amount, 0);
       if (amount <= 0) throw new BadRequestError('Transaction amount must be positive');
 
-      const taxonomy = resolveTaxonomyForText({
+      const rawTitle = typeof input.title === 'string' && input.title.trim() ? input.title.trim() : null;
+      const rawCategory = typeof input.category === 'string' && input.category.trim() ? input.category.trim() : null;
+      const rawSection = typeof input.section === 'string' && input.section.trim() ? input.section.trim() : null;
+      const rawDescription = typeof input.description === 'string' && input.description.trim() ? input.description.trim() : null;
+      const taxonomy = resolveTransactionSemanticTaxonomy({
         kind,
-        title: typeof input.category === 'string' ? input.category : undefined,
-        description: typeof input.description === 'string' ? input.description : undefined,
+        title: rawTitle ?? rawCategory,
+        description: rawDescription,
+        sectionName: rawSection,
+        categoryName: rawCategory,
       });
 
       const sectionId = typeof resolved.sectionId === 'string'
         ? resolved.sectionId
-        : await this.findOrCreateSectionId(tx, userId, typeof input.section === 'string' && input.section.trim() ? input.section : taxonomy.sectionName);
+        : await this.findOrCreateSectionId(tx, userId, rawSection ?? taxonomy.sectionName);
+
+      const semanticCategoryNames = taxonomy.semanticCategories ?? [];
+      const shouldPreferSemanticCategory = semanticCategoryNames.length > 1
+        || Boolean(taxonomy.merchantName && rawCategory && semanticCategoryNames.length > 0 && !semanticCategoryNames.includes(rawCategory))
+        || (rawCategory ? looksLikePlaceOrMerchant(rawCategory) : false);
+      const categoryName = rawCategory && !shouldPreferSemanticCategory
+        ? rawCategory
+        : taxonomy.categoryName;
 
       const categoryId = await this.findOrCreateCategoryId(tx, userId, {
-        name: typeof input.category === 'string' && input.category.trim() ? input.category : taxonomy.categoryName,
+        name: categoryName,
         type: kind,
         sectionId,
       });
@@ -246,11 +298,15 @@ export class AIExecutorService {
           sectionId,
           amount,
           type: kind,
-          description: typeof input.description === 'string' && input.description.trim()
-            ? input.description.trim()
-            : kind === 'income'
-              ? 'Пополнение счёта'
-              : 'Расход',
+          title: this.buildAITransactionTitle({
+            kind,
+            rawTitle,
+            categoryName,
+            taxonomyTitle: taxonomy.titleFallback,
+          }),
+          description: taxonomy.descriptionFallback
+            ?? rawDescription
+            ?? (kind === 'income' ? 'Пополнение счёта' : categoryName),
           date: new Date(),
           isAIGenerated: true,
         },

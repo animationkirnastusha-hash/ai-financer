@@ -5,6 +5,8 @@ import path from 'node:path';
 const backendRoot = process.cwd();
 const projectRoot = path.resolve(backendRoot, '..');
 const dryRun = process.argv.includes('--dry-run');
+const keepDist = process.argv.includes('--keep-dist') || process.env.REPO_CLEAN_KEEP_DIST === '1';
+const keepReports = process.argv.includes('--keep-reports') || process.env.REPO_CLEAN_KEEP_REPORTS === '1';
 
 const targets = [
   '.tmp.drivedownload',
@@ -19,8 +21,13 @@ const targets = [
   'backend/prisma/dev.db-journal',
   'backend/prisma/dev.db-wal',
   'backend/prisma/dev.db-shm',
-  'frontend/dist',
 ];
+
+if (!keepDist) targets.push('frontend/dist');
+if (!keepReports) {
+  targets.push('backend/reports');
+  targets.push('frontend/reports');
+}
 
 const removed = [];
 const skipped = [];
@@ -41,6 +48,8 @@ for (const relativePath of targets) {
 console.log('AI-Financer local artifact cleanup');
 console.log(`Project root: ${projectRoot}`);
 console.log(`Mode: ${dryRun ? 'dry-run' : 'delete'}`);
+console.log(`Keep frontend dist: ${keepDist ? 'yes' : 'no'}`);
+console.log(`Keep reports: ${keepReports ? 'yes' : 'no'}`);
 console.log('');
 
 if (removed.length) {

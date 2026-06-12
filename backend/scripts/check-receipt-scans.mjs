@@ -8,10 +8,7 @@ async function ensurePremiumAccess(context) {
   });
   const orderId = order.payload?.order?.id;
   if (!orderId) throw new Error('Premium mock order was not created');
-
-  const completed = await requestJson(context, `/payments/orders/${orderId}/mock-complete`, {
-    method: 'POST',
-  });
+  const completed = await requestJson(context, `/payments/orders/${orderId}/mock-complete`, { method: 'POST' });
   if (!completed.payload?.subscription?.access?.hasPremium) throw new Error('Premium access was not granted');
 }
 
@@ -88,20 +85,16 @@ await runSmoke('receipt-scans', async (context) => {
 
   const expense = await requestJson(context, `/receipt-scans/${scanId}/expense`, {
     method: 'POST',
-    expected: [200],
     body: {
       accountId,
+      totalAmount: 1234,
       title: `Smoke receipt expense ${context.suffix}`,
       description: 'predeploy receipt smoke',
+      purchasedAt: new Date().toISOString(),
     },
   });
-
-  if (expense.payload?.scan?.status !== 'expense_created') {
-    throw new Error('Receipt expense did not set expense_created status');
-  }
-  if (!expense.payload?.transactionId) {
-    throw new Error('Receipt expense did not return transactionId');
-  }
+  if (expense.payload?.scan?.status !== 'expense_created') throw new Error('Receipt expense did not set expense_created status');
+  if (!expense.payload?.transactionId) throw new Error('Receipt expense did not return transactionId');
 
   const after = await requestJson(context, '/subscription/me');
   const afterUsed = after.payload?.usage?.receiptScansThisMonth?.used;

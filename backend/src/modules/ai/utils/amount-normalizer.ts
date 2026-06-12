@@ -40,26 +40,79 @@ export function detectCurrencyInText(text: unknown, fallback?: AICurrency): AICu
 }
 
 /**
- * Accepts only structured numeric contract values produced by the AI tool contract.
- * This function intentionally does not read natural-language command text.
+ * Accepts structured numeric contract values produced by the AI tool contract.
+ * This function intentionally does not read the user's natural-language command text.
+ * It only tolerates compact amount tokens inside already structured amount fields:
+ *  - 20000
+ *  - "20 000"
+ *  - "20к" / "20 k" / "20 тыс"
+ *  - "1.5к"
  */
 export function normalizeMoneyAmount(value: unknown, _contextText?: string): number | null {
   if (typeof value === 'number') return toSafeInteger(value);
   if (typeof value !== 'string') return null;
 
-  const raw = value.trim().replace(',', '.');
-  if (!raw) return null;
+  const normalized = normalizeStructuredAmountText(value);
+  if (!normalized) return null;
 
-  // Structured numeric value only. No suffixes, no words, no embedded command text.
-  if (!/^\d{1,15}(?:\.\d{1,2})?$/.test(raw)) return null;
+  const suffixMatch = normalized.match(/^(\d{1,12}(?:[.,]\d{1,3})?)\s*(к|k|тыс|тыс\.|тысяч|тысячи|thousand|m|м|млн|млн\.|миллион|миллиона|миллионов|million)$/iu);
+  if (suffixMatch) {
+    const amount = Number(suffixMatch[1].replace(',', '.'));
+    const suffix = suffixMatch[2].toLowerCase();
+    const multiplier = suffix === 'm' || suffix === 'м' || suffix.startsWith('млн') || suffix.startsWith('миллион') || suffix === 'million'
+      ? 1_000_000
+      : 1_000;
 
-  return toSafeInteger(Number(raw));
+    return toSafeInteger(amount * multiplier);
+  }
+
+  const plainAmount = normalizePlainAmountText(normalized);
+  if (plainAmount === null) return null;
+
+  return toSafeInteger(plainAmount);
 }
 
 export function convertMoney(amount: number, from: AICurrency, to: AICurrency) {
   if (from === to) return Math.round(amount);
   const amountInRub = amount * CURRENCY_RATES_TO_RUB[from];
   return Math.round(amountInRub / CURRENCY_RATES_TO_RUB[to]);
+}
+
+
+function normalizeStructuredAmountText(value: string) {
+  const raw = value
+    .trim()
+    .toLowerCase()
+    .replace(/[₽$€]/g, ' ')
+    .replace(/\b(rub|rur|руб|руб\.|рублей|рубля|доллар|доллара|долларов|usd|eur|евро|vnd|донг|донгов)\b/giu, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  if (!raw) return '';
+
+  return raw;
+}
+
+function normalizePlainAmountText(value: string) {
+  const compact = value.trim();
+
+  if (/^\d{1,3}(?:\s\d{3})+$/.test(compact)) {
+    return Number(compact.replace(/\s/g, ''));
+  }
+
+  if (/^\d{1,3}(?:[,.]\d{3})+$/.test(compact)) {
+    return Number(compact.replace(/[,.]/g, ''));
+  }
+
+  if (/^\d{1,15}$/.test(compact)) {
+    return Number(compact);
+  }
+
+  if (/^\d{1,12}[,.]\d{1,2}$/.test(compact)) {
+    return Number(compact.replace(',', '.'));
+  }
+
+  return null;
 }
 
 function toSafeInteger(value: number) {
