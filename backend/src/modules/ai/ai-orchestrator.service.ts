@@ -75,7 +75,7 @@ export class AIOrchestratorService {
           executed: false,
           requiresConfirmation: false,
           riskLevel: "low",
-          message: `В одном запросе можно выполнить до ${this.planLimits.getLimit()} действий. Больше задач за раз будет доступно в Premium.`,
+          message: `За один раз можно выполнить до ${this.planLimits.getLimit()} действий. Разбей запрос на несколько коротких команд.`,
           parsed: null,
           meta: { auditLogId: audit.id },
         };
@@ -261,7 +261,7 @@ export class AIOrchestratorService {
         meta: { auditLogId: audit.id, pendingActionId: pending.id },
       };
     } catch (error) {
-      const message = error instanceof Error ? error.message : "AI Core failed";
+      const message = error instanceof Error ? error.message : "AI command failed";
       console.error("[AI] handleCommand failed", {
         message,
         command: plannerCommand,
@@ -284,7 +284,7 @@ export class AIOrchestratorService {
         requiresConfirmation: false,
         riskLevel: "low",
         message:
-          "AI Core не смог подготовить действие. Повтори коротко: действие, сумма, счёт.",
+          "Не смогла подготовить действие. Напиши короче: что сделать, сумма и счёт, если он нужен.",
         parsed: null,
         meta: { auditLogId: audit.id },
       };
@@ -482,7 +482,7 @@ export class AIOrchestratorService {
     if (!validated.ok) {
       const stillNeedsEntity = this.clarification.build(validated);
       const message = stillNeedsEntity
-        ? `${stillNeedsEntity.question} Я не нашёл: ${candidate}.`
+        ? this.clarification.buildRetryMessage(stillNeedsEntity, candidate)
         : validated.issues.map((issue) => issue.message).join("\n") ||
           "Не удалось применить уточнение.";
 

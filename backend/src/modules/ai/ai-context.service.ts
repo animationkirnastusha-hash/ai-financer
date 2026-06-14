@@ -59,7 +59,7 @@ export class AIContextService {
       prisma.aISessionState.findUnique({ where: { userId } }),
     ]);
 
-    const memory = await this.memory.buildUserMemory(userId, { accounts });
+    const memory = await this.memory.buildUserMemory(userId, { accounts, categories, sections, goals });
 
     return { accounts, categories, sections, goals, obligations, obligationReminders, recentTransactions, memory, aiSettings, onboardingState, aiSessionState };
   }

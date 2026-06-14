@@ -1,5 +1,5 @@
 import { prisma } from '../../lib/prisma';
-import { AIEntityResolverService } from './ai-entity-resolver.service';
+import { AIEntityResolverService } from './semantic/semantic-entity-resolver.service';
 
 const resolver = new AIEntityResolverService();
 
@@ -33,6 +33,9 @@ const FINANCIAL_MEMORY_TOOLS = new Set([
 export class AIMemoryService {
   async buildUserMemory(userId: string, context: {
     accounts?: Array<{ id: string; name: string; type?: string | null; currency?: string | null; balance?: number | null }>;
+    categories?: Array<{ id: string; name: string; type?: string | null; sectionId?: string | null }>;
+    sections?: Array<{ id: string; name: string }>;
+    goals?: Array<{ id: string; title: string; status?: string | null }>;
   }) {
     const [messages, auditLogs] = await Promise.all([
       prisma.aIMessage.findMany({
@@ -48,9 +51,15 @@ export class AIMemoryService {
     ]);
 
     const accountAliases = resolver.buildAccountMemory(context.accounts ?? []);
+    const categoryAliases = resolver.buildEntityMemory(context.categories ?? [], { kind: 'category', getLabel: (item) => item.name });
+    const sectionAliases = resolver.buildEntityMemory(context.sections ?? [], { kind: 'section', getLabel: (item) => item.name });
+    const goalAliases = resolver.buildEntityMemory(context.goals ?? [], { kind: 'goal', getLabel: (item) => item.title });
 
     return {
       accountAliases,
+      categoryAliases,
+      sectionAliases,
+      goalAliases,
       preferences: messages
         .map((message) => this.safeParse(message.meta) ?? { content: message.content })
         .filter(Boolean)

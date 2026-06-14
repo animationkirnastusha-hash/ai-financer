@@ -296,6 +296,17 @@ export function TextChatOverlay({
   }, [open, voice.refreshPermissionState]);
 
   useEffect(() => {
+    if (!open) return;
+
+    const handleNavigationCompleted = () => {
+      window.setTimeout(onClose, 120);
+    };
+
+    window.addEventListener('ai-financer:navigation-completed', handleNavigationCompleted);
+    return () => window.removeEventListener('ai-financer:navigation-completed', handleNavigationCompleted);
+  }, [onClose, open]);
+
+  useEffect(() => {
     if (!open || subscription) return;
     void loadSubscription();
   }, [loadSubscription, open, subscription]);

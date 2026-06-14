@@ -189,6 +189,7 @@ model Goal {
   accountId     String?
   status        String   @default("active")
   note          String?
+  autoSavePercent Int     @default(0)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
@@ -388,6 +389,7 @@ model LoanPayment {
   paidAt        DateTime @default(now())
   transactionId String?
   note          String?
+  autoSavePercent Int     @default(0)
   createdAt     DateTime @default(now())
 
   user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)

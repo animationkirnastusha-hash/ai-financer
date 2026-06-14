@@ -5,6 +5,7 @@ import { FinaCommandBar } from '@/features/fina/ui/FinaCommandBar';
 import { ScreenTopBar } from '@/shared/ui/ScreenTopBar';
 import { EmptyState } from '@/shared/ui/EmptyState';
 import { formatMoney } from '@/shared/lib/money';
+import { useI18n } from '@/shared/lib/i18n';
 
 function clampProgress(value: number) {
   if (!Number.isFinite(value)) return 0;
@@ -12,6 +13,7 @@ function clampProgress(value: number) {
 }
 
 export default function GoalsPage() {
+  const { t } = useI18n();
   const [goals, setGoals] = useState<GoalDto[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -103,6 +105,10 @@ export default function GoalsPage() {
                   <div className="mt-2 flex justify-between gap-3 text-xs text-white/42">
                     <span>{formatMoney(goal.currentAmount, goal.currency)} собрано</span>
                     <span>{formatMoney(left, goal.currency)} осталось · {progress}%</span>
+                  </div>
+                  <div className="app-goal-card__account">
+                    <span>{goal.account?.name ?? t('goals.account.autoCreated')}</span>
+                    {Number(goal.autoSavePercent ?? 0) > 0 ? <strong>{t('goals.account.autoSave', { percent: goal.autoSavePercent ?? 0 })}</strong> : <strong>{t('goals.account.manual')}</strong>}
                   </div>
                 </button>
               );

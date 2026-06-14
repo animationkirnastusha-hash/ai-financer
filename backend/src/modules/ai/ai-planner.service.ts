@@ -14,6 +14,9 @@ type UserContext = {
   recentTransactions?: Array<{ id?: string; description?: string | null; type?: string; amount?: number; createdAt?: string; account?: { name?: string }; category?: { name?: string } | null; section?: { name?: string } | null }>;
   memory?: {
     accountAliases?: Array<{ name?: string; type?: string; currency?: string; aliases?: string[] }>;
+    categoryAliases?: Array<{ name?: string; aliases?: string[] }>;
+    sectionAliases?: Array<{ name?: string; aliases?: string[] }>;
+    goalAliases?: Array<{ name?: string; aliases?: string[] }>;
     preferences?: unknown[];
     recentSuccessfulCommands?: Array<{ command?: string; intent?: string; status?: string }>;
   };
@@ -84,7 +87,8 @@ export class AIPlannerService {
       'For non-financial small talk, return {"mode":"reply","summary":"short human answer, then gently return to finance context","actions":[]}.',
       'No prose. No markdown. No questions outside JSON.',
       'Use semantic understanding only. Do not rely on keyword rules or regex-like extraction.',
-      'Never output accountId/categoryId/sectionId; backend resolves entities.',
+      'Use CTX entity hints as meanings, not as commands: colloquial account/category/goal words may refer to existing user entities even when the endings differ.',
+      'Never output accountId/categoryId/sectionId/goalId; backend resolves entities by semantic hints and confidence.',
       'The current USER message is the primary source of truth. Context and memory are secondary only for pronouns or explicit continuations.',
       'Treat voice-recognition text as noisy but meaningful: missing punctuation, spoken numbers, and informal wording are expected. Infer intent from the whole sentence and the available tool contract, not from hard-coded phrases.',
       'If USER contains VOICE_SESSION_COMMAND, treat it as one continuous command assembled from speech segments. Later correction segments override earlier conflicting details, but preserve amounts and entities from earlier segments when they were not explicitly cancelled or replaced.',
@@ -93,6 +97,8 @@ export class AIPlannerService {
       'If the request is materially ambiguous, produce the safest plan that lets validator ask for clarification instead of inventing facts.',
       'Return transaction amount fields as plain positive numbers when the amount is unambiguous. Compact spoken amount forms such as 20к, 20 k, 20 тыс, 20 тысяч, 1.5к mean thousands. Never substitute a different amount. If uncertain, leave amount missing so validator asks clarification.',
       'For create_transaction, use title only for a short clean operation label. Do not copy the full user phrase into title. Put merchant/place and item details into description.',
+      'When the user answers a clarification with an informal phrase such as “с налички”, “мой кэш”, or “та самая копилка”, put that phrase into the relevant entity field; backend resolves it semantically.',
+      'For screen-opening requests, do not invent financial actions. If no screen tool exists, return reply mode with a short natural acknowledgement; the UI navigation layer may handle it.',
       'Do not include examples in reasoning or outputs. Do not implement phrase-specific behavior in planner instructions.',
     ].join(' ');
   }
@@ -104,7 +110,7 @@ export class AIPlannerService {
       'RULES:',
       'Use only listed tools.',
       'Do not parse the command with rules. Plan by semantic meaning and tool contracts only. No regex-like financial extraction and no rule-based financial extraction.',
-      'Do not invent unavailable fields. Use natural entity names; backend validator resolves them.',
+      'Do not invent unavailable fields. Use natural entity names, user wording, or CTX entity names; backend validator resolves them semantically.',
       'If the user says something unrelated to finance, answer briefly and meaningfully in summary, but do not create actions and do not pretend to save memory.',
       'For analytics questions, use query_analytics.',
       'For loans, credits, mortgages, installments, subscriptions and required recurring payments, use obligation tools, not normal transactions. Normal transaction is only for a single finished expense/income.',
@@ -124,7 +130,7 @@ export class AIPlannerService {
       'Do not use previous commands as source data for names, accounts, amounts, or intent. Current USER message wins. Pending clarification is handled outside planner.',
       'If essential entity remains ambiguous after context, leave the ambiguous field missing/null so validator can ask clarification rather than inventing.',
       'Preserve user-provided amounts and names. For amount fields, return unambiguous compact amounts as plain numeric values; do not invent or round to a different amount.',
-      'Use account/category/section/goal names from CTX when the user clearly refers to existing entities.',
+      'Use account/category/section/goal names from CTX when the user clearly refers to existing entities. Different endings and colloquial forms may mean the same entity.',
       'If user asks to show/change AI settings, use show_ai_settings/update_ai_settings/apply_ai_settings_preset.',
       'If user asks to start/skip/finish tutorial/onboarding, use restart_onboarding/update_onboarding_state.',
       'For corrections during pending confirmation, output a new action plan that reflects the requested change instead of a conversational reply.',
@@ -182,6 +188,19 @@ export class AIPlannerService {
     };
   }
 
+
+  private compactAliasList(value: unknown, limit: number) {
+    return Array.isArray(value)
+      ? value.slice(0, limit).map((item) => {
+        const record = this.asRecord(item);
+        return {
+          name: typeof record.name === 'string' ? record.name : '',
+          aliases: Array.isArray(record.aliases) ? record.aliases.slice(0, 5).filter((alias) => typeof alias === 'string') : [],
+        };
+      }).filter((item) => item.name)
+      : [];
+  }
+
   private compactContext(context: unknown) {
     const value = this.asRecord(context) as UserContext;
     const memory = value.memory && typeof value.memory === 'object' ? value.memory : {};
@@ -190,12 +209,12 @@ export class AIPlannerService {
       accounts: Array.isArray(value.accounts)
         ? value.accounts.slice(0, 8).map((account) => account.name).filter(Boolean)
         : [],
-      accountAliases: Array.isArray(memory.accountAliases)
-        ? memory.accountAliases.slice(0, 8).map((item) => ({
-          name: item.name,
-          aliases: Array.isArray(item.aliases) ? item.aliases.slice(0, 5) : [],
-        }))
-        : [],
+      entityAliases: {
+        accounts: this.compactAliasList(memory.accountAliases, 8),
+        categories: this.compactAliasList(memory.categoryAliases, 10),
+        sections: this.compactAliasList(memory.sectionAliases, 8),
+        goals: this.compactAliasList(memory.goalAliases, 8),
+      },
       categories: Array.isArray(value.categories)
         ? value.categories.slice(0, 12).map((category) => category.name).filter(Boolean)
         : [],

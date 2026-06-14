@@ -15,9 +15,10 @@ type Props = {
   isMutating: boolean;
   onEdit: (item: TransactionDto) => void;
   onDuplicate: (item: TransactionDto) => void;
+  onDelete: (item: TransactionDto) => void;
 };
 
-export function JournalTransactionList({ items, currency, isMutating, onEdit, onDuplicate }: Props) {
+export function JournalTransactionList({ items, currency, isMutating, onEdit, onDuplicate, onDelete }: Props) {
   const { t, language } = useI18n();
 
   return (
@@ -46,6 +47,7 @@ export function JournalTransactionList({ items, currency, isMutating, onEdit, on
             <div className="journal-row__actions">
               <button type="button" onClick={() => onEdit(item)}>{t('common.edit')}</button>
               <button type="button" disabled={isMutating} onClick={() => onDuplicate(item)}>{t('journal.action.duplicate')}</button>
+              <button type="button" className="journal-row__delete" disabled={isMutating} onClick={() => onDelete(item)}>{t('common.delete')}</button>
             </div>
           </article>
         );

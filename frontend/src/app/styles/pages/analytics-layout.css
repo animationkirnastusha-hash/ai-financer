@@ -243,3 +243,61 @@
   .analytics-ring { justify-self: center; }
   .analytics-section-card__head .app-secondary-button { width: 100%; }
 }
+
+.analytics-mini-card--button,
+.analytics-income-grid button,
+.analytics-bar-row {
+  border: 0;
+  text-align: left;
+  cursor: pointer;
+}
+
+.analytics-mini-card--button:hover,
+.analytics-income-grid button:hover,
+.analytics-bar-row:hover {
+  background: rgba(255,255,255,.08);
+}
+
+.analytics-section-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+  min-width: 0;
+}
+
+.analytics-income-grid button {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+  border: 1px solid rgba(255,255,255,.09);
+  border-radius: 20px;
+  background: rgba(255,255,255,.055);
+  padding: 12px;
+  color: inherit;
+}
+
+.analytics-income-grid button span,
+.analytics-income-grid button strong {
+  display: block;
+  min-width: 0;
+  overflow-wrap: break-word;
+}
+
+.analytics-bar-row {
+  width: 100%;
+  color: inherit;
+  border-radius: 16px;
+  background: transparent;
+  padding: 2px;
+}
+
+@media (max-width: 560px) {
+  .analytics-section-card__actions {
+    justify-content: stretch;
+  }
+
+  .analytics-section-card__actions .app-secondary-button {
+    flex: 1 1 100%;
+  }
+}

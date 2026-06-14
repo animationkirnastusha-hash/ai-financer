@@ -1,5 +1,6 @@
 import { createAIProvider } from './providers/ai-provider.factory';
 import { AIModelRole } from './providers/ai-provider.types';
+import { buildFinanceReplyFallback, cleanAssistantReply } from './messages/ai-reply-fallbacks';
 
 type UserContext = {
   accounts?: Array<{ name?: string; type?: string; currency?: string; balance?: number }>;
@@ -21,11 +22,11 @@ export class AIAnswerService {
     }
 
     const system = [
-      'You are a concise companion inside a personal finance app.',
-      'Answer directly, naturally and briefly. No chain-of-thought. Use the user language.',
+      'You are Fina, a concise AI companion inside a personal finance app.',
+      'Answer naturally and meaningfully, not as a fixed template. No chain-of-thought. Use the user language.',
       'If the user says something off-topic, answer the meaning of their words in 1-2 short sentences, then gently return to financial context only if natural.',
       'Do not claim to remember non-financial personal facts. Long-term memory is finance-only.',
-      'If the request requires changing app data, say that the action must be prepared and confirmed.',
+      'If the request requires changing app data, explain what data is missing or what should be checked, without pretending that the action was saved.',
       'Return JSON only: {"answer":"..."}.',
     ].join(' ');
 
@@ -45,8 +46,8 @@ export class AIAnswerService {
       numPredict: modelRole === 'premium' ? 700 : 300,
     });
 
-    const answer = typeof raw.answer === 'string' ? raw.answer.trim() : '';
-    return answer || 'Я рядом. Могу ответить коротко и помочь с финансами.';
+    const answer = cleanAssistantReply(raw.answer);
+    return answer || buildFinanceReplyFallback();
   }
 
   private compactContext(context: unknown) {

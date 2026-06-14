@@ -258,7 +258,7 @@ export class AdminService {
 
   async resetUser(userId: string, input: unknown, actorUserId?: string) {
     const mode = normalizeResetMode((input as { mode?: unknown } | null | undefined)?.mode);
-    const body = parseAdminResetBody(input, `RESET_USER:${userId}:${mode}`);
+    const body = parseAdminResetBody(input, mode === 'full' ? 'RESET FULL' : 'RESET FINANCE');
 
     await logAdminResetAction(actorUserId, 'admin_reset_user_requested', {
       targetUserId: userId,

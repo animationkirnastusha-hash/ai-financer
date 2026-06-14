@@ -20,7 +20,7 @@ function normalize(input: string) {
 }
 
 function detectScreen(input: string): AppScreen | null {
-  if (includesAny(input, ['админ', 'админка', 'admin', 'панель администратора'])) return 'admin';
+  if (includesAny(input, ['админ', 'админка', 'admin', 'админ панель', 'админская панель', 'панель администратора'])) return 'admin';
   if (includesAny(input, ['чек', 'чеки', 'фото чека', 'скан чека', 'receipt', 'receipts'])) return 'receipt-scans';
   if (includesAny(input, ['магазин', 'store', 'стор', 'тарифы', 'купить премиум', 'premium', 'business'])) return 'store';
   if (includesAny(input, ['ии бухгалтер', 'бухгалтер', 'бухгалтерия', 'фина бухгалтер', 'самозанятый', 'ип', 'малый бизнес'])) return 'business-accountant';
@@ -60,7 +60,7 @@ function isBareNavigationTarget(input: string, screen: AppScreen) {
     profile: ['профиль', 'личный кабинет'],
     sections: ['категории', 'разделы', 'категории и разделы', 'разделы и категории'],
     companion: ['компаньон', 'фина', 'помощник'],
-    admin: ['админка', 'админ'],
+    admin: ['админка', 'админ', 'админ панель', 'админская панель', 'панель администратора'],
     store: ['магазин', 'стор', 'тарифы', 'premium', 'премиум'],
     'business-accountant': ['ии бухгалтер', 'бухгалтер', 'бухгалтерия', 'фина бухгалтер'],
     'receipt-scans': ['чеки', 'чек', 'фото чека', 'скан чека'],

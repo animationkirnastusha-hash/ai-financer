@@ -13,6 +13,7 @@ import { premiumDictionary } from './premium';
 import { businessDictionary } from './business';
 import { referralDictionary } from './referral';
 import { profileDictionary } from './profile';
+import { sectionsDictionary } from './sections';
 import { limitsDictionary } from './limits';
 import { miscDictionary } from './misc';
 
@@ -32,6 +33,7 @@ export const enDictionary = {
   ...businessDictionary,
   ...referralDictionary,
   ...profileDictionary,
+  ...sectionsDictionary,
   ...limitsDictionary,
   ...miscDictionary,
 } as const;

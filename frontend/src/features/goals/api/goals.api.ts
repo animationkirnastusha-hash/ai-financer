@@ -7,9 +7,11 @@ export type GoalDto = {
   currentAmount: number;
   currency: string;
   accountId?: string | null;
-  account?: { id: string; name: string; currency: string; icon?: string | null; color?: string | null } | null;
+  account?: { id: string; name: string; currency: string; balance?: number; icon?: string | null; color?: string | null } | null;
   status: 'active' | 'completed' | 'archived' | string;
   note?: string | null;
+  autoSavePercent?: number;
+  autoSaveEnabled?: boolean;
   progress: number;
   createdAt: string;
   updatedAt: string;
@@ -22,6 +24,7 @@ export type CreateGoalInput = {
   currency?: string;
   accountId?: string | null;
   note?: string | null;
+  autoSavePercent?: number | string | null;
 };
 
 export type UpdateGoalInput = Partial<CreateGoalInput> & {

@@ -63,7 +63,7 @@ export default function AdminPage() {
   };
 
   const handleResetUser = async (userId: string, mode: 'finance' | 'full') => {
-    const confirmText = `RESET_USER:${userId}:${mode}`;
+    const confirmText = mode === 'finance' ? 'RESET FINANCE' : 'RESET FULL';
     const text = mode === 'finance'
       ? `Чтобы очистить финансы пользователя, введи ${confirmText}`
       : `Чтобы полностью обнулить тестера, введи ${confirmText}`;

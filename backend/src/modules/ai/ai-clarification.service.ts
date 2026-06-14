@@ -20,6 +20,43 @@ export class AIClarificationService {
     return hasActionVerb || (hasAmount && hasFinancialObject);
   }
 
+
+  buildRetryMessage(clarification: AIClarificationRequest, candidate: string) {
+    const suffix = this.shortCandidateLabel(candidate);
+
+    if (clarification.type === 'account') {
+      return suffix
+        ? `Не смогла сопоставить это со счётом (${suffix}). Напиши название счёта из списка или выбери его вручную.`
+        : 'Не смогла сопоставить это со счётом. Напиши название счёта из списка или выбери его вручную.';
+    }
+
+    if (clarification.type === 'goal') {
+      return suffix
+        ? `Не смогла сопоставить это с целью (${suffix}). Напиши название цели чуть точнее.`
+        : 'Не смогла сопоставить это с целью. Напиши название цели чуть точнее.';
+    }
+
+    if (clarification.type === 'category') {
+      return suffix
+        ? `Не смогла сопоставить это с категорией (${suffix}). Напиши название категории чуть точнее.`
+        : 'Не смогла сопоставить это с категорией. Напиши название категории чуть точнее.';
+    }
+
+    if (clarification.type === 'section') {
+      return suffix
+        ? `Не смогла сопоставить это с разделом (${suffix}). Напиши название раздела чуть точнее.`
+        : 'Не смогла сопоставить это с разделом. Напиши название раздела чуть точнее.';
+    }
+
+    return 'Не смогла сопоставить уточнение с нужными данными. Напиши короче и точнее.';
+  }
+
+  private shortCandidateLabel(value: string) {
+    const clean = value.trim().replace(/\s+/g, ' ');
+    if (!clean) return '';
+    return clean.length > 32 ? `${clean.slice(0, 29).trim()}...` : clean;
+  }
+
   build(validated: AIValidatedPlan): AIClarificationRequest | null {
     const issue = validated.issues.find((item) => CLARIFICATION_CODES.has(item.code) && typeof item.actionIndex === 'number');
     if (!issue || typeof issue.actionIndex !== 'number') return null;

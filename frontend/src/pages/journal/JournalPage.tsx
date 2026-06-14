@@ -31,6 +31,7 @@ export default function JournalPage() {
   const error = useTransactionsStore((state) => state.error);
   const loadTransactions = useTransactionsStore((state) => state.loadTransactions);
   const createItem = useTransactionsStore((state) => state.createItem);
+  const deleteTx = useTransactionsStore((state) => state.deleteTx);
   const accounts = useAccountsStore((state) => state.items);
   const loadAccounts = useAccountsStore((state) => state.loadAccounts);
   const categories = useSectionsStore((state) => state.categories);
@@ -103,6 +104,13 @@ export default function JournalPage() {
     void loadTransactions(true);
   };
 
+  const deleteTransaction = async (item: Parameters<typeof buildDuplicateTransactionPayload>[0]) => {
+    const ok = window.confirm(t('journal.delete.confirm'));
+    if (!ok) return;
+    await deleteTx(item, 'revert');
+    void loadTransactions(true);
+  };
+
   return (
     <div className="app-page journal-page text-white">
       <div className="app-page__inner journal-layout">
@@ -171,6 +179,7 @@ export default function JournalPage() {
             isMutating={isMutating}
             onEdit={(item) => openModal({ type: 'transaction-edit', transaction: item })}
             onDuplicate={(item) => void duplicateTransaction(item)}
+            onDelete={(item) => void deleteTransaction(item)}
           />
         )}
       </div>

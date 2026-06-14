@@ -73,7 +73,7 @@ export class AIPreviewService {
     if (parsed.actions.length === 0)
       return "Я не нашёл действий для выполнения.";
     if (parsed.actions.length === 1)
-      return `Проверь: ${this.describeAction(parsed.actions[0])}`;
+      return `Проверь детали: ${this.describeAction(parsed.actions[0])}`;
     return `Проверь пакет из ${parsed.actions.length} действий: ${parsed.actions.map((action) => this.describeAction(action)).join("; ")}`;
   }
 
@@ -85,13 +85,13 @@ export class AIPreviewService {
       const action = parsed.actions[0];
       const initialBalance = Number(action.input?.initialBalance ?? 0);
       const name = this.clean(action.input?.name) || "счёт";
-      const created = `Готово: ${this.describeAction(action)}`;
+      const created = `Готово, ${this.describeAction(action)}`;
       if (initialBalance <= 0)
         return `${created}. Добавить деньги на «${name}» сейчас?`;
       return created;
     }
     if (parsed.actions.length === 1)
-      return `Готово: ${this.describeAction(parsed.actions[0])}`;
+      return `Готово, ${this.describeAction(parsed.actions[0])}.`;
     return `Готово. Пакет выполнен: ${parsed.actions.map((action) => this.describeAction(action)).join("; ")}`;
   }
 

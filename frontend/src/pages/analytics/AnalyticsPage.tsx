@@ -14,6 +14,15 @@ function isCurrentMonth(value: string) {
   return date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth();
 }
 
+function normalizeJournalTag(value: string) {
+  return value
+    .toLowerCase()
+    .replaceAll('ё', 'е')
+    .replace(/[^a-zа-я0-9\s-]+/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 function RingChart({ value, label }: { value: number; label: string }) {
   const radius = 42;
   const stroke = 11;
@@ -30,12 +39,12 @@ function RingChart({ value, label }: { value: number; label: string }) {
   );
 }
 
-function BarRow({ name, value, total }: { name: string; value: number; total: number }) {
+function BarRow({ name, value, total, onOpenJournal }: { name: string; value: number; total: number; onOpenJournal: () => void }) {
   return (
-    <div className="analytics-bar-row">
+    <button type="button" className="analytics-bar-row" onClick={onOpenJournal}>
       <div><span>{name}</span><strong>{formatMoney(value, 'RUB')}</strong></div>
       <i><b style={{ width: `${Math.max(8, Math.min(100, total ? (value / total) * 100 : 0))}%` }} /></i>
-    </div>
+    </button>
   );
 }
 
@@ -43,6 +52,7 @@ export default function AnalyticsPage() {
   const { t } = useI18n();
   const openModal = useAppModalStore((state) => state.openModal);
   const navigateTo = useNavigationStore((state) => state.navigateTo);
+  const openJournal = useNavigationStore((state) => state.openJournal);
   const subscription = useSubscriptionStore((state) => state.status);
   const canShowPremiumAnalytics = hasRealPremiumAccess(subscription) || hasRealBusinessAccess(subscription);
   const transactions = useTransactionsStore((state) => state.items);
@@ -83,10 +93,15 @@ export default function AnalyticsPage() {
       ? t('analytics.insight.positive')
       : t('analytics.insight.negative');
 
+  const openMonthJournal = () => openJournal({ period: 'month' });
+  const openCategoryJournal = (name: string, type: 'income' | 'expense') => {
+    openJournal({ period: 'month', type, query: name, tag: normalizeJournalTag(name) });
+  };
+
   return (
     <div className="app-page app-analytics-page text-white">
       <div className="app-page__inner space-y-4">
-        <ScreenTopBar title={t('common.analytics')} right={['notifications', 'settings']} />
+        <ScreenTopBar title={t('common.analytics')} right={['notifications', 'history', 'settings']} />
 
         <header className="app-card app-card--hero analytics-hero-card analytics-hero-card--final">
           <div className="analytics-hero-card__grid">
@@ -118,16 +133,16 @@ export default function AnalyticsPage() {
         </section>
 
         <section className="analytics-grid-two">
-          <article className="app-card analytics-mini-card">
+          <button type="button" className="app-card analytics-mini-card analytics-mini-card--button" onClick={openMonthJournal}>
             <span className="analytics-mini-card__label">{t('analytics.mini.operations')}</span>
             <strong className="analytics-mini-card__value">{data.operationsCount}</strong>
             <small className="analytics-mini-card__caption">{t('analytics.mini.operationsCaption')}</small>
-          </article>
-          <article className="app-card analytics-mini-card">
+          </button>
+          <button type="button" className="app-card analytics-mini-card analytics-mini-card--button" onClick={() => openCategoryJournal(data.mainCategory, 'expense')}>
             <span className="analytics-mini-card__label">{t('analytics.mini.mainCategory')}</span>
             <strong className="analytics-mini-card__value">{data.mainCategory}</strong>
             <small className="analytics-mini-card__caption">{t('analytics.mini.mainCategoryCaption')}</small>
-          </article>
+          </button>
         </section>
 
         <section className="app-card analytics-section-card analytics-section-card--primary">
@@ -136,11 +151,14 @@ export default function AnalyticsPage() {
               <div className="app-eyebrow">{t('analytics.expenses.eyebrow')}</div>
               <h2>{t('analytics.expenses.title')}</h2>
             </div>
-            <button type="button" className="app-secondary-button app-secondary-button--compact" onClick={() => openModal({ type: 'report-export', mode: 'base' })}>{t('analytics.report.action')}</button>
+            <div className="analytics-section-card__actions">
+              <button type="button" className="app-secondary-button app-secondary-button--compact" onClick={openMonthJournal}>{t('analytics.journal.action')}</button>
+              <button type="button" className="app-secondary-button app-secondary-button--compact" onClick={() => openModal({ type: 'report-export', mode: 'base' })}>{t('analytics.report.action')}</button>
+            </div>
           </div>
           <div className="analytics-bars">
             {data.top.length === 0 ? <div className="analytics-empty-line">{t('analytics.empty.expenses')}</div> : data.top.map(([name, value]) => (
-              <BarRow key={name} name={name} value={value} total={data.totalExpenses} />
+              <BarRow key={name} name={name} value={value} total={data.totalExpenses} onOpenJournal={() => openCategoryJournal(name, 'expense')} />
             ))}
           </div>
         </section>
@@ -154,7 +172,7 @@ export default function AnalyticsPage() {
           </div>
           <div className="analytics-income-grid">
             {data.incomeTop.length === 0 ? <div className="analytics-empty-line">{t('analytics.empty.income')}</div> : data.incomeTop.map(([name, value]) => (
-              <article key={name}><span>{name}</span><strong>{formatMoney(value, 'RUB')}</strong></article>
+              <button key={name} type="button" onClick={() => openCategoryJournal(name, 'income')}><span>{name}</span><strong>{formatMoney(value, 'RUB')}</strong></button>
             ))}
           </div>
         </section>
@@ -169,7 +187,7 @@ export default function AnalyticsPage() {
           <div className="analytics-action-grid">
             <button type="button" onClick={() => openModal({ type: 'ai-text-overlay', initialCommand: t('analytics.ask.topExpense'), autoSubmitInitialCommand: true })}>{t('analytics.ask.topExpense')}</button>
             <button type="button" onClick={() => openModal({ type: 'ai-text-overlay', initialCommand: t('analytics.ask.reduce'), autoSubmitInitialCommand: true })}>{t('analytics.ask.reduce')}</button>
-            <button type="button" onClick={() => navigateTo('dashboard')}>{t('analytics.action.home')}</button>
+            <button type="button" onClick={openMonthJournal}>{t('analytics.journal.action')}</button>
           </div>
         </section>
 

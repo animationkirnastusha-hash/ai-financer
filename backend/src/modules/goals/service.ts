@@ -11,6 +11,7 @@ export interface CreateGoalInput {
   currency?: string;
   accountId?: string | null;
   note?: string | null;
+  autoSavePercent?: number | string | null;
 }
 
 export interface UpdateGoalInput {
@@ -21,11 +22,12 @@ export interface UpdateGoalInput {
   accountId?: string | null;
   status?: GoalStatus;
   note?: string | null;
+  autoSavePercent?: number | string | null;
 }
 
 const goalInclude = {
   account: {
-    select: { id: true, name: true, currency: true, icon: true, color: true },
+    select: { id: true, name: true, currency: true, icon: true, color: true, balance: true },
   },
 } satisfies Prisma.GoalInclude;
 
@@ -44,16 +46,25 @@ export class GoalService {
 
   async create(userId: string, input: CreateGoalInput) {
     const data = await this.validateCreate(userId, input);
-    const existing = await prisma.goal.findFirst({
-      where: { userId, title: data.title, status: { not: 'archived' } },
-      include: goalInclude,
-    });
 
-    if (existing) return this.serializeGoal(existing);
+    const goal = await prisma.$transaction(async (tx) => {
+      const existing = await tx.goal.findFirst({
+        where: { userId, title: data.title, status: { not: 'archived' } },
+        include: goalInclude,
+      });
 
-    const goal = await prisma.goal.create({
-      data: { userId, ...data },
-      include: goalInclude,
+      if (existing) return existing;
+
+      const accountId = data.accountId ?? await this.createGoalAccount(tx, userId, {
+        title: data.title,
+        currency: data.currency,
+        balance: data.currentAmount,
+      });
+
+      return tx.goal.create({
+        data: { userId, ...data, accountId },
+        include: goalInclude,
+      });
     });
 
     return this.serializeGoal(goal);
@@ -98,6 +109,7 @@ export class GoalService {
       currency,
       accountId,
       note: this.clean(input.note),
+      autoSavePercent: this.percent(input.autoSavePercent),
       status: 'active',
     };
   }
@@ -126,6 +138,7 @@ export class GoalService {
     if (input.currency !== undefined) data.currency = this.currency(input.currency);
     if (input.accountId !== undefined) data.accountId = await this.resolveAccountId(userId, input.accountId);
     if (input.note !== undefined) data.note = this.clean(input.note);
+    if (input.autoSavePercent !== undefined) data.autoSavePercent = this.percent(input.autoSavePercent);
 
     if (input.status !== undefined) {
       if (!['active', 'completed', 'archived'].includes(input.status)) throw new BadRequestError('Invalid goal status');
@@ -142,6 +155,43 @@ export class GoalService {
     return account.id;
   }
 
+  private async createGoalAccount(
+    tx: Prisma.TransactionClient,
+    userId: string,
+    params: { title: string; currency: string; balance: number },
+  ) {
+    const name = await this.createUniqueGoalAccountName(tx, userId, params.title);
+    const account = await tx.account.create({
+      data: {
+        userId,
+        name,
+        type: 'savings',
+        currency: params.currency,
+        balance: params.balance,
+        openingBalance: params.balance,
+        showInTotalBalance: true,
+        icon: '🎯',
+        color: '#22c55e',
+      },
+      select: { id: true },
+    });
+
+    return account.id;
+  }
+
+  private async createUniqueGoalAccountName(tx: Prisma.TransactionClient, userId: string, title: string) {
+    const cleanTitle = this.clean(title).slice(0, 48) || 'Цель';
+    const baseName = `Цель: ${cleanTitle}`;
+
+    for (let index = 0; index < 20; index += 1) {
+      const candidate = index === 0 ? baseName : `${baseName} ${index + 1}`;
+      const existing = await tx.account.findFirst({ where: { userId, name: candidate }, select: { id: true } });
+      if (!existing) return candidate;
+    }
+
+    return `${baseName} ${Date.now().toString().slice(-4)}`;
+  }
+
   private serializeGoal(goal: GoalWithAccount) {
     const progress = goal.targetAmount > 0 ? Math.min(100, Math.round((goal.currentAmount / goal.targetAmount) * 100)) : 0;
     return {
@@ -154,6 +204,8 @@ export class GoalService {
       account: goal.account,
       status: goal.status,
       note: goal.note,
+      autoSavePercent: goal.autoSavePercent,
+      autoSaveEnabled: goal.autoSavePercent > 0,
       progress,
       createdAt: goal.createdAt,
       updatedAt: goal.updatedAt,
@@ -168,6 +220,16 @@ export class GoalService {
     const num = typeof value === 'number' ? value : Number(String(value ?? '').replace(/\s+/g, '').replace(',', '.'));
     if (!Number.isFinite(num)) return 0;
     return Math.max(0, Math.floor(num));
+  }
+
+  private percent(value: unknown) {
+    if (value === undefined || value === null || value === '') return 0;
+    const normalized = typeof value === 'number'
+      ? value
+      : (String(value).match(/\d+(?:[,.]\d+)?/)?.[0] ?? '').replace(',', '.');
+    const num = Number(normalized);
+    if (!Number.isFinite(num)) return 0;
+    return Math.max(0, Math.min(100, Math.round(num)));
   }
 
   private currency(value: unknown) {

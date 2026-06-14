@@ -80,8 +80,19 @@ export function journalTransactionSearchText(item: TransactionDto) {
   ].filter(Boolean).join(' '));
 }
 
+function tokenizeJournalNote(value: string | null | undefined) {
+  const normalized = normalizeJournalText(value ?? '');
+  if (!normalized) return [];
+
+  return normalized
+    .split(' ')
+    .map((word) => word.trim())
+    .filter((word) => word.length >= 4 && !/^[0-9]+$/.test(word))
+    .slice(0, 6);
+}
+
 export function journalTransactionTags(item: TransactionDto) {
-  const source = [
+  const namedSource = [
     item.account?.name,
     item.toAccount?.name,
     item.category?.name,
@@ -89,9 +100,15 @@ export function journalTransactionTags(item: TransactionDto) {
     item.section?.name,
   ].filter(Boolean) as string[];
 
-  return Array.from(new Map(source.map((label) => [normalizeJournalText(label), label])).entries())
-    .filter(([value]) => value.length > 1)
-    .map(([value, label]) => ({ value, label }));
+  const noteWords = [...tokenizeJournalNote(item.title), ...tokenizeJournalNote(item.description)];
+  const rawTags = [
+    ...namedSource.map((label) => ({ value: normalizeJournalText(label), label })),
+    ...noteWords.map((word) => ({ value: word, label: word })),
+  ];
+
+  return Array.from(new Map(rawTags.map((tag) => [tag.value, tag])).values())
+    .filter((tag) => tag.value.length > 1)
+    .map((tag) => ({ value: tag.value, label: tag.label }));
 }
 
 export function buildJournalTagOptions(items: TransactionDto[]): JournalTagOption[] {

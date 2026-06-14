@@ -10,7 +10,9 @@ import {
 } from './types';
 import { getToolDefinition } from './tools/tool-registry';
 import { convertMoney, detectCurrencyInText, normalizeCurrency, normalizeMoneyAmount } from './utils/amount-normalizer';
-import { AIEntityResolverService } from './ai-entity-resolver.service';
+import { AIEntityResolverService } from './semantic/semantic-entity-resolver.service';
+import { normalizeSemanticText } from './semantic/semantic-normalizer';
+import { semanticSimilarityScore, semanticThreshold } from './semantic/semantic-scorer';
 import { aiRiskPolicyService } from './ai-risk-policy.service';
 
 interface AccountLite {
@@ -737,6 +739,7 @@ export class AIValidatorService {
         const currency = this.coerceCurrency(input.currency, '', 'RUB') ?? 'RUB';
         const accountName = this.cleanString(input.account);
         const account = accountName ? this.resolveAccount(accounts, accountName) : null;
+        const autoSavePercent = this.optionalPercent(input.autoSavePercent, 0);
 
         if (!title) issues.push({ code: 'missing_goal_title', message: 'Не хватает названия цели.', actionIndex: index, field: 'title' });
         if (!targetAmount) issues.push({ code: 'missing_goal_target', message: 'Не хватает суммы цели.', actionIndex: index, field: 'targetAmount' });
@@ -748,6 +751,7 @@ export class AIValidatorService {
         input.currency = currency;
         input.account = account?.name ?? null;
         input.note = this.cleanEntityName(input.note);
+        input.autoSavePercent = autoSavePercent ?? 0;
         if (account) resolved.accountId = account.id;
       }
 
@@ -776,6 +780,7 @@ export class AIValidatorService {
           if (targetAmount !== null) input.targetAmount = targetAmount; else delete input.targetAmount;
           if (currentAmount !== null) input.currentAmount = currentAmount; else delete input.currentAmount;
           if (status === 'active' || status === 'completed' || status === 'archived') input.status = status; else delete input.status;
+          if (input.autoSavePercent !== null && input.autoSavePercent !== undefined) input.autoSavePercent = this.optionalPercent(input.autoSavePercent, 0); else delete input.autoSavePercent;
           if (input.note !== null && input.note !== undefined) input.note = this.cleanEntityName(input.note); else delete input.note;
         }
       }
@@ -1001,7 +1006,7 @@ export class AIValidatorService {
   }
 
   private key(value: string) {
-    return value.trim().toLowerCase();
+    return normalizeSemanticText(value);
   }
 
   private lastPlannedAccountName(plannedAccounts: Map<string, { name: string; currency: AICurrency }>) {
@@ -1133,8 +1138,11 @@ export class AIValidatorService {
 
   private optionalPercent(value: unknown, fallback: number) {
     if (value === undefined || value === null || value === '') return fallback;
-    const parsed = Math.round(Number(value));
-    if (!Number.isFinite(parsed) || parsed < 1 || parsed > 100) return fallback;
+    const normalized = typeof value === 'string'
+      ? (value.match(/\d+(?:[,.]\d+)?/)?.[0] ?? '').replace(',', '.')
+      : value;
+    const parsed = Math.round(Number(normalized));
+    if (!Number.isFinite(parsed) || parsed < 0 || parsed > 100) return fallback;
     return parsed;
   }
 
@@ -1219,13 +1227,14 @@ export class AIValidatorService {
   }
 
   private findGoalByName<T extends { id?: string | null; title: string }>(items: T[], raw: string) {
-    const resolved = this.findBestByText(items, raw, (item) => item.title);
-    return resolved?.item ?? null;
+    return this.entityResolver.resolveGoal(items, raw)?.item ?? null;
   }
 
-  private findByName<T extends { id?: string | null; name: string }>(items: T[], raw: string) {
-    const resolved = this.findBestByText(items, raw, (item) => item.name);
-    return resolved?.item ?? null;
+  private findByName<T extends { id?: string | null; name: string; type?: string | null; sectionId?: string | null }>(items: T[], raw: string) {
+    return this.entityResolver.resolveNamed(items, raw, {
+      kind: 'generic',
+      getLabel: (item) => item.name,
+    })?.item ?? null;
   }
 
   private findBestByText<T>(items: T[], raw: string, getLabel: (item: T) => string) {
@@ -1248,22 +1257,15 @@ export class AIValidatorService {
 
   private textSimilarityScore(query: string, label: string) {
     if (!query || !label) return 0;
-    if (query === label) return 1;
-
-    if (query.includes(label) || label.includes(query)) {
-      const ratio = Math.min(query.length, label.length) / Math.max(query.length, label.length);
-      return Math.max(0.74, ratio);
-    }
-
+    const semantic = semanticSimilarityScore(query, label);
     const distance = this.levenshtein(query, label);
     const max = Math.max(query.length, label.length);
-    return max > 0 ? 1 - distance / max : 0;
+    const legacy = max > 0 ? 1 - distance / max : 0;
+    return Math.max(semantic, legacy);
   }
 
   private fuzzyThreshold(value: string) {
-    if (value.length <= 3) return 0.88;
-    if (value.length <= 5) return 0.78;
-    return 0.68;
+    return semanticThreshold(value);
   }
 
   private levenshtein(a: string, b: string) {

@@ -307,3 +307,9 @@
     text-align: left;
   }
 }
+
+.journal-row__actions .journal-row__delete {
+  border-color: rgba(255, 120, 120, .18);
+  background: rgba(255, 90, 90, .08);
+  color: rgba(255, 198, 198, .86);
+}

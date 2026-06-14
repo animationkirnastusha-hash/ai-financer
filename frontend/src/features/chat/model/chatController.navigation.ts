@@ -74,6 +74,7 @@ export function handleChatNavigationIntent({
       kind: "success",
       actionType: "navigation",
     });
+    window.dispatchEvent(new CustomEvent("ai-financer:navigation-completed", { detail: { screen: navigationIntent.screen } }));
     return true;
   }
 
@@ -86,6 +87,7 @@ export function handleChatNavigationIntent({
       kind: "success",
       actionType: "navigation",
     });
+    window.dispatchEvent(new CustomEvent("ai-financer:navigation-completed", { detail: { screen: "back" } }));
     return true;
   }
 

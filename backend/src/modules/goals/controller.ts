@@ -28,6 +28,7 @@ export const createGoal = asyncHandler(async (req: Request, res: Response) => {
     currency: req.body.currency,
     accountId: req.body.accountId,
     note: req.body.note,
+    autoSavePercent: req.body.autoSavePercent,
   });
   res.status(201).json({ goal });
 });
@@ -41,6 +42,7 @@ export const updateGoal = asyncHandler(async (req: Request, res: Response) => {
     accountId: req.body.accountId,
     status: req.body.status,
     note: req.body.note,
+    autoSavePercent: req.body.autoSavePercent,
   });
   res.json({ goal });
 });

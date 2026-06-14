@@ -25,7 +25,15 @@ type Props = {
   onDateToChange: (value: string) => void;
 };
 
-const periods: JournalPeriod[] = ['today', 'week', 'month', 'year', 'all', 'custom'];
+const PERIODS: JournalPeriod[] = ['today', 'week', 'month', 'year', 'all', 'custom'];
+const TYPES: JournalTypeFilter[] = ['all', 'expense', 'income', 'transfer'];
+
+function typeLabelKey(type: JournalTypeFilter) {
+  if (type === 'all') return 'journal.type.all';
+  if (type === 'expense') return 'transaction.type.expense';
+  if (type === 'income') return 'transaction.type.income';
+  return 'transaction.type.transfer';
+}
 
 export function JournalFilterPanel({
   query,
@@ -51,15 +59,24 @@ export function JournalFilterPanel({
   const { t } = useI18n();
 
   return (
-    <section className="app-card journal-filter-card" data-no-swipe="true">
+    <section className="app-card journal-filter-card">
       <label className="journal-search-field">
         <span>{t('journal.filters.search')}</span>
-        <input value={query} onChange={(event) => onQueryChange(event.target.value)} placeholder={t('journal.filters.searchPlaceholder')} />
+        <input
+          value={query}
+          placeholder={t('journal.filters.searchPlaceholder')}
+          onChange={(event) => onQueryChange(event.target.value)}
+        />
       </label>
 
       <div className="journal-period-row" aria-label={t('journal.filters.period')}>
-        {periods.map((item) => (
-          <button key={item} type="button" data-active={period === item} onClick={() => onPeriodChange(item)}>
+        {PERIODS.map((item) => (
+          <button
+            key={item}
+            type="button"
+            data-active={period === item}
+            onClick={() => onPeriodChange(item)}
+          >
             {t(`journal.period.${item}`)}
           </button>
         ))}
@@ -82,12 +99,10 @@ export function JournalFilterPanel({
         <label>
           <span>{t('journal.filters.type')}</span>
           <select value={type} onChange={(event) => onTypeChange(event.target.value as JournalTypeFilter)}>
-            <option value="all">{t('journal.type.all')}</option>
-            <option value="expense">{t('transaction.type.expense')}</option>
-            <option value="income">{t('transaction.type.income')}</option>
-            <option value="transfer">{t('transaction.type.transfer')}</option>
+            {TYPES.map((item) => <option key={item} value={item}>{t(typeLabelKey(item))}</option>)}
           </select>
         </label>
+
         <label>
           <span>{t('journal.filters.account')}</span>
           <select value={accountId} onChange={(event) => onAccountChange(event.target.value)}>
@@ -95,6 +110,7 @@ export function JournalFilterPanel({
             {accounts.map((account) => <option key={account.id} value={account.id}>{account.name}</option>)}
           </select>
         </label>
+
         <label>
           <span>{t('journal.filters.category')}</span>
           <select value={categoryId} onChange={(event) => onCategoryChange(event.target.value)}>
@@ -102,25 +118,23 @@ export function JournalFilterPanel({
             {categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
           </select>
         </label>
-        <label>
-          <span>{t('journal.filters.tag')}</span>
-          <select value={selectedTag} onChange={(event) => onTagChange(event.target.value)}>
-            <option value="all">{t('journal.tag.all')}</option>
-            {tagOptions.map((tag) => <option key={tag.value} value={tag.value}>{tag.label}</option>)}
-          </select>
-        </label>
       </div>
 
-      {tagOptions.length ? (
-        <div className="journal-tag-row" aria-label={t('journal.filters.tag')}>
-          <button type="button" data-active={selectedTag === 'all'} onClick={() => onTagChange('all')}>{t('journal.tag.all')}</button>
-          {tagOptions.slice(0, 8).map((tag) => (
-            <button key={tag.value} type="button" data-active={selectedTag === tag.value} onClick={() => onTagChange(tag.value)}>
-              {tag.label}<span>{tag.count}</span>
-            </button>
-          ))}
-        </div>
-      ) : null}
+      <div className="journal-tag-row" aria-label={t('journal.filters.tag')}>
+        <button type="button" data-active={selectedTag === 'all'} onClick={() => onTagChange('all')}>
+          {t('journal.tag.all')}
+        </button>
+        {tagOptions.map((tag) => (
+          <button
+            key={tag.value}
+            type="button"
+            data-active={selectedTag === tag.value}
+            onClick={() => onTagChange(tag.value)}
+          >
+            {tag.label}<span>{tag.count}</span>
+          </button>
+        ))}
+      </div>
     </section>
   );
 }

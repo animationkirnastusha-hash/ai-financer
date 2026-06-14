@@ -38,4 +38,5 @@ export const journalDictionary = {
   'journal.item.noCategory': 'No category',
   'journal.item.noAccount': 'Account',
   'journal.action.duplicate': 'Duplicate',
+  'journal.delete.confirm': 'Delete this operation and revert its balance impact?',
 } as const;

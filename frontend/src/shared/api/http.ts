@@ -1,5 +1,6 @@
 import { env } from '@/shared/config/env';
 import { getAccessToken } from '@/features/auth/lib/accessToken';
+import { readOfflineJson, saveOfflineJson } from '@/shared/lib/performance/offlineJsonCache';
 
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 
@@ -28,20 +29,41 @@ export async function request<T>(
 ): Promise<T> {
   const token = getAccessToken();
 
-  const response = await fetch(`${env.apiBaseUrl}${path}`, {
-    method: options.method ?? 'GET',
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...options.headers,
-    },
-    body: options.body ? JSON.stringify(options.body) : undefined,
-    signal: options.signal,
-  });
+  const method = options.method ?? 'GET';
+  let response: Response;
+
+  try {
+    response = await fetch(`${env.apiBaseUrl}${path}`, {
+      method,
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...options.headers,
+      },
+      body: options.body ? JSON.stringify(options.body) : undefined,
+      signal: options.signal,
+    });
+  } catch (error) {
+    if (options.signal?.aborted) throw error;
+    if (method === 'GET') {
+      const cached = readOfflineJson<T>(path, token);
+      if (cached !== null) return cached;
+    }
+    throw error;
+  }
 
   const contentType = response.headers.get('content-type') || '';
   const isJson = contentType.includes('application/json');
   const payload = isJson ? await response.json() : await response.text();
+
+  if (response.ok && method === 'GET' && isJson) {
+    saveOfflineJson(path, token, payload);
+  }
+
+  if (!response.ok && method === 'GET') {
+    const cached = readOfflineJson<T>(path, token);
+    if (cached !== null) return cached;
+  }
 
   if (!response.ok) {
     const message = typeof payload === 'object' && payload !== null

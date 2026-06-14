@@ -4,6 +4,7 @@ import { BadRequestError, NotFoundError } from '../../shared/core/errors';
 import { progressionActivityBridge } from '../progression/activity-bridge.service';
 import { shouldReplaceGenericIcon } from '../taxonomy/taxonomy-icons';
 import { looksLikePlaceOrMerchant, resolveTransactionSemanticTaxonomy } from '../taxonomy/transaction-taxonomy';
+import { goalAutoSaveService } from '../goals/goal-autosave.service';
 
 export type TransactionType = 'income' | 'expense' | 'transfer';
 
@@ -254,7 +255,7 @@ export class TransactionService {
         direction: 'apply',
       });
 
-      return tx.transaction.create({
+      const transaction = await tx.transaction.create({
         data: {
           userId,
           accountId: input.accountId,
@@ -270,6 +271,18 @@ export class TransactionService {
         },
         include: transactionInclude,
       });
+
+      if (input.type === 'income') {
+        await goalAutoSaveService.applyForIncome(tx, userId, {
+          incomeTransactionId: transaction.id,
+          incomeAccountId: transaction.accountId,
+          incomeAmount: transaction.amount,
+          currency: transaction.account.currency,
+          date: transaction.date,
+        });
+      }
+
+      return transaction;
     });
 
     if (!transaction.isAIGenerated) {

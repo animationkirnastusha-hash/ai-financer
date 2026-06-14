@@ -90,7 +90,7 @@ const actionIcon: Record<Action, ReactNode> = {
 const actionLabelKey: Record<Action, I18nKey> = {
   back: 'common.back',
   analytics: 'common.analytics',
-  history: 'common.analytics',
+  history: 'screen.journal',
   settings: 'common.settings',
   home: 'common.home',
   store: 'common.store',
@@ -134,6 +134,7 @@ export function ScreenTopBar({ title, left = 'menu', right = DEFAULT_RIGHT_ACTIO
   const navigateTo = useNavigationStore((state) => state.navigateTo);
   const goBack = useNavigationStore((state) => state.goBack);
   const goHome = useNavigationStore((state) => state.goHome);
+  const openJournal = useNavigationStore((state) => state.openJournal);
   const openModal = useAppModalStore((state) => state.openModal);
   const unreadCount = useNotificationsStore((state) => state.unreadCount);
   const loadUnreadCount = useNotificationsStore((state) => state.loadUnreadCount);
@@ -147,7 +148,8 @@ export function ScreenTopBar({ title, left = 'menu', right = DEFAULT_RIGHT_ACTIO
 
   const handleAction = (action: Action) => {
     if (action === 'back') goBack();
-    if (action === 'analytics' || action === 'history') navigateTo('analytics');
+    if (action === 'analytics') navigateTo('analytics');
+    if (action === 'history') openJournal({ period: 'month' });
     if (action === 'settings') navigateTo('settings');
     if (action === 'home') goHome();
     if (action === 'store') navigateTo('store');

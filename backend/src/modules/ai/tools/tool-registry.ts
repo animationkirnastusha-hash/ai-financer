@@ -115,17 +115,17 @@ export const AI_TOOL_REGISTRY: AIToolDefinition[] = [
   },
   {
     name: 'create_goal',
-    description: 'Create financial goal/savings target. Use for goals like laptop, travel, emergency fund, moving.',
+    description: 'Create financial goal/savings target. If no account is provided, backend creates a linked savings account for the goal. Use autoSavePercent when the user wants to save a percent from every income, for example 10 percent to emergency fund.',
     risk: 'medium',
     requiresConfirmation: true,
-    input: { title: 'string', targetAmount: 'number|string', currentAmount: 'number|string|null', currency: 'RUB|USD|EUR|VND|null', account: 'string|null', note: 'string|null' },
+    input: { title: 'string', targetAmount: 'number|string', currentAmount: 'number|string|null', currency: 'RUB|USD|EUR|VND|null', account: 'string|null', autoSavePercent: 'number|string|null', note: 'string|null' },
   },
   {
     name: 'update_goal',
     description: 'Update existing financial goal: title, target amount, current amount, status, note.',
     risk: 'medium',
     requiresConfirmation: true,
-    input: { goal: 'string', title: 'string|null', targetAmount: 'number|string|null', currentAmount: 'number|string|null', status: 'active|completed|archived|null', note: 'string|null' },
+    input: { goal: 'string', title: 'string|null', targetAmount: 'number|string|null', currentAmount: 'number|string|null', autoSavePercent: 'number|string|null', status: 'active|completed|archived|null', note: 'string|null' },
   },
   {
     name: 'delete_goal',

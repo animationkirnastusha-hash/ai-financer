@@ -8,6 +8,7 @@ import { aiCompanionService } from './ai-companion.service';
 import { aiAnalyticsService } from './ai-analytics.service';
 import { resolveCategoryAppearance, resolveSectionAppearance, shouldReplaceGenericIcon } from '../taxonomy/taxonomy-icons';
 import { looksLikePlaceOrMerchant, resolveTransactionSemanticTaxonomy } from '../taxonomy/transaction-taxonomy';
+import { goalAutoSaveService } from '../goals/goal-autosave.service';
 
 const transactionInclude = {
   account: {
@@ -312,6 +313,16 @@ export class AIExecutorService {
         },
         include: transactionInclude,
       });
+
+      if (kind === 'income') {
+        await goalAutoSaveService.applyForIncome(tx, userId, {
+          incomeTransactionId: transaction.id,
+          incomeAccountId: transaction.accountId,
+          incomeAmount: transaction.amount,
+          currency: transaction.account.currency,
+          date: transaction.date,
+        });
+      }
 
       return { tool, transaction };
     }
@@ -639,16 +650,23 @@ export class AIExecutorService {
       const existing = await tx.goal.findFirst({ where: { userId, title, status: { not: 'archived' } } });
       if (existing) return { tool, goal: existing, skipped: true, reason: 'goal_already_exists' };
 
+      const currentAmount = this.toInteger(input.currentAmount, 0);
+      const currency = this.cleanString(input.currency).toUpperCase() || 'RUB';
+      const accountId = typeof resolved.accountId === 'string'
+        ? resolved.accountId
+        : await this.createGoalAccount(tx, userId, title, currency, currentAmount);
+
       const goal = await tx.goal.create({
         data: {
           userId,
           title,
           targetAmount,
-          currentAmount: this.toInteger(input.currentAmount, 0),
-          currency: this.cleanString(input.currency).toUpperCase() || 'RUB',
-          accountId: typeof resolved.accountId === 'string' ? resolved.accountId : null,
+          currentAmount,
+          currency,
+          accountId,
           note: typeof input.note === 'string' && input.note.trim() ? input.note.trim() : null,
-          status: 'active',
+          autoSavePercent: this.toInteger(input.autoSavePercent, 0),
+          status: currentAmount >= targetAmount ? 'completed' : 'active',
         },
       });
       return { tool, goal };
@@ -660,6 +678,7 @@ export class AIExecutorService {
       if (typeof input.title === 'string' && input.title.trim()) data.title = input.title.trim();
       if (input.targetAmount !== null && input.targetAmount !== undefined) data.targetAmount = this.toInteger(input.targetAmount, 0);
       if (input.currentAmount !== null && input.currentAmount !== undefined) data.currentAmount = this.toInteger(input.currentAmount, 0);
+      if (input.autoSavePercent !== null && input.autoSavePercent !== undefined) data.autoSavePercent = Math.max(0, Math.min(100, this.toInteger(input.autoSavePercent, 0)));
       if (typeof input.status === 'string' && ['active', 'completed', 'archived'].includes(input.status)) data.status = input.status;
       if (input.note !== undefined) data.note = typeof input.note === 'string' && input.note.trim() ? input.note.trim() : null;
 
@@ -1207,6 +1226,44 @@ export class AIExecutorService {
     return this.requireString(resolved.accountId, fieldName);
   }
 
+
+  private async createGoalAccount(
+    tx: Prisma.TransactionClient,
+    userId: string,
+    title: string,
+    currency: string,
+    balance: number,
+  ) {
+    const baseName = `Цель: ${this.cleanString(title).slice(0, 48) || 'Цель'}`;
+    let name = baseName;
+
+    for (let index = 0; index < 20; index += 1) {
+      const candidate = index === 0 ? baseName : `${baseName} ${index + 1}`;
+      const existing = await tx.account.findFirst({ where: { userId, name: candidate }, select: { id: true } });
+      if (!existing) {
+        name = candidate;
+        break;
+      }
+    }
+
+    const account = await tx.account.create({
+      data: {
+        userId,
+        name,
+        type: 'savings',
+        currency,
+        balance,
+        openingBalance: balance,
+        showInTotalBalance: true,
+        icon: '🎯',
+        color: '#22c55e',
+      },
+      select: { id: true },
+    });
+
+    return account.id;
+  }
+
   private async getAccount(tx: Prisma.TransactionClient, userId: string, accountId: string) {
     const account = await tx.account.findFirst({ where: { id: accountId, userId } });
     if (!account) throw new NotFoundError('Account not found');
@@ -1217,10 +1274,37 @@ export class AIExecutorService {
     const ref = this.key(raw);
     if (!ref) return null;
     const accounts = await tx.account.findMany({ where: { userId } });
+    const queryParts = this.accountQueryParts(ref);
+
     return accounts.find((account) => account.id === raw)
-      ?? accounts.find((account) => this.key(account.name) === ref)
-      ?? accounts.find((account) => this.key(account.name).includes(ref) || ref.includes(this.key(account.name)))
+      ?? accounts.find((account) => this.accountAliases(account).some((alias) => alias === ref || queryParts.includes(alias)))
+      ?? accounts.find((account) => this.accountAliases(account).some((alias) => alias.includes(ref) || ref.includes(alias) || queryParts.some((part) => alias.includes(part) || part.includes(alias))))
       ?? null;
+  }
+
+  private accountQueryParts(value: string) {
+    const stopWords = new Set(['используй', 'использовать', 'выбери', 'возьми', 'счет', 'счёт', 'со', 'с', 'на', 'из', 'для']);
+    return value.split(' ').filter((word) => word && !stopWords.has(word));
+  }
+
+  private accountAliases(account: { name: string; type?: string | null }) {
+    const base = this.key(account.name);
+    const type = this.key(account.type ?? '');
+    const aliases = new Set([base, ...base.split(' ').filter((word) => word.length >= 2)]);
+
+    if (type === 'cash' || base.includes('налич') || base.includes('налик') || base.includes('cash')) {
+      ['наличные', 'наличка', 'наличку', 'налик', 'кэш', 'cash'].forEach((alias) => aliases.add(this.key(alias)));
+    }
+
+    if (type === 'card' || base.includes('карта') || base.includes('банк') || base.includes('сбер') || base.includes('тинькофф')) {
+      ['карта', 'карту', 'карточка', 'банк'].forEach((alias) => aliases.add(this.key(alias)));
+    }
+
+    if (type === 'savings' || base.includes('цель') || base.includes('копил') || base.includes('накоп')) {
+      ['цель', 'копилка', 'копилку', 'накопления'].forEach((alias) => aliases.add(this.key(alias)));
+    }
+
+    return Array.from(aliases).filter(Boolean);
   }
 
   private rememberAccount(map: Map<string, string>, name: string, id: string) {
@@ -1243,7 +1327,15 @@ export class AIExecutorService {
   }
 
   private key(value: string) {
-    return value.trim().toLowerCase();
+    return value
+      .trim()
+      .toLowerCase()
+      .replace(/ё/g, 'е')
+      .replace(/счета/g, 'счет')
+      .replace(/счёта/g, 'счет')
+      .replace(/[^\p{L}\p{N}\s]+/gu, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
   }
 
   private cleanString(value: unknown) {
