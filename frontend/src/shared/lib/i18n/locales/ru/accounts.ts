@@ -88,4 +88,6 @@ export const accountsDictionary = {
   'accounts.hero.createHint': 'Счёта пока нет, можно создать',
   'accounts.hero.swipeAria': 'Свайп счетов',
   'accounts.hero.showAccount': 'Показать {name}',
+  'accounts.details.openJournal': 'Открыть журнал по счёту',
+  'accounts.details.openJournal.caption': 'Все записи, поиск и исправления только по этому счёту',
 } as const;

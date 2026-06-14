@@ -2,6 +2,7 @@ import type { TransactionDto } from '@/features/transactions/api/transactions.ap
 import type { HomeCashflowMode, HomeFinanceGroup } from '@/features/dashboard/lib/homeFinanceAnalytics';
 import { formatMoney, formatTransactionDate } from '@/shared/lib/money';
 import { useI18n } from '@/shared/lib/i18n';
+import { useNavigationStore } from '@/features/navigation/model/navigation.store';
 
 function operationTitle(transaction: TransactionDto, fallback: string) {
   return transaction.title || transaction.description || transaction.category?.name || fallback;
@@ -18,6 +19,7 @@ type Props = {
 
 export function HomeCategoryOperationsModal({ group, transactions = [], mode = 'expense', onClose, modalLayer, onEdit }: Props) {
   const { t } = useI18n();
+  const openJournal = useNavigationStore((state) => state.openJournal);
   if (!group) return null;
 
   const liveTransactionIds = new Set(transactions.map((transaction) => transaction.id));
@@ -26,6 +28,7 @@ export function HomeCategoryOperationsModal({ group, transactions = [], mode = '
   );
   const sorted = [...source].sort((a, b) => Number(b.amount || 0) - Number(a.amount || 0));
   const total = sorted.reduce((sum, transaction) => sum + Number(transaction.amount || 0), 0);
+  const journalCategoryId = sorted.find((transaction) => transaction.categoryId)?.categoryId ?? undefined;
 
   return (
     <div className="app-modal-backdrop app-home-chart-backdrop" style={{ zIndex: modalLayer }} data-no-swipe="true" onClick={onClose}>
@@ -40,6 +43,17 @@ export function HomeCategoryOperationsModal({ group, transactions = [], mode = '
             </div>
             <button type="button" className="app-icon-button" onClick={onClose} aria-label={t('common.close')}>×</button>
           </div>
+
+          <button
+            type="button"
+            className="app-secondary-button app-home-category-modal__journal"
+            onClick={() => {
+              onClose();
+              openJournal({ categoryId: journalCategoryId, tag: group.name ? group.name.toLowerCase().replaceAll('ё', 'е') : undefined, period: 'month', type: mode });
+            }}
+          >
+            {t('dashboard.categoryModal.openJournal')}
+          </button>
 
           <div className="app-home-category-operation-list">
             {sorted.length === 0 ? (

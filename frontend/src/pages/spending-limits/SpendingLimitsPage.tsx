@@ -12,6 +12,7 @@ import {
 } from '@/features/spending-limits/api/spendingLimits.api';
 import { formatMoney } from '@/shared/lib/money';
 import { useI18n } from '@/shared/lib/i18n';
+import { FinaCommandBar } from '@/features/fina/ui/FinaCommandBar';
 import { ScreenTopBar } from '@/shared/ui/ScreenTopBar';
 
 type LimitFormState = {
@@ -170,6 +171,16 @@ export default function SpendingLimitsPage() {
           </div>
         </header>
 
+        <FinaCommandBar
+          titleKey="limits.command.title"
+          captionKey="limits.command.caption"
+          placeholderKey="limits.command.placeholder"
+          suggestions={[
+            { key: 'limits.command.create', command: 'установи лимит на продукты 20000 рублей' },
+            { key: 'limits.command.left', command: 'сколько осталось по кафе' },
+            { key: 'limits.command.raise', command: 'подними лимит на транспорт на 10 процентов' },
+          ]}
+        />
 
         <section className="limits-guide-grid">
           <article className="app-card limits-guide-card">

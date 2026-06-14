@@ -16,23 +16,22 @@ type NavigationGroup = {
   items: NavigationItem[];
 };
 
-const productLinks: NavigationItem[] = [
+const mainLinks: NavigationItem[] = [
   { screen: 'dashboard', labelKey: 'screen.dashboard', captionKey: 'nav.dashboard.caption' },
-  { screen: 'accounts', labelKey: 'screen.accounts', captionKey: 'nav.accounts.caption' },
-  { screen: 'sections', labelKey: 'screen.sections', captionKey: 'nav.sections.caption' },
-];
-
-const planningLinks: NavigationItem[] = [
   { screen: 'goals', labelKey: 'screen.goals', captionKey: 'nav.goals.caption' },
-  { screen: 'obligations', labelKey: 'screen.obligations', captionKey: 'nav.obligations.caption' },
   { screen: 'spending-limits', labelKey: 'screen.limits', captionKey: 'nav.limits.caption' },
+  { screen: 'sections', labelKey: 'screen.sections', captionKey: 'nav.sections.caption' },
+  { screen: 'profile', labelKey: 'screen.profile', captionKey: 'nav.profile.caption' },
 ];
 
-const referralLinks: NavigationItem[] = [
-  { screen: 'referral', labelKey: 'common.referrals', captionKey: 'nav.referral.caption' },
+const moneyLinks: NavigationItem[] = [
+  { screen: 'accounts', labelKey: 'screen.accounts', captionKey: 'nav.accounts.caption' },
+  { screen: 'journal', labelKey: 'screen.journal', captionKey: 'nav.journal.caption' },
+  { screen: 'obligations', labelKey: 'screen.obligations', captionKey: 'nav.obligations.caption' },
+  { screen: 'analytics', labelKey: 'common.analytics', captionKey: 'nav.analytics.caption' },
 ];
 
-const paidLinks: NavigationItem[] = [
+const storeLinks: NavigationItem[] = [
   { screen: 'store', labelKey: 'screen.store', captionKey: 'nav.store.caption' },
 ];
 
@@ -69,12 +68,11 @@ export function AppNavigationSheet() {
   if (!isOpen) return null;
 
   const groups: NavigationGroup[] = [
-    { titleKey: 'nav.group.main', items: productLinks },
-    { titleKey: 'nav.group.plan', items: planningLinks },
-    { titleKey: 'nav.group.growth', items: referralLinks },
+    { titleKey: 'nav.group.levelOne', items: mainLinks },
+    { titleKey: 'nav.group.money', items: moneyLinks },
   ];
 
-  if (canShowStore) groups.push({ titleKey: 'nav.group.premium', items: paidLinks });
+  if (canShowStore) groups.push({ titleKey: 'nav.group.store', items: storeLinks });
   if (canShowReceipts) groups.push({ titleKey: 'nav.group.premium', items: receiptLinks });
   if (hasBusiness) groups.push({ titleKey: 'nav.group.business', items: businessLinks });
   if (isAdmin) groups.push({ titleKey: 'nav.group.admin', items: adminLinks });
@@ -86,13 +84,14 @@ export function AppNavigationSheet() {
 
   return (
     <div className="app-modal-backdrop app-navigation-backdrop" data-no-swipe="true" onClick={close}>
-      <div className="app-modal-sheet app-navigation-sheet app-navigation-sheet--structured" data-no-swipe="true" onClick={(event) => event.stopPropagation()}>
+      <div className="app-modal-sheet app-navigation-sheet app-navigation-sheet--structured app-navigation-sheet--ia" data-no-swipe="true" onClick={(event) => event.stopPropagation()}>
         <div className="app-modal-handle" />
         <div className="app-modal-body">
           <div className="app-navigation-head">
             <div>
               <div className="app-eyebrow">{t('nav.eyebrow')}</div>
               <h2>{t('nav.title')}</h2>
+              <p>{t('nav.caption')}</p>
             </div>
             <button type="button" className="app-icon-button" onClick={close} aria-label={t('common.close')}>×</button>
           </div>

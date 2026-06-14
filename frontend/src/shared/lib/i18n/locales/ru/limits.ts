@@ -36,4 +36,10 @@ export const limitsDictionary = {
   'limits.guide.category.caption': 'Помогает контролировать кофе, такси, подписки и другие статьи.',
   'limits.guide.total.title': 'Все расходы',
   'limits.guide.total.caption': 'Общий лимит на период без привязки к счёту.',
+  'limits.command.title': 'Быстрый лимит',
+  'limits.command.placeholder': 'Попросите Фину настроить контроль',
+  'limits.command.caption': 'Команды помогают быстро поставить лимит и проверить остаток.',
+  'limits.command.create': 'Создать',
+  'limits.command.left': 'Остаток',
+  'limits.command.raise': 'Поднять',
 } as const;

@@ -88,4 +88,6 @@ export const accountsDictionary = {
   'accounts.hero.createHint': 'No account yet, you can create one',
   'accounts.hero.swipeAria': 'Account swipe',
   'accounts.hero.showAccount': 'Show {name}',
+  'accounts.details.openJournal': 'Open account journal',
+  'accounts.details.openJournal.caption': 'Records, search and fixes for this account only',
 } as const;

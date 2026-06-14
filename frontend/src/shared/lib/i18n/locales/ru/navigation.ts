@@ -23,4 +23,11 @@ export const navigationDictionary = {
   'nav.limits.caption': 'Контроль расходов по счетам и категориям',
   'nav.group.premium': 'Premium',
   'nav.group.business': 'Бизнес',
+  'nav.caption': 'Главные разделы оставлены на первом уровне, журнал и отчёты — во вторичных экранах.',
+  'nav.group.levelOne': 'Главные разделы',
+  'nav.group.money': 'Деньги и отчёты',
+  'nav.group.store': 'Магазин',
+  'nav.transactions.caption': 'Старый журнал операций',
+  'nav.journal.caption': 'Поиск, даты, теги и исправления',
+  'nav.profile.caption': 'Настройки, друзья и подписка',
 } as const;

@@ -49,4 +49,8 @@ export const commonDictionary = {
   'screen.settings': 'Настройки',
   'screen.referral': 'Рефералы',
   'common.section': 'раздел',
+  'screen.journal': 'Журнал',
+  'screen.transactions': 'Операции',
+  'screen.profile': 'Профиль',
+  'bottomNav.label': 'Основная навигация',
 } as const;

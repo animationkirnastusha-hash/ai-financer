@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import type { AccountDto } from "@/features/accounts/api/accounts.api";
 import { formatMoney } from "@/shared/lib/money";
 import { useI18n } from "@/shared/lib/i18n";
+import { useNavigationStore } from "@/features/navigation/model/navigation.store";
 
 const ACCOUNT_TYPE_KEYS: Record<string, string> = {
   cash: "accounts.type.cash",
@@ -42,6 +43,7 @@ export function AccountDetailsSheet({
   onAskAI,
 }: Props) {
   const { t } = useI18n();
+  const openJournal = useNavigationStore((state) => state.openJournal);
 
   useEffect(() => {
     document.body.classList.toggle("ai-modal-open", open);
@@ -134,6 +136,18 @@ export function AccountDetailsSheet({
               }
             />
           </section>
+
+          <button
+            type="button"
+            className="app-account-details-journal"
+            onClick={() => {
+              onClose();
+              openJournal({ accountId: account.id, period: 'all' });
+            }}
+          >
+            <b>{t("accounts.details.openJournal")}</b>
+            <span>{t("accounts.details.openJournal.caption")}</span>
+          </button>
 
           {account.lockRename ||
           account.lockSpending ||

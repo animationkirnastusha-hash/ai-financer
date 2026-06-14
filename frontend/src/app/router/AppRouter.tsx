@@ -12,6 +12,8 @@ import { canShowStoreSurface, hasFeatureAccess, hasRealBusinessAccess } from '@/
 import { Spinner } from '@/shared/ui/Spinner';
 
 const AccountsPage = lazy(() => import('@/pages/accounts/AccountsPage'));
+const JournalPage = lazy(() => import('@/pages/journal/JournalPage'));
+const ProfilePage = lazy(() => import('@/pages/profile/ProfilePage'));
 const AnalyticsPage = lazy(() => import('@/pages/analytics/AnalyticsPage'));
 const CompanionPage = lazy(() => import('@/pages/companion/CompanionPage'));
 const DashboardPage = lazy(() => import('@/pages/dashboard/DashboardPage'));
@@ -55,6 +57,8 @@ export function AppRouter() {
       <Suspense fallback={<RouteFallback />}>
         {currentScreen === 'dashboard' && <DashboardPage />}
         {currentScreen === 'accounts' && <AccountsPage />}
+        {currentScreen === 'journal' && <JournalPage />}
+        {currentScreen === 'profile' && <ProfilePage />}
         {currentScreen === 'analytics' && <AnalyticsPage />}
         {currentScreen === 'goals' && <GoalsPage />}
         {currentScreen === 'obligations' && <ObligationsPage />}

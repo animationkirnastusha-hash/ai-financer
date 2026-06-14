@@ -24,12 +24,14 @@ function detectScreen(input: string): AppScreen | null {
   if (includesAny(input, ['чек', 'чеки', 'фото чека', 'скан чека', 'receipt', 'receipts'])) return 'receipt-scans';
   if (includesAny(input, ['магазин', 'store', 'стор', 'тарифы', 'купить премиум', 'premium', 'business'])) return 'store';
   if (includesAny(input, ['ии бухгалтер', 'бухгалтер', 'бухгалтерия', 'фина бухгалтер', 'самозанятый', 'ип', 'малый бизнес'])) return 'business-accountant';
-  if (includesAny(input, ['аналитика', 'аналитику', 'анализ', 'analytics', 'статистика', 'отчет', 'отчеты', 'операции', 'история', 'платежи'])) return 'analytics';
+  if (includesAny(input, ['журнал', 'история', 'история операций', 'операции', 'операцию', 'транзакции', 'транзакция', 'transactions'])) return 'journal';
+  if (includesAny(input, ['аналитика', 'аналитику', 'анализ', 'analytics', 'статистика', 'отчет', 'отчеты'])) return 'analytics';
   if (includesAny(input, ['цели', 'цель', 'копилка', 'копилки', 'goals'])) return 'goals';
   if (includesAny(input, ['лимит', 'лимиты', 'ограничения трат', 'контроль трат', 'spending limits', 'limits'])) return 'spending-limits';
   if (includesAny(input, ['companion', 'компаньон', 'компаньона', 'спутник'])) return 'companion';
   if (includesAny(input, ['категории', 'категорию', 'разделы', 'раздел', 'taxonomy', 'таксономия'])) return 'sections';
-  if (includesAny(input, ['настройки', 'settings', 'параметры', 'профиль'])) return 'settings';
+  if (includesAny(input, ['профиль', 'личный кабинет', 'profile'])) return 'profile';
+  if (includesAny(input, ['настройки', 'settings', 'параметры'])) return 'settings';
   if (includesAny(input, ['счета', 'счет', 'мои счета', 'аккаунты', 'accounts', 'кошельки', 'карты'])) return 'accounts';
   if (includesAny(input, ['главная', 'главный', 'домой', 'сводка', 'обзор', 'dashboard'])) return 'dashboard';
   return null;
@@ -50,10 +52,12 @@ function isBareNavigationTarget(input: string, screen: AppScreen) {
   const bareAliases: Partial<Record<AppScreen, string[]>> = {
     dashboard: ['главная', 'домой', 'главный экран', 'сводка'],
     accounts: ['счета', 'счет', 'мои счета', 'кошельки', 'карты'],
-    analytics: ['аналитика', 'анализ', 'статистика', 'отчеты', 'операции', 'история'],
+    analytics: ['аналитика', 'анализ', 'статистика', 'отчеты'],
+    journal: ['журнал', 'история', 'история операций', 'операции', 'транзакции'],
     goals: ['цели', 'цель', 'копилки', 'копилка'],
     'spending-limits': ['лимиты', 'лимит', 'контроль трат'],
-    settings: ['настройки', 'параметры', 'профиль'],
+    settings: ['настройки', 'параметры'],
+    profile: ['профиль', 'личный кабинет'],
     sections: ['категории', 'разделы', 'категории и разделы', 'разделы и категории'],
     companion: ['компаньон', 'фина', 'помощник'],
     admin: ['админка', 'админ'],

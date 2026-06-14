@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { useSwipeNavigation } from '@/features/navigation/lib/useSwipeNavigation';
 import { useNavigationStore } from '@/features/navigation/model/navigation.store';
+import { AppBottomNavigation } from '@/features/navigation/ui/AppBottomNavigation';
 import { VoiceFirstCompanionLayer } from '@/features/voice/ui/VoiceFirstCompanionLayer';
 
 export function AppShell({ children }: { children: ReactNode }) {
@@ -15,9 +16,9 @@ export function AppShell({ children }: { children: ReactNode }) {
         {children}
       </main>
 
+      <AppBottomNavigation />
       <VoiceFirstCompanionLayer />
 
-     
     </div>
   );
 }

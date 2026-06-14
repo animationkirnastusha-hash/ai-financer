@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { goalsApi, type GoalDto } from '@/features/goals/api/goals.api';
 import { useAppModalStore } from '@/features/modals/model/appModal.store';
-import { useNavigationStore } from '@/features/navigation/model/navigation.store';
+import { FinaCommandBar } from '@/features/fina/ui/FinaCommandBar';
 import { ScreenTopBar } from '@/shared/ui/ScreenTopBar';
 import { EmptyState } from '@/shared/ui/EmptyState';
 import { formatMoney } from '@/shared/lib/money';
@@ -12,7 +12,6 @@ function clampProgress(value: number) {
 }
 
 export default function GoalsPage() {
-  const openAIWithCommand = useNavigationStore((state) => state.openAIWithCommand);
   const [goals, setGoals] = useState<GoalDto[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -63,10 +62,16 @@ export default function GoalsPage() {
           </div>
         </header>
 
-        <button type="button" onClick={() => openAIWithCommand('создай цель ноутбук 120000')} className="app-card w-full p-4 text-left active:scale-[0.99]">
-          <div className="text-sm font-semibold text-white">Создать голосом</div>
-          <div className="mt-1 text-xs text-white/42">Скажи Фине цель, сумму и при необходимости заметку.</div>
-        </button>
+        <FinaCommandBar
+          titleKey="goals.command.title"
+          captionKey="goals.command.caption"
+          placeholderKey="goals.command.placeholder"
+          suggestions={[
+            { key: 'goals.command.create', command: 'создай цель отпуск 120000 рублей' },
+            { key: 'goals.command.plan', command: 'предложи план взносов для цели отпуск' },
+            { key: 'goals.command.status', command: 'сколько осталось до цели отпуск' },
+          ]}
+        />
 
         {error ? <div className="app-error-box">{error}</div> : null}
 

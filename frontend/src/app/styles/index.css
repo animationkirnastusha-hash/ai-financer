@@ -63,6 +63,13 @@
 @import "./pages/final-page-polish.css";
 @import "./features/taxonomy/taxonomy-final-polish.css";
 
+@import "./features/chat/fina-pull-gesture.css";
+@import "./features/fina/fina-command-bar.css";
+@import "./layout/bottom-navigation.css";
+@import "./layout/navigation-ia.css";
+@import "./pages/profile.css";
+@import "./pages/journal.css";
+@import "./pages/dashboard-ia.css";
 /* Dashboard chart modal final polish. Kept inline here to avoid nested CSS @import resolution issues on Windows/Vite. */
 .app-home-chart-modal__head h2,
 .app-home-category-modal h2 {

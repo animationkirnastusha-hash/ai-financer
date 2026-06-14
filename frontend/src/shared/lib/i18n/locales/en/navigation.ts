@@ -23,4 +23,11 @@ export const navigationDictionary = {
   'nav.limits.caption': 'Spending control by accounts and categories',
   'nav.group.premium': 'Premium',
   'nav.group.business': 'Business',
+  'nav.caption': 'Core sections first; personal settings and invites live in Profile.',
+  'nav.group.levelOne': 'Main sections',
+  'nav.group.money': 'Money and reports',
+  'nav.group.store': 'Store',
+  'nav.transactions.caption': 'Legacy operations journal',
+  'nav.journal.caption': 'Search, dates, tags and fixes',
+  'nav.profile.caption': 'Settings, friends and subscription',
 } as const;

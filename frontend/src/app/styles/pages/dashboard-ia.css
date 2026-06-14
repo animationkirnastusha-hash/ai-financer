@@ -1,0 +1,43 @@
+.home-ia-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.home-ia-card {
+  display: grid;
+  min-height: 84px;
+  align-content: start;
+  gap: 6px;
+  text-align: left;
+}
+
+.home-ia-card span,
+.home-ia-card small {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.home-ia-card span {
+  color: rgba(255, 255, 255, .92);
+  font-size: 14px;
+  font-weight: 760;
+}
+
+.home-ia-card small {
+  color: rgba(255, 255, 255, .46);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+@media (max-width: 390px) {
+  .home-ia-grid { grid-template-columns: 1fr; }
+}
+
+.app-home-category-modal__journal {
+  width: 100%;
+  justify-content: center;
+  margin-bottom: 12px;
+}

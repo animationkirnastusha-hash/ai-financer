@@ -1,0 +1,22 @@
+.app-navigation-sheet--ia .app-navigation-head p {
+  margin-top: 6px;
+  max-width: 34ch;
+  color: rgba(255, 255, 255, .48);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.app-navigation-sheet--ia .app-navigation-grid {
+  grid-template-columns: 1fr;
+}
+
+.app-navigation-sheet--ia .app-navigation-item {
+  min-height: 62px;
+  align-items: flex-start;
+  text-align: left;
+}
+
+.app-navigation-sheet--ia .app-navigation-item[data-active="true"] {
+  border-color: rgba(129, 239, 208, .28);
+  background: rgba(129, 239, 208, .10);
+}

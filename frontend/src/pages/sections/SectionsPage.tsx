@@ -2,6 +2,7 @@ import { useEffect, useMemo } from 'react';
 import { useAppModalStore } from '@/features/modals/model/appModal.store';
 import { useSectionsStore } from '@/features/sections/model/sections.store';
 import type { CategoryDto, SectionDto } from '@/features/sections/api/sections.api';
+import { FinaCommandBar } from '@/features/fina/ui/FinaCommandBar';
 import { ScreenTopBar } from '@/shared/ui/ScreenTopBar';
 import { EmptyState } from '@/shared/ui/EmptyState';
 import { SettingsGearIcon } from '@/shared/ui/AppIcons';
@@ -72,6 +73,17 @@ export default function SectionsPage({ onBack }: Props) {
             <div><span>{ungrouped.length}</span><small>без раздела</small></div>
           </div>
         </header>
+
+        <FinaCommandBar
+          titleKey="sections.command.title"
+          captionKey="sections.command.caption"
+          placeholderKey="sections.command.placeholder"
+          suggestions={[
+            { key: 'sections.command.rule', command: 'создай правило все Яндекс Такси транспорт' },
+            { key: 'sections.command.merge', command: 'объедини кафе и кофейни' },
+            { key: 'sections.command.rename', command: 'переименуй категорию еда в продукты' },
+          ]}
+        />
 
         <section className="app-card app-taxonomy-actions">
           <button type="button" onClick={() => openModal({ type: 'section-edit', section: null })} className="app-action-card app-action-card--wide">

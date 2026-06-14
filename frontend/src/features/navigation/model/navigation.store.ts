@@ -2,15 +2,26 @@ import { create } from 'zustand';
 
 export type SettingsSection = 'voice' | 'fina' | 'ai' | 'currency' | 'data' | 'notifications';
 
+export type JournalFilters = Partial<{
+  query: string;
+  period: 'today' | 'week' | 'month' | 'year' | 'all' | 'custom';
+  type: 'all' | 'income' | 'expense' | 'transfer';
+  accountId: string;
+  categoryId: string;
+  tag: string;
+}>;
+
 export type AppScreen =
   | 'dashboard'
   | 'accounts'
   | 'analytics'
+  | 'journal'
   | 'goals'
   | 'obligations'
   | 'spending-limits'
   | 'companion'
   | 'settings'
+  | 'profile'
   | 'store'
   | 'premium'
   | 'business-accountant'
@@ -27,8 +38,11 @@ type NavigationState = {
   hasSystemNotifications: boolean;
   isNotificationsOpen: boolean;
   settingsSection: SettingsSection | null;
+  journalFilters: JournalFilters | null;
 
   navigateTo: (screen: AppScreen) => void;
+  openJournal: (filters?: JournalFilters) => void;
+  consumeJournalFilters: () => JournalFilters | null;
   openSettingsSection: (section: SettingsSection) => void;
   consumeSettingsSection: () => SettingsSection | null;
   openAIWithCommand: (command?: string) => void;
@@ -54,6 +68,7 @@ export const useNavigationStore = create<NavigationState>((set, get) => ({
   hasSystemNotifications: true,
   isNotificationsOpen: false,
   settingsSection: null,
+  journalFilters: null,
 
   navigateTo: (screen) => {
     const { currentScreen, history } = get();
@@ -72,7 +87,26 @@ export const useNavigationStore = create<NavigationState>((set, get) => ({
       isNavigationMenuOpen: false,
       isNotificationsOpen: false,
       settingsSection: screen === 'settings' ? get().settingsSection : null,
+      journalFilters: screen === 'journal' ? get().journalFilters : null,
     });
+  },
+
+  openJournal: (filters) => {
+    const { currentScreen, history } = get();
+    set({
+      currentScreen: 'journal',
+      history: currentScreen === 'journal' ? history : compactHistory(history, currentScreen, 'journal'),
+      journalFilters: filters ?? null,
+      isNavigationMenuOpen: false,
+      isNotificationsOpen: false,
+      settingsSection: null,
+    });
+  },
+
+  consumeJournalFilters: () => {
+    const filters = get().journalFilters;
+    if (filters) set({ journalFilters: null });
+    return filters;
   },
 
   openSettingsSection: (section) => {
@@ -81,6 +115,7 @@ export const useNavigationStore = create<NavigationState>((set, get) => ({
       currentScreen: 'settings',
       history: currentScreen === 'settings' ? history : compactHistory(history, currentScreen, 'settings'),
       settingsSection: section,
+      journalFilters: null,
       isNavigationMenuOpen: false,
       isNotificationsOpen: false,
     });
@@ -114,7 +149,7 @@ export const useNavigationStore = create<NavigationState>((set, get) => ({
     while (previous === currentScreen) previous = nextHistory.pop();
 
     if (!previous) {
-      set({ currentScreen: 'dashboard', history: [], isNavigationMenuOpen: false });
+      set({ currentScreen: 'dashboard', history: [], isNavigationMenuOpen: false, journalFilters: null });
       return;
     }
 
@@ -123,6 +158,7 @@ export const useNavigationStore = create<NavigationState>((set, get) => ({
       history: nextHistory,
       isNavigationMenuOpen: false,
       isNotificationsOpen: false,
+      journalFilters: previous === 'journal' ? get().journalFilters : null,
     });
   },
 
@@ -133,6 +169,7 @@ export const useNavigationStore = create<NavigationState>((set, get) => ({
       isNavigationMenuOpen: false,
       isNotificationsOpen: false,
       settingsSection: null,
+      journalFilters: null,
     }),
 
   openNavigationMenu: () =>

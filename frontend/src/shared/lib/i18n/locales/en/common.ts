@@ -49,4 +49,8 @@ export const commonDictionary = {
   'screen.settings': 'Settings',
   'screen.referral': 'Referrals',
   'common.section': 'section',
+  'screen.journal': 'Journal',
+  'screen.transactions': 'Transactions',
+  'screen.profile': 'Profile',
+  'bottomNav.label': 'Primary navigation',
 } as const;
