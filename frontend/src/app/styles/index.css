@@ -76,3 +76,6 @@
 @import "./layout/release-compact-scale.css";
 
 @import "./pages/product-density-polish.css";
+@import "./features/onboarding/product-tour.css";
+
+@import "./features/voice/voice-permission-compact.css";

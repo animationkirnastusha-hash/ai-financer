@@ -5,6 +5,7 @@ import { AppNavigationSheet } from '@/features/navigation/ui/AppNavigationSheet'
 import { AppModalManager } from '@/features/modals/ui/AppModalManager';
 import { PremiumUpgradeSheet } from '@/features/premium/ui/PremiumUpgradeSheet';
 import { LaunchOnboardingSheet } from '@/features/onboarding/ui/LaunchOnboardingSheet';
+import { ProductTourOverlay } from '@/features/onboarding/ui/ProductTourOverlay';
 import { ProductAnalyticsTracker } from '@/features/product-analytics/ui/ProductAnalyticsTracker';
 import { useAuthStore } from '@/features/auth/model/auth.store';
 import { useSubscriptionStore } from '@/features/subscription/model/subscription.store';
@@ -78,6 +79,7 @@ export function AppRouter() {
       <AppModalManager />
       {canShowStore ? <PremiumUpgradeSheet /> : null}
       <LaunchOnboardingSheet />
+      <ProductTourOverlay />
     </AppShell>
   );
 }

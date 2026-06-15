@@ -7,6 +7,7 @@ import { HomeObligationsWidget } from '@/features/obligations/ui/HomeObligations
 import { FinaCommandBar } from '@/features/fina/ui/FinaCommandBar';
 import { ReceiptQuickAction } from '@/features/receipt-scans/ui/ReceiptQuickAction';
 import { ProductLearningCard } from '@/features/onboarding/ui/ProductLearningCard';
+import { ProductTourOverlay } from '@/features/onboarding/ui/ProductTourOverlay';
 import { useSubscriptionStore } from '@/features/subscription/model/subscription.store';
 import { useI18n } from '@/shared/lib/i18n';
 import type { HomeCashflowMode, HomeCashflowPeriod } from '@/features/dashboard/lib/homeFinanceAnalytics';
@@ -132,32 +133,38 @@ export default function DashboardPage() {
           </section>
         ) : null}
 
-        <HomeBalanceCarousel
-          accounts={accounts}
-          mainCurrency={mainCurrency}
-          secondaryCurrency={secondaryCurrency}
-          secondaryCurrencyEnabled={secondaryCurrencyEnabled}
-          rates={rates}
-          income={month.income}
-          expenses={month.expenses}
-          delta={month.delta}
-          onOpenAccounts={() => navigateTo('accounts')}
-        />
+        <div data-product-tour="home-balance">
+          <HomeBalanceCarousel
+            accounts={accounts}
+            mainCurrency={mainCurrency}
+            secondaryCurrency={secondaryCurrency}
+            secondaryCurrencyEnabled={secondaryCurrencyEnabled}
+            rates={rates}
+            income={month.income}
+            expenses={month.expenses}
+            delta={month.delta}
+            onOpenAccounts={() => navigateTo('accounts')}
+          />
+        </div>
 
-        <FinaCommandBar
-          compact
-          titleKey="dashboard.fina.title"
-          captionKey="dashboard.fina.caption"
-          placeholderKey="dashboard.fina.placeholder"
-          suggestions={[
-            { key: 'dashboard.fina.expense', command: 'Потратил на кофе' },
-            { key: 'dashboard.fina.payments', command: 'какие ближайшие платежи на неделю' },
-          ]}
-        />
+        <div data-product-tour="home-fina">
+          <FinaCommandBar
+            compact
+            titleKey="dashboard.fina.title"
+            captionKey="dashboard.fina.caption"
+            placeholderKey="dashboard.fina.placeholder"
+            suggestions={[
+              { key: 'dashboard.fina.expense', command: 'Потратил на кофе' },
+              { key: 'dashboard.fina.payments', command: 'какие ближайшие платежи на неделю' },
+            ]}
+          />
+        </div>
 
-        <ProductLearningCard />
+        <div data-product-tour="home-learning">
+          <ProductLearningCard />
+        </div>
 
-        <section className="home-ia-grid" aria-label={t('dashboard.ia.label')}>
+        <section className="home-ia-grid" aria-label={t('dashboard.ia.label')} data-product-tour="home-actions">
           <button type="button" className="app-card home-ia-card" onClick={() => navigateTo('accounts')}>
             <span>{t('dashboard.ia.accounts.title')}</span>
             <small>{t('dashboard.ia.accounts.caption')}</small>
@@ -172,29 +179,36 @@ export default function DashboardPage() {
           </button>
         </section>
 
-        <ReceiptQuickAction />
+        <div data-product-tour="home-receipt">
+          <ReceiptQuickAction />
+        </div>
 
         <HomeObligationsWidget />
 
-        <HomeCashflowChart
-          transactions={transactions}
-          mode={cashflowMode}
-          period={cashflowPeriod}
-          rates={rates}
-          onModeChange={setCashflowMode}
-          onPeriodChange={setCashflowPeriod}
-          onOpenDetails={() => openModal({ type: 'home-chart-details', mode: cashflowMode, period: cashflowPeriod })}
-          onCreate={() => openModal({ type: 'transaction-create', initialType: cashflowMode })}
-        />
+        <div data-product-tour="home-chart">
+          <HomeCashflowChart
+            transactions={transactions}
+            mode={cashflowMode}
+            period={cashflowPeriod}
+            rates={rates}
+            onModeChange={setCashflowMode}
+            onPeriodChange={setCashflowPeriod}
+            onOpenDetails={() => openModal({ type: 'home-chart-details', mode: cashflowMode, period: cashflowPeriod })}
+            onCreate={() => openModal({ type: 'transaction-create', initialType: cashflowMode })}
+          />
+        </div>
 
-        <HomeFinanceInsight
-          transactions={transactions}
-          mode={cashflowMode}
-          period={cashflowPeriod}
-          rates={rates}
-        />
+        <div data-product-tour="home-insight">
+          <HomeFinanceInsight
+            transactions={transactions}
+            mode={cashflowMode}
+            period={cashflowPeriod}
+            rates={rates}
+          />
+        </div>
       </div>
 
+      <ProductTourOverlay />
     </div>
   );
 }

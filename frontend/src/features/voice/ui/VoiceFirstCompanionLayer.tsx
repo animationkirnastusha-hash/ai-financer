@@ -70,8 +70,9 @@ export function VoiceFirstCompanionLayer() {
   const canUseVoice = voiceEnabled && voiceBetaEnabled && voice.isSupported;
   const hasPending = chat.pendingActions.length > 0;
   const isBusy = chat.isSending || isDispatching || voice.state === 'uploading';
-  const microphoneNeedsAction = canUseVoice && (!voicePermissionPrompted || voice.permissionState === 'prompt' || voice.permissionState === 'denied' || voice.permissionState === 'unsupported');
-  const voicePermissionReady = canUseVoice && voicePermissionPrompted && voice.permissionState !== 'prompt' && voice.permissionState !== 'denied' && voice.permissionState !== 'unsupported';
+  const microphoneBlocked = voice.permissionState === 'denied' || voice.permissionState === 'unsupported';
+  const microphoneNeedsAction = canUseVoice && (!voicePermissionPrompted || microphoneBlocked);
+  const voicePermissionReady = canUseVoice && voicePermissionPrompted && !microphoneBlocked;
   const canStartManualRecording = voicePermissionReady && !hasPending && !chat.isSending && !isDispatching && voice.state === 'idle';
 
   useEffect(() => {
@@ -88,7 +89,7 @@ export function VoiceFirstCompanionLayer() {
       return;
     }
 
-    if (voice.permissionState === 'prompt' || voice.permissionState === 'denied') {
+    if (voice.permissionState === 'denied') {
       if (voicePermissionPrompted) setVoicePermissionPrompted(false);
     }
   }, [canUseVoice, setVoicePermissionPrompted, voice.permissionState, voicePermissionPrompted]);
@@ -147,21 +148,13 @@ export function VoiceFirstCompanionLayer() {
     if (result === 'started') return true;
 
     if (result === 'permission-ready') {
-      try {
-        const ready = await voice.primePermission();
-        if (ready) {
-          setVoicePermissionPrompted(true);
-          const secondTry = await voice.start();
-          if (secondTry === 'started') return true;
-        }
-      } catch {
-        // Permission errors are handled below.
-      }
+      setPermissionIntroOpen(true);
+      setPermissionIntroDismissed(false);
     }
 
     explainVoiceUnavailable();
     return false;
-  }, [canStartManualRecording, explainVoiceUnavailable, resetVoiceMachine, setVoicePermissionPrompted, showThought, t, voice]);
+  }, [canStartManualRecording, explainVoiceUnavailable, resetVoiceMachine, showThought, t, voice]);
 
   const primeVoicePermission = useCallback(async () => {
     setIsPriming(true);

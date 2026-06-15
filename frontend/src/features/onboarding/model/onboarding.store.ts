@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { PRODUCT_TOUR_ELIGIBLE_STORAGE_KEY, PRODUCT_TOUR_STORAGE_KEY, useProductTourStore } from '@/features/onboarding/model/productTour.store';
 import type { OnboardingDraft, OnboardingStatus } from '@/features/onboarding/model/onboarding.types';
 
 const STORAGE_KEY = 'ai-financer-onboarding-seen:v4';
@@ -97,23 +98,29 @@ export const useOnboardingStore = create<OnboardingState>((set, get) => {
 
     close: () => {
       localStorage.setItem(STORAGE_KEY, 'true');
+      useProductTourStore.getState().enableForNewUser();
       set({ isOpen: false, hasSeenOnboarding: true, status: 'completed' });
     },
 
     complete: () => {
       saveDraft(get().draft);
       localStorage.setItem(STORAGE_KEY, 'true');
+      useProductTourStore.getState().enableForNewUser();
       set({ isOpen: false, hasSeenOnboarding: true, status: 'completed' });
     },
 
     skip: () => {
       saveDraft(get().draft);
       localStorage.setItem(STORAGE_KEY, 'true');
+      useProductTourStore.getState().enableForNewUser();
       set({ isOpen: false, hasSeenOnboarding: true, status: 'skipped' });
     },
 
     reset: () => {
       localStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem(PRODUCT_TOUR_STORAGE_KEY);
+      localStorage.removeItem(PRODUCT_TOUR_ELIGIBLE_STORAGE_KEY);
+      useProductTourStore.getState().reset();
       set({ isOpen: true, hasSeenOnboarding: false, status: 'in_progress', draft: readDraft() });
     },
 

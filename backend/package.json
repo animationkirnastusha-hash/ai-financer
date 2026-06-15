@@ -64,7 +64,11 @@
     "test:tester-contracts": "npm run test:ai-money-contract",
     "test:tester-final": "node scripts/run-final-tester-check.mjs",
     "test:final-tester": "node scripts/run-final-tester-check.mjs",
-    "pretest:full": "node scripts/run-final-tester-check.mjs"
+    "pretest:full": "node scripts/run-final-tester-check.mjs",
+    "smoke:tester-critical": "node scripts/smoke/check-tester-critical-paths.mjs",
+    "test:mass": "node scripts/run-mass-tester-check.mjs",
+    "test:scenario-suite": "node scripts/run-mass-tester-check.mjs",
+    "test:tester-full": "node scripts/run-mass-tester-check.mjs"
   },
   "keywords": [],
   "author": "",

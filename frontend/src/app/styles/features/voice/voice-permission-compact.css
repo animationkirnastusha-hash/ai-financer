@@ -1,0 +1,65 @@
+.voice-first-intro {
+  display: grid;
+  place-items: end center;
+  padding: 0 14px calc(16px + env(safe-area-inset-bottom));
+}
+
+.voice-first-intro__card.voice-first-intro__card--polished {
+  width: min(360px, calc(100vw - 28px));
+  max-height: min(72dvh, 470px);
+  padding: 16px;
+  border-radius: 24px;
+  gap: 9px;
+}
+
+.voice-first-intro__avatar {
+  margin-bottom: 0;
+  transform: scale(.86);
+  transform-origin: center;
+}
+
+.voice-first-intro__eyebrow {
+  font-size: 10px;
+  letter-spacing: .11em;
+}
+
+.voice-first-intro__title {
+  font-size: 18px;
+  line-height: 1.12;
+}
+
+.voice-first-intro__card p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.38;
+}
+
+.voice-first-intro__hint {
+  padding: 9px 10px;
+  border-radius: 16px;
+  font-size: 12px;
+  line-height: 1.32;
+}
+
+.voice-first-intro__actions {
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.voice-first-intro__actions button {
+  min-height: 40px;
+  padding: 0 13px;
+  font-size: 13px;
+}
+
+@media (max-width: 390px) {
+  .voice-first-intro__card.voice-first-intro__card--polished {
+    width: min(338px, calc(100vw - 22px));
+    padding: 14px;
+    border-radius: 22px;
+  }
+
+  .voice-first-intro__title {
+    font-size: 17px;
+  }
+}

@@ -133,9 +133,7 @@ export function useVoiceInput({ onText, lang = 'ru-RU', sessionMs = 5200, permis
     try {
       const currentPermission = await refreshPermissionState();
 
-      // Важно: удержание Фины больше НЕ вызывает системный popup.
-      // Если разрешения ещё нет, пользователь должен нажать отдельную кнопку “Разрешить микрофон”.
-      if (!permissionPrimed && currentPermission !== 'granted' && !(permissionWasPrompted && currentPermission === 'unknown')) {
+      if (!permissionPrimed && currentPermission !== 'granted' && !permissionWasPrompted) {
         logVoiceDebugEvent('manual_voice_start_blocked_permission', { permissionState: currentPermission });
         return 'permission-ready';
       }
