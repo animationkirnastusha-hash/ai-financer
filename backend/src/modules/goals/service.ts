@@ -53,7 +53,21 @@ export class GoalService {
         include: goalInclude,
       });
 
-      if (existing) return existing;
+      if (existing) {
+        if (existing.accountId) return existing;
+
+        const accountId = await this.createGoalAccount(tx, userId, {
+          title: existing.title,
+          currency: existing.currency,
+          balance: existing.currentAmount,
+        });
+
+        return tx.goal.update({
+          where: { id: existing.id },
+          data: { accountId },
+          include: goalInclude,
+        });
+      }
 
       const accountId = data.accountId ?? await this.createGoalAccount(tx, userId, {
         title: data.title,

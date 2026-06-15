@@ -17,6 +17,10 @@ function assertNonEmpty(value, label) {
   if (typeof value !== 'string' || !value.trim()) throw new Error(`${label} is empty`);
 }
 
+function getGoalAccountId(goal) {
+  return goal?.accountId || goal?.account?.id || null;
+}
+
 async function getAccountBalance(context, accountId) {
   const response = await requestJson(context, `/accounts/${accountId}`);
   const account = response.payload?.account;
@@ -134,7 +138,7 @@ await runSmoke('tester-critical-paths', async (context) => {
   });
   const goal = goalResponse.payload?.goal;
   requireId(goal?.id, 'goal');
-  requireId(goal?.accountId, 'goal account');
+  const goalAccountId = requireId(getGoalAccountId(goal), 'goal account');
 
   const autosaveIncome = await createTransaction(context, {
     accountId: card.id,
@@ -151,6 +155,7 @@ await runSmoke('tester-critical-paths', async (context) => {
   const linkedTransfer = transactions.find((item) => item?.sourceTransactionId === autosaveIncome.id && item?.goalId === goal.id);
   if (!linkedTransfer) throw new Error('autosave linked transfer was not created');
   assertAmount(linkedTransfer.amount, 1000, 'autosave transfer amount');
+  if (linkedTransfer.toAccountId !== goalAccountId) throw new Error('autosave transfer lost goal account link');
 
   const goalsAfterAutosave = await requestJson(context, '/goals');
   const updatedGoal = unwrapArray(goalsAfterAutosave.payload, 'goals').find((item) => item.id === goal.id);
@@ -192,6 +197,7 @@ await runSmoke('tester-critical-paths', async (context) => {
 
   await requestJson(context, `/spending-limits/${limit.id}`, { method: 'DELETE' });
   await requestJson(context, `/goals/${goal.id}`, { method: 'DELETE' });
+  await requestJson(context, `/accounts/${goalAccountId}`, { method: 'DELETE' });
   await requestJson(context, `/transactions/${transfer.id}`, { method: 'DELETE', body: { balanceMode: 'revert' } });
   await requestJson(context, `/transactions/${income.id}`, { method: 'DELETE', body: { balanceMode: 'revert' } });
   await requestJson(context, `/transactions/${expense.id}`, { method: 'DELETE', body: { balanceMode: 'revert' } });
