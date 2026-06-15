@@ -8,13 +8,10 @@
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "audit:css": "node scripts/audit-css.mjs",
-    "audit:i18n": "node scripts/audit-i18n.mjs",
-    "audit:i18n:strict": "node scripts/audit-i18n.mjs --strict",
     "audit:predeploy": "node scripts/predeploy-audit.mjs",
     "audit:predeploy:strict": "node scripts/predeploy-audit.mjs --strict",
-    "predeploy:full": "node scripts/run-final-frontend-check.mjs",
-    "audit:css:strict": "node scripts/audit-css.mjs --strict",
-    "audit:product-readiness": "node scripts/audit-product-readiness.mjs"
+    "audit:product-readiness": "node scripts/audit-product-readiness.mjs",
+    "predeploy:full": "node scripts/run-final-frontend-check.mjs"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.59.0",

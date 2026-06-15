@@ -34,27 +34,54 @@ function assertFile(relativePath) {
   if (!fs.existsSync(full)) addFinding('missing-file', full, `${relativePath} is missing`);
 }
 
+function assertContains(relativePath, pattern, message) {
+  const full = path.resolve(frontendRoot, relativePath);
+  const content = read(full);
+  if (!content.includes(pattern)) addFinding('missing-wiring', full, message);
+}
+
+function extractStringLiterals(line) {
+  const result = [];
+  const regex = /(['"`])((?:\\.|(?!\1).)*?)\1/g;
+  let match;
+  while ((match = regex.exec(line))) result.push(match[2]);
+  return result;
+}
+
 function checkNoLegacyOnboardingSteps(files) {
-  const patterns = ['features/onboarding/ui/steps', "./steps", "../steps"];
+  const importPattern = /from\s+['"](?:\.\.\/|\.\/)steps(?:\/[^'"]*)?['"]/;
   for (const file of files) {
-    const content = read(file);
-    patterns.forEach((pattern) => {
-      if (content.includes(pattern)) addFinding('legacy-onboarding', file, `legacy onboarding step import: ${pattern}`);
+    if (!/\.tsx?$/.test(file)) continue;
+    const lines = read(file).split(/\r?\n/);
+    lines.forEach((line, index) => {
+      if (importPattern.test(line)) addFinding('legacy-onboarding', file, 'legacy onboarding step import', index + 1);
     });
   }
 }
 
 function checkNoFixedAmountsInLearningExamples(files) {
-  const targetFiles = files.filter((file) => /locales[\\/](ru|en)[\\/](onboarding|profile|text-chat|settings|misc)\.ts$/.test(file));
+  const targetFiles = files.filter((file) => /locales[\/](ru|en)[\/](onboarding|profile|text-chat|settings|misc)\.ts$/.test(file));
   const commandWords = /(Потратил|Получил|доход|расход|лимит|цель|Spent|Got|received|income|expense|limit|goal)/i;
   const amountLike = /(?:\d[\d\s]{1,}|\d+[.,]\d+)/;
 
   for (const file of targetFiles) {
     const lines = read(file).split(/\r?\n/);
     lines.forEach((line, index) => {
-      const isLikelyExample = /(example|examples|learning|prompt|command|подсказ|пример)/i.test(line);
+      const isLikelyExample = /(example|examples|learning|prompt|command|подсказ|пример|tour)/i.test(line);
       if (isLikelyExample && commandWords.test(line) && amountLike.test(line)) {
         addFinding('fixed-amount-example', file, 'learning/example command should not contain a fixed amount', index + 1);
+      }
+    });
+  }
+}
+
+function checkNoWakeWordExamples(files) {
+  const targetFiles = files.filter((file) => /locales[\/](ru|en)[\/](onboarding|profile|text-chat|settings|misc)\.ts$/.test(file));
+  for (const file of targetFiles) {
+    const lines = read(file).split(/\r?\n/);
+    lines.forEach((line, index) => {
+      if (/['"`]\s*Фина[,.!?:]/.test(line)) {
+        addFinding('wake-word-example', file, 'example command should not require wake word Фина', index + 1);
       }
     });
   }
@@ -70,12 +97,9 @@ function checkNoHighConfidenceTechnicalCopy(files) {
     'debug panel',
     'Endpoint',
     'Endpoints',
+    'pending action',
   ];
-  const ignored = [
-    'features/admin',
-    'pages/admin',
-    'scripts/',
-  ];
+  const ignored = ['features/admin', 'pages/admin', 'scripts/', 'features/audit-log'];
 
   for (const file of files) {
     const relative = path.relative(frontendRoot, file).replace(/\\/g, '/');
@@ -83,40 +107,85 @@ function checkNoHighConfidenceTechnicalCopy(files) {
     if (!/\.(ts|tsx)$/.test(file)) continue;
     const lines = read(file).split(/\r?\n/);
     lines.forEach((line, index) => {
-      const trimmed = line.trim();
-      if (
-        trimmed.startsWith('import ') ||
-        trimmed.startsWith('export ') ||
-        trimmed.startsWith('type ') ||
-        trimmed.startsWith('interface ') ||
-        trimmed.startsWith('//') ||
-        trimmed.startsWith('*')
-      ) return;
-
-      banned.forEach((term) => {
-        if (line.includes(term)) addFinding('technical-copy', file, `high-confidence technical UI copy: ${term}`, index + 1);
-      });
+      if (/console\.(log|warn|error|info|debug)\s*\(/.test(line)) return;
+      const literals = extractStringLiterals(line);
+      for (const literal of literals) {
+        for (const term of banned) {
+          if (literal.includes(term)) addFinding('technical-copy', file, `high-confidence technical UI copy: ${term}`, index + 1);
+        }
+      }
     });
   }
 }
 
-function checkAnimationAndTourWiring() {
+function checkProductTourAndLearningWiring() {
   assertFile('src/features/chat/ui/message/AssistantTypingText.tsx');
   assertFile('src/features/onboarding/ui/ProductTourOverlay.tsx');
+  assertFile('src/features/onboarding/ui/ProductLearningCard.tsx');
   assertFile('src/app/styles/features/onboarding/product-tour.css');
+  assertFile('src/app/styles/features/onboarding/product-learning.css');
   assertFile('src/app/styles/animations/chat-motion.css');
 
+  const appRouter = read(path.resolve(srcRoot, 'app/router/AppRouter.tsx'));
   const dashboard = read(path.resolve(srcRoot, 'pages/dashboard/DashboardPage.tsx'));
-  if (dashboard && !dashboard.includes('ProductTourOverlay')) {
-    addFinding('tour-wiring', path.resolve(srcRoot, 'pages/dashboard/DashboardPage.tsx'), 'ProductTourOverlay is not mounted on dashboard');
+  if (!appRouter.includes('ProductTourOverlay') && !dashboard.includes('ProductTourOverlay')) {
+    addFinding('tour-wiring', path.resolve(srcRoot, 'app/router/AppRouter.tsx'), 'ProductTourOverlay is not mounted');
+  }
+
+  for (const target of ['home-balance', 'home-fina', 'home-learning', 'home-actions', 'home-chart', 'home-insight']) {
+    if (!dashboard.includes(`data-product-tour="${target}"`)) {
+      addFinding('tour-target', path.resolve(srcRoot, 'pages/dashboard/DashboardPage.tsx'), `Product tour target is missing: ${target}`);
+    }
   }
 
   const indexCss = read(path.resolve(srcRoot, 'app/styles/index.css'));
-  if (indexCss && !indexCss.includes('product-tour.css')) {
-    addFinding('style-wiring', path.resolve(srcRoot, 'app/styles/index.css'), 'product-tour.css is not imported');
+  for (const css of ['product-tour.css', 'product-learning.css', 'chat-motion.css', 'voice-permission-compact.css']) {
+    if (!indexCss.includes(css)) addFinding('style-wiring', path.resolve(srcRoot, 'app/styles/index.css'), `${css} is not imported`);
   }
-  if (indexCss && !indexCss.includes('chat-motion.css')) {
-    addFinding('style-wiring', path.resolve(srcRoot, 'app/styles/index.css'), 'chat-motion.css is not imported');
+}
+
+function checkNavigationIA() {
+  const bottomNav = read(path.resolve(srcRoot, 'features/navigation/ui/AppBottomNavigation.tsx'));
+  const navSheet = read(path.resolve(srcRoot, 'features/navigation/ui/AppNavigationSheet.tsx'));
+
+  for (const screen of ['dashboard', 'goals', 'spending-limits', 'journal', 'profile']) {
+    if (!bottomNav.includes(`screen: '${screen}'`)) addFinding('bottom-nav', path.resolve(srcRoot, 'features/navigation/ui/AppBottomNavigation.tsx'), `bottom nav missing ${screen}`);
+    if (navSheet.includes(`screen: '${screen}'`)) addFinding('navigation-duplication', path.resolve(srcRoot, 'features/navigation/ui/AppNavigationSheet.tsx'), `menu duplicates first-level screen ${screen}`);
+  }
+
+  if (!navSheet.includes(`screen: 'store'`)) addFinding('store-entry', path.resolve(srcRoot, 'features/navigation/ui/AppNavigationSheet.tsx'), 'Store must stay available from menu for base users');
+  if (!navSheet.includes(`screen: 'sections'`)) addFinding('taxonomy-entry', path.resolve(srcRoot, 'features/navigation/ui/AppNavigationSheet.tsx'), 'Categories/sections must stay in secondary menu');
+}
+
+function checkProductSurfaceFiles() {
+  for (const relativePath of [
+    'src/features/receipt-scans/ui/ReceiptQuickAction.tsx',
+    'src/pages/analytics/AnalyticsPage.tsx',
+    'src/pages/premium/PremiumPage.tsx',
+    'src/pages/referral/ReferralPage.tsx',
+    'src/pages/spending-limits/SpendingLimitsPage.tsx',
+    'src/pages/goals/GoalsPage.tsx',
+    'src/features/chat/ui/TextChatOverlay.tsx',
+    'src/features/voice/ui/VoicePermissionIntro.tsx',
+    'src/features/modals/ui/AppModalManager.tsx',
+  ]) {
+    assertFile(relativePath);
+  }
+}
+
+function checkLearningKeys() {
+  const ru = read(path.resolve(srcRoot, 'shared/lib/i18n/locales/ru/onboarding.ts'));
+  const en = read(path.resolve(srcRoot, 'shared/lib/i18n/locales/en/onboarding.ts'));
+  for (const key of [
+    'learning.eyebrow',
+    'learning.task.expense.title',
+    'learning.task.question.title',
+    'learning.task.goal.title',
+    'learning.task.limit.title',
+    'learning.done.action',
+  ]) {
+    if (!ru.includes(`'${key}'`)) addFinding('i18n-key', path.resolve(srcRoot, 'shared/lib/i18n/locales/ru/onboarding.ts'), `missing RU key: ${key}`);
+    if (!en.includes(`'${key}'`)) addFinding('i18n-key', path.resolve(srcRoot, 'shared/lib/i18n/locales/en/onboarding.ts'), `missing EN key: ${key}`);
   }
 }
 
@@ -149,9 +218,13 @@ if (!fs.existsSync(srcRoot)) {
 }
 
 const files = walk(srcRoot);
-checkAnimationAndTourWiring();
+checkProductSurfaceFiles();
+checkProductTourAndLearningWiring();
+checkNavigationIA();
+checkLearningKeys();
 checkNoLegacyOnboardingSteps(files);
 checkNoFixedAmountsInLearningExamples(files);
+checkNoWakeWordExamples(files);
 checkNoHighConfidenceTechnicalCopy(files);
 writeReport();
 

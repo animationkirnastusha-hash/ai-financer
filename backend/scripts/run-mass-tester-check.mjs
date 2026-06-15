@@ -23,7 +23,7 @@ function ensureContext() {
 
   const backendPkg = JSON.parse(fs.readFileSync(backendPackage, 'utf8'));
   const frontendPkg = JSON.parse(fs.readFileSync(frontendPackage, 'utf8'));
-  const backendRequired = ['repo:clean', 'release:check', 'smoke:tester-critical'];
+  const backendRequired = ['repo:clean', 'release:check', 'smoke:tester-critical', 'test:product-scenarios'];
   const frontendRequired = ['predeploy:full', 'audit:product-readiness'];
   const backendMissing = backendRequired.filter((script) => !backendPkg.scripts?.[script]);
   const frontendMissing = frontendRequired.filter((script) => !frontendPkg.scripts?.[script]);
@@ -119,6 +119,7 @@ try {
 await check('initial cleanup', () => run('npm', ['run', 'repo:clean']));
 await check('backend release check', () => run('npm', ['run', 'release:check']));
 await check('tester critical backend scenarios', () => run('npm', ['run', 'smoke:tester-critical']));
+await check('five product scenario scripts', () => run('npm', ['run', 'test:product-scenarios']));
 await check('frontend predeploy check', () => run('npm', ['run', 'predeploy:full'], { cwd: frontendRoot }));
 await check('frontend product readiness audit', () => run('npm', ['run', 'audit:product-readiness'], { cwd: frontendRoot }));
 await check('final cleanup', () => run('node', ['scripts/clean-local-artifacts.mjs', '--keep-dist', '--keep-reports']));

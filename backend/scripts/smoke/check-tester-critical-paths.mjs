@@ -136,8 +136,11 @@ await runSmoke('tester-critical-paths', async (context) => {
       autoSavePercent: 10,
     },
   });
-  const goal = goalResponse.payload?.goal;
-  requireId(goal?.id, 'goal');
+  const createdGoal = goalResponse.payload?.goal;
+  const goalId = requireId(createdGoal?.id, 'goal');
+
+  const listedGoalsAfterCreate = unwrapArray((await requestJson(context, '/goals')).payload, 'goals');
+  const goal = listedGoalsAfterCreate.find((item) => item.id === goalId) || createdGoal;
   const goalAccountId = requireId(getGoalAccountId(goal), 'goal account');
 
   const autosaveIncome = await createTransaction(context, {
@@ -152,13 +155,13 @@ await runSmoke('tester-critical-paths', async (context) => {
     method: 'GET',
   });
   const transactions = unwrapArray(transactionsAfterAutosave.payload, 'transactions');
-  const linkedTransfer = transactions.find((item) => item?.sourceTransactionId === autosaveIncome.id && item?.goalId === goal.id);
+  const linkedTransfer = transactions.find((item) => item?.sourceTransactionId === autosaveIncome.id && item?.goalId === goalId);
   if (!linkedTransfer) throw new Error('autosave linked transfer was not created');
   assertAmount(linkedTransfer.amount, 1000, 'autosave transfer amount');
   if (linkedTransfer.toAccountId !== goalAccountId) throw new Error('autosave transfer lost goal account link');
 
   const goalsAfterAutosave = await requestJson(context, '/goals');
-  const updatedGoal = unwrapArray(goalsAfterAutosave.payload, 'goals').find((item) => item.id === goal.id);
+  const updatedGoal = unwrapArray(goalsAfterAutosave.payload, 'goals').find((item) => item.id === goalId);
   if (!updatedGoal) throw new Error('goal is not visible after autosave');
   assertAmount(updatedGoal.currentAmount, 1000, 'goal progress after autosave');
 
@@ -168,7 +171,7 @@ await runSmoke('tester-critical-paths', async (context) => {
   });
 
   const goalsAfterDelete = await requestJson(context, '/goals');
-  const revertedGoal = unwrapArray(goalsAfterDelete.payload, 'goals').find((item) => item.id === goal.id);
+  const revertedGoal = unwrapArray(goalsAfterDelete.payload, 'goals').find((item) => item.id === goalId);
   if (!revertedGoal) throw new Error('goal is not visible after income delete');
   assertAmount(revertedGoal.currentAmount, 0, 'goal progress after income delete');
 
@@ -196,7 +199,7 @@ await runSmoke('tester-critical-paths', async (context) => {
   if (!reportPreview.payload) throw new Error('report preview is empty');
 
   await requestJson(context, `/spending-limits/${limit.id}`, { method: 'DELETE' });
-  await requestJson(context, `/goals/${goal.id}`, { method: 'DELETE' });
+  await requestJson(context, `/goals/${goalId}`, { method: 'DELETE' });
   await requestJson(context, `/accounts/${goalAccountId}`, { method: 'DELETE' });
   await requestJson(context, `/transactions/${transfer.id}`, { method: 'DELETE', body: { balanceMode: 'revert' } });
   await requestJson(context, `/transactions/${income.id}`, { method: 'DELETE', body: { balanceMode: 'revert' } });
@@ -209,7 +212,7 @@ await runSmoke('tester-critical-paths', async (context) => {
     cardAccountId: card.id,
     expenseId: expense.id,
     incomeId: income.id,
-    goalId: goal.id,
+    goalId,
     linkedAutosaveTransferId: linkedTransfer.id,
   });
 });
