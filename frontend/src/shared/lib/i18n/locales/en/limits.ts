@@ -42,4 +42,10 @@ export const limitsDictionary = {
   'limits.command.create': 'Create',
   'limits.command.left': 'Remaining',
   'limits.command.raise': 'Raise',
+  'limits.error.load': 'Could not load limits',
+  'limits.form.amountPlaceholder': 'Amount',
+  'limits.empty.title': 'No limits yet',
+  'limits.empty.caption': 'Tell Fina: “Set a cafe limit”. She will ask for amount and period.',
+  'limits.empty.action': 'Set with Fina',
+  'limits.empty.manual': 'Set manually',
 } as const;

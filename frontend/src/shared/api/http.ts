@@ -1,6 +1,6 @@
 import { env } from '@/shared/config/env';
 import { getAccessToken } from '@/features/auth/lib/accessToken';
-import { readOfflineJson, saveOfflineJson } from '@/shared/lib/performance/offlineJsonCache';
+import { clearOfflineJsonCache, readOfflineJson, saveOfflineJson } from '@/shared/lib/performance/offlineJsonCache';
 
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 
@@ -58,6 +58,10 @@ export async function request<T>(
 
   if (response.ok && method === 'GET' && isJson) {
     saveOfflineJson(path, token, payload);
+  }
+
+  if (response.ok && method !== 'GET') {
+    clearOfflineJsonCache(token);
   }
 
   if (!response.ok && method === 'GET') {

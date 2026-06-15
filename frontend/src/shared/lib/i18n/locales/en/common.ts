@@ -15,7 +15,7 @@ export const commonDictionary = {
   'screen.obligations': 'Obligations',
   'screen.sections': 'Categories',
   'screen.premium': 'Premium',
-  'screen.business': 'AI accountant',
+  'screen.business': 'Business',
   'screen.admin': 'Admin',
   'screen.receipts': 'Receipts',
   'common.cancel': 'Cancel',

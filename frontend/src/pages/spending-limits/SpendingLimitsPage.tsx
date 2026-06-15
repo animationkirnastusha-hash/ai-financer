@@ -11,9 +11,11 @@ import {
   type SpendingLimitTargetType,
 } from '@/features/spending-limits/api/spendingLimits.api';
 import { formatMoney } from '@/shared/lib/money';
+import { useNavigationStore } from '@/features/navigation/model/navigation.store';
 import { useI18n } from '@/shared/lib/i18n';
 import { FinaCommandBar } from '@/features/fina/ui/FinaCommandBar';
 import { ScreenTopBar } from '@/shared/ui/ScreenTopBar';
+import { EmptyState } from '@/shared/ui/EmptyState';
 
 type LimitFormState = {
   targetType: SpendingLimitTargetType;
@@ -43,6 +45,7 @@ export default function SpendingLimitsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const openAIWithCommand = useNavigationStore((state) => state.openAIWithCommand);
 
   const expenseCategories = useMemo(
     () => categories.filter((category) => category.type === 'expense' || category.type === 'both' || !category.type),
@@ -70,7 +73,7 @@ export default function SpendingLimitsPage() {
           categoryId: current.categoryId || nextCategories.find((category) => category.type === 'expense')?.id || '',
         }));
       } catch (loadError) {
-        if (!cancelled) setError(loadError instanceof Error ? loadError.message : 'Не удалось загрузить лимиты');
+        if (!cancelled) setError(loadError instanceof Error ? loadError.message : t('limits.error.load'));
       } finally {
         if (!cancelled) setIsLoading(false);
       }
@@ -176,7 +179,7 @@ export default function SpendingLimitsPage() {
           captionKey="limits.command.caption"
           placeholderKey="limits.command.placeholder"
           suggestions={[
-            { key: 'limits.command.create', command: 'установи лимит на продукты 20000 рублей' },
+            { key: 'limits.command.create', command: 'Поставь лимит на продукты' },
             { key: 'limits.command.left', command: 'сколько осталось по кафе' },
             { key: 'limits.command.raise', command: 'подними лимит на транспорт на 10 процентов' },
           ]}
@@ -237,7 +240,7 @@ export default function SpendingLimitsPage() {
             <div className="limits-form__row">
               <label>
                 <span>{t('limits.form.amount')}</span>
-                <input inputMode="decimal" value={form.amount} onChange={(event) => setForm({ ...form, amount: event.target.value })} placeholder="50000" />
+                <input inputMode="decimal" value={form.amount} onChange={(event) => setForm({ ...form, amount: event.target.value })} placeholder={t('limits.form.amountPlaceholder')} />
               </label>
               <label>
                 <span>{t('limits.form.period')}</span>
@@ -275,7 +278,17 @@ export default function SpendingLimitsPage() {
           </div>
 
           {isLoading ? <div className="app-card limits-empty">{t('common.loading')}</div> : null}
-          {!isLoading && limits.length === 0 ? <div className="app-card limits-empty">{t('limits.empty')}</div> : null}
+          {!isLoading && limits.length === 0 ? (
+            <EmptyState
+              eyebrow={t('screen.limits')}
+              title={t('limits.empty.title')}
+              description={t('limits.empty.caption')}
+              actionLabel={t('limits.empty.action')}
+              onAction={() => openAIWithCommand('Поставь лимит на кафе')}
+              secondaryActionLabel={t('limits.empty.manual')}
+              onSecondaryAction={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+            />
+          ) : null}
 
           <div className="limits-list">
             {limits.map((limit) => (

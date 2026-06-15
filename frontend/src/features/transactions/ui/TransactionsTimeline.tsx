@@ -58,7 +58,7 @@ export function TransactionsTimeline({ transactions, isLoading, error, onRefresh
         ) : error ? (
           <div className="rounded-2xl border border-red-400/15 bg-red-400/10 p-4 text-sm text-red-100/80">{error}</div>
         ) : transactions.length === 0 ? (
-          <div className="rounded-2xl border border-white/8 bg-black/20 p-4 text-sm leading-6 text-white/55">Пока нет операций. Скажи Фине: “кофе 300”.</div>
+          <div className="rounded-2xl border border-white/8 bg-black/20 p-4 text-sm leading-6 text-white/55">Пока нет операций. Скажи Фине: “Потратил на кофе”.</div>
         ) : (
           groups.map((group) => (
             <div key={group.key} className="space-y-3">

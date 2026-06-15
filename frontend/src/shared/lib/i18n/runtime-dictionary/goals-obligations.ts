@@ -4,7 +4,7 @@ export const goalsObligationsRuntimeDictionary: Record<string, string> = {
   'Добавить цель': 'Add goal',
   'Цели не загрузились': 'Goals failed to load',
   'Укажи название и сумму цели.': 'Specify the goal name and amount.',
-  'Короткая форма. Можно также сказать: “создай цель отпуск 120000”.': 'Short form. You can also say: “create a goal vacation 120000”.',
+  'Короткая форма. Можно также сказать: “создай цель на отпуск”.': 'Short form. You can also say: “create a vacation goal”.',
   'Цели помогают видеть, зачем ты экономишь и сколько осталось до результата.': 'Goals help you see why you save and how much is left.',
   'Подушка безопасности': 'Safety cushion',
   'Отпуск': 'Vacation',

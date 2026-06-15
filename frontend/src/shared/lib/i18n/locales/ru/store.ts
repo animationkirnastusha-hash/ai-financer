@@ -49,7 +49,7 @@ export const storeDictionary = {
   'store.payment.starsPaid': 'Оплата прошла. Обновляю доступ…',
   'store.payment.starsCancelled': 'Оплата отменена.',
   'store.payment.starsFailed': 'Оплата не прошла.',
-  'store.payment.starsNotConfigured': 'Оплата Stars ещё не подключена на сервере.',
+  'store.payment.starsNotConfigured': 'Оплата Stars скоро появится.',
   'store.payment.manualPrepared': 'Заявка сохранена. Другие способы подключим позже.',
   'store.payment.testGranted': 'Доступ выдан.',
   'store.payment.error': 'Не удалось подготовить оплату.',

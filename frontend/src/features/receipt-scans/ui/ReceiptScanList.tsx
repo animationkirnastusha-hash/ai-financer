@@ -2,6 +2,7 @@ import type { AccountDto } from '@/features/accounts/api/accounts.api';
 import type { ReceiptScanDto, ReviewReceiptScanPayload } from '@/features/receipt-scans/api/receiptScans.api';
 import { ReceiptPreviewCard } from '@/features/receipt-scans/ui/ReceiptPreviewCard';
 import { useI18n } from '@/shared/lib/i18n';
+import { EmptyState } from '@/shared/ui/EmptyState';
 
 type Props = {
   items: ReceiptScanDto[];
@@ -21,10 +22,11 @@ export function ReceiptScanList({ items, accounts = [], isLoading = false, isSav
 
   if (!items.length) {
     return (
-      <section className="app-card receipt-empty-card">
-        <strong>{t('receipts.empty.title')}</strong>
-        <span>{t('receipts.empty.caption')}</span>
-      </section>
+      <EmptyState
+        eyebrow={t('screen.receipts')}
+        title={t('receipts.empty.title')}
+        description={t('receipts.empty.caption')}
+      />
     );
   }
 

@@ -16,19 +16,14 @@ type NavigationGroup = {
   items: NavigationItem[];
 };
 
-const mainLinks: NavigationItem[] = [
-  { screen: 'dashboard', labelKey: 'screen.dashboard', captionKey: 'nav.dashboard.caption' },
-  { screen: 'goals', labelKey: 'screen.goals', captionKey: 'nav.goals.caption' },
-  { screen: 'spending-limits', labelKey: 'screen.limits', captionKey: 'nav.limits.caption' },
-  { screen: 'sections', labelKey: 'screen.sections', captionKey: 'nav.sections.caption' },
-  { screen: 'profile', labelKey: 'screen.profile', captionKey: 'nav.profile.caption' },
-];
-
 const moneyLinks: NavigationItem[] = [
   { screen: 'accounts', labelKey: 'screen.accounts', captionKey: 'nav.accounts.caption' },
-  { screen: 'journal', labelKey: 'screen.journal', captionKey: 'nav.journal.caption' },
-  { screen: 'obligations', labelKey: 'screen.obligations', captionKey: 'nav.obligations.caption' },
   { screen: 'analytics', labelKey: 'common.analytics', captionKey: 'nav.analytics.caption' },
+  { screen: 'obligations', labelKey: 'screen.obligations', captionKey: 'nav.obligations.caption' },
+];
+
+const setupLinks: NavigationItem[] = [
+  { screen: 'sections', labelKey: 'screen.sections', captionKey: 'nav.sections.caption' },
 ];
 
 const storeLinks: NavigationItem[] = [
@@ -68,8 +63,8 @@ export function AppNavigationSheet() {
   if (!isOpen) return null;
 
   const groups: NavigationGroup[] = [
-    { titleKey: 'nav.group.levelOne', items: mainLinks },
     { titleKey: 'nav.group.money', items: moneyLinks },
+    { titleKey: 'nav.group.setup', items: setupLinks },
   ];
 
   if (canShowStore) groups.push({ titleKey: 'nav.group.store', items: storeLinks });

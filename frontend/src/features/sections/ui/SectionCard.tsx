@@ -1,5 +1,6 @@
 import type { SectionDto, CategoryDto } from '@/features/sections/api/sections.api';
 import { formatMoney } from '@/shared/lib/money';
+import { useI18n } from '@/shared/lib/i18n';
 
 type Props = {
   section: SectionDto;
@@ -9,6 +10,7 @@ type Props = {
 };
 
 export function SectionCard({ section, categories, onOpenAI, onSelect }: Props) {
+  const { t } = useI18n();
   const sectionCategories = categories.filter((category) => category.sectionId === section.id);
   const expenses = Number(section.totals?.expenses ?? 0);
   const transactionCount = Number(section.totals?.transactionCount ?? 0);
@@ -24,13 +26,13 @@ export function SectionCard({ section, categories, onOpenAI, onSelect }: Props) 
             <div>
               <h3 className="text-lg font-semibold text-white">{section.name}</h3>
               <p className="mt-1 text-xs leading-5 text-white/42">
-                {section.description || 'Раздел для расходов, категорий и AI-правил'}
+                {section.description || t('sections.section.defaultCaption')}
               </p>
             </div>
           </div>
 
           <div className="rounded-2xl border border-emerald-300/12 bg-emerald-300/8 px-3 py-2 text-right">
-            <div className="text-xs text-emerald-100/55">Расходы</div>
+            <div className="text-xs text-emerald-100/55">{t('sections.section.expenses')}</div>
             <div className="mt-1 text-sm font-semibold text-emerald-100">
               {expenses > 0 ? formatMoney(expenses, 'RUB', { sign: 'minus' }) : '—'}
             </div>
@@ -49,18 +51,18 @@ export function SectionCard({ section, categories, onOpenAI, onSelect }: Props) 
         ))}
         {sectionCategories.length === 0 ? (
           <span className="rounded-full border border-white/8 bg-black/20 px-3 py-1.5 text-xs text-white/38">
-            Категории можно добавить вручную или через AI
+            {t('sections.section.noCategoriesHint')}
           </span>
         ) : null}
       </div>
 
       <div className="mt-4 grid grid-cols-2 gap-2 text-xs text-white/45">
         <div className="rounded-2xl border border-white/8 bg-black/18 p-3">
-          <div className="text-white/32">Категорий</div>
+          <div className="text-white/32">{t('sections.section.categoriesCount')}</div>
           <div className="mt-1 text-base font-semibold text-white/80">{sectionCategories.length}</div>
         </div>
         <div className="rounded-2xl border border-white/8 bg-black/18 p-3">
-          <div className="text-white/32">Операций</div>
+          <div className="text-white/32">{t('sections.section.operationsCount')}</div>
           <div className="mt-1 text-base font-semibold text-white/80">{transactionCount || '—'}</div>
         </div>
       </div>
@@ -71,14 +73,14 @@ export function SectionCard({ section, categories, onOpenAI, onSelect }: Props) 
           onClick={() => onOpenAI(`Запиши все расходы по продуктам в раздел ${section.name}`)}
           className="shrink-0 rounded-2xl border border-white/10 bg-white/8 px-3 py-2 text-xs text-white/70"
         >
-          Продукты → {section.name}
+          {t('sections.section.quickProducts', { name: section.name })}
         </button>
         <button
           type="button"
           onClick={() => onOpenAI(`Создай категорию для раздела ${section.name}`)}
           className="shrink-0 rounded-2xl border border-white/10 bg-white/8 px-3 py-2 text-xs text-white/70"
         >
-          + Категория
+          {t('sections.section.quickCategory')}
         </button>
       </div>
     </article>

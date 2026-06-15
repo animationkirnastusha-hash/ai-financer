@@ -1,0 +1,282 @@
+:root {
+  --app-card-compact-padding: 14px;
+}
+
+.app-page {
+  font-size: 15px;
+}
+
+.app-card {
+  padding: var(--app-card-compact-padding);
+}
+
+.app-card--hero {
+  border-radius: 26px;
+}
+
+.app-eyebrow {
+  font-size: 9px;
+  letter-spacing: .18em;
+}
+
+.app-home-layout,
+.profile-hub,
+.app-analytics-page .app-page__inner {
+  gap: 12px;
+}
+
+.app-home-balance-card {
+  padding: 15px;
+}
+
+.app-home-balance-card__top {
+  gap: 10px;
+}
+
+.app-home-balance-card__amount {
+  margin-top: 7px !important;
+  font-size: clamp(30px, 9.2vw, 52px) !important;
+  line-height: .95 !important;
+}
+
+.app-home-balance-card__top p,
+.app-home-balance-card__rate {
+  font-size: 12px !important;
+  line-height: 1.3 !important;
+}
+
+.app-home-balance-card__rate {
+  margin-top: 7px !important;
+  padding: 5px 8px !important;
+}
+
+.app-home-balance-card__nav {
+  min-width: 88px !important;
+  height: 36px !important;
+  grid-template-columns: 27px 1fr 27px !important;
+}
+
+.app-home-balance-card__nav button {
+  font-size: 20px !important;
+}
+
+.app-home-balance-card__metrics {
+  margin-top: 10px !important;
+  gap: 6px !important;
+}
+
+.app-home-metric {
+  border-radius: 16px !important;
+  padding: 8px !important;
+}
+
+.app-home-metric span {
+  font-size: 9px !important;
+}
+
+.app-home-metric b {
+  margin-top: 4px !important;
+  font-size: 13px !important;
+}
+
+.app-home-balance-card__footer {
+  margin-top: 10px !important;
+}
+
+.app-home-balance-card__footer button {
+  padding: 6px 10px !important;
+  font-size: 11px !important;
+}
+
+.fina-command-bar--compact {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 4px;
+  padding: 12px 14px;
+  border-radius: 22px;
+}
+
+.fina-command-bar--compact .fina-command-bar__copy p {
+  margin-top: 4px;
+  font-size: 12px;
+  line-height: 1.34;
+}
+
+.fina-command-bar__below {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  margin-top: -4px;
+}
+
+.fina-command-bar__text-action {
+  min-height: 34px;
+  border-radius: 999px;
+  border: 1px solid rgba(129, 239, 208, .18);
+  background: rgba(129, 239, 208, .08);
+  color: rgba(219, 255, 244, .92);
+  padding: 0 12px;
+  font-size: 12px;
+  font-weight: 820;
+  white-space: nowrap;
+}
+
+.fina-command-bar__below .fina-command-bar__chips {
+  min-width: 0;
+  padding-bottom: 0;
+}
+
+.fina-command-bar__below .fina-command-bar__chips button {
+  min-height: 32px;
+  padding: 0 10px;
+  font-size: 11px;
+}
+
+.home-ia-grid {
+  gap: 8px;
+}
+
+.home-ia-card {
+  min-height: 64px !important;
+  border-radius: 20px;
+  gap: 4px;
+  padding: 12px !important;
+}
+
+.home-ia-card span {
+  font-size: 13px !important;
+}
+
+.home-ia-card small {
+  font-size: 11px !important;
+  line-height: 1.28 !important;
+}
+
+.app-home-cashflow-card {
+  gap: 11px !important;
+}
+
+.app-home-cashflow-card__head h2,
+.app-home-chart-modal__head h2,
+.analytics-hero-card h1,
+.analytics-section-card h2,
+.profile-hub-hero h1,
+.profile-hub-support h2 {
+  font-size: clamp(22px, 6.2vw, 32px) !important;
+  line-height: 1.02 !important;
+}
+
+.app-home-period-switch button,
+.app-home-mode-switch button {
+  min-height: 30px !important;
+  padding: 0 9px !important;
+  font-size: 11px !important;
+}
+
+.app-home-chart-preview {
+  border-radius: 24px !important;
+  grid-template-columns: 86px minmax(0, 1fr) !important;
+  gap: 12px !important;
+  padding: 12px !important;
+}
+
+.app-home-donut {
+  width: 84px !important;
+  height: 84px !important;
+}
+
+.app-home-chart-preview__text b {
+  font-size: 20px !important;
+}
+
+.app-home-chart-preview__text small {
+  font-size: 12px !important;
+}
+
+.app-home-cashflow-card__action {
+  min-height: 42px !important;
+}
+
+.app-home-finance-insight p {
+  font-size: 13px !important;
+  line-height: 1.45 !important;
+}
+
+.analytics-hero-card,
+.analytics-section-card,
+.analytics-mini-card,
+.analytics-fina-card,
+.profile-hub-hero,
+.profile-hub-tile {
+  border-radius: 22px;
+}
+
+.analytics-kpi-grid {
+  margin-top: 12px !important;
+}
+
+.analytics-kpi-grid article,
+.analytics-income-grid article,
+.analytics-income-grid button,
+.analytics-mini-card,
+.profile-hub-hero__stats article {
+  border-radius: 16px !important;
+  padding: 9px !important;
+}
+
+.analytics-kpi-grid strong,
+.analytics-income-grid strong,
+.analytics-mini-card__value,
+.analytics-mini-card strong,
+.profile-hub-hero__stats strong {
+  font-size: clamp(15px, 4vw, 19px) !important;
+}
+
+.analytics-kpi-grid span,
+.analytics-income-grid span,
+.analytics-mini-card__label,
+.analytics-mini-card__caption,
+.analytics-mini-card small,
+.profile-hub-hero__stats span {
+  font-size: 11px !important;
+}
+
+.profile-hub-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.profile-hub-tile {
+  padding: 12px !important;
+}
+
+.profile-hub-tile b {
+  font-size: 13px !important;
+}
+
+.profile-hub-tile small {
+  font-size: 11px !important;
+  line-height: 1.28 !important;
+}
+
+@media (max-width: 390px) {
+  .fina-command-bar__below {
+    grid-template-columns: 1fr;
+  }
+
+  .home-ia-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .home-ia-card {
+    min-height: 68px !important;
+  }
+
+  .app-home-chart-preview {
+    grid-template-columns: 72px minmax(0, 1fr) !important;
+  }
+
+  .app-home-donut {
+    width: 72px !important;
+    height: 72px !important;
+  }
+}

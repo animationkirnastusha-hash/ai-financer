@@ -15,27 +15,27 @@ export function formatAuditLogItem(item: AuditLogItem) {
 
   if (status === 'executed') {
     if (amount) {
-      return `Выполнено AI-действие${categoryName ? ` · ${categoryName}` : ''}${amount ? ` · ${amount}` : ''}`;
+      return `Действие выполнено${categoryName ? ` · ${categoryName}` : ''}${amount ? ` · ${amount}` : ''}`;
     }
-    return 'AI выполнил действие';
+    return 'Действие выполнено';
   }
 
   if (status === 'pending_confirmation') {
     if (amount) {
-      return `Ожидает подтверждения${categoryName ? ` · ${categoryName}` : ''}${amount ? ` · ${amount}` : ''}`;
+      return `Нужно подтвердить${categoryName ? ` · ${categoryName}` : ''}${amount ? ` · ${amount}` : ''}`;
     }
-    return 'AI ожидает подтверждения';
+    return 'Нужно подтвердить действие';
   }
 
   if (status === 'previewed') {
     if (amount) {
-      return `Подготовлен черновик${categoryName ? ` · ${categoryName}` : ''}${amount ? ` · ${amount}` : ''}`;
+      return `Подготовлено${categoryName ? ` · ${categoryName}` : ''}${amount ? ` · ${amount}` : ''}`;
     }
-    return 'AI подготовил черновик действия';
+    return 'Действие подготовлено';
   }
 
   if (item.message) return item.message;
   if (action) return action;
 
-  return 'AI action';
+  return 'Действие Фины';
 }

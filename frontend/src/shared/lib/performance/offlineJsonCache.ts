@@ -42,3 +42,22 @@ export function readOfflineJson<T>(path: string, token: string | null): T | null
     return null;
   }
 }
+
+export function clearOfflineJsonCache(token: string | null, pathPrefix?: string) {
+  if (typeof window === 'undefined') return;
+  try {
+    const prefix = `${CACHE_PREFIX}${hashToken(token)}:`;
+    const keys: string[] = [];
+
+    for (let index = 0; index < localStorage.length; index += 1) {
+      const key = localStorage.key(index);
+      if (!key || !key.startsWith(prefix)) continue;
+      if (pathPrefix && !key.startsWith(`${prefix}${pathPrefix}`)) continue;
+      keys.push(key);
+    }
+
+    keys.forEach((key) => localStorage.removeItem(key));
+  } catch {
+    // Offline cache is optional.
+  }
+}

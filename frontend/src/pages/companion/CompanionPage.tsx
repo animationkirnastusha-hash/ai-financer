@@ -35,7 +35,7 @@ export default function CompanionPage() {
   const nextHint = useMemo(() => {
     if (streak >= 7) return 'Серия уже держится. Следующий шаг — цели и регулярность.';
     if (xp > 0) return 'Запиши ещё одну операцию или создай цель, чтобы усилить прогресс.';
-    return 'Начни с первой операции: “кофе 300” или “доход 50000”.';
+    return 'Начни с первой операции: “Потратил на кофе” или “Получил зарплату”.';
   }, [streak, xp]);
 
   const memoryItems = [
@@ -65,7 +65,7 @@ export default function CompanionPage() {
           <div className="flex items-start justify-between gap-4">
             <div>
               <div className="app-section-title">Прогресс</div>
-              <div className="mt-1 text-sm text-white/45">XP показывает регулярность и реальные действия. Позже его можно будет использовать как отдельный ресурс.</div>
+              <div className="mt-1 text-sm text-white/45">Прогресс показывает регулярность и помогает не терять привычку.</div>
             </div>
             <div className="rounded-2xl border border-emerald-300/18 bg-emerald-300/10 px-3 py-2 text-right">
               <div className="text-lg font-semibold text-emerald-50">{xp}</div>

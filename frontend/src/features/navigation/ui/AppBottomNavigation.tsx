@@ -11,7 +11,7 @@ const items: BottomNavItem[] = [
   { screen: 'dashboard', labelKey: 'screen.dashboard', icon: '⌂' },
   { screen: 'goals', labelKey: 'screen.goals', icon: '◎' },
   { screen: 'spending-limits', labelKey: 'screen.limits', icon: '◔' },
-  { screen: 'sections', labelKey: 'screen.sections', icon: '◌' },
+  { screen: 'journal', labelKey: 'screen.journal', icon: '≡' },
   { screen: 'profile', labelKey: 'screen.profile', icon: '◡' },
 ];
 

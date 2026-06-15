@@ -13,6 +13,6 @@ export const statusRuntimeDictionary: Record<string, string> = {
   'Ошибка': 'Error',
   'Отменено': 'Cancelled',
   'Неизвестно': 'Unknown',
-  'Проверь соединение с сервером и попробуй ещё раз.': 'Check the server connection and try again.',
+  'Проверь интернет и попробуй ещё раз.': 'Check your connection and try again.',
   'Не удалось загрузить данные': 'Could not load data',
 };

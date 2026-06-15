@@ -27,6 +27,7 @@
 @import "./features/chat/chat-input-modal.css";
 @import "./features/premium/premium-access.css";
 @import "./pages/onboarding-setup.css";
+@import "./features/onboarding/product-learning.css";
 @import "./pages/obligations.css";
 @import "./foundations/ios-input-zoom-guard.css";
 @import "./foundations/performance.css";
@@ -58,6 +59,7 @@
 @import "./pages/dashboard-taxonomy.css";
 @import "./pages/receipt-taxonomy.css";
 @import "./animations/final-motion.css";
+@import "./animations/chat-motion.css";
 @import "./layout/final-device-polish.css";
 @import "./pages/final-page-polish.css";
 @import "./features/taxonomy/taxonomy-final-polish.css";
@@ -72,3 +74,5 @@
 @import "./pages/dashboard/dashboard-chart-modal-final.css";
 @import "./layout/offline-status.css";
 @import "./layout/release-compact-scale.css";
+
+@import "./pages/product-density-polish.css";

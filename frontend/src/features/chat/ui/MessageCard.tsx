@@ -2,6 +2,8 @@ import type { MessageEntity } from '@/entities/message/model/message.types';
 import { cn } from '@/shared/lib/cn';
 import { formatTime } from '@/shared/lib/format';
 import { FinancePreviewCard } from '@/features/chat/ui/FinancePreviewCard';
+import { AssistantTypingText } from '@/features/chat/ui/message/AssistantTypingText';
+import { useI18n } from '@/shared/lib/i18n';
 import { Button } from '@/shared/ui/Button';
 
 type MessageCardProps = {
@@ -9,6 +11,7 @@ type MessageCardProps = {
   onConfirm?: (id: string) => void;
   onCancel?: (id: string) => void;
   onUndo?: (auditLogId: string) => void;
+  animateText?: boolean;
 };
 
 export function MessageCard({
@@ -16,7 +19,9 @@ export function MessageCard({
   onConfirm,
   onCancel,
   onUndo,
+  animateText = false,
 }: MessageCardProps) {
+  const { t } = useI18n();
   const isUser = message.role === 'user';
 
   if (message.kind === 'preview') {
@@ -47,7 +52,9 @@ export function MessageCard({
       )}
     >
       <div className="text-chat-message__bubble">
-        <div className="text-chat-message__text">{message.text}</div>
+        <div className="text-chat-message__text">
+          {!isUser ? <AssistantTypingText text={message.text} enabled={animateText} /> : message.text}
+        </div>
 
         {!isUser && message.canUndo && message.auditLogId ? (
           <div className="text-chat-message__undo">
@@ -56,7 +63,7 @@ export function MessageCard({
               variant="secondary"
               onClick={() => onUndo?.(message.auditLogId!)}
             >
-              Отменить
+              {t('voicePending.action.cancel')}
             </Button>
           </div>
         ) : null}

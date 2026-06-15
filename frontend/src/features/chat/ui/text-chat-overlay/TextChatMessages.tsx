@@ -1,4 +1,4 @@
-import type { ReactNode, RefObject } from 'react';
+import { useMemo, type ReactNode, type RefObject } from 'react';
 
 import { FinancePreviewCard } from '@/features/chat/ui/FinancePreviewCard';
 import { MessageCard } from '@/features/chat/ui/MessageCard';
@@ -43,6 +43,19 @@ export function TextChatMessages({
   emptyState,
 }: Props) {
   const hasContent = messages.length > 0 || inlinePendingActions.length > 0;
+  const latestAssistantMessageId = useMemo(() => {
+    for (let index = messages.length - 1; index >= 0; index -= 1) {
+      const message = messages[index];
+      if (message.role === 'assistant' && message.kind !== 'preview') return message.id;
+    }
+    return null;
+  }, [messages]);
+
+  const shouldAnimateAssistantMessage = (message: ChatMessage) => {
+    if (message.id !== latestAssistantMessageId || isSending || isVoiceUploading) return false;
+    const createdAt = Date.parse(message.createdAt);
+    return Number.isFinite(createdAt) && Date.now() - createdAt < 9000;
+  };
 
   return (
     <div
@@ -59,6 +72,7 @@ export function TextChatMessages({
               onConfirm={onConfirm}
               onCancel={onCancel}
               onUndo={onUndo}
+              animateText={shouldAnimateAssistantMessage(message)}
             />
           ))}
           {inlinePendingActions.map((action) => (

@@ -4,7 +4,7 @@ const TABS: Array<{ id: AdminTab; title: string }> = [
   { id: 'overview', title: 'Обзор' },
   { id: 'users', title: 'Пользователи' },
   { id: 'events', title: 'События' },
-  { id: 'monitoring', title: 'Сервер' },
+  { id: 'monitoring', title: 'Состояние' },
   { id: 'training', title: 'Фина' },
   { id: 'tools', title: 'Инструменты' },
 ];

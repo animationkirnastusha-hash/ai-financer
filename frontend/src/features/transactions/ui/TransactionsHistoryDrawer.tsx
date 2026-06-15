@@ -39,7 +39,7 @@ export function TransactionsHistoryDrawer({
       <div className="max-h-[68dvh] space-y-2 overflow-y-auto pr-1">
         {items.length === 0 ? (
           <div className="rounded-2xl border border-white/8 bg-white/[0.04] p-4 text-sm text-white/60">
-            Пока нет операций. Напиши AI: «кофе 300».
+            Пока нет операций. Напиши Фине: «Потратил на кофе».
           </div>
         ) : null}
 

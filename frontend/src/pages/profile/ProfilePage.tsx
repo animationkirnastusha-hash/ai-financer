@@ -1,10 +1,10 @@
 import { useEffect, useMemo } from 'react';
 import { useAuthStore } from '@/features/auth/model/auth.store';
-import { FinaCommandBar } from '@/features/fina/ui/FinaCommandBar';
 import { useNavigationStore, type SettingsSection } from '@/features/navigation/model/navigation.store';
+import { useLearningProgressStore, type LearningProgressStep } from '@/features/onboarding/model/learning-progress.store';
 import { useReferralStore } from '@/features/referral/model/referral.store';
 import { useSubscriptionStore } from '@/features/subscription/model/subscription.store';
-import { useI18n } from '@/shared/lib/i18n';
+import { useI18n, type I18nKey } from '@/shared/lib/i18n';
 import { ScreenTopBar } from '@/shared/ui/ScreenTopBar';
 
 type ProfileTile = {
@@ -12,6 +12,12 @@ type ProfileTile = {
   caption: string;
   action: () => void;
   badge?: string;
+};
+
+type CommandExample = {
+  labelKey: I18nKey;
+  command: string;
+  step?: LearningProgressStep;
 };
 
 function formatBonus(value: number) {
@@ -32,6 +38,7 @@ export default function ProfilePage() {
   const navigateTo = useNavigationStore((state) => state.navigateTo);
   const openSettingsSection = useNavigationStore((state) => state.openSettingsSection);
   const openAIWithCommand = useNavigationStore((state) => state.openAIWithCommand);
+  const markLearning = useLearningProgressStore((state) => state.mark);
   const subscription = useSubscriptionStore((state) => state.status);
   const loadSubscription = useSubscriptionStore((state) => state.load);
   const referral = useReferralStore((state) => state.info);
@@ -44,11 +51,33 @@ export default function ProfilePage() {
   const plan = formatPlan(subscription?.access?.status);
   const displayName = user?.firstName || user?.username || t('profile.user.fallback');
 
+  const commandGroups = useMemo(() => [
+    {
+      titleKey: 'profile.examples.group.money' as I18nKey,
+      items: [
+        { labelKey: 'profile.examples.expense' as I18nKey, command: 'Потратил на кофе', step: 'firstExpense' as LearningProgressStep },
+        { labelKey: 'profile.examples.income' as I18nKey, command: 'Получил зарплату' },
+      ] satisfies CommandExample[],
+    },
+    {
+      titleKey: 'profile.examples.group.planning' as I18nKey,
+      items: [
+        { labelKey: 'profile.examples.goal' as I18nKey, command: 'Создай цель на отпуск', step: 'firstGoal' as LearningProgressStep },
+        { labelKey: 'profile.examples.limit' as I18nKey, command: 'Поставь лимит на кафе', step: 'firstLimit' as LearningProgressStep },
+      ] satisfies CommandExample[],
+    },
+    {
+      titleKey: 'profile.examples.group.questions' as I18nKey,
+      items: [
+        { labelKey: 'profile.examples.today' as I18nKey, command: 'Сколько я потратил сегодня?', step: 'firstQuestion' as LearningProgressStep },
+        { labelKey: 'profile.examples.balance' as I18nKey, command: 'Какой общий баланс?' },
+      ] satisfies CommandExample[],
+    },
+  ], []);
+
   const settingsTiles = useMemo<ProfileTile[]>(() => {
     const openSettings = (section: SettingsSection) => () => openSettingsSection(section);
     return [
-      { title: t('profile.tile.accounts.title'), caption: t('profile.tile.accounts.caption'), action: () => navigateTo('accounts') },
-      { title: t('profile.tile.journal.title'), caption: t('profile.tile.journal.caption'), action: () => navigateTo('journal') },
       { title: t('profile.tile.settings.title'), caption: t('profile.tile.settings.caption'), action: openSettings('fina') },
       { title: t('profile.tile.notifications.title'), caption: t('profile.tile.notifications.caption'), action: openSettings('notifications') },
       { title: t('profile.tile.data.title'), caption: t('profile.tile.data.caption'), action: openSettings('data') },
@@ -56,6 +85,11 @@ export default function ProfilePage() {
       { title: t('profile.tile.store.title'), caption: t('profile.tile.store.caption'), action: () => navigateTo('store'), badge: plan },
     ];
   }, [navigateTo, openSettingsSection, plan, referral?.referrals.length, t]);
+
+  const startExample = (example: CommandExample) => {
+    if (example.step) markLearning(example.step);
+    openAIWithCommand(example.command);
+  };
 
   return (
     <div className="app-page profile-hub-page text-white">
@@ -75,17 +109,6 @@ export default function ProfilePage() {
           </div>
         </header>
 
-        <FinaCommandBar
-          titleKey="profile.command.title"
-          captionKey="profile.command.caption"
-          placeholderKey="profile.command.placeholder"
-          suggestions={[
-            { key: 'profile.command.export', command: 'экспортируй операции за месяц' },
-            { key: 'profile.command.voice', command: 'открой настройки голоса' },
-            { key: 'profile.command.usage', command: 'покажи статус подписки' },
-          ]}
-        />
-
         <section className="profile-hub-grid">
           {settingsTiles.map((tile) => (
             <button key={tile.title} type="button" className="app-card profile-hub-tile" onClick={tile.action}>
@@ -98,13 +121,26 @@ export default function ProfilePage() {
           ))}
         </section>
 
-        <section className="app-card profile-hub-support">
+        <section className="app-card profile-command-examples">
           <div>
-            <div className="app-eyebrow">{t('profile.support.eyebrow')}</div>
-            <h2>{t('profile.support.title')}</h2>
-            <p>{t('profile.support.caption')}</p>
+            <div className="app-eyebrow">{t('profile.examples.eyebrow')}</div>
+            <h2>{t('profile.examples.title')}</h2>
+            <p>{t('profile.examples.caption')}</p>
           </div>
-          <button type="button" className="app-secondary-button" onClick={() => openAIWithCommand('что умеет Фина')}>{t('profile.support.action')}</button>
+          <div className="profile-command-examples__groups">
+            {commandGroups.map((group) => (
+              <div key={group.titleKey} className="profile-command-examples__group">
+                <strong>{t(group.titleKey)}</strong>
+                <div className="profile-command-examples__chips">
+                  {group.items.map((item) => (
+                    <button key={item.labelKey} type="button" onClick={() => startExample(item)}>
+                      {t(item.labelKey)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
         </section>
       </div>
     </div>

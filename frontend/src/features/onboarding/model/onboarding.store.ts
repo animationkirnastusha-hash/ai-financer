@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import type { OnboardingDraft, OnboardingStatus } from '@/features/onboarding/model/onboarding.types';
 
-const STORAGE_KEY = 'ai-financer-onboarding-seen:v3';
+const STORAGE_KEY = 'ai-financer-onboarding-seen:v4';
 const DRAFT_KEY = 'ai-financer-onboarding-draft:v1';
 
 const defaultDraft: OnboardingDraft = {

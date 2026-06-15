@@ -49,7 +49,7 @@ export const storeDictionary = {
   'store.payment.starsPaid': 'Payment received. Refreshing access…',
   'store.payment.starsCancelled': 'Payment cancelled.',
   'store.payment.starsFailed': 'Payment failed.',
-  'store.payment.starsNotConfigured': 'Stars payment is not configured on the server yet.',
+  'store.payment.starsNotConfigured': 'Stars payment is coming soon.',
   'store.payment.manualPrepared': 'Request saved. Other methods will come later.',
   'store.payment.testGranted': 'Access granted.',
   'store.payment.error': 'Could not prepare payment.',

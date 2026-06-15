@@ -131,7 +131,7 @@ export const useNavigationStore = create<NavigationState>((set, get) => ({
     const trimmedCommand = command?.trim() || null;
 
     window.dispatchEvent(new CustomEvent('ai-financer:open-text-chat', {
-      detail: { command: trimmedCommand },
+      detail: { command: trimmedCommand, autoSubmitInitialCommand: Boolean(trimmedCommand) },
     }));
 
     set({

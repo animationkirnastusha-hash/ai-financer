@@ -441,3 +441,158 @@
   align-items: center;
   gap: 12px;
 }
+
+/* Pack 132: compact learning-first onboarding. */
+.onboarding-setup-sheet--compact {
+  max-width: 520px;
+  max-height: min(88vh, 690px);
+}
+
+.onboarding-setup-body--compact {
+  max-height: calc(min(88vh, 690px) - 86px);
+  padding-top: 12px;
+}
+
+.onboarding-welcome-card {
+  display: grid;
+  gap: 10px;
+  padding: 4px 0 2px;
+}
+
+.onboarding-fina-mark {
+  display: grid;
+  width: 46px;
+  height: 46px;
+  place-items: center;
+  border-radius: 18px;
+  background: linear-gradient(135deg, rgba(52,211,153,.2), rgba(125,211,252,.12));
+  box-shadow: 0 14px 40px rgba(52,211,153,.12);
+  color: rgba(220,255,244,.94);
+  font-size: 21px;
+}
+
+.onboarding-welcome-card h2 {
+  margin: 0;
+  color: rgba(255,255,255,.96);
+  font-size: clamp(28px, 8vw, 42px);
+  line-height: .96;
+  letter-spacing: -.065em;
+}
+
+.onboarding-welcome-card p {
+  margin: 0;
+  max-width: 420px;
+  color: rgba(255,255,255,.6);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.onboarding-learning-card,
+.onboarding-micro-card {
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 26px;
+  background: rgba(255,255,255,.05);
+  padding: 13px;
+}
+
+.onboarding-learning-card__head {
+  display: grid;
+  gap: 4px;
+  margin-bottom: 10px;
+}
+
+.onboarding-learning-card__head span {
+  color: rgba(255,255,255,.42);
+  font-size: 10px;
+  font-weight: 850;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+}
+
+.onboarding-learning-card__head strong {
+  color: rgba(255,255,255,.92);
+  font-size: 14px;
+}
+
+.onboarding-learning-list {
+  display: grid;
+  gap: 8px;
+}
+
+.onboarding-learning-task {
+  display: grid;
+  gap: 4px;
+  width: 100%;
+  border: 1px solid rgba(255,255,255,.075);
+  border-radius: 18px;
+  background: rgba(0,0,0,.14);
+  padding: 11px 12px;
+  text-align: left;
+  transition: transform .18s ease, border-color .18s ease, background .18s ease;
+}
+
+.onboarding-learning-task:active {
+  transform: scale(.985);
+}
+
+.onboarding-learning-task:hover {
+  border-color: rgba(52,211,153,.22);
+  background: rgba(52,211,153,.075);
+}
+
+.onboarding-learning-task span {
+  color: rgba(255,255,255,.92);
+  font-size: 13px;
+  font-weight: 820;
+}
+
+.onboarding-learning-task small {
+  color: rgba(255,255,255,.48);
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.onboarding-micro-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.onboarding-micro-card strong,
+.onboarding-micro-card span {
+  display: block;
+}
+
+.onboarding-micro-card strong {
+  color: rgba(255,255,255,.92);
+  font-size: 13px;
+}
+
+.onboarding-micro-card span {
+  margin-top: 4px;
+  color: rgba(255,255,255,.48);
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.onboarding-info-box {
+  font-size: 12px;
+}
+
+.onboarding-setup-footer--compact {
+  align-items: center;
+  justify-content: space-between;
+}
+
+@media (max-width: 420px) {
+  .onboarding-micro-card {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .onboarding-micro-card .app-secondary-button {
+    justify-content: center;
+    width: 100%;
+  }
+}

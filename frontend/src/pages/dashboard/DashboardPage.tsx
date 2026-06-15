@@ -6,6 +6,7 @@ import { HomeFinanceInsight } from '@/features/dashboard/ui/HomeFinanceInsight';
 import { HomeObligationsWidget } from '@/features/obligations/ui/HomeObligationsWidget';
 import { FinaCommandBar } from '@/features/fina/ui/FinaCommandBar';
 import { ReceiptQuickAction } from '@/features/receipt-scans/ui/ReceiptQuickAction';
+import { ProductLearningCard } from '@/features/onboarding/ui/ProductLearningCard';
 import { useSubscriptionStore } from '@/features/subscription/model/subscription.store';
 import { useI18n } from '@/shared/lib/i18n';
 import type { HomeCashflowMode, HomeCashflowPeriod } from '@/features/dashboard/lib/homeFinanceAnalytics';
@@ -35,7 +36,6 @@ function fromRub(amount: number, currency: AppCurrency, rates: { usd: number; eu
 export default function DashboardPage() {
   const { t } = useI18n();
   const navigateTo = useNavigationStore((state) => state.navigateTo);
-  const openJournal = useNavigationStore((state) => state.openJournal);
   const openModal = useAppModalStore((state) => state.openModal);
   const modalStackSize = useAppModalStore((state) => state.stack.length);
   const accounts = useAccountsStore((state) => state.items);
@@ -145,28 +145,30 @@ export default function DashboardPage() {
         />
 
         <FinaCommandBar
+          compact
           titleKey="dashboard.fina.title"
           captionKey="dashboard.fina.caption"
           placeholderKey="dashboard.fina.placeholder"
           suggestions={[
-            { key: 'dashboard.fina.expense', command: 'потратил 450 на кофе' },
-            { key: 'dashboard.fina.limit', command: 'сколько осталось до лимита на кафе' },
+            { key: 'dashboard.fina.expense', command: 'Потратил на кофе' },
             { key: 'dashboard.fina.payments', command: 'какие ближайшие платежи на неделю' },
           ]}
         />
 
+        <ProductLearningCard />
+
         <section className="home-ia-grid" aria-label={t('dashboard.ia.label')}>
-          <button type="button" className="app-card home-ia-card" onClick={() => openJournal({ period: 'month' })}>
-            <span>{t('dashboard.ia.journal.title')}</span>
-            <small>{t('dashboard.ia.journal.caption')}</small>
+          <button type="button" className="app-card home-ia-card" onClick={() => navigateTo('accounts')}>
+            <span>{t('dashboard.ia.accounts.title')}</span>
+            <small>{t('dashboard.ia.accounts.caption')}</small>
           </button>
-          <button type="button" className="app-card home-ia-card" onClick={() => navigateTo('spending-limits')}>
-            <span>{t('dashboard.ia.limits.title')}</span>
-            <small>{t('dashboard.ia.limits.caption')}</small>
+          <button type="button" className="app-card home-ia-card" onClick={() => navigateTo('analytics')}>
+            <span>{t('dashboard.ia.analytics.title')}</span>
+            <small>{t('dashboard.ia.analytics.caption')}</small>
           </button>
-          <button type="button" className="app-card home-ia-card" onClick={() => navigateTo('goals')}>
-            <span>{t('dashboard.ia.goals.title')}</span>
-            <small>{t('dashboard.ia.goals.caption')}</small>
+          <button type="button" className="app-card home-ia-card" onClick={() => navigateTo('obligations')}>
+            <span>{t('dashboard.ia.obligations.title')}</span>
+            <small>{t('dashboard.ia.obligations.caption')}</small>
           </button>
         </section>
 

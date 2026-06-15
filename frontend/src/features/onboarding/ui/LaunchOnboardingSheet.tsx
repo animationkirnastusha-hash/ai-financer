@@ -1,75 +1,65 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useAccountsStore } from '@/features/accounts/model/accounts.store';
 import { useAuthStore } from '@/features/auth/model/auth.store';
-import { goalsApi } from '@/features/goals/api/goals.api';
+import { useAppModalStore } from '@/features/modals/model/appModal.store';
 import { useNavigationStore } from '@/features/navigation/model/navigation.store';
+import { requestOnboardingMicrophonePermission } from '@/features/onboarding/model/microphonePermission';
 import { useOnboardingStore } from '@/features/onboarding/model/onboarding.store';
-import type { OnboardingDraft } from '@/features/onboarding/model/onboarding.types';
-import { AccountsStep } from '@/features/onboarding/ui/steps/AccountsStep';
-import { CurrencyStep } from '@/features/onboarding/ui/steps/CurrencyStep';
-import { FinishStep } from '@/features/onboarding/ui/steps/FinishStep';
-import { GoalsStep } from '@/features/onboarding/ui/steps/GoalsStep';
-import { LoansStep } from '@/features/onboarding/ui/steps/LoansStep';
-import { MicrophonePermissionStep } from '@/features/onboarding/ui/steps/MicrophonePermissionStep';
-import { RemindersStep } from '@/features/onboarding/ui/steps/RemindersStep';
-import { VoiceIntroStep } from '@/features/onboarding/ui/steps/VoiceIntroStep';
-import { WelcomeStep } from '@/features/onboarding/ui/steps/WelcomeStep';
+import { useLearningProgressStore, type LearningProgressStep } from '@/features/onboarding/model/learning-progress.store';
 import { useSettingsStore } from '@/features/settings/model/settings.store';
+import { useI18n, type I18nKey } from '@/shared/lib/i18n';
 
-type StepId =
-  | 'welcome'
-  | 'microphone'
-  | 'voice_intro'
-  | 'currency'
-  | 'accounts'
-  | 'loans'
-  | 'goals'
-  | 'reminders'
-  | 'finish';
+type LearningTask = {
+  id: LearningProgressStep;
+  titleKey: I18nKey;
+  captionKey: I18nKey;
+  command: string;
+};
 
-const steps: Array<{ id: StepId; title: string }> = [
-  { id: 'welcome', title: 'Старт' },
-  { id: 'microphone', title: 'Микрофон' },
-  { id: 'voice_intro', title: 'Фина' },
-  { id: 'currency', title: 'Валюта' },
-  { id: 'accounts', title: 'Счета' },
-  { id: 'loans', title: 'Кредиты' },
-  { id: 'goals', title: 'Цели' },
-  { id: 'reminders', title: 'Напоминания' },
-  { id: 'finish', title: 'Готово' },
+const learningTasks: LearningTask[] = [
+  {
+    id: 'firstExpense',
+    titleKey: 'onboarding.learning.expense.title',
+    captionKey: 'onboarding.learning.expense.caption',
+    command: 'Потратил на кофе',
+  },
+  {
+    id: 'firstQuestion',
+    titleKey: 'onboarding.learning.question.title',
+    captionKey: 'onboarding.learning.question.caption',
+    command: 'Сколько я потратил сегодня?',
+  },
+  {
+    id: 'firstLimit',
+    titleKey: 'onboarding.learning.limit.title',
+    captionKey: 'onboarding.learning.limit.caption',
+    command: 'Поставь лимит на кафе',
+  },
+  {
+    id: 'firstGoal',
+    titleKey: 'onboarding.learning.goal.title',
+    captionKey: 'onboarding.learning.goal.caption',
+    command: 'Создай цель на отпуск',
+  },
 ];
 
-function normalizeAccountCurrency(currency: OnboardingDraft['currency']): 'RUB' | 'USD' | 'EUR' {
-  if (currency === 'USD' || currency === 'EUR') return currency;
-  return 'RUB';
-}
-
 function getFirstName(user: ReturnType<typeof useAuthStore.getState>['user']) {
-  return user?.firstName || user?.username || 'друг';
+  return user?.firstName || user?.username || '';
 }
 
 export function LaunchOnboardingSheet() {
+  const { t } = useI18n();
   const isOpen = useOnboardingStore((state) => state.isOpen);
-  const draft = useOnboardingStore((state) => state.draft);
-  const setDraft = useOnboardingStore((state) => state.setDraft);
-  const skip = useOnboardingStore((state) => state.skip);
   const complete = useOnboardingStore((state) => state.complete);
-
+  const skip = useOnboardingStore((state) => state.skip);
   const user = useAuthStore((state) => state.user);
   const navigateTo = useNavigationStore((state) => state.navigateTo);
-  const createAccount = useAccountsStore((state) => state.createAccount);
-  const loadAccounts = useAccountsStore((state) => state.loadAccounts);
-  const setMainCurrency = useSettingsStore((state) => state.setMainCurrency);
-  const setVoiceEnabled = useSettingsStore((state) => state.setVoiceEnabled);
-  const setTextInputEnabled = useSettingsStore((state) => state.setTextInputEnabled);
+  const openModal = useAppModalStore((state) => state.openModal);
+  const markLearning = useLearningProgressStore((state) => state.mark);
+  const voicePermissionPrompted = useSettingsStore((state) => state.voicePermissionPrompted);
+  const [isRequestingMic, setIsRequestingMic] = useState(false);
+  const [micMessageKey, setMicMessageKey] = useState<I18nKey | null>(null);
 
-  const [stepIndex, setStepIndex] = useState(0);
-  const [isFinishing, setIsFinishing] = useState(false);
-  const [finishError, setFinishError] = useState<string | null>(null);
-
-  const currentStep = steps[stepIndex];
-  const isLastStep = stepIndex === steps.length - 1;
-  const progress = useMemo(() => Math.round(((stepIndex + 1) / steps.length) * 100), [stepIndex]);
+  const name = useMemo(() => getFirstName(user), [user]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -85,89 +75,24 @@ export function LaunchOnboardingSheet() {
     };
   }, [isOpen]);
 
-  useEffect(() => {
-    if (isOpen) setStepIndex(0);
-  }, [isOpen]);
-
-  useEffect(() => {
-    const isAccountVoiceStep = isOpen && currentStep.id === 'accounts' && (draft.accountsSetupMode ?? 'voice') === 'voice';
-    if (!isAccountVoiceStep) {
-      document.body.classList.remove('ai-onboarding-account-voice-step');
-      document.documentElement.classList.remove('ai-onboarding-account-voice-step');
-      return;
-    }
-
-    document.body.classList.add('ai-onboarding-account-voice-step');
-    document.documentElement.classList.add('ai-onboarding-account-voice-step');
-
-    return () => {
-      document.body.classList.remove('ai-onboarding-account-voice-step');
-      document.documentElement.classList.remove('ai-onboarding-account-voice-step');
-    };
-  }, [currentStep.id, draft.accountsSetupMode, isOpen]);
-
   if (!isOpen) return null;
 
-  const updateDraft = (nextDraft: OnboardingDraft) => {
-    setDraft(nextDraft);
+  const closeAndOpenDashboard = () => {
+    complete();
+    navigateTo('dashboard');
   };
 
-  const goNext = () => {
-    setFinishError(null);
-    if (isLastStep) {
-      void finishSetup();
-      return;
-    }
-    setStepIndex((value) => Math.min(value + 1, steps.length - 1));
-  };
-
-  const goBack = () => {
-    setFinishError(null);
-    setStepIndex((value) => Math.max(value - 1, 0));
-  };
-
-  const finishSetup = async () => {
-    if (isFinishing) return;
-    setIsFinishing(true);
-    setFinishError(null);
-
-    try {
-      setMainCurrency(draft.currency);
-      setVoiceEnabled(draft.voice.voiceEnabled);
-      setTextInputEnabled(draft.voice.textFallbackEnabled);
-
-      const accountCurrency = normalizeAccountCurrency(draft.currency);
-      if (draft.accountsSetupMode === 'manual') {
-        for (const account of draft.accounts) {
-          if (!account.enabled || !account.name.trim()) continue;
-          await createAccount({
-            name: account.name.trim(),
-            type: account.type,
-            currency: accountCurrency,
-            initialBalance: Number(account.balance) || 0,
-          });
-        }
-      }
-
-      if (draft.goal.enabled && draft.goal.title.trim() && Number(draft.goal.targetAmount) > 0) {
-        await goalsApi.create({
-          title: draft.goal.title.trim(),
-          targetAmount: Number(draft.goal.targetAmount) || 0,
-          currentAmount: 0,
-          currency: accountCurrency,
-          note: 'Создано при первом запуске',
-        });
-      }
-
-      await loadAccounts(true);
-      complete();
-      navigateTo('dashboard');
-    } catch (error) {
-      console.error(error);
-      setFinishError(error instanceof Error ? error.message : 'Не удалось завершить настройку');
-    } finally {
-      setIsFinishing(false);
-    }
+  const startWithCommand = (task: LearningTask) => {
+    markLearning(task.id);
+    complete();
+    navigateTo('dashboard');
+    window.setTimeout(() => {
+      openModal({
+        type: 'ai-text-overlay',
+        initialCommand: task.command,
+        autoSubmitInitialCommand: true,
+      });
+    }, 120);
   };
 
   const skipOnboarding = () => {
@@ -175,56 +100,69 @@ export function LaunchOnboardingSheet() {
     navigateTo('dashboard');
   };
 
+  const requestMic = async () => {
+    if (isRequestingMic) return;
+    setIsRequestingMic(true);
+    setMicMessageKey(null);
+    const result = await requestOnboardingMicrophonePermission();
+    if (result.ok) setMicMessageKey('onboarding.microphone.message.readyShort');
+    else if (result.state === 'denied') setMicMessageKey('onboarding.microphone.message.deniedShort');
+    else setMicMessageKey('onboarding.microphone.message.laterShort');
+    setIsRequestingMic(false);
+  };
+
   return (
-    <div className="app-modal-backdrop px-3" data-no-swipe="true" data-ai-core-modal="true">
-      <div className="app-modal-sheet onboarding-setup-sheet" data-no-swipe="true" data-ai-core-modal="true">
+    <div className="app-modal-backdrop px-3" data-no-swipe="true">
+      <div className="app-modal-sheet onboarding-setup-sheet onboarding-setup-sheet--compact" data-no-swipe="true">
         <div className="app-modal-handle" />
 
-        <header className="onboarding-setup-head">
-          <div>
-            <span>{currentStep.title}</span>
-            <strong>{progress}%</strong>
-          </div>
-          <div className="onboarding-progress"><i style={{ width: `${progress}%` }} /></div>
-          <div className="onboarding-step-tabs" aria-label="Шаги настройки">
-            {steps.map((step, index) => (
-              <button
-                key={step.id}
-                type="button"
-                className={index === stepIndex ? 'is-active' : ''}
-                onClick={() => setStepIndex(index)}
-                aria-label={step.title}
-              />
-            ))}
-          </div>
-        </header>
+        <div className="app-modal-body onboarding-setup-body onboarding-setup-body--compact">
+          <section className="onboarding-welcome-card">
+            <div className="onboarding-fina-mark" aria-hidden="true">✦</div>
+            <div className="app-eyebrow">{t('onboarding.welcome.eyebrow')}</div>
+            <h2>{t(name ? 'onboarding.welcome.titleWithName' : 'onboarding.welcome.title', { name })}</h2>
+            <p>{t('onboarding.welcome.shortDescription')}</p>
+          </section>
 
-        <div className="app-modal-body onboarding-setup-body">
-          {currentStep.id === 'welcome' ? <WelcomeStep name={getFirstName(user)} draft={draft} onChange={updateDraft} /> : null}
-          {currentStep.id === 'microphone' ? <MicrophonePermissionStep /> : null}
-          {currentStep.id === 'voice_intro' ? <VoiceIntroStep /> : null}
-          {currentStep.id === 'currency' ? <CurrencyStep value={draft.currency} onChange={(currency) => updateDraft({ ...draft, currency })} /> : null}
-          {currentStep.id === 'accounts' ? <AccountsStep draft={draft} onChange={updateDraft} /> : null}
-          {currentStep.id === 'loans' ? <LoansStep draft={draft} onChange={updateDraft} /> : null}
-          {currentStep.id === 'goals' ? <GoalsStep draft={draft} onChange={updateDraft} /> : null}
-          {currentStep.id === 'reminders' ? <RemindersStep draft={draft} onChange={updateDraft} /> : null}
-          {currentStep.id === 'finish' ? <FinishStep draft={draft} /> : null}
+          <section className="onboarding-learning-card">
+            <div className="onboarding-learning-card__head">
+              <span>{t('onboarding.learning.eyebrow')}</span>
+              <strong>{t('onboarding.learning.title')}</strong>
+            </div>
+            <div className="onboarding-learning-list">
+              {learningTasks.map((task) => (
+                <button
+                  key={task.id}
+                  type="button"
+                  className="onboarding-learning-task"
+                  onClick={() => startWithCommand(task)}
+                >
+                  <span>{t(task.titleKey)}</span>
+                  <small>{t(task.captionKey)}</small>
+                </button>
+              ))}
+            </div>
+          </section>
 
-          {finishError ? <div className="app-error-box">{finishError}</div> : null}
+          <section className="onboarding-micro-card">
+            <div>
+              <strong>{t('onboarding.microphone.quickTitle')}</strong>
+              <span>{voicePermissionPrompted ? t('onboarding.microphone.quickReady') : t('onboarding.microphone.quickCaption')}</span>
+            </div>
+            <button type="button" className="app-secondary-button app-secondary-button--compact" onClick={requestMic} disabled={isRequestingMic || voicePermissionPrompted}>
+              {isRequestingMic ? t('onboarding.microphone.action.loading') : voicePermissionPrompted ? t('onboarding.microphone.action.ready') : t('onboarding.microphone.action.allow')}
+            </button>
+          </section>
+          {micMessageKey ? <div className="app-info-box onboarding-info-box">{t(micMessageKey)}</div> : null}
         </div>
 
-        <footer className="app-modal-footer onboarding-setup-footer">
-          <button type="button" className="app-secondary-button" onClick={skipOnboarding} disabled={isFinishing}>
-            Пропустить
+        <footer className="app-modal-footer onboarding-setup-footer onboarding-setup-footer--compact">
+          <button type="button" className="app-secondary-button" onClick={skipOnboarding}>
+            {t('onboarding.action.later')}
           </button>
-          <div className="onboarding-footer-actions">
-            <button type="button" className="app-secondary-button" onClick={goBack} disabled={stepIndex === 0 || isFinishing}>
-              Назад
-            </button>
-            <button type="button" className="app-primary-button" onClick={goNext} disabled={isFinishing}>
-              {isFinishing ? 'Сохраняю…' : isLastStep ? 'Завершить' : 'Дальше'}
-            </button>
-          </div>
+          <button type="button" className="app-primary-button" onClick={closeAndOpenDashboard}>
+            {t('onboarding.action.start')}
+          </button>
         </footer>
       </div>
     </div>

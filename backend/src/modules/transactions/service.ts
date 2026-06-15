@@ -354,6 +354,10 @@ export class TransactionService {
     }
 
     const updated = await prisma.$transaction(async (tx) => {
+      if (existing.type === 'income') {
+        await goalAutoSaveService.removeForIncome(tx, userId, existing.id, { revertBalances: true });
+      }
+
       await this.applyBalanceEffect(tx, {
         type: existing.type as TransactionType,
         amount: existing.amount,
@@ -370,7 +374,7 @@ export class TransactionService {
         direction: 'apply',
       });
 
-      return tx.transaction.update({
+      const updatedTransaction = await tx.transaction.update({
         where: { id: existing.id },
         data: {
           accountId: nextAccountId,
@@ -382,9 +386,23 @@ export class TransactionService {
           title: this.buildTransactionTitleFallback(nextType, nextTitle, nextDescription, taxonomy),
           description: nextDescription,
           date: nextDate,
+          sourceTransactionId: nextType === 'transfer' ? existing.sourceTransactionId : null,
+          goalId: nextType === 'transfer' ? existing.goalId : null,
         },
         include: transactionInclude,
       });
+
+      if (nextType === 'income') {
+        await goalAutoSaveService.applyForIncome(tx, userId, {
+          incomeTransactionId: updatedTransaction.id,
+          incomeAccountId: updatedTransaction.accountId,
+          incomeAmount: updatedTransaction.amount,
+          currency: nextAccount.currency,
+          date: updatedTransaction.date,
+        });
+      }
+
+      return updatedTransaction;
     });
 
     return updated;
@@ -401,7 +419,15 @@ export class TransactionService {
     }
 
     await prisma.$transaction(async (tx) => {
-      if ((options.balanceMode ?? 'revert') === 'revert') {
+      const balanceMode = options.balanceMode ?? 'revert';
+
+      if (existing.type === 'income') {
+        await goalAutoSaveService.removeForIncome(tx, userId, existing.id, {
+          revertBalances: balanceMode === 'revert',
+        });
+      }
+
+      if (balanceMode === 'revert') {
         await this.applyBalanceEffect(tx, {
           type: existing.type as TransactionType,
           amount: existing.amount,
@@ -410,6 +436,15 @@ export class TransactionService {
           direction: 'revert',
         });
       }
+
+      await goalAutoSaveService.handleLinkedTransferDeleted(tx, userId, {
+        id: existing.id,
+        amount: existing.amount,
+        accountId: existing.accountId,
+        toAccountId: existing.toAccountId,
+        goalId: existing.goalId,
+        sourceTransactionId: existing.sourceTransactionId,
+      }, { balanceMode });
 
       await tx.transaction.delete({
         where: { id: existing.id },

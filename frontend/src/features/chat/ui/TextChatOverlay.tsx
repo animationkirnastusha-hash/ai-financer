@@ -75,6 +75,8 @@ export function TextChatOverlay({
   const autoCloseTimerRef = useRef<number | null>(null);
   const dragStartYRef = useRef<number | null>(null);
   const [dragOffset, setDragOffset] = useState(0);
+  const [shouldRender, setShouldRender] = useState(open);
+  const [isClosing, setIsClosing] = useState(false);
   const receiptCameraInputRef = useRef<HTMLInputElement | null>(null);
   const receiptFileInputRef = useRef<HTMLInputElement | null>(null);
   const [receiptHint, setReceiptHint] = useState<string | null>(null);
@@ -134,6 +136,24 @@ export function TextChatOverlay({
     },
     [chat],
   );
+
+
+  useEffect(() => {
+    if (open) {
+      setShouldRender(true);
+      setIsClosing(false);
+      return;
+    }
+
+    if (!shouldRender) return;
+    setIsClosing(true);
+    const timer = window.setTimeout(() => {
+      setShouldRender(false);
+      setIsClosing(false);
+    }, 220);
+
+    return () => window.clearTimeout(timer);
+  }, [open, shouldRender]);
 
   const voice = useVoiceInput({
     lang: appLanguage === "en" ? "en-US" : "ru-RU",
@@ -487,7 +507,7 @@ export function TextChatOverlay({
     [voice],
   );
 
-  if (!open) return null;
+  if (!shouldRender) return null;
 
   const submit = async () => {
     const text = value.trim();
@@ -509,7 +529,8 @@ export function TextChatOverlay({
 
   return (
     <div
-      className="text-chat-overlay"
+      className={`text-chat-overlay${isClosing ? ' text-chat-overlay--closing' : ''}`}
+      aria-hidden={isClosing ? 'true' : undefined}
       data-no-swipe="true"
       data-ai-core-modal="true"
       style={{ zIndex: layer }}
@@ -517,7 +538,7 @@ export function TextChatOverlay({
       <div
         className="text-chat-overlay__stage"
         style={{
-          transform: dragOffset ? `translateY(${dragOffset}px)` : undefined,
+          transform: !isClosing && dragOffset ? `translateY(${dragOffset}px)` : undefined,
         }}
         onClick={(event) => event.stopPropagation()}
       >

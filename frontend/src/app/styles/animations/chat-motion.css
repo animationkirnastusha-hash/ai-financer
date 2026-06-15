@@ -1,0 +1,180 @@
+/* Lightweight dialog motion and Fina typing effects. */
+.assistant-typing-text {
+  display: inline;
+}
+
+.assistant-typing-text__cursor {
+  display: inline-block;
+  width: 2px;
+  height: 1.08em;
+  margin-left: 2px;
+  border-radius: 999px;
+  background: currentColor;
+  opacity: .78;
+  transform: translateY(2px);
+  animation: assistantTypingCursor 760ms ease-in-out infinite;
+}
+
+.text-chat-message--assistant .text-chat-message__bubble {
+  transform-origin: 0 100%;
+}
+
+.text-chat-message--user .text-chat-message__bubble {
+  transform-origin: 100% 100%;
+}
+
+.text-chat-message__bubble,
+.text-chat-message__preview,
+.finance-preview-card,
+.text-chat-overlay__jump,
+.text-chat-overlay__receipt-hint {
+  animation: chatItemIn 220ms cubic-bezier(.16, 1, .3, 1) both;
+}
+
+.text-chat-overlay__typing {
+  position: relative;
+  overflow: hidden;
+}
+
+.text-chat-overlay__typing::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.08), transparent);
+  transform: translateX(-110%);
+  animation: chatTypingSheen 1.45s ease-in-out infinite;
+}
+
+.text-chat-overlay--closing {
+  pointer-events: none;
+  animation: textChatBackdropOut 220ms ease both;
+}
+
+.text-chat-overlay--closing .text-chat-overlay__stage {
+  animation: textChatStageOut 220ms cubic-bezier(.4, 0, 1, 1) both;
+}
+
+.app-modal-backdrop,
+.premium-upgrade-backdrop,
+.notification-backdrop,
+.app-home-chart-backdrop {
+  animation: appModalBackdropIn 180ms ease both;
+}
+
+.app-modal-sheet,
+.premium-upgrade-sheet,
+.notification-sheet,
+.drawer,
+.bottom-sheet {
+  animation: appModalSheetIn 260ms cubic-bezier(.16, 1, .3, 1) both;
+  transform-origin: 50% 100%;
+}
+
+.app-modal-sheet > *,
+.premium-upgrade-sheet > *,
+.notification-sheet > *,
+.drawer > * {
+  animation: appModalContentIn 240ms cubic-bezier(.16, 1, .3, 1) both;
+}
+
+.app-primary-button,
+.app-secondary-button,
+.app-icon-button,
+.text-chat-overlay__composer button,
+.text-chat-overlay__chips button,
+.premium-upgrade-later,
+.premium-upgrade-trigger,
+.store-card,
+.app-list-button,
+.app-action-card,
+.app-card {
+  transition:
+    transform 150ms cubic-bezier(.2, .8, .2, 1),
+    opacity 150ms ease,
+    border-color 200ms ease,
+    background-color 200ms ease,
+    box-shadow 200ms ease;
+}
+
+.app-primary-button:active,
+.app-secondary-button:active,
+.app-icon-button:active,
+.text-chat-overlay__composer button:active,
+.text-chat-overlay__chips button:active,
+.premium-upgrade-later:active,
+.premium-upgrade-trigger:active,
+.store-card:active,
+.app-list-button:active,
+.app-action-card:active,
+.app-card:active {
+  transform: scale(.985);
+}
+
+@keyframes assistantTypingCursor {
+  0%, 100% { opacity: .2; }
+  45%, 65% { opacity: .9; }
+}
+
+@keyframes chatItemIn {
+  from { opacity: 0; transform: translate3d(0, 7px, 0) scale(.992); }
+  to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+}
+
+@keyframes chatTypingSheen {
+  0% { transform: translateX(-110%); opacity: 0; }
+  30% { opacity: 1; }
+  100% { transform: translateX(110%); opacity: 0; }
+}
+
+@keyframes textChatBackdropOut {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+@keyframes textChatStageOut {
+  from { opacity: 1; transform: translateY(0) scale(1); }
+  to { opacity: 0; transform: translateY(24px) scale(.985); }
+}
+
+@keyframes appModalBackdropIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes appModalSheetIn {
+  from { opacity: 0; transform: translate3d(0, 18px, 0) scale(.985); }
+  to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+}
+
+@keyframes appModalContentIn {
+  from { opacity: 0; transform: translate3d(0, 6px, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .assistant-typing-text__cursor,
+  .text-chat-message__bubble,
+  .text-chat-message__preview,
+  .finance-preview-card,
+  .text-chat-overlay__jump,
+  .text-chat-overlay__receipt-hint,
+  .text-chat-overlay__typing::before,
+  .text-chat-overlay--closing,
+  .text-chat-overlay--closing .text-chat-overlay__stage,
+  .app-modal-backdrop,
+  .premium-upgrade-backdrop,
+  .notification-backdrop,
+  .app-home-chart-backdrop,
+  .app-modal-sheet,
+  .premium-upgrade-sheet,
+  .notification-sheet,
+  .drawer,
+  .bottom-sheet,
+  .app-modal-sheet > *,
+  .premium-upgrade-sheet > *,
+  .notification-sheet > *,
+  .drawer > * {
+    animation: none !important;
+    transition: none !important;
+  }
+}

@@ -1,0 +1,120 @@
+.product-learning-card {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+}
+
+.product-learning-card__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.product-learning-card h2 {
+  margin: 6px 0 0;
+  color: rgba(255,255,255,.94);
+  font-size: 20px;
+  line-height: 1.08;
+  letter-spacing: -.045em;
+}
+
+.product-learning-card p {
+  margin: 7px 0 0;
+  color: rgba(255,255,255,.5);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.product-learning-card__close {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 999px;
+  background: rgba(255,255,255,.055);
+  color: rgba(255,255,255,.65);
+  font-size: 18px;
+  line-height: 1;
+}
+
+.product-learning-card__progress {
+  height: 6px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255,255,255,.08);
+}
+
+.product-learning-card__progress span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, rgba(52,211,153,.92), rgba(125,211,252,.82));
+  transition: width .24s ease;
+}
+
+.product-learning-card__tasks {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.product-learning-task {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 3px 8px;
+  align-items: start;
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 18px;
+  background: rgba(255,255,255,.045);
+  padding: 10px;
+  text-align: left;
+  transition: transform .16s ease, border-color .16s ease, background .16s ease;
+}
+
+.product-learning-task:active {
+  transform: scale(.985);
+}
+
+.product-learning-task[data-complete="true"] {
+  border-color: rgba(52,211,153,.22);
+  background: rgba(52,211,153,.08);
+}
+
+.product-learning-task span {
+  grid-row: span 2;
+  display: grid;
+  width: 20px;
+  height: 20px;
+  place-items: center;
+  border-radius: 999px;
+  background: rgba(52,211,153,.12);
+  color: rgba(209,250,229,.9);
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.product-learning-task b,
+.product-learning-task small {
+  min-width: 0;
+}
+
+.product-learning-task b {
+  color: rgba(255,255,255,.9);
+  font-size: 12px;
+  line-height: 1.2;
+}
+
+.product-learning-task small {
+  color: rgba(255,255,255,.45);
+  font-size: 11px;
+  line-height: 1.3;
+}
+
+@media (max-width: 420px) {
+  .product-learning-card__tasks {
+    grid-template-columns: 1fr;
+  }
+}

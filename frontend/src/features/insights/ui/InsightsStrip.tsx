@@ -2,6 +2,7 @@ import { buildInsights } from '@/features/insights/lib/buildInsights';
 import type { AuditLogItem } from '@/features/audit-log/model/auditLog.types';
 import type { PendingActionItem } from '@/features/pending-actions/model/pendingActions.types';
 import { InsightCard } from '@/features/insights/ui/InsightCard';
+import { useI18n } from '@/shared/lib/i18n';
 
 type Props = {
   pendingActions: PendingActionItem[];
@@ -16,6 +17,7 @@ export function InsightsStrip({
   onOpenPending,
   onOpenAudit,
 }: Props) {
+  const { t } = useI18n();
   const insights = buildInsights({ pendingActions, auditLogs });
 
   const handleClick = (kind: string) => {
@@ -33,7 +35,7 @@ export function InsightsStrip({
   return (
     <div className="px-4 pb-3">
       <div className="mb-2 text-[10px] uppercase tracking-[0.16em] text-white/32">
-        AI Insights
+        {t('insights.strip.title')}
       </div>
 
       <div className="flex gap-3 overflow-x-auto pb-1">

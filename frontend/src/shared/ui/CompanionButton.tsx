@@ -13,7 +13,7 @@ const sizes = {
   lg: 'h-32 w-32',
 };
 
-export function CompanionButton({ mood = 'idle', size = 'md', label = 'Открыть AI', className = '', ...props }: Props) {
+export function CompanionButton({ mood = 'idle', size = 'md', label = 'Открыть Фину', className = '', ...props }: Props) {
   return (
     <button
       type="button"

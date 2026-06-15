@@ -12,7 +12,7 @@ type EmptyStateProps = {
 };
 
 export function EmptyState({
-  eyebrow = 'AI Finance',
+  eyebrow = 'Фина',
   title,
   description,
   icon,

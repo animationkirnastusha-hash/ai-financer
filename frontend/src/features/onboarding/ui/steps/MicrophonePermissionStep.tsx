@@ -2,20 +2,22 @@ import { useEffect, useState } from 'react';
 import { readMicrophonePermissionState, requestOnboardingMicrophonePermission } from '@/features/onboarding/model/microphonePermission';
 import { OnboardingStepShell } from '@/features/onboarding/ui/OnboardingStepShell';
 import { useSettingsStore } from '@/features/settings/model/settings.store';
+import { useI18n, type I18nKey } from '@/shared/lib/i18n';
 
-function permissionLabel(state: PermissionState | 'unsupported' | 'unknown') {
-  if (state === 'granted') return 'Микрофон разрешён';
-  if (state === 'denied') return 'Микрофон заблокирован';
-  if (state === 'unsupported') return 'Микрофон недоступен';
-  return 'Разрешение ещё не выдано';
+function getPermissionLabelKey(state: PermissionState | 'unsupported' | 'unknown'): I18nKey {
+  if (state === 'granted') return 'onboarding.microphone.status.granted';
+  if (state === 'denied') return 'onboarding.microphone.status.denied';
+  if (state === 'unsupported') return 'onboarding.microphone.status.unsupported';
+  return 'onboarding.microphone.status.unknown';
 }
 
 export function MicrophonePermissionStep() {
+  const { t } = useI18n();
   const voicePermissionPrompted = useSettingsStore((state) => state.voicePermissionPrompted);
   const setVoicePermissionPrompted = useSettingsStore((state) => state.setVoicePermissionPrompted);
   const [permissionState, setPermissionState] = useState<PermissionState | 'unsupported' | 'unknown'>('unknown');
   const [isRequesting, setIsRequesting] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
+  const [messageKey, setMessageKey] = useState<I18nKey | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -33,19 +35,19 @@ export function MicrophonePermissionStep() {
   const requestPermission = async () => {
     if (isRequesting) return;
     setIsRequesting(true);
-    setMessage(null);
+    setMessageKey(null);
 
     const result = await requestOnboardingMicrophonePermission();
     setPermissionState(result.state);
 
     if (result.ok) {
-      setMessage('Готово. Теперь на шаге со счетами можно зажать Фину и создать наличку с картой голосом.');
+      setMessageKey('onboarding.microphone.message.ready');
     } else if (result.state === 'denied') {
-      setMessage('Доступ заблокирован. Открой настройки Telegram или браузера, разреши микрофон для этого сайта и вернись в приложение.');
+      setMessageKey('onboarding.microphone.message.denied');
     } else if (result.state === 'unsupported') {
-      setMessage('В этом браузере или WebView микрофон недоступен. Можно пройти настройку вручную.');
+      setMessageKey('onboarding.microphone.message.unsupported');
     } else {
-      setMessage('Системное окно не подтвердило доступ. Нажми кнопку ещё раз или продолжи вручную.');
+      setMessageKey('onboarding.microphone.message.retry');
     }
 
     setIsRequesting(false);
@@ -55,19 +57,15 @@ export function MicrophonePermissionStep() {
 
   return (
     <OnboardingStepShell
-      eyebrow="Микрофон"
-      title="Сначала разрешим голос"
-      description="Следующий практический шаг — создать Наличку и Карту голосом. Чтобы системное окно не сорвало запись во время удержания Фины, разрешение нужно выдать заранее."
+      eyebrow={t('onboarding.microphone.eyebrow')}
+      title={t('onboarding.microphone.title')}
+      description={t('onboarding.microphone.description')}
     >
       <div className={isReady ? 'onboarding-permission-card is-ready' : 'onboarding-permission-card'}>
         <div className="onboarding-permission-card__icon" aria-hidden="true">🎙</div>
         <div>
-          <strong>{permissionLabel(permissionState)}</strong>
-          <span>
-            {isReady
-              ? 'Можно переходить дальше: запись будет начинаться только когда ты зажмёшь Фину.'
-              : 'Нажми кнопку ниже и подтверди системный запрос. Запись после разрешения сама не начнётся.'}
-          </span>
+          <strong>{t(getPermissionLabelKey(permissionState))}</strong>
+          <span>{isReady ? t('onboarding.microphone.readyCaption') : t('onboarding.microphone.waitingCaption')}</span>
         </div>
       </div>
 
@@ -77,19 +75,27 @@ export function MicrophonePermissionStep() {
         onClick={requestPermission}
         disabled={isRequesting || permissionState === 'unsupported'}
       >
-        {isRequesting ? 'Запрашиваю…' : isReady ? 'Проверить разрешение ещё раз' : 'Разрешить микрофон'}
+        {isRequesting
+          ? t('onboarding.microphone.action.loading')
+          : isReady
+            ? t('onboarding.microphone.action.retry')
+            : t('onboarding.microphone.action.allow')}
       </button>
 
-      {message ? <div className={isReady ? 'onboarding-tip-card onboarding-tip-card--success' : 'onboarding-tip-card onboarding-tip-card--warning'}><span>{message}</span></div> : null}
+      {messageKey ? (
+        <div className={isReady ? 'onboarding-tip-card onboarding-tip-card--success' : 'onboarding-tip-card onboarding-tip-card--warning'}>
+          <span>{t(messageKey)}</span>
+        </div>
+      ) : null}
 
       <div className="onboarding-rule-list">
         <div>
-          <strong>Разрешение — отдельно</strong>
-          <span>Сейчас мы только включаем доступ к микрофону. Команда не отправится сама.</span>
+          <strong>{t('onboarding.microphone.rule.permission.title')}</strong>
+          <span>{t('onboarding.microphone.rule.permission.caption')}</span>
         </div>
         <div>
-          <strong>Запись — на следующем шаге</strong>
-          <span>На шаге “Счета” ты зажмёшь Фину и сам скажешь команды для создания налички и карты.</span>
+          <strong>{t('onboarding.microphone.rule.recording.title')}</strong>
+          <span>{t('onboarding.microphone.rule.recording.caption')}</span>
         </div>
       </div>
     </OnboardingStepShell>

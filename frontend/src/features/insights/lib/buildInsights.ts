@@ -34,12 +34,12 @@ export function buildInsights({
       id: 'pending-attention',
       kind: 'pending_attention',
       tone: 'warning',
-      title: `AI ждёт подтверждения: ${pendingActions.length}`,
+      title: `Нужно проверить: ${pendingActions.length}`,
       description:
         pendingActions.length === 1
           ? 'Есть одно действие, требующее внимания.'
-          : 'Есть несколько AI-действий, требующих внимания.',
-      ctaLabel: 'Открыть pending',
+          : 'Есть несколько действий, требующих внимания.',
+      ctaLabel: 'Проверить',
     });
   }
 
@@ -48,9 +48,9 @@ export function buildInsights({
       id: 'audit-executed',
       kind: 'audit_activity',
       tone: 'positive',
-      title: `AI выполнил действий: ${executedCount}`,
-      description: 'AI уже провёл операции и сохранил их в аудит-логе.',
-      ctaLabel: 'Открыть audit',
+      title: `Готовых действий: ${executedCount}`,
+      description: 'Операции уже сохранены в журнале.',
+      ctaLabel: 'Открыть журнал',
     });
   }
 
@@ -59,8 +59,8 @@ export function buildInsights({
       id: 'drafts-previewed',
       kind: 'ai_state',
       tone: 'ai',
-      title: `AI подготовил черновиков: ${previewedCount}`,
-      description: 'AI распознаёт команды и собирает структурированные операции.',
+      title: `Подготовлено: ${previewedCount}`,
+      description: 'Фина подготовила действия для проверки.',
     });
   }
 
@@ -70,7 +70,7 @@ export function buildInsights({
       kind: 'pending_attention',
       tone: 'warning',
       title: `Ожидают подтверждения: ${pendingAuditCount}`,
-      description: 'В аудите есть действия, которые пока не завершены.',
+      description: 'Есть действия, которые пока не завершены.',
       ctaLabel: 'Проверить',
     });
   }
@@ -80,9 +80,9 @@ export function buildInsights({
       id: 'ai-ready',
       kind: 'ai_state',
       tone: 'neutral',
-      title: 'AI готов к работе',
+      title: 'Фина готова',
       description:
-        'Начни с команды вроде «кофе 350», «+50000 зарплата» или «перевёл 10000».',
+        'Напиши, например: «Потратил на кофе», «Получил зарплату» или «Перевёл на накопления».',
     });
   }
 

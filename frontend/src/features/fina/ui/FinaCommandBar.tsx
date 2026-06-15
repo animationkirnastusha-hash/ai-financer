@@ -9,10 +9,11 @@ type FinaCommandBarProps = {
   suggestions?: Array<{ key: I18nKey; command: string }>;
   action?: ReactNode;
   className?: string;
+  compact?: boolean;
 };
 
 const defaultSuggestions: Array<{ key: I18nKey; command: string }> = [
-  { key: 'fina.command.addExpense', command: 'потратил 450 на кофе' },
+  { key: 'fina.command.addExpense', command: 'Потратил на кофе' },
   { key: 'fina.command.balance', command: 'какой общий баланс' },
   { key: 'fina.command.week', command: 'сколько я потратил за неделю' },
 ];
@@ -24,12 +25,48 @@ export function FinaCommandBar({
   suggestions = defaultSuggestions,
   action,
   className = '',
+  compact = false,
 }: FinaCommandBarProps) {
   const { t } = useI18n();
   const openAIWithCommand = useNavigationStore((state) => state.openAIWithCommand);
+  const rootClassName = `fina-command-bar app-card ${compact ? 'fina-command-bar--compact' : ''} ${className}`.trim();
+
+  if (compact) {
+    return (
+      <>
+        <section className={rootClassName} data-no-swipe="true">
+          <div className="fina-command-bar__copy">
+            <span>{t(titleKey)}</span>
+            <p>{t(captionKey)}</p>
+          </div>
+          {action ? <div className="fina-command-bar__action">{action}</div> : null}
+        </section>
+
+        <div className="fina-command-bar__below" data-no-swipe="true">
+          <button type="button" className="fina-command-bar__text-action" onClick={() => openAIWithCommand()}>
+            {t('fina.command.openText')}
+          </button>
+
+          {suggestions.length ? (
+            <div className="fina-command-bar__chips" aria-label={t('fina.command.suggestions')}>
+              {suggestions.map((suggestion) => (
+                <button
+                  key={suggestion.key}
+                  type="button"
+                  onClick={() => openAIWithCommand(suggestion.command)}
+                >
+                  {t(suggestion.key)}
+                </button>
+              ))}
+            </div>
+          ) : null}
+        </div>
+      </>
+    );
+  }
 
   return (
-    <section className={`fina-command-bar app-card ${className}`.trim()} data-no-swipe="true">
+    <section className={rootClassName} data-no-swipe="true">
       <div className="fina-command-bar__copy">
         <span>{t(titleKey)}</span>
         <strong>{t(placeholderKey)}</strong>

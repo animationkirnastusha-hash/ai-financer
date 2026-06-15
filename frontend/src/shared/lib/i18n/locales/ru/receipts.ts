@@ -16,7 +16,7 @@ export const receiptsDictionary = {
   'receipts.note.caption': 'Проверь сумму, дату и счёт. Расход создаётся только после твоего подтверждения.',
   'receipts.list.loading': 'Загружаю чеки...',
   'receipts.empty.title': 'Чеков пока нет',
-  'receipts.empty.caption': 'Когда загрузишь чек, он появится здесь.',
+  'receipts.empty.caption': 'Загрузите чек через кнопку выше. Он останется здесь, а расход появится только после проверки.',
   'receipts.preview.title': 'Чек на проверке',
   'receipts.preview.caption': 'Проверь сумму, дату и счёт перед созданием расхода.',
   'receipts.preview.file': 'Файл',

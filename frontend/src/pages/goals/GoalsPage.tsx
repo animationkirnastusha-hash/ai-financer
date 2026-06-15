@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { goalsApi, type GoalDto } from '@/features/goals/api/goals.api';
 import { useAppModalStore } from '@/features/modals/model/appModal.store';
+import { useNavigationStore } from '@/features/navigation/model/navigation.store';
 import { FinaCommandBar } from '@/features/fina/ui/FinaCommandBar';
 import { ScreenTopBar } from '@/shared/ui/ScreenTopBar';
 import { EmptyState } from '@/shared/ui/EmptyState';
@@ -18,6 +19,7 @@ export default function GoalsPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const openModal = useAppModalStore((state) => state.openModal);
+  const openAIWithCommand = useNavigationStore((state) => state.openAIWithCommand);
 
   const loadGoals = async () => {
     setIsLoading(true);
@@ -26,7 +28,7 @@ export default function GoalsPage() {
       setGoals(await goalsApi.list());
     } catch (error) {
       console.error(error);
-      setError(error instanceof Error ? error.message : 'Цели не загрузились');
+      setError(error instanceof Error ? error.message : t('goals.error.load'));
     } finally {
       setIsLoading(false);
     }
@@ -46,21 +48,21 @@ export default function GoalsPage() {
   return (
     <div className="app-page app-goals-page text-white">
       <div className="app-page__inner space-y-4">
-        <ScreenTopBar title="Цели" left="back" right={['notifications', 'home']} />
+        <ScreenTopBar title={t('screen.goals')} left="back" right={['notifications', 'home']} />
 
         <header className="app-card app-card--hero">
-          <div className="app-eyebrow">Прогресс</div>
+          <div className="app-eyebrow">{t('goals.hero.eyebrow')}</div>
           <div className="app-goals-hero__top mt-3">
             <div className="min-w-0">
-              <h1 className="app-hero-title">Цели</h1>
-              <p className="app-hero-caption">Накопления, крупные покупки и понятный путь к ним.</p>
+              <h1 className="app-hero-title">{t('goals.hero.title')}</h1>
+              <p className="app-hero-caption">{t('goals.hero.caption')}</p>
             </div>
-            <button type="button" onClick={() => openModal({ type: 'goal-edit', onAfterSave: loadGoals })} className="app-primary-button shrink-0">+ Цель</button>
+            <button type="button" onClick={() => openModal({ type: 'goal-edit', onAfterSave: loadGoals })} className="app-primary-button shrink-0">{t('goals.hero.action')}</button>
           </div>
           <div className="app-goals-summary">
-            <div><strong>{activeGoals.length}</strong><small>активных</small></div>
-            <div><strong>{totalProgress}%</strong><small>общий прогресс</small></div>
-            <div><strong>{formatMoney(Math.max(totals.target - totals.current, 0), 'RUB')}</strong><small>осталось</small></div>
+            <div><strong>{activeGoals.length}</strong><small>{t('goals.stats.active')}</small></div>
+            <div><strong>{totalProgress}%</strong><small>{t('goals.stats.progress')}</small></div>
+            <div><strong>{formatMoney(Math.max(totals.target - totals.current, 0), 'RUB')}</strong><small>{t('goals.stats.left')}</small></div>
           </div>
         </header>
 
@@ -69,7 +71,7 @@ export default function GoalsPage() {
           captionKey="goals.command.caption"
           placeholderKey="goals.command.placeholder"
           suggestions={[
-            { key: 'goals.command.create', command: 'создай цель отпуск 120000 рублей' },
+            { key: 'goals.command.create', command: 'Создай цель на отпуск' },
             { key: 'goals.command.plan', command: 'предложи план взносов для цели отпуск' },
             { key: 'goals.command.status', command: 'сколько осталось до цели отпуск' },
           ]}
@@ -78,14 +80,16 @@ export default function GoalsPage() {
         {error ? <div className="app-error-box">{error}</div> : null}
 
         {isLoading ? (
-          <div className="app-card p-5 text-sm text-white/55">Загружаю цели...</div>
+          <div className="app-card p-5 text-sm text-white/55">{t('goals.loading')}</div>
         ) : activeGoals.length === 0 ? (
           <EmptyState
-            eyebrow="Цели"
-            title="Целей пока нет"
-            description="Создай первую цель вручную или скажи Фине, что хочешь накопить."
-            actionLabel="Создать цель"
-            onAction={() => openModal({ type: 'goal-edit', onAfterSave: loadGoals })}
+            eyebrow={t('screen.goals')}
+            title={t('goals.empty.title')}
+            description={t('goals.empty.caption')}
+            actionLabel={t('goals.empty.action')}
+            onAction={() => openAIWithCommand('Создай цель на отпуск')}
+            secondaryActionLabel={t('goals.empty.manual')}
+            onSecondaryAction={() => openModal({ type: 'goal-edit', onAfterSave: loadGoals })}
           />
         ) : (
           <div className="space-y-3">
@@ -97,14 +101,14 @@ export default function GoalsPage() {
                   <div className="app-goal-card__head">
                     <div className="min-w-0">
                       <div className="app-goal-card__title">{goal.title}</div>
-                      {goal.note ? <div className="app-goal-card__note">{goal.note}</div> : <div className="app-goal-card__note">Нажми, чтобы изменить цель или прогресс.</div>}
+                      {goal.note ? <div className="app-goal-card__note">{goal.note}</div> : <div className="app-goal-card__note">{t('goals.card.editHint')}</div>}
                     </div>
                     <div className="app-goal-card__money">{formatMoney(goal.targetAmount, goal.currency)}</div>
                   </div>
                   <div className="app-goal-progress"><span style={{ width: `${progress}%` }} /></div>
                   <div className="mt-2 flex justify-between gap-3 text-xs text-white/42">
-                    <span>{formatMoney(goal.currentAmount, goal.currency)} собрано</span>
-                    <span>{formatMoney(left, goal.currency)} осталось · {progress}%</span>
+                    <span>{t('goals.card.saved', { amount: formatMoney(goal.currentAmount, goal.currency) })}</span>
+                    <span>{t('goals.card.left', { amount: formatMoney(left, goal.currency), progress })}</span>
                   </div>
                   <div className="app-goal-card__account">
                     <span>{goal.account?.name ?? t('goals.account.autoCreated')}</span>

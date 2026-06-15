@@ -42,4 +42,10 @@ export const limitsDictionary = {
   'limits.command.create': 'Создать',
   'limits.command.left': 'Остаток',
   'limits.command.raise': 'Поднять',
+  'limits.error.load': 'Не удалось загрузить лимиты',
+  'limits.form.amountPlaceholder': 'Сумма',
+  'limits.empty.title': 'Лимитов пока нет',
+  'limits.empty.caption': 'Скажите Фине: “Поставь лимит на кафе”. Она уточнит сумму и период.',
+  'limits.empty.action': 'Поставить через Фину',
+  'limits.empty.manual': 'Настроить вручную',
 } as const;

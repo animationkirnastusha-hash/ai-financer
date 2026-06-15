@@ -1,5 +1,6 @@
 import type { InsightItem } from '@/features/insights/model/insight.types';
 import { cn } from '@/shared/lib/cn';
+import { useI18n } from '@/shared/lib/i18n';
 
 type Props = {
   item: InsightItem;
@@ -22,14 +23,17 @@ function getToneClasses(tone: InsightItem['tone']) {
   return 'border-white/10 bg-white/6';
 }
 
-function getToneLabel(tone: InsightItem['tone']) {
-  if (tone === 'positive') return 'AI Result';
-  if (tone === 'warning') return 'Attention';
-  if (tone === 'ai') return 'AI Insight';
-  return 'AI State';
-}
-
 export function InsightCard({ item, onClick }: Props) {
+  const { t } = useI18n();
+  const toneLabel =
+    item.tone === 'positive'
+      ? t('insights.tone.positive')
+      : item.tone === 'warning'
+        ? t('insights.tone.warning')
+        : item.tone === 'ai'
+          ? t('insights.tone.ai')
+          : t('insights.tone.neutral');
+
   const content = (
     <div
       className={cn(
@@ -38,7 +42,7 @@ export function InsightCard({ item, onClick }: Props) {
       )}
     >
       <div className="text-[10px] uppercase tracking-[0.16em] text-white/45">
-        {getToneLabel(item.tone)}
+        {toneLabel}
       </div>
 
       <div className="mt-2 text-sm font-semibold text-white">
@@ -60,7 +64,7 @@ export function InsightCard({ item, onClick }: Props) {
   if (!onClick) return content;
 
   return (
-    <button onClick={onClick} className="text-left">
+    <button type="button" onClick={onClick} className="text-left">
       {content}
     </button>
   );

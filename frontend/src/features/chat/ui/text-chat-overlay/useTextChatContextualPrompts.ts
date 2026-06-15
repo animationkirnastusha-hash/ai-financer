@@ -22,13 +22,11 @@ export function useTextChatContextualPrompts(
       latest?.title || latest?.description || 'последнюю операцию';
 
     const prompts = [
-      accountName ? `расход 300 кофе с ${accountName}` : 'расход 300 кофе',
-      accountName ? `доход 5000 на ${accountName}` : 'доход 5000',
-      accountName
-        ? `поставь лимит на ${accountName} 20000 в месяц`
-        : 'поставь общий лимит расходов 80000 в месяц',
-      'покажи лимиты',
-      'создай цель отпуск 120000',
+      'Потратил на кофе',
+      accountName ? `Получил зарплату на ${accountName}` : 'Получил зарплату',
+      'Поставь лимит на кафе',
+      'Покажи лимиты',
+      'Создай цель на отпуск',
     ];
 
     if (latest?.id && latestAmount)
