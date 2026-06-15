@@ -2,8 +2,10 @@
 import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
+import { loadBackendEnv } from './lib/load-backend-env.mjs';
 
 const backendRoot = process.cwd();
+const loadedEnvFiles = loadBackendEnv({ backendRoot });
 const projectRoot = path.resolve(backendRoot, '..');
 const frontendRoot = path.resolve(projectRoot, 'frontend');
 const stopOnFail = process.env.MASS_CHECK_STOP_ON_FAIL !== '0';
@@ -103,6 +105,7 @@ function writeReport() {
 console.log('AI-Financer mass tester check');
 console.log(`Project root: ${projectRoot}`);
 console.log(`Backend root: ${backendRoot}`);
+console.log(`Env files loaded: ${loadedEnvFiles.length ? loadedEnvFiles.join(', ') : 'none'}`);
 console.log(`Frontend root: ${frontendRoot}`);
 console.log(`Stop on fail: ${stopOnFail ? 'yes' : 'no'}`);
 

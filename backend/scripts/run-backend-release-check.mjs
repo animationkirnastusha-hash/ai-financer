@@ -2,8 +2,10 @@
 import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
+import { loadBackendEnv } from './lib/load-backend-env.mjs';
 
 const root = process.cwd();
+const loadedEnvFiles = loadBackendEnv({ backendRoot: root });
 const stopOnFail = process.env.RELEASE_CHECK_STOP_ON_FAIL !== '0';
 const baseUrl = process.env.TEST_BASE_URL || 'http://localhost:3000/api';
 const reportDir = path.resolve(root, 'reports/backend-release-check');
@@ -110,6 +112,7 @@ function writeReport() {
 
 console.log('AI-Financer backend release check');
 console.log(`Backend root: ${root}`);
+console.log(`Env files loaded: ${loadedEnvFiles.length ? loadedEnvFiles.join(', ') : 'none'}`);
 console.log(`Base URL: ${baseUrl}`);
 console.log(`Stop on fail: ${stopOnFail ? 'yes' : 'no'}`);
 
