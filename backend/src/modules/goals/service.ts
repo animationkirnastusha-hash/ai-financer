@@ -41,7 +41,12 @@ export class GoalService {
       orderBy: [{ status: 'asc' }, { createdAt: 'desc' }],
     });
 
-    return goals.map(this.serializeGoal);
+    const normalizedGoals: GoalWithAccount[] = [];
+    for (const goal of goals) {
+      normalizedGoals.push(await this.ensureGoalAccount(userId, goal));
+    }
+
+    return normalizedGoals.map((goal) => this.serializeGoal(goal));
   }
 
   async create(userId: string, input: CreateGoalInput) {
@@ -95,7 +100,7 @@ export class GoalService {
       include: goalInclude,
     });
 
-    return this.serializeGoal(goal);
+    return this.serializeGoal(await this.ensureGoalAccount(userId, goal));
   }
 
   async delete(userId: string, goalId: string) {
@@ -167,6 +172,33 @@ export class GoalService {
     const account = await prisma.account.findFirst({ where: { id: accountId, userId }, select: { id: true } });
     if (!account) throw new BadRequestError('Goal account not found');
     return account.id;
+  }
+
+
+  private async ensureGoalAccount(userId: string, goal: GoalWithAccount): Promise<GoalWithAccount> {
+    if (goal.status === 'archived' || goal.accountId) return goal;
+
+    return prisma.$transaction(async (tx) => {
+      const freshGoal = await tx.goal.findFirst({
+        where: { id: goal.id, userId },
+        include: goalInclude,
+      });
+
+      if (!freshGoal) throw new NotFoundError('Goal not found');
+      if (freshGoal.status === 'archived' || freshGoal.accountId) return freshGoal;
+
+      const accountId = await this.createGoalAccount(tx, userId, {
+        title: freshGoal.title,
+        currency: freshGoal.currency,
+        balance: freshGoal.currentAmount,
+      });
+
+      return tx.goal.update({
+        where: { id: freshGoal.id },
+        data: { accountId },
+        include: goalInclude,
+      });
+    });
   }
 
   private async createGoalAccount(

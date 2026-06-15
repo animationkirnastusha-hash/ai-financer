@@ -72,10 +72,13 @@
 @import "./pages/journal.css";
 @import "./pages/dashboard-ia.css";
 @import "./pages/dashboard/dashboard-chart-modal-final.css";
+@import "./pages/dashboard/dashboard-final-i18n.css";
 @import "./layout/offline-status.css";
 @import "./layout/release-compact-scale.css";
 
 @import "./pages/product-density-polish.css";
+@import "./pages/product-density-polish-dashboard.css";
+@import "./pages/product-density-polish-analytics.css";
 @import "./features/onboarding/product-tour.css";
 
 @import "./features/voice/voice-permission-compact.css";
