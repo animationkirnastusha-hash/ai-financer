@@ -239,7 +239,7 @@ export class ObligationService {
       include: loanInclude,
     });
 
-    await this.rebuildLoanReminder(userId, loan.id);
+    await this.tryRebuildLoanReminder(userId, loan.id);
     return this.getLoan(userId, loan.id);
   }
 
@@ -269,7 +269,7 @@ export class ObligationService {
     if (input.note !== undefined) data.note = normalizeOptionalText(input.note);
 
     const updated = await prisma.loan.update({ where: { id: loanId }, data, include: loanInclude });
-    await this.rebuildLoanReminder(userId, updated.id);
+    await this.tryRebuildLoanReminder(userId, updated.id);
     return this.getLoan(userId, updated.id);
   }
 
@@ -337,7 +337,7 @@ export class ObligationService {
     });
 
     const updated = await this.getLoan(userId, loanId);
-    await this.rebuildLoanReminder(userId, loanId);
+    await this.tryRebuildLoanReminder(userId, loanId);
     await notificationService.createPaymentMarkedNotification(userId, {
       title: loan.title,
       amount,
@@ -407,6 +407,18 @@ export class ObligationService {
     const account = await prisma.account.findFirst({ where: { id: accountId, userId } });
     if (!account) throw new NotFoundError('Account not found');
     return account;
+  }
+
+  private async tryRebuildLoanReminder(userId: string, loanId: string) {
+    try {
+      await this.rebuildLoanReminder(userId, loanId);
+    } catch (error) {
+      console.warn('[obligations] reminder rebuild skipped', {
+        userId,
+        loanId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
   }
 
   private async rebuildLoanReminder(userId: string, loanId: string) {

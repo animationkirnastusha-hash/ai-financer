@@ -37,7 +37,7 @@ await runSmoke('obligations-reports', async (context) => {
       paidMonths: 2,
       paymentDay: 15,
       nextPaymentDate: tomorrowIso(),
-      reminderDaysBefore: 1,
+      reminderDaysBefore: 0,
       accountId,
       autoCreateExpense: true,
       note: 'predeploy smoke',

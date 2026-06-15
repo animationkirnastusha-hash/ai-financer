@@ -182,7 +182,7 @@ await runSmoke('tester-critical-paths', async (context) => {
       targetType: 'category',
       categoryId: category.id,
       amount: 5000,
-      period: 'month',
+      period: 'monthly',
       notifyAt: 80,
       isActive: true,
     },

@@ -26,8 +26,16 @@ export interface UpdateSpendingLimitInput {
 
 type LimitWithRelations = Awaited<ReturnType<typeof prisma.spendingLimit.findFirst>>;
 
-const PERIODS = new Set(['daily', 'weekly', 'monthly']);
 const TARGET_TYPES = new Set(['account', 'category', 'total']);
+
+function normalizePeriod(value: unknown): SpendingLimitPeriod {
+  const period = String(value ?? 'monthly').trim().toLowerCase();
+  if (period === 'day' || period === 'daily') return 'daily';
+  if (period === 'week' || period === 'weekly') return 'weekly';
+  if (period === 'month' || period === 'monthly') return 'monthly';
+  throw new BadRequestError('period must be daily, weekly or monthly');
+}
+
 
 export class SpendingLimitService {
   async getUserLimits(userId: string) {
@@ -125,8 +133,7 @@ export class SpendingLimitService {
       throw new BadRequestError('Limit amount must be greater than 0');
     }
 
-    const period = (input.period ?? 'monthly') as SpendingLimitPeriod;
-    if (!PERIODS.has(period)) throw new BadRequestError('period must be daily, weekly or monthly');
+    const period = normalizePeriod(input.period);
 
     const notifyAt = input.notifyAt !== undefined ? Number(input.notifyAt) : 80;
     if (!Number.isFinite(notifyAt) || notifyAt < 1 || notifyAt > 100) {

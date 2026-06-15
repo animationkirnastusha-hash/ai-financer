@@ -23,7 +23,7 @@ await runSmoke('scenario-04-limits-obligations-reports', async (context) => {
   const limitResponse = await requestJson(context, '/spending-limits', {
     method: 'POST',
     expected: [201],
-    body: { targetType: 'category', categoryId: category.id, amount: 5000, period: 'month', notifyAt: 80, isActive: true },
+    body: { targetType: 'category', categoryId: category.id, amount: 5000, period: 'monthly', notifyAt: 80, isActive: true },
   });
   const limit = limitResponse.payload?.limit;
   requireId(limit?.id, 'spending limit');
@@ -54,7 +54,7 @@ await runSmoke('scenario-04-limits-obligations-reports', async (context) => {
       paidMonths: 2,
       paymentDay: 15,
       nextPaymentDate: nextDateIso(5),
-      reminderDaysBefore: 1,
+      reminderDaysBefore: 0,
       accountId: account.id,
       autoCreateExpense: true,
       note: 'Сценарная проверка',
