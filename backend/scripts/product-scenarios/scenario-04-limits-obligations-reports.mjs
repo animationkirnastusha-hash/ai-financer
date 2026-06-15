@@ -54,7 +54,7 @@ await runSmoke('scenario-04-limits-obligations-reports', async (context) => {
       paidMonths: 2,
       paymentDay: 15,
       nextPaymentDate: nextDateIso(5),
-      reminderDaysBefore: 0,
+      reminderDaysBefore: 1,
       accountId: account.id,
       autoCreateExpense: true,
       note: 'Сценарная проверка',

@@ -1,8 +1,8 @@
 import { runSmoke } from './lib/test-context.mjs';
 import { requestJson } from './lib/http-client.mjs';
 
-function tomorrowIso() {
-  const date = new Date(Date.now() + 24 * 60 * 60 * 1000);
+function futureIso(days = 3) {
+  const date = new Date(Date.now() + days * 24 * 60 * 60 * 1000);
   date.setUTCHours(9, 0, 0, 0);
   return date.toISOString();
 }
@@ -36,8 +36,8 @@ await runSmoke('obligations-reports', async (context) => {
       termMonths: 18,
       paidMonths: 2,
       paymentDay: 15,
-      nextPaymentDate: tomorrowIso(),
-      reminderDaysBefore: 0,
+      nextPaymentDate: futureIso(5),
+      reminderDaysBefore: 1,
       accountId,
       autoCreateExpense: true,
       note: 'predeploy smoke',
@@ -71,8 +71,8 @@ await runSmoke('obligations-reports', async (context) => {
       loanId: loan.id,
       title: `Smoke reminder ${context.suffix}`,
       message: 'predeploy smoke reminder',
-      dueDate: tomorrowIso(),
-      remindAt: tomorrowIso(),
+      dueDate: futureIso(5),
+      remindAt: futureIso(3),
       channel: 'app',
     },
   });
