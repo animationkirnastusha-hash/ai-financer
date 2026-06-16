@@ -1,11 +1,11 @@
-/* Pack 132: compact learning-first onboarding. */
+/* Compact first-launch onboarding. Keep this file focused on LaunchOnboardingSheet only. */
 .onboarding-setup-sheet--compact {
   max-width: 520px;
-  max-height: min(88vh, 690px);
+  max-height: min(90vh, 720px);
 }
 
 .onboarding-setup-body--compact {
-  max-height: calc(min(88vh, 690px) - 86px);
+  max-height: calc(min(90vh, 720px) - 86px);
   padding-top: 12px;
 }
 
@@ -13,6 +13,10 @@
   display: grid;
   gap: 10px;
   padding: 4px 0 2px;
+}
+
+.onboarding-welcome-card--intro {
+  padding-bottom: 4px;
 }
 
 .onboarding-fina-mark {
@@ -37,13 +41,15 @@
 
 .onboarding-welcome-card p {
   margin: 0;
-  max-width: 420px;
-  color: rgba(255,255,255,.6);
+  max-width: 430px;
+  color: rgba(255,255,255,.62);
   font-size: 14px;
   line-height: 1.55;
 }
 
-.onboarding-learning-card,
+.onboarding-intro-card,
+.onboarding-start-card,
+.onboarding-trial-card,
 .onboarding-micro-card {
   border: 1px solid rgba(255,255,255,.08);
   border-radius: 26px;
@@ -51,13 +57,13 @@
   padding: 13px;
 }
 
-.onboarding-learning-card__head {
+.onboarding-intro-card__head {
   display: grid;
   gap: 4px;
   margin-bottom: 10px;
 }
 
-.onboarding-learning-card__head span {
+.onboarding-intro-card__head span {
   color: rgba(255,255,255,.42);
   font-size: 10px;
   font-weight: 850;
@@ -65,49 +71,75 @@
   text-transform: uppercase;
 }
 
-.onboarding-learning-card__head strong {
+.onboarding-intro-card__head strong {
   color: rgba(255,255,255,.92);
   font-size: 14px;
 }
 
-.onboarding-learning-list {
+.onboarding-intro-list {
   display: grid;
   gap: 8px;
 }
 
-.onboarding-learning-task {
+.onboarding-intro-list div {
   display: grid;
   gap: 4px;
+  border-radius: 18px;
+  background: rgba(0,0,0,.14);
+  padding: 10px 11px;
+}
+
+.onboarding-intro-list b,
+.onboarding-start-action span,
+.onboarding-trial-card strong,
+.onboarding-micro-card strong {
+  color: rgba(255,255,255,.92);
+  font-size: 13px;
+  font-weight: 820;
+}
+
+.onboarding-intro-list small,
+.onboarding-start-action small,
+.onboarding-trial-card span,
+.onboarding-micro-card span {
+  color: rgba(255,255,255,.5);
+  font-size: 11px;
+  line-height: 1.38;
+}
+
+.onboarding-start-card {
+  display: grid;
+  gap: 8px;
+}
+
+.onboarding-start-action {
+  display: grid;
+  gap: 5px;
   width: 100%;
   border: 1px solid rgba(255,255,255,.075);
   border-radius: 18px;
   background: rgba(0,0,0,.14);
   padding: 11px 12px;
   text-align: left;
-  transition: transform .18s ease, border-color .18s ease, background .18s ease;
+  transition: transform .18s ease, border-color .18s ease, background .18s ease, box-shadow .18s ease;
 }
 
-.onboarding-learning-task:active {
+.onboarding-start-action--primary {
+  border-color: rgba(52,211,153,.24);
+  background: linear-gradient(135deg, rgba(52,211,153,.16), rgba(125,211,252,.08));
+  box-shadow: 0 16px 34px rgba(52,211,153,.08);
+}
+
+.onboarding-start-action:active {
   transform: scale(.985);
 }
 
-.onboarding-learning-task:hover {
+.onboarding-start-action:hover {
   border-color: rgba(52,211,153,.22);
   background: rgba(52,211,153,.075);
 }
 
-.onboarding-learning-task span {
-  color: rgba(255,255,255,.92);
-  font-size: 13px;
-  font-weight: 820;
-}
-
-.onboarding-learning-task small {
-  color: rgba(255,255,255,.48);
-  font-size: 11px;
-  line-height: 1.35;
-}
-
+.onboarding-trial-card,
 .onboarding-micro-card {
   display: flex;
   align-items: center;
@@ -115,21 +147,16 @@
   gap: 12px;
 }
 
+.onboarding-trial-card strong,
+.onboarding-trial-card span,
 .onboarding-micro-card strong,
 .onboarding-micro-card span {
   display: block;
 }
 
-.onboarding-micro-card strong {
-  color: rgba(255,255,255,.92);
-  font-size: 13px;
-}
-
+.onboarding-trial-card span,
 .onboarding-micro-card span {
   margin-top: 4px;
-  color: rgba(255,255,255,.48);
-  font-size: 11px;
-  line-height: 1.35;
 }
 
 .onboarding-info-box {
@@ -142,11 +169,13 @@
 }
 
 @media (max-width: 420px) {
+  .onboarding-trial-card,
   .onboarding-micro-card {
     align-items: stretch;
     flex-direction: column;
   }
 
+  .onboarding-trial-card .app-secondary-button,
   .onboarding-micro-card .app-secondary-button {
     justify-content: center;
     width: 100%;

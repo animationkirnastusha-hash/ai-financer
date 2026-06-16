@@ -2,6 +2,7 @@ import { createAIProvider } from './providers/ai-provider.factory';
 import { AIUserTier } from './ai-model-router';
 
 export type AIDialogIntent =
+  | 'identity_help'
   | 'financial_action'
   | 'financial_question'
   | 'financial_coaching'
@@ -36,10 +37,72 @@ type RouteContext = {
   recentTransactions?: unknown[];
 };
 
+const IDENTITY_HELP_PATTERNS = [
+  'кто ты',
+  'что ты умеешь',
+  'что ты можешь',
+  'что умеешь',
+  'что можешь',
+  'как с тобой',
+  'как тобой',
+  'как работать',
+  'как пользоваться',
+  'расскажи о себе',
+  'расскажи про себя',
+  'расскажи что умеешь',
+  'зачем ты',
+  'чем отличаешься',
+  'что такое фина',
+  'who are you',
+  'what can you do',
+  'how do i use',
+  'how to use',
+  'what is fina',
+];
+
+const PLAN_WORDS = [
+  'премиум',
+  'premium',
+  'business',
+  'бизнес',
+  'триал',
+  'trial',
+  'базовая версия',
+  'free версия',
+  'free',
+  'тариф',
+  'тарифы',
+];
+
+const HELP_WORDS = [
+  'что такое',
+  'что дает',
+  'что даёт',
+  'что доступно',
+  'чем отличается',
+  'чем отличаются',
+  'какая разница',
+  'расскажи',
+  'объясни',
+  'как работает',
+  'в чем разница',
+  'версии',
+  'версиях',
+  'what is',
+  'what does',
+  'difference',
+  'explain',
+  'tell me',
+  'versions',
+];
+
 export class AIDialogRouterService {
   private readonly provider = createAIProvider();
 
   async route(command: string, context: unknown, tier: AIUserTier): Promise<AIDialogRoute> {
+    const localRoute = this.tryLocalRoute(command, tier);
+    if (localRoute) return localRoute;
+
     try {
       const raw = await this.provider.generateJson<RouteResponse>({
         system: this.systemPrompt(),
@@ -47,7 +110,7 @@ export class AIDialogRouterService {
         modelRole: 'fast',
         temperature: 0,
         timeoutMs: 8_000,
-        numPredict: 220,
+        numPredict: 240,
       });
 
       return this.normalizeRoute(raw, tier);
@@ -66,10 +129,11 @@ export class AIDialogRouterService {
       'Do not extract amounts, accounts, categories or other financial fields. This is not a command parser.',
       'Choose whether the message should go to tools or to a natural answer.',
       'Use tools only when the user wants to change app data, open/show app data, or ask a data-backed finance question.',
-      'Use a natural answer when the user wants advice, emotional support, salary/budget discussion, or casual conversation.',
+      'Use a natural answer when the user wants advice, emotional support, salary/budget discussion, casual conversation, or asks what Fina is and how to use the app.',
+      'identity_help means the user asks who Fina is, what Fina can do, how to work with Fina, or how Free/Premium/Business differ. identity_help always has shouldUseTools=false.',
       'Never choose tools for general life complaints unless the user explicitly asks to create, update, delete, record, transfer, pay, show or calculate app data.',
       'For BUSINESS tier, business finance and bookkeeping conversations should use business_accountant style unless they are explicit app mutations.',
-      'JSON shape: {"intent":"financial_action|financial_question|financial_coaching|business_accounting|app_navigation|small_talk|unclear","shouldUseTools":true,"answerStyle":"free_companion|premium_companion|business_accountant","confidence":0.0,"summary":"short intent summary"}.',
+      'JSON shape: {"intent":"identity_help|financial_action|financial_question|financial_coaching|business_accounting|app_navigation|small_talk|unclear","shouldUseTools":true,"answerStyle":"free_companion|premium_companion|business_accountant","confidence":0.0,"summary":"short intent summary"}.',
     ].join(' ');
   }
 
@@ -78,6 +142,7 @@ export class AIDialogRouterService {
       'TIER:', String(tier || 'FREE').toUpperCase(),
       'CONTEXT_HINTS:', JSON.stringify(this.compactContext(context)),
       'ROUTING_RULES:',
+      '- identity_help: user asks who Fina is, what Fina can do, how to use Fina, or what Free/Premium/Business/trial mean. shouldUseTools=false.',
       '- financial_action: user wants to create/update/delete/record/pay/transfer/set something in the app. shouldUseTools=true.',
       '- financial_question: user asks about their spending, income, balance, accounts, goals, obligations or reports. shouldUseTools=true.',
       '- app_navigation: user asks to open/show an app screen or list. shouldUseTools=true.',
@@ -87,6 +152,34 @@ export class AIDialogRouterService {
       '- unclear: not enough meaning to act safely. shouldUseTools=false.',
       'USER:', command,
     ].join('\n');
+  }
+
+  private tryLocalRoute(command: string, tier: AIUserTier): AIDialogRoute | null {
+    const normalized = command
+      .toLocaleLowerCase('ru-RU')
+      .replaceAll('ё', 'е')
+      .replace(/[!?.,:;()\[\]{}"'`«»]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    if (!normalized) return null;
+
+    const asksAboutFina = IDENTITY_HELP_PATTERNS.some((pattern) => normalized.includes(pattern));
+    const asksAboutPlan = PLAN_WORDS.some((plan) => normalized.includes(plan))
+      && HELP_WORDS.some((word) => normalized.includes(word));
+
+    if (asksAboutFina || asksAboutPlan) {
+      const tierText = String(tier || 'FREE').toUpperCase();
+      return {
+        intent: 'identity_help',
+        shouldUseTools: false,
+        answerStyle: tierText === 'BUSINESS' ? 'business_accountant' : tierText === 'PREMIUM' ? 'premium_companion' : 'free_companion',
+        confidence: 0.96,
+        summary: 'The user asks who Fina is, what she can do, how to use her, or how Free, Premium and Business differ.',
+      };
+    }
+
+    return null;
   }
 
   private compactContext(context: unknown) {
@@ -105,9 +198,11 @@ export class AIDialogRouterService {
     const intent = this.normalizeIntent(raw.intent);
     const answerStyle = this.normalizeAnswerStyle(raw.answerStyle, tierText, intent);
     const confidence = this.clampConfidence(raw.confidence);
-    const shouldUseTools = typeof raw.shouldUseTools === 'boolean'
-      ? raw.shouldUseTools
-      : this.defaultShouldUseTools(intent);
+    const shouldUseTools = intent === 'identity_help'
+      ? false
+      : typeof raw.shouldUseTools === 'boolean'
+        ? raw.shouldUseTools
+        : this.defaultShouldUseTools(intent);
 
     return {
       intent,
@@ -120,6 +215,7 @@ export class AIDialogRouterService {
 
   private normalizeIntent(value: unknown): AIDialogIntent {
     if (
+      value === 'identity_help' ||
       value === 'financial_action' ||
       value === 'financial_question' ||
       value === 'financial_coaching' ||

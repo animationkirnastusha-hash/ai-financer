@@ -7,7 +7,7 @@ type LearningTask = {
   id: LearningProgressStep;
   titleKey: I18nKey;
   captionKey: I18nKey;
-  command: string;
+  commandKey: string;
 };
 
 const tasks: LearningTask[] = [
@@ -15,25 +15,25 @@ const tasks: LearningTask[] = [
     id: 'firstExpense',
     titleKey: 'learning.task.expense.title',
     captionKey: 'learning.task.expense.caption',
-    command: 'Потратил на кофе',
+    commandKey: 'learning.task.expense.command',
   },
   {
     id: 'firstQuestion',
     titleKey: 'learning.task.question.title',
     captionKey: 'learning.task.question.caption',
-    command: 'Сколько я потратил сегодня?',
+    commandKey: 'learning.task.question.command',
   },
   {
     id: 'firstGoal',
     titleKey: 'learning.task.goal.title',
     captionKey: 'learning.task.goal.caption',
-    command: 'Создай цель на отпуск',
+    commandKey: 'learning.task.goal.command',
   },
   {
     id: 'firstLimit',
     titleKey: 'learning.task.limit.title',
     captionKey: 'learning.task.limit.caption',
-    command: 'Поставь лимит на кафе',
+    commandKey: 'learning.task.limit.command',
   },
 ];
 
@@ -52,7 +52,7 @@ export function ProductLearningCard() {
 
   const startTask = (task: LearningTask) => {
     mark(task.id);
-    openAIWithCommand(task.command);
+    openAIWithCommand(t(task.commandKey));
   };
 
   return (
