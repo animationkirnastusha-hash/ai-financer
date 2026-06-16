@@ -64,7 +64,7 @@ export class AIPendingActionService {
       const clarification = view.parsed?.clarification;
       if (clarification && typeof clarification === 'object' && !Array.isArray(clarification)) {
         const type = (clarification as Record<string, unknown>).type;
-        if (type === 'account' || type === 'goal' || type === 'category' || type === 'section') return view;
+        if (type === 'account' || type === 'account_setup' || type === 'amount' || type === 'goal' || type === 'category' || type === 'section' || type === 'transaction' || type === 'obligation' || type === 'spending_limit') return view;
       }
     }
 

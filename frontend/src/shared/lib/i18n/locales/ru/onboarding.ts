@@ -71,7 +71,7 @@ export const onboardingDictionary = {
   'onboarding.tour.skip': 'Пропустить',
   'onboarding.tour.back': 'Назад',
   'onboarding.tour.next': 'Дальше',
-  'onboarding.tour.done': 'Готово',
+  'onboarding.tour.done': 'Начать пользоваться',
   'onboarding.tour.balance.title': 'Баланс и счета',
   'onboarding.tour.balance.caption': 'Здесь видно общий баланс и счета. Можно быстро открыть список счетов и проверить, где лежат деньги.',
   'onboarding.tour.fina.title': 'Диалог с Финой',

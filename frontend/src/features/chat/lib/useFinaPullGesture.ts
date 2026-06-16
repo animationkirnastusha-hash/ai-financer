@@ -1,14 +1,56 @@
 import { useCallback, useRef, useState, type TouchEvent } from 'react';
 import type { AppModalDescriptor } from '@/features/modals/model/appModal.store';
+import type { AppScreen } from '@/features/navigation/model/navigation.store';
 
-const START_ZONE_PX = 148;
-const ACTIVATE_DRAG_PX = 16;
-const OPEN_DRAG_PX = 86;
-const MAX_VISUAL_DRAG_PX = 112;
-const MAX_HORIZONTAL_DRIFT_PX = 70;
+const DASHBOARD_MIN_START_ZONE_PX = 260;
+const DASHBOARD_MAX_START_ZONE_PX = 560;
+const DASHBOARD_START_ZONE_SCREEN_SHARE = 0.56;
+const SAFE_PAGE_MIN_START_ZONE_PX = 96;
+const SAFE_PAGE_MAX_START_ZONE_PX = 184;
+const SAFE_PAGE_START_ZONE_SCREEN_SHARE = 0.22;
+const ACTIVATE_DRAG_PX = 8;
+const OPEN_DRAG_PX = 52;
+const MAX_VISUAL_DRAG_PX = 96;
+const MAX_HORIZONTAL_DRIFT_PX = 86;
+
+const SAFE_PULL_SCREENS = new Set<AppScreen>([
+  'dashboard',
+  'accounts',
+  'analytics',
+  'journal',
+  'goals',
+  'obligations',
+  'spending-limits',
+  'profile',
+  'store',
+  'premium',
+  'business-accountant',
+  'receipt-scans',
+  'referral',
+]);
+
+function isHTMLElement(value: unknown): value is HTMLElement {
+  return value instanceof HTMLElement;
+}
+
+function hasActiveEditableElement() {
+  const active = document.activeElement;
+  if (!isHTMLElement(active)) return false;
+
+  return Boolean(active.closest('input, textarea, select, [contenteditable="true"]'));
+}
+
+function hasBlockingLayer() {
+  return Boolean(
+    document.body.classList.contains('product-tour-active') ||
+    document.documentElement.classList.contains('product-tour-active') ||
+    document.querySelector('[role="dialog"], .product-tour, .app-modal-backdrop, .app-modal-sheet, .bottom-sheet, .app-navigation-sheet'),
+  );
+}
 
 function isInteractiveTarget(target: EventTarget | null) {
-  if (!(target instanceof HTMLElement)) return false;
+  if (!isHTMLElement(target)) return false;
+
   return Boolean(
     target.closest(
       [
@@ -19,93 +61,133 @@ function isInteractiveTarget(target: EventTarget | null) {
         'input',
         'textarea',
         'select',
+        'form',
         '[role="button"]',
+        '[role="tab"]',
+        '[role="switch"]',
         '[contenteditable="true"]',
       ].join(', '),
     ),
   );
 }
 
-function isScrollableParentBusy(target: EventTarget | null, root: HTMLElement | null) {
-  if (!(target instanceof HTMLElement) || !root) return false;
+function findScrollRoot(target: EventTarget | null, root: HTMLElement) {
+  if (isHTMLElement(target)) {
+    const closestPage = target.closest<HTMLElement>('.app-page');
+    if (closestPage && root.contains(closestPage)) return closestPage;
+  }
+
+  return root.querySelector<HTMLElement>('.app-page') ?? root;
+}
+
+function isScrollableParentBusy(target: EventTarget | null, scrollRoot: HTMLElement) {
+  if (!isHTMLElement(target)) return false;
 
   let node: HTMLElement | null = target;
-  while (node && node !== root) {
+  while (node && node !== scrollRoot) {
     const style = window.getComputedStyle(node);
     const canScrollY = /(auto|scroll)/.test(style.overflowY) && node.scrollHeight > node.clientHeight + 1;
-    if (canScrollY && node.scrollTop > 0) return true;
+    if (canScrollY) return true;
     node = node.parentElement;
   }
 
   return false;
 }
 
+function getStartZonePx(scrollRoot: HTMLElement, screen: AppScreen) {
+  const rootHeight = scrollRoot.getBoundingClientRect().height || window.innerHeight;
+  const isDashboard = screen === 'dashboard';
+  const min = isDashboard ? DASHBOARD_MIN_START_ZONE_PX : SAFE_PAGE_MIN_START_ZONE_PX;
+  const max = isDashboard ? DASHBOARD_MAX_START_ZONE_PX : SAFE_PAGE_MAX_START_ZONE_PX;
+  const share = isDashboard ? DASHBOARD_START_ZONE_SCREEN_SHARE : SAFE_PAGE_START_ZONE_SCREEN_SHARE;
+
+  return Math.min(max, Math.max(min, rootHeight * share));
+}
+
 type UseFinaPullGestureOptions = {
   blocked?: boolean;
+  currentScreen: AppScreen;
   openModal: (modal: AppModalDescriptor) => void;
 };
 
-export function useFinaPullGesture({ blocked = false, openModal }: UseFinaPullGestureOptions) {
-  const rootRef = useRef<HTMLDivElement | null>(null);
+export function canUseFinaPullOnScreen(screen: AppScreen) {
+  return SAFE_PULL_SCREENS.has(screen);
+}
+
+export function useFinaPullGesture({ blocked = false, currentScreen, openModal }: UseFinaPullGestureOptions) {
+  const rootRef = useRef<HTMLElement | null>(null);
   const startRef = useRef<{
     x: number;
     y: number;
     active: boolean;
     blocked: boolean;
+    scrollRoot: HTMLElement | null;
   } | null>(null);
+  const pullOffsetRef = useRef(0);
   const [pullOffset, setPullOffset] = useState(0);
   const [isReadyToOpen, setIsReadyToOpen] = useState(false);
 
+  const setVisualOffset = useCallback((offset: number) => {
+    const nextOffset = Math.min(MAX_VISUAL_DRAG_PX, Math.max(0, offset));
+    pullOffsetRef.current = nextOffset;
+    setPullOffset(nextOffset);
+    setIsReadyToOpen(nextOffset >= OPEN_DRAG_PX);
+  }, []);
+
   const reset = useCallback(() => {
     startRef.current = null;
+    pullOffsetRef.current = 0;
     setPullOffset(0);
     setIsReadyToOpen(false);
   }, []);
 
-  const onTouchStart = useCallback((event: TouchEvent<HTMLDivElement>) => {
+  const onTouchStart = useCallback((event: TouchEvent<HTMLElement>) => {
     const touch = event.touches[0];
     const root = rootRef.current;
     if (!touch || !root) return;
 
-    const rootTop = root.getBoundingClientRect().top;
+    const scrollRoot = findScrollRoot(event.target, root);
+    const rootTop = scrollRoot.getBoundingClientRect().top;
     const startYInRoot = touch.clientY - rootTop;
-    const rootAtTop = root.scrollTop <= 2;
+    const rootAtTop = scrollRoot.scrollTop <= 2;
     const shouldBlock =
       blocked ||
+      !canUseFinaPullOnScreen(currentScreen) ||
+      hasActiveEditableElement() ||
+      hasBlockingLayer() ||
       !rootAtTop ||
-      startYInRoot > START_ZONE_PX ||
+      startYInRoot < 0 ||
+      startYInRoot > getStartZonePx(scrollRoot, currentScreen) ||
       isInteractiveTarget(event.target) ||
-      isScrollableParentBusy(event.target, root);
+      isScrollableParentBusy(event.target, scrollRoot);
 
     startRef.current = {
       x: touch.clientX,
       y: touch.clientY,
       active: false,
       blocked: shouldBlock,
+      scrollRoot,
     };
-  }, [blocked]);
+  }, [blocked, currentScreen]);
 
-  const onTouchMove = useCallback((event: TouchEvent<HTMLDivElement>) => {
+  const onTouchMove = useCallback((event: TouchEvent<HTMLElement>) => {
     const origin = startRef.current;
     const touch = event.touches[0];
-    const root = rootRef.current;
-    if (!origin || !touch || !root || origin.blocked) return;
+    if (!origin || !touch || origin.blocked || !origin.scrollRoot) return;
 
     const dx = touch.clientX - origin.x;
     const dy = touch.clientY - origin.y;
     const absDx = Math.abs(dx);
 
     if (dy <= ACTIVATE_DRAG_PX) return;
-    if (absDx > MAX_HORIZONTAL_DRIFT_PX || absDx > dy * 0.72) {
+    if (absDx > MAX_HORIZONTAL_DRIFT_PX || absDx > dy * 0.78) {
       origin.blocked = true;
-      setPullOffset(0);
-      setIsReadyToOpen(false);
+      setVisualOffset(0);
       return;
     }
-    if (root.scrollTop > 2) {
+    if (origin.scrollRoot.scrollTop > 2) {
       origin.blocked = true;
-      setPullOffset(0);
-      setIsReadyToOpen(false);
+      setVisualOffset(0);
       return;
     }
 
@@ -113,14 +195,12 @@ export function useFinaPullGesture({ blocked = false, openModal }: UseFinaPullGe
     event.preventDefault();
     event.stopPropagation();
 
-    const nextOffset = Math.min(MAX_VISUAL_DRAG_PX, Math.max(0, dy));
-    setPullOffset(nextOffset);
-    setIsReadyToOpen(nextOffset >= OPEN_DRAG_PX);
-  }, []);
+    setVisualOffset(dy);
+  }, [setVisualOffset]);
 
-  const onTouchEnd = useCallback((event: TouchEvent<HTMLDivElement>) => {
+  const onTouchEnd = useCallback((event: TouchEvent<HTMLElement>) => {
     const origin = startRef.current;
-    const shouldOpen = Boolean(origin?.active && !origin.blocked && pullOffset >= OPEN_DRAG_PX);
+    const shouldOpen = Boolean(origin?.active && !origin.blocked && pullOffsetRef.current >= OPEN_DRAG_PX);
 
     if (origin?.active) {
       event.preventDefault();
@@ -134,7 +214,7 @@ export function useFinaPullGesture({ blocked = false, openModal }: UseFinaPullGe
         openModal({ type: 'ai-text-overlay', mode: 'text' });
       });
     }
-  }, [openModal, pullOffset, reset]);
+  }, [openModal, reset]);
 
   const onTouchCancel = useCallback(() => {
     reset();
@@ -144,6 +224,7 @@ export function useFinaPullGesture({ blocked = false, openModal }: UseFinaPullGe
     rootRef,
     pullOffset,
     isReadyToOpen,
+    isEnabled: canUseFinaPullOnScreen(currentScreen) && !blocked,
     gestureHandlers: {
       onTouchStart,
       onTouchMove,

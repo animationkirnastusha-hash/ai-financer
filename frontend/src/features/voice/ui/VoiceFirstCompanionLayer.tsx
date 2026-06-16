@@ -21,6 +21,7 @@ export function VoiceFirstCompanionLayer() {
   const hasTextChatOverlay = modalStack.some((modal) => modal.type === 'ai-text-overlay');
   const navigateTo = useNavigationStore((state) => state.navigateTo);
   const goBack = useNavigationStore((state) => state.goBack);
+  const currentScreen = useNavigationStore((state) => state.currentScreen);
   const openAIWithCommand = useNavigationStore((state) => state.openAIWithCommand);
 
   const chat = useChatController();
@@ -74,6 +75,7 @@ export function VoiceFirstCompanionLayer() {
   const microphoneNeedsAction = canUseVoice && (!voicePermissionPrompted || microphoneBlocked);
   const voicePermissionReady = canUseVoice && voicePermissionPrompted && !microphoneBlocked;
   const canStartManualRecording = voicePermissionReady && !hasPending && !chat.isSending && !isDispatching && voice.state === 'idle';
+  const tapToTextEnabled = currentScreen !== 'dashboard';
 
   useEffect(() => {
     void voice.refreshPermissionState?.();
@@ -201,8 +203,10 @@ export function VoiceFirstCompanionLayer() {
     openTextOverlay,
     onCancelRecording,
     showThought,
+    tapToTextEnabled,
     labels: {
       recognizing: t('voice.thought.recognizing'),
+      pullForText: t('voice.thought.pullForText'),
     },
   });
 
@@ -308,7 +312,8 @@ export function VoiceFirstCompanionLayer() {
       phase={phase}
       cooldownUntil={cooldownUntil}
       mood={mood}
-      ariaLabel={t('voice.fina.tapTextHoldVoice')}
+      ariaLabel={t(tapToTextEnabled ? 'voice.fina.tapTextHoldVoice' : 'voice.fina.holdVoiceOnly')}
+      tapToTextEnabled={tapToTextEnabled}
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}

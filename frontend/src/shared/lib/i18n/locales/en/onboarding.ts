@@ -71,7 +71,7 @@ export const onboardingDictionary = {
   'onboarding.tour.skip': 'Skip',
   'onboarding.tour.back': 'Back',
   'onboarding.tour.next': 'Next',
-  'onboarding.tour.done': 'Done',
+  'onboarding.tour.done': 'Start using',
   'onboarding.tour.balance.title': 'Balance and accounts',
   'onboarding.tour.balance.caption': 'This shows your total balance and accounts. You can quickly open accounts and check where money is kept.',
   'onboarding.tour.fina.title': 'Talk to Fina',

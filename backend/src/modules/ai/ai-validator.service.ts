@@ -216,11 +216,12 @@ export class AIValidatorService {
         const explicitAccountRef = this.cleanString(input.account);
         const plannedAccountRef = this.lastPlannedAccountName(plannedAccounts);
         const defaultAccount = this.resolveDefaultTransactionAccount(accounts, kind, aiSettings);
+        const hasNoUsableAccounts = accounts.length === 0 && plannedAccounts.size === 0 && !defaultAccount;
         const shouldAskAccount = !explicitAccountRef && !plannedAccountRef && !defaultAccount && kind === 'expense' && accounts.length > 0;
         const accountRef = explicitAccountRef
           || plannedAccountRef
           || (defaultAccount?.name ?? '')
-          || (shouldAskAccount ? '' : accounts[0]?.name || '');
+          || (shouldAskAccount || hasNoUsableAccounts ? '' : accounts[0]?.name || '');
 
         const account = this.resolveAccount(accounts, accountRef) ?? defaultAccount;
         const plannedAccount = plannedAccounts.get(this.key(accountRef));
@@ -230,7 +231,14 @@ export class AIValidatorService {
         if (!kind) issues.push({ code: 'missing_transaction_kind', message: 'AI не указал тип операции: income или expense.', actionIndex: index, field: 'kind' });
         if (!amount) issues.push({ code: 'missing_amount', message: 'Не хватает суммы операции.', actionIndex: index, field: 'amount' });
         if (!account && !plannedAccount) {
-          if (shouldAskAccount) {
+          if (hasNoUsableAccounts) {
+            issues.push({
+              code: 'needs_first_account_setup',
+              message: 'Сначала нужен счёт для операции.',
+              actionIndex: index,
+              field: 'accountSetup',
+            });
+          } else if (shouldAskAccount) {
             issues.push({
               code: 'needs_account_clarification',
               message: 'С какого счёта списать расход?',
@@ -923,7 +931,9 @@ export class AIValidatorService {
     if (tool === 'show_accounts' || tool === 'show_transactions' || tool === 'show_ai_settings' || tool === 'show_goals' || tool === 'show_taxonomy' || tool === 'show_obligations' || tool === 'show_spending_limits') return false;
     if (tool === 'update_onboarding_state' || tool === 'restart_onboarding' || tool === 'create_spending_limit' || tool === 'update_spending_limit') return false;
 
-    if (tool === 'create_account' || tool === 'update_account' || tool === 'update_transaction' || tool === 'delete_account' || tool === 'delete_accounts' || tool === 'set_primary_account' || tool === 'create_category' || tool === 'update_category' || tool === 'delete_category' || tool === 'create_section' || tool === 'update_section' || tool === 'delete_section' || tool === 'assign_category_to_section' || tool === 'create_goal' || tool === 'update_goal' || tool === 'delete_goal') {
+    if (tool === 'create_account' || tool === 'set_primary_account' || tool === 'create_goal' || tool === 'update_goal') return false;
+
+    if (tool === 'update_account' || tool === 'update_transaction' || tool === 'delete_account' || tool === 'delete_accounts' || tool === 'create_category' || tool === 'update_category' || tool === 'delete_category' || tool === 'create_section' || tool === 'update_section' || tool === 'delete_section' || tool === 'assign_category_to_section' || tool === 'delete_goal') {
       return settings.requireConfirmForAccountActions !== false;
     }
 

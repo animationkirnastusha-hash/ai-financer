@@ -21,6 +21,7 @@ export function VoiceCompanionSurface({
   cooldownUntil,
   mood,
   ariaLabel,
+  tapToTextEnabled = true,
   onPointerDown,
   onPointerMove,
   onPointerUp,
@@ -53,6 +54,7 @@ export function VoiceCompanionSurface({
                 captureMode={captureMode}
                 phase={phase}
                 cooldownUntil={cooldownUntil}
+                tapToTextEnabled={tapToTextEnabled}
               />
             </div>
 

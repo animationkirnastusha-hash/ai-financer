@@ -24,8 +24,10 @@ type UseVoiceHoldGestureParams = {
   openTextOverlay: () => void;
   onCancelRecording: (reason: string, mode: GestureMode) => void;
   showThought: ShowVoiceThought;
+  tapToTextEnabled?: boolean;
   labels: {
     recognizing: string;
+    pullForText?: string;
   };
 };
 
@@ -36,6 +38,7 @@ export function useVoiceHoldGesture({
   openTextOverlay,
   onCancelRecording,
   showThought,
+  tapToTextEnabled = true,
   labels,
 }: UseVoiceHoldGestureParams) {
   const [gestureMode, setGestureMode] = useState<GestureMode>('idle');
@@ -144,8 +147,13 @@ export function useVoiceHoldGesture({
 
     if (!gesture.started) {
       resetGesture();
-      openTextOverlay();
-      logVoiceDebugEvent('manual_voice_tap_text_overlay_opened', { pointerId: event.pointerId });
+      if (tapToTextEnabled) {
+        openTextOverlay();
+        logVoiceDebugEvent('manual_voice_tap_text_overlay_opened', { pointerId: event.pointerId });
+      } else {
+        if (labels.pullForText) showThought(labels.pullForText, 'neutral', 1800);
+        logVoiceDebugEvent('manual_voice_tap_text_overlay_disabled', { pointerId: event.pointerId });
+      }
       return;
     }
 
@@ -159,7 +167,7 @@ export function useVoiceHoldGesture({
 
     gesture.releaseAfterStart = true;
     logVoiceDebugEvent('manual_voice_hold_release_waiting_recorder_start', { pointerId: event.pointerId, voiceState });
-  }, [clearHoldTimer, labels.recognizing, openTextOverlay, resetGesture, showThought, stopVoice, voiceState]);
+  }, [clearHoldTimer, labels.pullForText, labels.recognizing, openTextOverlay, resetGesture, showThought, stopVoice, tapToTextEnabled, voiceState]);
 
   const handlePointerCancel = useCallback((event: PointerEvent<HTMLDivElement>) => {
     const gesture = gestureRef.current;

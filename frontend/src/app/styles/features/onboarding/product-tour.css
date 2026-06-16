@@ -1,27 +1,48 @@
+html.product-tour-active,
+body.product-tour-active {
+  overscroll-behavior: none;
+}
+
+body.product-tour-active .telegram-app-shell,
+body.product-tour-active .telegram-app-content,
+body.product-tour-active .app-page {
+  overscroll-behavior: none;
+}
+
 .product-tour {
   position: fixed;
   inset: 0;
   z-index: 6200;
   pointer-events: auto;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .product-tour__veil {
   position: absolute;
   inset: 0;
-  background: transparent;
-  animation: product-tour-fade 0.22s ease-out both;
+  z-index: 6200;
+  background: rgba(3, 6, 16, 0.08);
+  pointer-events: auto;
+  animation: product-tour-fade 0.2s ease-out both;
 }
 
 .product-tour__spotlight {
   position: fixed;
   z-index: 6201;
-  border: 1px solid rgba(255, 255, 255, 0.86);
-  border-radius: 24px;
-  background: rgba(255, 255, 255, 0.025);
-  box-shadow: 0 0 0 9999px rgba(4, 7, 17, 0.78), 0 16px 60px rgba(83, 132, 255, 0.28), 0 0 0 8px rgba(255, 255, 255, 0.07);
+  border: 1.5px solid rgba(255, 255, 255, 0.88);
+  border-radius: 26px;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(110, 231, 183, 0.10), transparent 58%),
+    rgba(255, 255, 255, 0.018);
+  box-shadow:
+    0 0 0 9999px rgba(3, 6, 16, 0.82),
+    0 18px 70px rgba(56, 189, 248, 0.24),
+    0 0 0 7px rgba(255, 255, 255, 0.06);
   pointer-events: none;
-  transition: top 0.24s ease, left 0.24s ease, width 0.24s ease, height 0.24s ease;
-  animation: product-tour-pulse 1.8s ease-in-out infinite;
+  transition: top 0.26s ease, left 0.26s ease, width 0.26s ease, height 0.26s ease, opacity 0.2s ease;
+  animation: product-tour-spotlight-in 0.24s ease-out both, product-tour-pulse 1.9s ease-in-out 0.24s infinite;
 }
 
 .product-tour__card {
@@ -29,10 +50,15 @@
   z-index: 6202;
   border: 1px solid rgba(255, 255, 255, 0.18);
   border-radius: 24px;
-  background: linear-gradient(180deg, rgba(21, 31, 55, 0.97), rgba(10, 16, 31, 0.96));
-  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.42);
+  background:
+    radial-gradient(circle at 100% 100%, rgba(110, 231, 183, 0.13), transparent 42%),
+    linear-gradient(180deg, rgba(22, 33, 58, 0.98), rgba(10, 16, 31, 0.98));
+  box-shadow: 0 24px 82px rgba(0, 0, 0, 0.48);
   color: #fff;
   padding: 15px;
+  pointer-events: auto;
+  touch-action: manipulation;
+  transition: top 0.24s ease, left 0.24s ease, width 0.24s ease;
   animation: product-tour-card-in 0.24s ease-out both;
 }
 
@@ -105,9 +131,14 @@
   margin-top: 14px;
 }
 
+.product-tour__actions--no-skip {
+  justify-content: flex-end;
+}
+
 .product-tour__actions > div {
   display: inline-flex;
   align-items: center;
+  justify-content: flex-end;
   gap: 8px;
 }
 
@@ -120,7 +151,8 @@
   font-weight: 750;
 }
 
-.product-tour__link:active {
+.product-tour__link:active,
+.product-tour__primary:active {
   transform: scale(0.97);
 }
 
@@ -132,7 +164,7 @@
 @keyframes product-tour-card-in {
   from {
     opacity: 0;
-    transform: translateY(10px) scale(0.98);
+    transform: translateY(12px) scale(0.98);
   }
   to {
     opacity: 1;
@@ -140,9 +172,30 @@
   }
 }
 
+@keyframes product-tour-spotlight-in {
+  from {
+    opacity: 0;
+    transform: scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
 @keyframes product-tour-pulse {
-  0%, 100% { box-shadow: 0 0 0 9999px rgba(4, 7, 17, 0.78), 0 16px 60px rgba(83, 132, 255, 0.2), 0 0 0 7px rgba(255, 255, 255, 0.06); }
-  50% { box-shadow: 0 0 0 9999px rgba(4, 7, 17, 0.78), 0 16px 70px rgba(83, 132, 255, 0.34), 0 0 0 11px rgba(255, 255, 255, 0.1); }
+  0%, 100% {
+    box-shadow:
+      0 0 0 9999px rgba(3, 6, 16, 0.82),
+      0 18px 64px rgba(56, 189, 248, 0.20),
+      0 0 0 7px rgba(255, 255, 255, 0.06);
+  }
+  50% {
+    box-shadow:
+      0 0 0 9999px rgba(3, 6, 16, 0.82),
+      0 18px 76px rgba(110, 231, 183, 0.30),
+      0 0 0 11px rgba(255, 255, 255, 0.10);
+  }
 }
 
 @media (max-width: 380px) {
@@ -154,6 +207,10 @@
   .product-tour__actions {
     align-items: stretch;
     flex-direction: column-reverse;
+  }
+
+  .product-tour__actions--no-skip {
+    align-items: flex-end;
   }
 
   .product-tour__actions > div {

@@ -34,6 +34,7 @@ export type VoiceCompanionSurfaceProps = {
   cooldownUntil: number;
   mood: VoiceCompanionMood;
   ariaLabel: string;
+  tapToTextEnabled?: boolean;
   onPointerDown: (event: PointerEvent<HTMLDivElement>) => void;
   onPointerMove: (event: PointerEvent<HTMLDivElement>) => void;
   onPointerUp: (event: PointerEvent<HTMLDivElement>) => void;

@@ -9,6 +9,7 @@ type VoiceStatusPillProps = {
   captureMode: VoiceCaptureMode;
   phase?: VoiceSessionPhase;
   cooldownUntil?: number;
+  tapToTextEnabled?: boolean;
 };
 
 export function VoiceStatusPill({
@@ -16,6 +17,7 @@ export function VoiceStatusPill({
   isBusy,
   voiceState,
   phase = 'idle',
+  tapToTextEnabled = true,
 }: VoiceStatusPillProps) {
   const { t } = useI18n();
   let label = t('voice.status.off');
@@ -25,7 +27,7 @@ export function VoiceStatusPill({
     else if (voiceState === 'uploading' || phase === 'uploading') label = t('voice.status.uploading');
     else if (voiceState === 'recording' || phase === 'holding') label = t('voice.status.listening');
     else if (phase === 'cooldown') label = t('voice.status.ready');
-    else label = t('voice.status.tapTextHoldVoice');
+    else label = t(tapToTextEnabled ? 'voice.status.tapTextHoldVoice' : 'voice.status.holdVoiceOnly');
   }
 
   return (

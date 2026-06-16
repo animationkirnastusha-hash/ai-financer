@@ -10,6 +10,7 @@ type FinaCommandBarProps = {
   action?: ReactNode;
   className?: string;
   compact?: boolean;
+  showTextAction?: boolean;
 };
 
 const defaultSuggestions: Array<{ key: I18nKey; command: string }> = [
@@ -26,12 +27,15 @@ export function FinaCommandBar({
   action,
   className = '',
   compact = false,
+  showTextAction = true,
 }: FinaCommandBarProps) {
   const { t } = useI18n();
   const openAIWithCommand = useNavigationStore((state) => state.openAIWithCommand);
   const rootClassName = `fina-command-bar app-card ${compact ? 'fina-command-bar--compact' : ''} ${className}`.trim();
 
   if (compact) {
+    const hasBelowActions = showTextAction || suggestions.length > 0;
+
     return (
       <>
         <section className={rootClassName} data-no-swipe="true">
@@ -42,25 +46,29 @@ export function FinaCommandBar({
           {action ? <div className="fina-command-bar__action">{action}</div> : null}
         </section>
 
-        <div className="fina-command-bar__below" data-no-swipe="true">
-          <button type="button" className="fina-command-bar__text-action" onClick={() => openAIWithCommand()}>
-            {t('fina.command.openText')}
-          </button>
+        {hasBelowActions ? (
+          <div className="fina-command-bar__below" data-no-swipe="true">
+            {showTextAction ? (
+              <button type="button" className="fina-command-bar__text-action" onClick={() => openAIWithCommand()}>
+                {t('fina.command.openText')}
+              </button>
+            ) : null}
 
-          {suggestions.length ? (
-            <div className="fina-command-bar__chips" aria-label={t('fina.command.suggestions')}>
-              {suggestions.map((suggestion) => (
-                <button
-                  key={suggestion.key}
-                  type="button"
-                  onClick={() => openAIWithCommand(suggestion.command)}
-                >
-                  {t(suggestion.key)}
-                </button>
-              ))}
-            </div>
-          ) : null}
-        </div>
+            {suggestions.length ? (
+              <div className="fina-command-bar__chips" aria-label={t('fina.command.suggestions')}>
+                {suggestions.map((suggestion) => (
+                  <button
+                    key={suggestion.key}
+                    type="button"
+                    onClick={() => openAIWithCommand(suggestion.command)}
+                  >
+                    {t(suggestion.key)}
+                  </button>
+                ))}
+              </div>
+            ) : null}
+          </div>
+        ) : null}
       </>
     );
   }

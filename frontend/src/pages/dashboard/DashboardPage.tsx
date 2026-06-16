@@ -7,13 +7,11 @@ import { HomeObligationsWidget } from '@/features/obligations/ui/HomeObligations
 import { FinaCommandBar } from '@/features/fina/ui/FinaCommandBar';
 import { ReceiptQuickAction } from '@/features/receipt-scans/ui/ReceiptQuickAction';
 import { ProductLearningCard } from '@/features/onboarding/ui/ProductLearningCard';
-import { ProductTourOverlay } from '@/features/onboarding/ui/ProductTourOverlay';
 import { useSubscriptionStore } from '@/features/subscription/model/subscription.store';
 import { useI18n } from '@/shared/lib/i18n';
 import type { HomeCashflowMode, HomeCashflowPeriod } from '@/features/dashboard/lib/homeFinanceAnalytics';
 import { useNavigationStore } from '@/features/navigation/model/navigation.store';
 import { useAppModalStore } from '@/features/modals/model/appModal.store';
-import { useFinaPullGesture } from '@/features/chat/lib/useFinaPullGesture';
 import { useSettingsStore } from '@/features/settings/model/settings.store';
 import type { AppCurrency } from '@/features/settings/model/settings.types';
 import { useTransactionsStore } from '@/features/transactions/model/transactions.store';
@@ -38,7 +36,6 @@ export default function DashboardPage() {
   const { t } = useI18n();
   const navigateTo = useNavigationStore((state) => state.navigateTo);
   const openModal = useAppModalStore((state) => state.openModal);
-  const modalStackSize = useAppModalStore((state) => state.stack.length);
   const accounts = useAccountsStore((state) => state.items);
   const accountsLoading = useAccountsStore((state) => state.isLoading);
   const accountsError = useAccountsStore((state) => state.error);
@@ -52,7 +49,6 @@ export default function DashboardPage() {
 
   const [cashflowMode, setCashflowMode] = useState<HomeCashflowMode>('expense');
   const [cashflowPeriod, setCashflowPeriod] = useState<HomeCashflowPeriod>('month');
-  const finaPull = useFinaPullGesture({ blocked: modalStackSize > 0, openModal });
 
   const mainCurrency = useSettingsStore((state) => state.mainCurrency);
   const secondaryCurrencyEnabled = useSettingsStore((state) => state.secondaryCurrencyEnabled);
@@ -83,24 +79,7 @@ export default function DashboardPage() {
   }, [mainCurrency, rates, transactions]);
 
   return (
-    <div
-      ref={finaPull.rootRef}
-      className="app-page app-dashboard-page app-dashboard-page--fina-pull text-white"
-      {...finaPull.gestureHandlers}
-    >
-      <div
-        className="app-fina-pull-indicator"
-        aria-hidden="true"
-        data-ready={finaPull.isReadyToOpen ? 'true' : 'false'}
-        style={{
-          opacity: finaPull.pullOffset ? Math.min(1, finaPull.pullOffset / 72) : 0,
-          transform: `translate(-50%, ${Math.min(58, Math.max(0, finaPull.pullOffset - 20))}px)`,
-        }}
-      >
-        <span className="app-fina-pull-indicator__dot" />
-        <span>{finaPull.isReadyToOpen ? t('dashboard.finaPull.release') : t('dashboard.finaPull.pull')}</span>
-      </div>
-
+    <div className="app-page app-dashboard-page text-white">
       <div className="app-page__inner app-home-layout">
         <ScreenTopBar title={t('screen.dashboard')} right={['notifications', 'analytics', 'settings']} />
 
@@ -150,6 +129,7 @@ export default function DashboardPage() {
         <div data-product-tour="home-fina">
           <FinaCommandBar
             compact
+            showTextAction={false}
             titleKey="dashboard.fina.title"
             captionKey="dashboard.fina.caption"
             placeholderKey="dashboard.fina.placeholder"
@@ -208,7 +188,6 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <ProductTourOverlay />
     </div>
   );
 }

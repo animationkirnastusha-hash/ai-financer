@@ -85,8 +85,8 @@ export interface AIValidatedPlan {
 }
 
 export interface AIClarificationRequest {
-  type: 'account' | 'goal' | 'category' | 'section' | 'transaction' | 'obligation' | 'spending_limit';
-  field: 'account' | 'goal' | 'category' | 'section' | 'transaction' | 'obligation' | 'spending_limit' | string;
+  type: 'account' | 'account_setup' | 'amount' | 'goal' | 'category' | 'section' | 'transaction' | 'obligation' | 'spending_limit';
+  field: 'account' | 'accountSetup' | 'amount' | 'targetAmount' | 'goal' | 'category' | 'section' | 'transaction' | 'obligation' | 'spending_limit' | string;
   actionIndex: number;
   question: string;
   createdAt: string;

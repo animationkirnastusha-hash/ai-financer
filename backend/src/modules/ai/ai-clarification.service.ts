@@ -1,10 +1,13 @@
-import { AIClarificationRequest, AIValidatedPlan } from './types';
+import { AIClarificationRequest, AIValidatedAction, AIValidatedPlan } from './types';
 
 const CLARIFICATION_CODES = new Set([
+  'needs_first_account_setup',
   'needs_account_clarification',
   'account_not_found',
   'from_account_not_found',
   'to_account_not_found',
+  'missing_amount',
+  'missing_goal_target',
   'goal_not_found',
   'category_not_found',
   'section_not_found',
@@ -20,9 +23,20 @@ export class AIClarificationService {
     return hasActionVerb || (hasAmount && hasFinancialObject);
   }
 
-
   buildRetryMessage(clarification: AIClarificationRequest, candidate: string) {
     const suffix = this.shortCandidateLabel(candidate);
+
+    if (clarification.type === 'account_setup') {
+      return suffix
+        ? `Не получилось создать первый счёт по ответу (${suffix}). Напишите название и текущий баланс, например: Наличка 5000.`
+        : 'Не получилось создать первый счёт. Напишите название и текущий баланс, например: Наличка 5000.';
+    }
+
+    if (clarification.type === 'amount') {
+      return suffix
+        ? `Не поняла сумму (${suffix}). Напишите только сумму, например: 350.`
+        : 'Не поняла сумму. Напишите только сумму, например: 350.';
+    }
 
     if (clarification.type === 'account') {
       return suffix
@@ -51,15 +65,58 @@ export class AIClarificationService {
     return 'Не смогла сопоставить уточнение с нужными данными. Напиши короче и точнее.';
   }
 
-  private shortCandidateLabel(value: string) {
-    const clean = value.trim().replace(/\s+/g, ' ');
-    if (!clean) return '';
-    return clean.length > 32 ? `${clean.slice(0, 29).trim()}...` : clean;
-  }
-
   build(validated: AIValidatedPlan): AIClarificationRequest | null {
-    const issue = validated.issues.find((item) => CLARIFICATION_CODES.has(item.code) && typeof item.actionIndex === 'number');
+    const priorityCodes = [
+      'needs_first_account_setup',
+      'needs_account_clarification',
+      'account_not_found',
+      'from_account_not_found',
+      'to_account_not_found',
+      'missing_amount',
+      'missing_goal_target',
+      'goal_not_found',
+      'category_not_found',
+      'section_not_found',
+      'transaction_not_found',
+    ];
+
+    const issue = priorityCodes
+      .map((code) => validated.issues.find((item) => item.code === code && typeof item.actionIndex === 'number'))
+      .find(Boolean)
+      ?? validated.issues.find((item) => CLARIFICATION_CODES.has(item.code) && typeof item.actionIndex === 'number');
     if (!issue || typeof issue.actionIndex !== 'number') return null;
+
+    const action = validated.actions[issue.actionIndex];
+
+    if (issue.code === 'needs_first_account_setup') {
+      return {
+        type: 'account_setup',
+        field: 'accountSetup',
+        actionIndex: issue.actionIndex,
+        question: 'Сначала нужен счёт. Напишите название и текущий баланс, например: Наличка 5000.',
+        createdAt: new Date().toISOString(),
+      };
+    }
+
+    if (issue.code === 'missing_amount') {
+      return {
+        type: 'amount',
+        field: 'amount',
+        actionIndex: issue.actionIndex,
+        question: this.amountQuestion(action),
+        createdAt: new Date().toISOString(),
+      };
+    }
+
+    if (issue.code === 'missing_goal_target') {
+      return {
+        type: 'amount',
+        field: 'targetAmount',
+        actionIndex: issue.actionIndex,
+        question: 'На какую сумму создать цель?',
+        createdAt: new Date().toISOString(),
+      };
+    }
 
     if (issue.code === 'transaction_not_found') {
       return { type: 'transaction', field: 'transaction', actionIndex: issue.actionIndex, question: 'Какую операцию нужно изменить?', createdAt: new Date().toISOString() };
@@ -86,5 +143,24 @@ export class AIClarificationService {
     }
 
     return { type: 'account', field: 'account', actionIndex: issue.actionIndex, question: 'Какой счёт использовать?', createdAt: new Date().toISOString() };
+  }
+
+  private amountQuestion(action: AIValidatedAction | undefined) {
+    const tool = String(action?.tool ?? '');
+    const input = action?.input ?? {};
+
+    if (tool === 'create_goal') return 'На какую сумму создать цель?';
+    if (tool === 'transfer_money') return 'Какую сумму перевести?';
+    if (tool === 'create_transaction') {
+      return input.kind === 'income' ? 'Какая сумма дохода?' : 'Сколько потратили?';
+    }
+
+    return 'Какая сумма?';
+  }
+
+  private shortCandidateLabel(value: string) {
+    const clean = value.trim().replace(/\s+/g, ' ');
+    if (!clean) return '';
+    return clean.length > 32 ? `${clean.slice(0, 29).trim()}...` : clean;
   }
 }

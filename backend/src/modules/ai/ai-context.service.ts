@@ -5,7 +5,11 @@ export class AIContextService {
   private readonly memory = new AIMemoryService();
 
   async buildUserContext(userId: string) {
-    const [accounts, categories, sections, goals, obligations, obligationReminders, recentTransactions, aiSettings, onboardingState, aiSessionState] = await Promise.all([
+    const [user, accounts, categories, sections, goals, obligations, obligationReminders, recentTransactions, aiSettings, onboardingState, aiSessionState] = await Promise.all([
+      prisma.user.findUnique({
+        where: { id: userId },
+        select: { id: true, tier: true, isAdmin: true },
+      }),
       prisma.account.findMany({
         where: { userId },
         select: { id: true, name: true, type: true, currency: true, balance: true },
@@ -61,6 +65,6 @@ export class AIContextService {
 
     const memory = await this.memory.buildUserMemory(userId, { accounts, categories, sections, goals });
 
-    return { accounts, categories, sections, goals, obligations, obligationReminders, recentTransactions, memory, aiSettings, onboardingState, aiSessionState };
+    return { user: user ? { id: user.id, tier: user.tier, isAdmin: user.isAdmin } : { id: userId, tier: 'FREE', isAdmin: false }, accounts, categories, sections, goals, obligations, obligationReminders, recentTransactions, memory, aiSettings, onboardingState, aiSessionState };
   }
 }

@@ -64,7 +64,7 @@ export const dashboardDictionary = {
   'dashboard.categoryModal.openJournal': 'Open in journal',
   'dashboard.fina.title': 'Fina',
   'dashboard.fina.placeholder': 'Write to Fina',
-  'dashboard.fina.caption': 'Pull the screen down to open the dialog. Text is available below.',
+  'dashboard.fina.caption': 'Pull the screen down to open the dialog.',
   'dashboard.fina.expense': 'Expense',
   'dashboard.fina.limit': 'Limit',
   'dashboard.fina.payments': 'Payments',
@@ -83,6 +83,6 @@ export const dashboardDictionary = {
   'dashboard.ia.limits.caption': '50/80/100% control',
   'dashboard.ia.goals.title': 'Goals',
   'dashboard.ia.goals.caption': 'Savings progress',
-  'dashboard.finaPull.pull': 'Pull down to open Fina',
+  'dashboard.finaPull.pull': 'Pull down to open the dialog',
   'dashboard.finaPull.release': 'Release to open chat',
 } as const;

@@ -26,7 +26,7 @@ export class AIPremiumService {
       tier,
       capabilities: CAPABILITIES.map((capability) => {
         const override = custom.find((item) => item.key === capability.key);
-        const includedByTier = capability.tier === 'FREE' || tier === 'PREMIUM' || tier === 'ADMIN';
+        const includedByTier = capability.tier === 'FREE' || tier === 'PREMIUM' || tier === 'BUSINESS';
         return {
           ...capability,
           enabled: override?.enabled ?? includedByTier,
