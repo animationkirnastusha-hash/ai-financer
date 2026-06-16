@@ -7,6 +7,9 @@ import { getTelegramWebApp } from '@/shared/lib/telegram';
 type TelegramTrackingData = {
   initDataUnsafe?: {
     start_param?: string;
+    user?: {
+      language_code?: string;
+    };
   };
   platform?: string;
   version?: string;
@@ -57,7 +60,7 @@ export function ProductAnalyticsTracker() {
       query: window.location.search,
       platform: telegram?.platform ?? 'web',
       telegramVersion: telegram?.version,
-      language: navigator.language,
+      language: telegram?.initDataUnsafe?.user?.language_code ?? null,
     });
   }, [user]);
 

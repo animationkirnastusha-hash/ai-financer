@@ -3,9 +3,11 @@ export type SubscriptionPlan = 'free' | 'pro' | 'premium';
 export type AppCurrency = 'RUB' | 'USD' | 'EUR' | 'KZT' | 'UZS' | 'KGS' | 'AMD' | 'GEL' | 'AZN';
 
 export type AppLanguage = 'ru' | 'en';
+export type AppLanguageSource = 'telegram' | 'user';
 
 export type AppSettings = {
   appLanguage: AppLanguage;
+  appLanguageSource: AppLanguageSource;
 
   companionName: string;
 

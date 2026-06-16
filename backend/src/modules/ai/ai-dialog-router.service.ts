@@ -1,17 +1,20 @@
-import { createAIProvider } from './providers/ai-provider.factory';
-import { AIUserTier } from './ai-model-router';
+import { createAIProvider } from "./providers/ai-provider.factory";
+import { AIUserTier } from "./ai-model-router";
 
 export type AIDialogIntent =
-  | 'financial_action'
-  | 'financial_question'
-  | 'financial_coaching'
-  | 'business_accounting'
-  | 'app_navigation'
-  | 'small_talk'
-  | 'identity_help'
-  | 'unclear';
+  | "financial_action"
+  | "financial_question"
+  | "financial_coaching"
+  | "business_accounting"
+  | "app_navigation"
+  | "small_talk"
+  | "identity_help"
+  | "unclear";
 
-export type AIAnswerStyle = 'free_companion' | 'premium_companion' | 'business_accountant';
+export type AIAnswerStyle =
+  | "free_companion"
+  | "premium_companion"
+  | "business_accountant";
 
 export interface AIDialogRoute {
   intent: AIDialogIntent;
@@ -40,7 +43,11 @@ type RouteContext = {
 export class AIDialogRouterService {
   private readonly provider = createAIProvider();
 
-  async route(command: string, context: unknown, tier: AIUserTier): Promise<AIDialogRoute> {
+  async route(
+    command: string,
+    context: unknown,
+    tier: AIUserTier,
+  ): Promise<AIDialogRoute> {
     const heuristic = this.routeByHeuristic(command, tier);
     if (heuristic) return heuristic;
 
@@ -48,7 +55,7 @@ export class AIDialogRouterService {
       const raw = await this.provider.generateJson<RouteResponse>({
         system: this.systemPrompt(),
         prompt: this.buildPrompt(command, context, tier),
-        modelRole: 'fast',
+        modelRole: "fast",
         temperature: 0,
         timeoutMs: 8_000,
         numPredict: 220,
@@ -56,60 +63,76 @@ export class AIDialogRouterService {
 
       return this.normalizeRoute(raw, tier);
     } catch (error) {
-      console.warn('[AI] dialog router failed, falling back to tool-safe mode', {
-        message: error instanceof Error ? error.message : String(error),
-      });
+      console.warn(
+        "[AI] dialog router failed, falling back to tool-safe mode",
+        {
+          message: error instanceof Error ? error.message : String(error),
+        },
+      );
       return this.defaultActionRoute(tier);
     }
   }
 
-
-  private routeByHeuristic(command: string, tier: AIUserTier): AIDialogRoute | null {
-    const text = command.toLowerCase().replace(/ё/g, 'е').trim();
+  private routeByHeuristic(
+    command: string,
+    tier: AIUserTier,
+  ): AIDialogRoute | null {
+    const text = command.toLowerCase().replace(/ё/g, "е").trim();
     const isIdentityQuestion =
-      /\b(кто ты|что ты умеешь|как с тобой работать|как работать с тобой|что можешь|расскажи о себе|познакомь|новый пользователь|первый запуск|чем отличается|что дает premium|что дает премиум|что дает business|что дает бизнес|фри|free|premium|премиум|business|бизнес)\b/.test(text);
+      /\b(кто ты|что ты умеешь|как с тобой работать|как работать с тобой|что можешь|расскажи о себе|познакомь|новый пользователь|первый запуск|чем отличается|что дает premium|что дает премиум|что дает business|что дает бизнес|фри|free|premium|премиум|business|бизнес|who are you|what are you|what can you do|how do i use you|how to use you|how can i use you|what is fina|tell me about yourself|new user|first launch|get started)\b/.test(
+        text,
+      );
 
     if (!isIdentityQuestion) return null;
 
-    const tierText = String(tier || 'FREE').toUpperCase();
+    const tierText = String(tier || "FREE").toUpperCase();
     return {
-      intent: 'identity_help',
+      intent: "identity_help",
       shouldUseTools: false,
-      answerStyle: tierText === 'BUSINESS' ? 'business_accountant' : tierText === 'PREMIUM' ? 'premium_companion' : 'free_companion',
+      answerStyle:
+        tierText === "BUSINESS"
+          ? "business_accountant"
+          : tierText === "PREMIUM"
+            ? "premium_companion"
+            : "free_companion",
       confidence: 0.92,
-      summary: 'User asks about Fina, onboarding or product capabilities. Explain text and voice naturally, then suggest creating the first account if user is new.',
+      summary:
+        "User asks about Fina, onboarding or product capabilities. Answer in the same language as the user message. Explain text and voice naturally, then suggest creating the first account if user is new.",
     };
   }
 
   private systemPrompt() {
     return [
-      'Return ONLY strict JSON. No markdown. No prose.',
-      'Classify the user message before financial planning.',
-      'Do not extract amounts, accounts, categories or other financial fields. This is not a command parser.',
-      'Choose whether the message should go to tools or to a natural answer.',
-      'Use tools only when the user wants to change app data, open/show app data, or ask a data-backed finance question.',
-      'Use a natural answer when the user wants advice, emotional support, salary/budget discussion, or casual conversation.',
-      'Never choose tools for general life complaints unless the user explicitly asks to create, update, delete, record, transfer, pay, show or calculate app data.',
-      'For BUSINESS tier, business finance and bookkeeping conversations should use business_accountant style unless they are explicit app mutations.',
+      "Return ONLY strict JSON. No markdown. No prose.",
+      "Classify the user message before financial planning.",
+      "Do not extract amounts, accounts, categories or other financial fields. This is not a command parser.",
+      "Choose whether the message should go to tools or to a natural answer.",
+      "Use tools only when the user wants to change app data, open/show app data, or ask a data-backed finance question.",
+      "Use a natural answer when the user wants advice, emotional support, salary/budget discussion, or casual conversation.",
+      "Never choose tools for general life complaints unless the user explicitly asks to create, update, delete, record, transfer, pay, show or calculate app data.",
+      "For BUSINESS tier, business finance and bookkeeping conversations should use business_accountant style unless they are explicit app mutations.",
       'JSON shape: {"intent":"financial_action|financial_question|financial_coaching|business_accounting|app_navigation|small_talk|identity_help|unclear","shouldUseTools":true,"answerStyle":"free_companion|premium_companion|business_accountant","confidence":0.0,"summary":"short intent summary"}.',
-    ].join(' ');
+    ].join(" ");
   }
 
   private buildPrompt(command: string, context: unknown, tier: AIUserTier) {
     return [
-      'TIER:', String(tier || 'FREE').toUpperCase(),
-      'CONTEXT_HINTS:', JSON.stringify(this.compactContext(context)),
-      'ROUTING_RULES:',
-      '- financial_action: user wants to create/update/delete/record/pay/transfer/set something in the app. shouldUseTools=true.',
-      '- financial_question: user asks about their spending, income, balance, accounts, goals, obligations or reports. shouldUseTools=true.',
-      '- app_navigation: user asks to open/show an app screen or list. shouldUseTools=true.',
-      '- financial_coaching: user wants advice, planning, discussion or support. shouldUseTools=false.',
-      '- business_accounting: business-tier user wants bookkeeping/cashflow/document/accounting discussion, not a direct mutation. shouldUseTools=false.',
-      '- small_talk: casual or emotional message without a direct app action. shouldUseTools=false.',
-      '- identity_help: user asks who Fina is, what Fina can do, how to work with Fina, onboarding, Free/Premium/Business capabilities, or says they are a new user. shouldUseTools=false.',
-      '- unclear: not enough meaning to act safely. shouldUseTools=false.',
-      'USER:', command,
-    ].join('\n');
+      "TIER:",
+      String(tier || "FREE").toUpperCase(),
+      "CONTEXT_HINTS:",
+      JSON.stringify(this.compactContext(context)),
+      "ROUTING_RULES:",
+      "- financial_action: user wants to create/update/delete/record/pay/transfer/set something in the app. shouldUseTools=true.",
+      "- financial_question: user asks about their spending, income, balance, accounts, goals, obligations or reports. shouldUseTools=true.",
+      "- app_navigation: user asks to open/show an app screen or list. shouldUseTools=true.",
+      "- financial_coaching: user wants advice, planning, discussion or support. shouldUseTools=false.",
+      "- business_accounting: business-tier user wants bookkeeping/cashflow/document/accounting discussion, not a direct mutation. shouldUseTools=false.",
+      "- small_talk: casual or emotional message without a direct app action. shouldUseTools=false.",
+      "- identity_help: user asks who Fina is, what Fina can do, how to work with Fina, onboarding, Free/Premium/Business capabilities, or says they are a new user. shouldUseTools=false.",
+      "- unclear: not enough meaning to act safely. shouldUseTools=false.",
+      "USER:",
+      command,
+    ].join("\n");
   }
 
   private compactContext(context: unknown) {
@@ -118,61 +141,92 @@ export class AIDialogRouterService {
       tier: value.user?.tier,
       accountsCount: Array.isArray(value.accounts) ? value.accounts.length : 0,
       goalsCount: Array.isArray(value.goals) ? value.goals.length : 0,
-      obligationsCount: Array.isArray(value.obligations) ? value.obligations.length : 0,
-      recentTransactionsCount: Array.isArray(value.recentTransactions) ? value.recentTransactions.length : 0,
+      obligationsCount: Array.isArray(value.obligations)
+        ? value.obligations.length
+        : 0,
+      recentTransactionsCount: Array.isArray(value.recentTransactions)
+        ? value.recentTransactions.length
+        : 0,
     };
   }
 
   private normalizeRoute(raw: RouteResponse, tier: AIUserTier): AIDialogRoute {
-    const tierText = String(tier || 'FREE').toUpperCase();
+    const tierText = String(tier || "FREE").toUpperCase();
     const intent = this.normalizeIntent(raw.intent);
-    const answerStyle = this.normalizeAnswerStyle(raw.answerStyle, tierText, intent);
+    const answerStyle = this.normalizeAnswerStyle(
+      raw.answerStyle,
+      tierText,
+      intent,
+    );
     const confidence = this.clampConfidence(raw.confidence);
-    const shouldUseTools = typeof raw.shouldUseTools === 'boolean'
-      ? raw.shouldUseTools
-      : this.defaultShouldUseTools(intent);
+    const shouldUseTools =
+      typeof raw.shouldUseTools === "boolean"
+        ? raw.shouldUseTools
+        : this.defaultShouldUseTools(intent);
 
     return {
       intent,
       shouldUseTools,
       answerStyle,
       confidence,
-      summary: typeof raw.summary === 'string' && raw.summary.trim() ? raw.summary.trim().slice(0, 240) : undefined,
+      summary:
+        typeof raw.summary === "string" && raw.summary.trim()
+          ? raw.summary.trim().slice(0, 240)
+          : undefined,
     };
   }
 
   private normalizeIntent(value: unknown): AIDialogIntent {
     if (
-      value === 'financial_action' ||
-      value === 'financial_question' ||
-      value === 'financial_coaching' ||
-      value === 'business_accounting' ||
-      value === 'app_navigation' ||
-      value === 'small_talk' ||
-      value === 'identity_help' ||
-      value === 'unclear'
+      value === "financial_action" ||
+      value === "financial_question" ||
+      value === "financial_coaching" ||
+      value === "business_accounting" ||
+      value === "app_navigation" ||
+      value === "small_talk" ||
+      value === "identity_help" ||
+      value === "unclear"
     ) {
       return value;
     }
-    return 'financial_action';
+    return "financial_action";
   }
 
-  private normalizeAnswerStyle(value: unknown, tier: string, intent: AIDialogIntent): AIAnswerStyle {
-    if (value === 'business_accountant' || tier === 'BUSINESS' || intent === 'business_accounting') return 'business_accountant';
-    if (value === 'premium_companion' || tier === 'PREMIUM') return 'premium_companion';
-    return 'free_companion';
+  private normalizeAnswerStyle(
+    value: unknown,
+    tier: string,
+    intent: AIDialogIntent,
+  ): AIAnswerStyle {
+    if (
+      value === "business_accountant" ||
+      tier === "BUSINESS" ||
+      intent === "business_accounting"
+    )
+      return "business_accountant";
+    if (value === "premium_companion" || tier === "PREMIUM")
+      return "premium_companion";
+    return "free_companion";
   }
 
   private defaultShouldUseTools(intent: AIDialogIntent) {
-    return intent === 'financial_action' || intent === 'financial_question' || intent === 'app_navigation';
+    return (
+      intent === "financial_action" ||
+      intent === "financial_question" ||
+      intent === "app_navigation"
+    );
   }
 
   private defaultActionRoute(tier: AIUserTier): AIDialogRoute {
-    const tierText = String(tier || 'FREE').toUpperCase();
+    const tierText = String(tier || "FREE").toUpperCase();
     return {
-      intent: 'financial_action',
+      intent: "financial_action",
       shouldUseTools: true,
-      answerStyle: tierText === 'BUSINESS' ? 'business_accountant' : tierText === 'PREMIUM' ? 'premium_companion' : 'free_companion',
+      answerStyle:
+        tierText === "BUSINESS"
+          ? "business_accountant"
+          : tierText === "PREMIUM"
+            ? "premium_companion"
+            : "free_companion",
       confidence: 0.5,
     };
   }
@@ -184,6 +238,8 @@ export class AIDialogRouterService {
   }
 
   private asRecord(value: unknown): Record<string, unknown> {
-    return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {};
+    return value && typeof value === "object" && !Array.isArray(value)
+      ? (value as Record<string, unknown>)
+      : {};
   }
 }

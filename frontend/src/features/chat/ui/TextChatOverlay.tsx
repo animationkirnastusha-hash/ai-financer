@@ -120,11 +120,13 @@ export function TextChatOverlay({
 
   const inlinePendingActions = useMemo(
     () =>
-      chat.pendingActions.filter(
+      chat.confirmationActions.filter(
         (action) => action?.id && !pendingActionIdsInMessages.has(action.id),
       ),
-    [chat.pendingActions, pendingActionIdsInMessages],
+    [chat.confirmationActions, pendingActionIdsInMessages],
   );
+
+  const hasBlockingConfirmation = inlinePendingActions.length > 0;
 
   const hasReceiptAccess = Boolean(
     subscription?.access?.hasPremium ||
@@ -187,13 +189,13 @@ export function TextChatOverlay({
     if (voice.state === "uploading")
       return pickRotatingStatus(t, "thinking", seed + 1);
     if (chat.isSending) return pickRotatingStatus(t, "thinking", seed + 2);
-    if (chat.pendingActions.length > 0)
+    if (hasBlockingConfirmation)
       return pickRotatingStatus(t, "confirm", seed);
     return voiceHint || pickRotatingStatus(t, "ready", seed);
   }, [
     chat.isSending,
     chat.messages.length,
-    chat.pendingActions.length,
+    hasBlockingConfirmation,
     inlinePendingActions.length,
     t,
     voice.state,
@@ -205,7 +207,7 @@ export function TextChatOverlay({
       ? "listening"
       : voice.state === "uploading" || chat.isSending
         ? "thinking"
-        : chat.pendingActions.length > 0
+        : hasBlockingConfirmation
           ? "confirm"
           : "ready";
 
@@ -476,7 +478,7 @@ export function TextChatOverlay({
     if (
       chat.isSending ||
       voice.state !== "idle" ||
-      chat.pendingActions.length > 0
+      hasBlockingConfirmation
     )
       return;
     if (
@@ -514,7 +516,7 @@ export function TextChatOverlay({
     autoCloseOnVoiceResult,
     chat.isSending,
     chat.messages,
-    chat.pendingActions.length,
+    hasBlockingConfirmation,
     isVoicePressed,
     onClose,
     open,
@@ -522,14 +524,14 @@ export function TextChatOverlay({
   ]);
 
   const closeOverlay = useCallback(() => {
-    if (chat.pendingActions.length > 0) {
+    if (hasBlockingConfirmation) {
       setVoiceHint(t("textChat.close.pending"));
       return;
     }
     if (voice.state === "recording" || voice.state === "uploading")
       voice.cancel();
     onClose();
-  }, [chat.pendingActions.length, onClose, t, voice]);
+  }, [hasBlockingConfirmation, onClose, t, voice]);
 
   const handleDragPointerDown = useCallback(
     (event: PointerEvent<HTMLButtonElement>) => {

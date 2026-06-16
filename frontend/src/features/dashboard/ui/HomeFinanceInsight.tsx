@@ -12,7 +12,7 @@ type Props = {
 };
 
 export function HomeFinanceInsight({ transactions, mode, period, rates }: Props) {
-  const { t } = useI18n();
+  const { t, rt } = useI18n();
   const analytics = buildHomeFinanceAnalytics(transactions, mode, period, rates, {
     otherExpense: t('dashboard.analytics.otherExpense'),
     incomeSection: t('dashboard.analytics.incomeSection'),
@@ -23,7 +23,7 @@ export function HomeFinanceInsight({ transactions, mode, period, rates }: Props)
   const periodTitle = period === 'day' ? t('analytics.period.day') : period === 'week' ? t('analytics.period.week') : t('analytics.period.month');
 
   const text = first
-    ? t('dashboard.insight.top', { mode: modeTitle, period: periodTitle.toLowerCase(), amount: formatMoney(analytics.total, 'RUB'), category: first.name })
+    ? t('dashboard.insight.top', { mode: modeTitle, period: periodTitle.toLowerCase(), amount: formatMoney(analytics.total, 'RUB'), category: rt(first.name) })
     : t(mode === 'expense' ? 'dashboard.insight.empty.expense' : 'dashboard.insight.empty.income');
 
   return (

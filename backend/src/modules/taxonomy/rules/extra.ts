@@ -5,7 +5,7 @@ export const extraRules: TaxonomyIconRule[] = [
       "id": "extra_0",
       "type": "expense",
       "sectionId": "groceries",
-      "sectionName": "Продукты",
+      "sectionName": "Продуктовый магазин",
       "sectionIcon": "🛒",
       "sectionColor": "#34D399",
       "categoryName": "Продукты",

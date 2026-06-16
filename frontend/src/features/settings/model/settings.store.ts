@@ -2,12 +2,14 @@ import { create } from 'zustand';
 import type {
   AppCurrency,
   AppLanguage,
+  AppLanguageSource,
   AppSettings,
   SubscriptionPlan,
 } from '@/features/settings/model/settings.types';
 
 type SettingsState = AppSettings & {
   setAppLanguage: (language: AppLanguage) => void;
+  applyTelegramLanguage: (languageCode?: string | null) => void;
 
   setCompanionName: (name: string) => void;
 
@@ -30,10 +32,24 @@ type SettingsState = AppSettings & {
 };
 
 const STORAGE_KEY = 'ai-financer-settings';
-const FIXED_COMPANION_NAME = 'Фина';
+const FIXED_COMPANION_NAME = 'Fina';
+
+function normalizeLanguage(value: unknown): AppLanguage {
+  return value === 'ru' ? 'ru' : 'en';
+}
+
+function normalizeTelegramLanguage(languageCode?: string | null): AppLanguage {
+  const value = String(languageCode ?? '').trim().toLowerCase();
+  return value === 'ru' || value.startsWith('ru-') || value.startsWith('ru_') ? 'ru' : 'en';
+}
+
+function normalizeLanguageSource(value: unknown): AppLanguageSource {
+  return value === 'user' ? 'user' : 'telegram';
+}
 
 const defaultSettings: AppSettings = {
-  appLanguage: 'ru',
+  appLanguage: 'en',
+  appLanguageSource: 'telegram',
 
   companionName: FIXED_COMPANION_NAME,
 
@@ -55,7 +71,6 @@ const defaultSettings: AppSettings = {
   rubToEurRate: 100,
 };
 
-
 function loadSettings(): AppSettings {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -66,7 +81,8 @@ function loadSettings(): AppSettings {
     return {
       ...defaultSettings,
       ...parsed,
-      appLanguage: parsed.appLanguage === 'en' ? 'en' : 'ru',
+      appLanguage: normalizeLanguage(parsed.appLanguage),
+      appLanguageSource: normalizeLanguageSource(parsed.appLanguageSource),
       companionName: FIXED_COMPANION_NAME,
       voiceRepliesEnabled: parsed.voiceRepliesEnabled === false ? false : true,
       voicePermissionPrompted: Boolean(parsed.voicePermissionPrompted),
@@ -82,6 +98,7 @@ function saveSettings(state: AppSettings) {
     STORAGE_KEY,
     JSON.stringify({
       appLanguage: state.appLanguage,
+      appLanguageSource: state.appLanguageSource,
       companionName: FIXED_COMPANION_NAME,
       voiceEnabled: state.voiceEnabled,
       voiceBetaEnabled: state.voiceBetaEnabled,
@@ -106,7 +123,18 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   companionName: FIXED_COMPANION_NAME,
 
   setAppLanguage: (appLanguage) => {
-    set({ appLanguage, companionName: FIXED_COMPANION_NAME });
+    set({ appLanguage, appLanguageSource: 'user', companionName: FIXED_COMPANION_NAME });
+    saveSettings(get());
+  },
+
+  applyTelegramLanguage: (languageCode) => {
+    const state = get();
+    if (state.appLanguageSource === 'user') return;
+
+    const appLanguage = normalizeTelegramLanguage(languageCode);
+    if (state.appLanguage === appLanguage && state.appLanguageSource === 'telegram') return;
+
+    set({ appLanguage, appLanguageSource: 'telegram', companionName: FIXED_COMPANION_NAME });
     saveSettings(get());
   },
 

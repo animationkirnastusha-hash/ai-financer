@@ -59,7 +59,24 @@ function normalizeCode(value: unknown) {
   return String(value ?? '').replace(/\D/g, '').slice(0, 6);
 }
 
-async function sendTelegramMessage(chatId: number | string, text: string) {
+type TelegramReplyMarkup = {
+  inline_keyboard: Array<Array<{
+    text: string;
+    url?: string;
+    web_app?: { url: string };
+  }>>;
+};
+
+function getMiniAppUrl() {
+  return (
+    process.env.TELEGRAM_MINI_APP_URL?.trim()
+    || process.env.TELEGRAM_WEB_APP_URL?.trim()
+    || process.env.FRONTEND_URL?.trim()
+    || ''
+  );
+}
+
+async function sendTelegramMessage(chatId: number | string, text: string, replyMarkup?: TelegramReplyMarkup) {
   if (!env.telegramBotToken) {
     return { ok: false, reason: 'TELEGRAM_BOT_TOKEN_MISSING' };
   }
@@ -74,6 +91,7 @@ async function sendTelegramMessage(chatId: number | string, text: string) {
       text,
       parse_mode: 'HTML',
       disable_web_page_preview: true,
+      ...(replyMarkup ? { reply_markup: replyMarkup } : {}),
     }),
   });
 
@@ -241,14 +259,26 @@ export class AuthService {
 
     const lower = text.toLowerCase();
     const wantsLoginCode = lower === '/login' || lower.startsWith('/start login') || lower === 'код' || lower === 'войти';
+    const wantsStart = lower === '/start' || (lower.startsWith('/start ') && !lower.startsWith('/start login'));
 
     if (!wantsLoginCode) {
+      const miniAppUrl = getMiniAppUrl();
+
       await sendTelegramMessage(
         chatId,
-        'Для входа в AI-financer через сторонний Telegram-клиент отправь /login. Я пришлю одноразовый код.',
+        wantsStart
+          ? 'Welcome to Fina. Open the Mini App to manage accounts, expenses, goals and reports. Send /login if you need a one-time login code.'
+          : 'Open Fina from Telegram to manage money in the Mini App. Send /login if you need a one-time login code.',
+        miniAppUrl
+          ? {
+              inline_keyboard: [[
+                { text: 'Open Fina', web_app: { url: miniAppUrl } },
+              ]],
+            }
+          : undefined,
       );
 
-      return { handled: true, action: 'help_sent' };
+      return { handled: true, action: wantsStart ? 'start_sent' : 'help_sent' };
     }
 
     const record = this.createFallbackLoginCode({
@@ -263,7 +293,7 @@ export class AuthService {
 
     await sendTelegramMessage(
       chatId,
-      `Код входа в AI-financer: <b>${record.code}</b>\n\nОн действует ${minutes} минут. Никому не пересылай этот код.`,
+      `Fina login code: <b>${record.code}</b>\n\nIt is valid for ${minutes} minutes. Do not share this code.`,
     );
 
     return { handled: true, action: 'code_sent' };

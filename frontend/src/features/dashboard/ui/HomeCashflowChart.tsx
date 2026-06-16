@@ -27,7 +27,7 @@ export function HomeCashflowChart({
   onOpenDetails,
   onCreate,
 }: Props) {
-  const { t } = useI18n();
+  const { t, rt } = useI18n();
   const analytics = buildHomeFinanceAnalytics(transactions, mode, period, rates, {
     otherExpense: t('dashboard.analytics.otherExpense'),
     incomeSection: t('dashboard.analytics.incomeSection'),
@@ -63,7 +63,7 @@ export function HomeCashflowChart({
         </span>
         <span className="app-home-chart-preview__text">
           <b>{hasData ? formatMoney(analytics.total, 'RUB', { sign: mode === 'expense' ? 'minus' : 'plus' }) : t('dashboard.cashflow.empty')}</b>
-          <small>{hasData && primary ? `${primary.icon ? `${primary.icon} ` : ``}${primary.name} — ${primary.percent}%` : t('dashboard.cashflow.emptyCaption')}</small>
+          <small>{hasData && primary ? `${primary.icon ? `${primary.icon} ` : ``}${rt(primary.name)} — ${primary.percent}%` : t('dashboard.cashflow.emptyCaption')}</small>
         </span>
       </button>
 

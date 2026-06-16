@@ -1,11 +1,10 @@
 import { useMemo, useState, type TouchEvent } from 'react';
 import type { AccountDto } from '@/features/accounts/api/accounts.api';
 import type { AppCurrency } from '@/features/settings/model/settings.types';
-import { APP_CURRENCIES, convertCurrency, getCurrencyProfile } from '@/features/currency/lib/currency';
+import { convertCurrency, getCurrencyProfile } from '@/features/currency/lib/currency';
 import { formatMoney } from '@/shared/lib/money';
 import { useI18n } from '@/shared/lib/i18n';
 
-const currencyLabels: Record<AppCurrency, string> = Object.fromEntries(APP_CURRENCIES.map((item) => [item.code, item.label])) as Record<AppCurrency, string>;
 
 type Rates = { usd: number; eur: number };
 
@@ -107,7 +106,7 @@ export function HomeBalanceCarousel({
         <div className="min-w-0">
           <div className="app-eyebrow">{t('dashboard.balance.eyebrow')}</div>
           <div className="app-home-balance-card__amount">{formatMoney(active.amount, active.currency)}</div>
-          <p>{active.kind === 'total' ? currencyLabels[active.currency] : active.name} · {active.caption}</p>
+          <p>{active.kind === 'total' ? active.currency : active.name} · {active.caption}</p>
         </div>
         <div className="app-home-balance-card__nav">
           <button type="button" onClick={() => go(-1)} aria-label={t('dashboard.balance.prev')}>‹</button>

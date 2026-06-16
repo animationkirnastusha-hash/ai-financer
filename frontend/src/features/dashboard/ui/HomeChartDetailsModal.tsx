@@ -20,7 +20,7 @@ type Props = {
 };
 
 export function HomeChartDetailsModal({ open, transactions, mode, period, rates, onClose, modalLayer, onOpenAnalytics, onOpenReport, onOpenGroup }: Props) {
-  const { t } = useI18n();
+  const { t, rt } = useI18n();
   if (!open) return null;
 
   const analytics = buildHomeFinanceAnalytics(transactions, mode, period, rates, {
@@ -69,7 +69,7 @@ export function HomeChartDetailsModal({ open, transactions, mode, period, rates,
                 <div className="app-home-section-breakdown__head">
                   <i style={{ background: section.color }}>{section.icon || ''}</i>
                   <span>
-                    <b>{section.name}</b>
+                    <b>{rt(section.name)}</b>
                     <small>{t('dashboard.chart.operationsCount', { count: section.count })} · {section.percent}%</small>
                   </span>
                   <strong>{formatMoney(section.amount, 'RUB')}</strong>
@@ -80,7 +80,7 @@ export function HomeChartDetailsModal({ open, transactions, mode, period, rates,
                     <button key={group.key} type="button" className="app-home-chart-group app-home-chart-group--nested" onClick={(event) => { event.stopPropagation(); onOpenGroup(group); }}>
                       <i style={{ background: group.color }}>{group.icon || ''}</i>
                       <span className="min-w-0">
-                        <b>{group.name}</b>
+                        <b>{rt(group.name)}</b>
                         <small>{t('dashboard.chart.operationsCount', { count: group.count })} · {group.percent}%</small>
                       </span>
                       <strong>{formatMoney(group.amount, 'RUB')}</strong>

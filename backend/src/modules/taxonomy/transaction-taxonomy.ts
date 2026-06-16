@@ -15,6 +15,37 @@ export type SemanticTransactionTaxonomy = TaxonomyMatch & {
   merchantName?: string | null;
 };
 
+
+const GROCERY_SECTION = {
+  sectionName: 'Продуктовый магазин',
+  sectionIcon: '🛒',
+  sectionColor: '#34D399',
+};
+
+const GROCERY_CATEGORY = {
+  categoryName: 'Продукты',
+  categoryIcon: '🛒',
+  categoryColor: '#34D399',
+};
+
+const GENERIC_GROCERY_WORDS = [
+  'продукты',
+  'продукт',
+  'продуктовый',
+  'продуктовом',
+  'groceries',
+  'grocery',
+  'food store',
+];
+
+const SPECIFIC_GROCERY_WORDS = [
+  'мясо', 'колбас', 'сосиск', 'ветчина', 'курица', 'говядина', 'свинина',
+  'молоко', 'кефир', 'йогурт', 'сыр', 'творог', 'сметана',
+  'хлеб', 'булка', 'выпечка', 'овощ', 'помидор', 'огурец', 'картоф',
+  'фрукт', 'яблок', 'банан', 'рыба', 'морепродукт', 'сладост', 'шоколад',
+  'meat', 'sausage', 'chicken', 'milk', 'cheese', 'bread', 'vegetable', 'fruit', 'fish',
+];
+
 const AZS_SECTION = {
   sectionName: 'АЗС',
   sectionIcon: '⛽',
@@ -172,6 +203,18 @@ export function resolveTransactionSemanticTaxonomy(input: SemanticTransactionTax
 
   if (input.kind !== 'expense') {
     return base;
+  }
+
+  const hasGenericGrocery = hasAny(text, GENERIC_GROCERY_WORDS);
+  const hasSpecificGrocery = hasAny(text, SPECIFIC_GROCERY_WORDS);
+
+  if (hasGenericGrocery && !hasSpecificGrocery) {
+    return {
+      ...GROCERY_SECTION,
+      ...GROCERY_CATEGORY,
+      titleFallback: 'Продукты',
+      descriptionFallback: input.description ?? input.title ?? 'Продукты',
+    };
   }
 
   const hasAzsPlace = hasAny(text, PLACE_AZS_WORDS);

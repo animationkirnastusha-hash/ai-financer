@@ -51,7 +51,7 @@ export class AIOrchestratorService {
     try {
       const clarificationResult = await this.tryAnswerPendingClarification(
         userId,
-        plannerCommand,
+        trimmed,
       );
       if (clarificationResult) return clarificationResult;
 
@@ -299,6 +299,38 @@ export class AIOrchestratorService {
         throw new BadRequestError("Invalid pending action payload");
       }
 
+      if (this.hasOpenClarification(parsed)) {
+        const message = this.buildClarificationConfirmBlockedMessage(pending.command, parsed);
+        const riskLevel = this.normalizeRisk(pending.riskLevel);
+        const audit = await this.audit.create({
+          userId,
+          command: pending.command,
+          intent: "clarification_confirm_blocked",
+          riskLevel,
+          requiresConfirmation: false,
+          executed: false,
+          status: "clarification_confirm_blocked",
+          parsed,
+          errorMessage: message,
+          result: { pendingActionId, confirmElapsedMs: Date.now() - startedAt },
+        });
+
+        return {
+          success: false,
+          intent: "clarification",
+          executed: false,
+          requiresConfirmation: false,
+          riskLevel,
+          message,
+          parsed: parsed as unknown as Record<string, unknown>,
+          meta: {
+            auditLogId: audit.id,
+            pendingActionId,
+            clarification: parsed.clarification ?? undefined,
+          },
+        };
+      }
+
       const result = await this.executor.execute(userId, parsed, {
         pendingActionId,
       });
@@ -377,6 +409,29 @@ export class AIOrchestratorService {
         meta: { auditLogId: audit.id },
       };
     }
+  }
+
+
+  private hasOpenClarification(parsed: AIParsedCommand | null): boolean {
+    const clarification = parsed && (parsed as unknown as { clarification?: unknown }).clarification;
+    return Boolean(clarification && typeof clarification === "object" && !Array.isArray(clarification));
+  }
+
+  private buildClarificationConfirmBlockedMessage(command: string, parsed: AIParsedCommand): string {
+    const question = (parsed as unknown as { clarification?: { question?: unknown } }).clarification?.question;
+    const fallback = typeof question === "string" && question.trim() ? question.trim() : null;
+    if (this.looksEnglish(command)) {
+      return fallback && !/[а-яё]/i.test(fallback)
+        ? fallback
+        : "Please answer the question first. I cannot confirm the action until the missing details are filled in.";
+    }
+    return fallback ?? "Сначала ответь на уточнение. Я не буду выполнять действие, пока не хватает данных.";
+  }
+
+  private looksEnglish(value: string): boolean {
+    const latin = (value.match(/[a-z]/gi) ?? []).length;
+    const cyrillic = (value.match(/[а-яё]/gi) ?? []).length;
+    return latin > cyrillic;
   }
 
   async updatePendingAction(

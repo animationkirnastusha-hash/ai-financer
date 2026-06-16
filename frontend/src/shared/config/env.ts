@@ -5,4 +5,6 @@ export const env = {
     import.meta.env.VITE_API_BASE_URL || '/api',
   ),
   telegramBotUrl: String(import.meta.env.VITE_TELEGRAM_BOT_URL || '').trim(),
+  telegramAnalyticsToken: String(import.meta.env.VITE_TELEGRAM_ANALYTICS_TOKEN || '').trim(),
+  telegramAnalyticsIdentifier: String(import.meta.env.VITE_TELEGRAM_ANALYTICS_IDENTIFIER || 'ai_financer').trim(),
 };

@@ -15,6 +15,7 @@ export const miscDictionary = {
   'analytics.hero.eyebrow': 'Analytics',
   'analytics.hero.title': 'Monthly picture',
   'analytics.hero.caption': 'Income, expenses, categories and a short Fina insight.',
+  'analytics.hero.preview': 'Top spending',
   'analytics.kpi.income': 'Income',
   'analytics.kpi.expense': 'Expenses',
   'analytics.kpi.result': 'Result',

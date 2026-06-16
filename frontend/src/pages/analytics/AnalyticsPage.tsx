@@ -39,17 +39,17 @@ function RingChart({ value, label }: { value: number; label: string }) {
   );
 }
 
-function BarRow({ name, value, total, onOpenJournal }: { name: string; value: number; total: number; onOpenJournal: () => void }) {
+function BarRow({ name, displayName, value, total, onOpenJournal }: { name: string; displayName: string; value: number; total: number; onOpenJournal: () => void }) {
   return (
-    <button type="button" className="analytics-bar-row" onClick={onOpenJournal}>
-      <div><span>{name}</span><strong>{formatMoney(value, 'RUB')}</strong></div>
+    <button type="button" className="analytics-bar-row" aria-label={name} onClick={onOpenJournal}>
+      <div><span>{displayName}</span><strong>{formatMoney(value, 'RUB')}</strong></div>
       <i><b style={{ width: `${Math.max(8, Math.min(100, total ? (value / total) * 100 : 0))}%` }} /></i>
     </button>
   );
 }
 
 export default function AnalyticsPage() {
-  const { t } = useI18n();
+  const { t, rt } = useI18n();
   const openModal = useAppModalStore((state) => state.openModal);
   const navigateTo = useNavigationStore((state) => state.navigateTo);
   const openJournal = useNavigationStore((state) => state.openJournal);
@@ -122,6 +122,20 @@ export default function AnalyticsPage() {
             <article><span>{t('analytics.kpi.expense')}</span><strong>{formatMoney(data.totalExpenses, 'RUB', { sign: 'minus' })}</strong></article>
             <article><span>{t('analytics.kpi.result')}</span><strong>{formatMoney(data.balance, 'RUB', { sign: 'auto' })}</strong></article>
           </div>
+
+          <div className="analytics-hero-preview" aria-label={t('analytics.hero.preview')}>
+            <span>{t('analytics.hero.preview')}</span>
+            {data.top.length === 0 ? (
+              <b>{t('analytics.empty.noCategory')}</b>
+            ) : (
+              data.top.slice(0, 3).map(([name, value]) => (
+                <button key={name} type="button" onClick={() => openCategoryJournal(name, 'expense')}>
+                  <i>{rt(name)}</i>
+                  <strong>{formatMoney(value, 'RUB')}</strong>
+                </button>
+              ))
+            )}
+          </div>
         </header>
 
         <section className="analytics-fina-card app-card analytics-fina-card--floating">
@@ -140,7 +154,7 @@ export default function AnalyticsPage() {
           </button>
           <button type="button" className="app-card analytics-mini-card analytics-mini-card--button" onClick={() => openCategoryJournal(data.mainCategory, 'expense')}>
             <span className="analytics-mini-card__label">{t('analytics.mini.mainCategory')}</span>
-            <strong className="analytics-mini-card__value">{data.mainCategory}</strong>
+            <strong className="analytics-mini-card__value">{rt(data.mainCategory)}</strong>
             <small className="analytics-mini-card__caption">{t('analytics.mini.mainCategoryCaption')}</small>
           </button>
         </section>
@@ -158,7 +172,7 @@ export default function AnalyticsPage() {
           </div>
           <div className="analytics-bars">
             {data.top.length === 0 ? <div className="analytics-empty-line">{t('analytics.empty.expenses')}</div> : data.top.map(([name, value]) => (
-              <BarRow key={name} name={name} value={value} total={data.totalExpenses} onOpenJournal={() => openCategoryJournal(name, 'expense')} />
+              <BarRow key={name} name={name} displayName={rt(name)} value={value} total={data.totalExpenses} onOpenJournal={() => openCategoryJournal(name, 'expense')} />
             ))}
           </div>
         </section>
@@ -172,7 +186,7 @@ export default function AnalyticsPage() {
           </div>
           <div className="analytics-income-grid">
             {data.incomeTop.length === 0 ? <div className="analytics-empty-line">{t('analytics.empty.income')}</div> : data.incomeTop.map(([name, value]) => (
-              <button key={name} type="button" onClick={() => openCategoryJournal(name, 'income')}><span>{name}</span><strong>{formatMoney(value, 'RUB')}</strong></button>
+              <button key={name} type="button" onClick={() => openCategoryJournal(name, 'income')}><span>{rt(name)}</span><strong>{formatMoney(value, 'RUB')}</strong></button>
             ))}
           </div>
         </section>

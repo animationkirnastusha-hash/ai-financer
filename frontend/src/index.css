@@ -1,2 +1,2 @@
 @import "tailwindcss";
-@import "src/app/styles/index.css";
+@import "./app/styles/index.css";
