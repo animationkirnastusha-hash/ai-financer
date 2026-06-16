@@ -35,12 +35,6 @@ const TOUR_STEPS: TourStep[] = [
     captionKey: 'onboarding.tour.fina.caption',
   },
   {
-    id: 'learning',
-    target: 'home-learning',
-    titleKey: 'onboarding.tour.learning.title',
-    captionKey: 'onboarding.tour.learning.caption',
-  },
-  {
     id: 'actions',
     target: 'home-actions',
     titleKey: 'onboarding.tour.actions.title',

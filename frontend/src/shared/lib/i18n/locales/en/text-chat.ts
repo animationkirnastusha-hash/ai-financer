@@ -31,6 +31,7 @@ export const textChatDictionary = {
   'textChat.voice.thinking': 'Thinking',
   'textChat.voice.cancelled': 'Recording cancelled',
   'textChat.voice.notHeard': 'I did not catch that',
+  'textChat.voice.permissionReady': 'Microphone is ready. Press and hold the button when you want to speak.',
   'textChat.voice.needPermission': 'Microphone access is needed',
   'textChat.voice.busy': 'One second',
   'textChat.voice.startFailed': 'Could not start recording',

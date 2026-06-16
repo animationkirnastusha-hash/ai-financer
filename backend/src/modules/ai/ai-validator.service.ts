@@ -117,8 +117,36 @@ export class AIValidatorService {
       delete input.__userText;
 
     if (action.tool === 'create_account') {
+        const rawName = this.cleanEntityName(input.name);
+        const rawUserText = this.cleanString(action.input?.__userText || input.__userText);
+        const isGenericAccountName = this.isGenericAccountName(rawName);
+        const hasInitialBalance = normalizeMoneyAmount(input.initialBalance) !== null;
+
+        if ((!rawName || isGenericAccountName) && !hasInitialBalance) {
+          issues.push({
+            code: 'missing_account_setup_details',
+            message: 'Не хватает названия счёта и текущего баланса.',
+            actionIndex: index,
+            field: 'accountSetup',
+          });
+        } else if (!rawName || isGenericAccountName) {
+          issues.push({
+            code: 'missing_account_name',
+            message: 'Не хватает названия счёта.',
+            actionIndex: index,
+            field: 'accountSetup',
+          });
+        } else if (!hasInitialBalance && this.isShortCreateAccountRequest(rawUserText)) {
+          issues.push({
+            code: 'missing_account_balance',
+            message: 'Не хватает текущего баланса счёта.',
+            actionIndex: index,
+            field: 'accountSetup',
+          });
+        }
+
         const fallbackName = `Счёт ${plannedAccounts.size + accounts.length + 1}`;
-        const name = this.cleanEntityName(input.name) || fallbackName;
+        const name = rawName && !isGenericAccountName ? rawName : fallbackName;
         const type = this.coerceAccountType(input.type, 'cash');
         const currency: AICurrency = this.coerceCurrency(input.currency, '', 'RUB') ?? 'RUB';
         const initialBalance = normalizeMoneyAmount(input.initialBalance) ?? 0;
@@ -919,6 +947,18 @@ export class AIValidatorService {
 
     if (supportIndexes.size === 0) return actions;
     return actions.filter((_, index) => !supportIndexes.has(index));
+  }
+
+
+  private isGenericAccountName(value: string) {
+    const key = this.key(value);
+    return !key || key === 'счет' || key === 'счёт' || key === 'новый счет' || key === 'новый счёт' || key === 'account' || key === 'new account';
+  }
+
+  private isShortCreateAccountRequest(value: string) {
+    const text = this.key(value);
+    if (!text) return true;
+    return /^(создай|добавь|открой|сделай)?\s*(первый\s*)?(счет|счёт|account)(\s*\.)?$/.test(text);
   }
 
   private resolveRequiresConfirmation(

@@ -1,6 +1,9 @@
 import { AIClarificationRequest, AIValidatedAction, AIValidatedPlan } from './types';
 
 const CLARIFICATION_CODES = new Set([
+  'missing_account_setup_details',
+  'missing_account_name',
+  'missing_account_balance',
   'needs_first_account_setup',
   'needs_account_clarification',
   'account_not_found',
@@ -67,6 +70,9 @@ export class AIClarificationService {
 
   build(validated: AIValidatedPlan): AIClarificationRequest | null {
     const priorityCodes = [
+      'missing_account_setup_details',
+      'missing_account_name',
+      'missing_account_balance',
       'needs_first_account_setup',
       'needs_account_clarification',
       'account_not_found',
@@ -88,12 +94,14 @@ export class AIClarificationService {
 
     const action = validated.actions[issue.actionIndex];
 
-    if (issue.code === 'needs_first_account_setup') {
+    if (issue.code === 'needs_first_account_setup' || issue.code === 'missing_account_setup_details' || issue.code === 'missing_account_name' || issue.code === 'missing_account_balance') {
       return {
         type: 'account_setup',
         field: 'accountSetup',
         actionIndex: issue.actionIndex,
-        question: 'Сначала нужен счёт. Напишите название и текущий баланс, например: Наличка 5000.',
+        question: issue.code === 'needs_first_account_setup'
+          ? 'Сначала нужен счёт. Напишите название и текущий баланс, например: Наличка 5000.'
+          : 'Как назовём счёт и какой сейчас баланс? Например: Наличка 5000.',
         createdAt: new Date().toISOString(),
       };
     }

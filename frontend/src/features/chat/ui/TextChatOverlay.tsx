@@ -73,6 +73,7 @@ export function TextChatOverlay({
   const voiceCancelledBySwipeRef = useRef(false);
   const lastAutoClosedMessageKeyRef = useRef("");
   const autoCloseTimerRef = useRef<number | null>(null);
+  const voicePermissionRequestRef = useRef(false);
   const dragStartYRef = useRef<number | null>(null);
   const [dragOffset, setDragOffset] = useState(0);
   const [shouldRender, setShouldRender] = useState(open);
@@ -243,8 +244,29 @@ export function TextChatOverlay({
     if (result === "started") return true;
 
     if (result === "permission-ready") {
-      setVoicePermissionPrompted(true);
-      setVoiceHint(t("textChat.voice.needPermission"));
+      setIsVoicePressed(false);
+      voice.cancel();
+
+      const sessionKey = "ai-financer-microphone-permission-requested:session";
+      const alreadyRequestedThisSession = sessionStorage.getItem(sessionKey) === "true";
+
+      if (!alreadyRequestedThisSession && !voicePermissionRequestRef.current) {
+        voicePermissionRequestRef.current = true;
+        sessionStorage.setItem(sessionKey, "true");
+        setVoiceHint(t("textChat.voice.needPermission"));
+        try {
+          const allowed = await voice.primePermission();
+          setVoicePermissionPrompted(allowed);
+          setVoiceHint(allowed ? t("textChat.voice.permissionReady") : t("textChat.voice.startFailed"));
+        } catch {
+          setVoicePermissionPrompted(false);
+          setVoiceHint(t("textChat.voice.startFailed"));
+        } finally {
+          voicePermissionRequestRef.current = false;
+        }
+      } else {
+        setVoiceHint(t("textChat.voice.needPermission"));
+      }
     } else if (result === "busy") {
       setVoiceHint(t("textChat.voice.busy"));
     } else {

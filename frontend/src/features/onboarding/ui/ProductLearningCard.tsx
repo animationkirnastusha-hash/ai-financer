@@ -7,33 +7,27 @@ type LearningTask = {
   id: LearningProgressStep;
   titleKey: I18nKey;
   captionKey: I18nKey;
-  commandKey: string;
+  command: string;
 };
 
 const tasks: LearningTask[] = [
   {
-    id: 'firstExpense',
-    titleKey: 'learning.task.expense.title',
-    captionKey: 'learning.task.expense.caption',
-    commandKey: 'learning.task.expense.command',
+    id: 'firstQuestion',
+    titleKey: 'learning.task.help.title',
+    captionKey: 'learning.task.help.caption',
+    command: 'Как с тобой работать?',
   },
   {
-    id: 'firstQuestion',
-    titleKey: 'learning.task.question.title',
-    captionKey: 'learning.task.question.caption',
-    commandKey: 'learning.task.question.command',
+    id: 'firstExpense',
+    titleKey: 'learning.task.account.title',
+    captionKey: 'learning.task.account.caption',
+    command: 'Создай первый счёт',
   },
   {
     id: 'firstGoal',
-    titleKey: 'learning.task.goal.title',
-    captionKey: 'learning.task.goal.caption',
-    commandKey: 'learning.task.goal.command',
-  },
-  {
-    id: 'firstLimit',
-    titleKey: 'learning.task.limit.title',
-    captionKey: 'learning.task.limit.caption',
-    commandKey: 'learning.task.limit.command',
+    titleKey: 'learning.task.firstStep.title',
+    captionKey: 'learning.task.firstStep.caption',
+    command: 'Что лучше сделать первым?',
   },
 ];
 
@@ -52,7 +46,7 @@ export function ProductLearningCard() {
 
   const startTask = (task: LearningTask) => {
     mark(task.id);
-    openAIWithCommand(t(task.commandKey));
+    openAIWithCommand(task.command);
   };
 
   return (

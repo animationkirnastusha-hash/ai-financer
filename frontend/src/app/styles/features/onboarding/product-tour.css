@@ -227,3 +227,22 @@ body.product-tour-active .app-page {
     transition: none;
   }
 }
+
+html.product-tour-active,
+body.product-tour-active {
+  overflow: hidden !important;
+  height: 100%;
+}
+
+body.product-tour-active .app-bottom-navigation,
+body.product-tour-active .app-main-menu-dots,
+body.product-tour-active .voice-first-companion,
+body.product-tour-active .fina-pull-indicator {
+  pointer-events: none !important;
+}
+
+body.product-tour-active .app-bottom-navigation,
+body.product-tour-active .app-main-menu-dots {
+  opacity: 0 !important;
+  transform: translateY(12px);
+}
