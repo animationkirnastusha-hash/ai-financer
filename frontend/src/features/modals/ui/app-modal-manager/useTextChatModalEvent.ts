@@ -5,6 +5,7 @@ type OpenModal = (modal: AppModalDescriptor) => void;
 
 type TextChatEventDetail = {
   command?: string | null;
+  initialAssistantMessage?: string | null;
   mode?: 'text' | 'voice';
   autoStartVoice?: boolean;
   autoCloseOnVoiceResult?: boolean;
@@ -18,6 +19,7 @@ export function useTextChatModalEvent(openModal: OpenModal) {
       openModal({
         type: 'ai-text-overlay',
         initialCommand: detail?.command ?? null,
+        initialAssistantMessage: detail?.initialAssistantMessage ?? null,
         mode: detail?.mode ?? 'text',
         autoStartVoice: Boolean(detail?.autoStartVoice),
         autoCloseOnVoiceResult: Boolean(detail?.autoCloseOnVoiceResult),

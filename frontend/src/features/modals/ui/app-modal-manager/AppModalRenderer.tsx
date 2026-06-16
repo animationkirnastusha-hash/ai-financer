@@ -6,6 +6,7 @@ import { NotificationSheet } from '@/features/notifications/ui/NotificationSheet
 import { UtilityModals } from '@/features/modals/ui/UtilityModals';
 import { ReportExportSheet } from '@/features/reports/ui/ReportExportSheet';
 import { TextChatOverlay } from '@/features/chat/ui/TextChatOverlay';
+import { TrialOfferSheet } from '@/features/subscription/ui/TrialOfferSheet';
 import type { AppModalDescriptor } from '@/features/modals/model/appModal.store';
 import { layerByIndex } from '@/features/modals/lib/modalLayers';
 import type { AppModalDependencies } from './useAppModalDependencies';
@@ -17,6 +18,7 @@ import {
   isObligationModal,
   isReportModal,
   isTextChatModal,
+  isTrialOfferModal,
   isUtilityModal,
 } from './modalTypeGuards';
 
@@ -132,11 +134,17 @@ export function AppModalRenderer({ closeAllModals, closeModal, deps, index, moda
     return <ReportExportSheet open mode={modal.mode ?? 'base'} layer={layer} onClose={() => closeModal('report-export')} />;
   }
 
+
+  if (isTrialOfferModal(modal)) {
+    return <TrialOfferSheet open layer={layer} source={modal.source ?? 'manual'} onClose={() => closeModal('trial-offer')} />;
+  }
+
   if (isTextChatModal(modal)) {
     return (
       <TextChatOverlay
         open
         initialCommand={modal.initialCommand ?? null}
+        initialAssistantMessage={modal.initialAssistantMessage ?? null}
         mode={modal.mode ?? 'text'}
         autoStartVoice={Boolean(modal.autoStartVoice)}
         autoCloseOnVoiceResult={Boolean(modal.autoCloseOnVoiceResult)}

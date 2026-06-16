@@ -20,6 +20,10 @@ function getOption(catalog: StorePaymentCatalogDto | null, product: StorePayment
   return findOptions(catalog, product).find((option) => option.duration === duration) ?? null;
 }
 
+function isSubscriptionProduct(product: StorePaymentProduct) {
+  return product === 'premium' || product === 'business';
+}
+
 export function StorePaymentActions({ product, title, compact = false }: Props) {
   const { t } = useI18n();
   const user = useAuthStore((state) => state.user);
@@ -27,10 +31,14 @@ export function StorePaymentActions({ product, title, compact = false }: Props) 
   const setSubscription = useSubscriptionStore((state) => state.setStatus);
   const loadSubscription = useSubscriptionStore((state) => state.load);
   const [catalog, setCatalog] = useState<StorePaymentCatalogDto | null>(null);
-  const [duration, setDuration] = useState<StorePaymentDuration>('month');
+  const [duration, setDuration] = useState<StorePaymentDuration>(isSubscriptionProduct(product) ? 'month' : 'once');
   const [isBusy, setIsBusy] = useState(false);
   const [busyProvider, setBusyProvider] = useState<StorePaymentProvider | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    setDuration(isSubscriptionProduct(product) ? 'month' : 'once');
+  }, [product]);
 
   useEffect(() => {
     let mounted = true;
@@ -50,10 +58,15 @@ export function StorePaymentActions({ product, title, compact = false }: Props) 
   const selected = useMemo(() => options.find((option) => option.duration === duration) ?? options[0], [duration, options]);
   const monthOption = getOption(catalog, product, 'month');
   const yearOption = getOption(catalog, product, 'year');
+  const onceOption = getOption(catalog, product, 'once');
+  const selectedDuration = (selected?.duration ?? duration) as StorePaymentDuration;
   const selectedStarsPrice = selected ? formatPaymentPrice(selected.starsAmount, selected.starsCurrency) : '—';
-  const selectedStarsBasePrice = selected?.starsBaseAmount ? formatPaymentPrice(selected.starsBaseAmount, selected.starsCurrency) : null;
+  const selectedStarsBasePrice = selected?.starsBaseAmount && selected.starsBaseAmount !== selected.starsAmount
+    ? formatPaymentPrice(selected.starsBaseAmount, selected.starsCurrency)
+    : null;
   const selectedRubHint = selected ? formatPaymentPrice(selected.amount, selected.currency) : '—';
   const discount = selected?.discountPercent ? t('store.payment.discount', { value: String(selected.discountPercent) }) : null;
+  const singleProduct = !isSubscriptionProduct(product);
 
   const refreshOrder = async (orderId: string) => {
     await new Promise((resolve) => window.setTimeout(resolve, 1200));
@@ -84,12 +97,12 @@ export function StorePaymentActions({ product, title, compact = false }: Props) 
   };
 
   const createOrder = async (provider: StorePaymentProvider) => {
-    if (isBusy) return;
+    if (isBusy || !selected) return;
     setIsBusy(true);
     setBusyProvider(provider);
     setMessage(null);
     try {
-      const result = await paymentsApi.createOrder({ product, duration, provider });
+      const result = await paymentsApi.createOrder({ product, duration: selectedDuration, provider });
       if (provider === 'mock') {
         const completed = await paymentsApi.completeMock(result.order.id);
         setSubscription(completed.subscription);
@@ -123,26 +136,34 @@ export function StorePaymentActions({ product, title, compact = false }: Props) 
     <div className={compact ? 'store-payment-actions store-payment-actions--compact' : 'store-payment-actions'}>
       {title ? <h3>{title}</h3> : null}
 
-      <div className="store-payment-plan-toggle" role="group" aria-label={t('store.payment.period')}>
-        <button
-          type="button"
-          className={duration === 'month' ? 'is-active' : undefined}
-          onClick={() => setDuration('month')}
-        >
-          <span>{t('store.payment.month')}</span>
-          <strong>{monthOption ? formatPaymentPrice(monthOption.starsAmount, monthOption.starsCurrency) : '—'}</strong>
-          {monthOption ? <small>{t('store.payment.priceHint', { price: formatPaymentPrice(monthOption.amount, monthOption.currency) })}</small> : null}
-        </button>
-        <button
-          type="button"
-          className={duration === 'year' ? 'is-active' : undefined}
-          onClick={() => setDuration('year')}
-        >
-          <span>{t('store.payment.year')}</span>
-          <strong>{yearOption ? formatPaymentPrice(yearOption.starsAmount, yearOption.starsCurrency) : '—'}</strong>
-          {yearOption ? <small>{t('store.payment.yearHint', { price: formatPaymentPrice(yearOption.amount, yearOption.currency) })}</small> : null}
-        </button>
-      </div>
+      {singleProduct ? (
+        <div className="store-payment-one-time">
+          <span>{t('store.payment.oneTime')}</span>
+          <strong>{onceOption ? formatPaymentPrice(onceOption.starsAmount, onceOption.starsCurrency) : selectedStarsPrice}</strong>
+          {onceOption ? <small>{t('store.payment.priceHint', { price: formatPaymentPrice(onceOption.amount, onceOption.currency) })}</small> : null}
+        </div>
+      ) : (
+        <div className="store-payment-plan-toggle" role="group" aria-label={t('store.payment.period')}>
+          <button
+            type="button"
+            className={duration === 'month' ? 'is-active' : undefined}
+            onClick={() => setDuration('month')}
+          >
+            <span>{t('store.payment.month')}</span>
+            <strong>{monthOption ? formatPaymentPrice(monthOption.starsAmount, monthOption.starsCurrency) : '—'}</strong>
+            {monthOption ? <small>{t('store.payment.priceHint', { price: formatPaymentPrice(monthOption.amount, monthOption.currency) })}</small> : null}
+          </button>
+          <button
+            type="button"
+            className={duration === 'year' ? 'is-active' : undefined}
+            onClick={() => setDuration('year')}
+          >
+            <span>{t('store.payment.year')}</span>
+            <strong>{yearOption ? formatPaymentPrice(yearOption.starsAmount, yearOption.starsCurrency) : '—'}</strong>
+            {yearOption ? <small>{t('store.payment.yearHint', { price: formatPaymentPrice(yearOption.amount, yearOption.currency) })}</small> : null}
+          </button>
+        </div>
+      )}
 
       {selected ? (
         <div className="store-payment-selected-price">

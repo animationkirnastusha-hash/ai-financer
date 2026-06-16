@@ -19,6 +19,8 @@ type Props = {
   expenses: number;
   delta: number;
   onOpenAccounts: () => void;
+  onReceiptClick: () => void;
+  receiptAvailable: boolean;
 };
 
 type Slide =
@@ -49,6 +51,8 @@ export function HomeBalanceCarousel({
   expenses,
   delta,
   onOpenAccounts,
+  onReceiptClick,
+  receiptAvailable,
 }: Props) {
   const { t } = useI18n();
   const [activeIndex, setActiveIndex] = useState(0);
@@ -124,7 +128,17 @@ export function HomeBalanceCarousel({
         <div className="app-home-balance-card__dots" aria-hidden="true">
           {slides.map((slide, index) => <i key={slide.id} data-active={index === safeIndex} />)}
         </div>
-        <button type="button" onClick={onOpenAccounts}>{t('dashboard.balance.openAccounts')}</button>
+        <div className="app-home-balance-card__actions">
+          <button
+            type="button"
+            className="app-home-balance-card__receipt"
+            data-locked={receiptAvailable ? 'false' : 'true'}
+            onClick={onReceiptClick}
+          >
+            {t('dashboard.receipt.button')}
+          </button>
+          <button type="button" className="app-home-balance-card__accounts" onClick={onOpenAccounts}>{t('dashboard.balance.openAccounts')}</button>
+        </div>
       </div>
     </header>
   );

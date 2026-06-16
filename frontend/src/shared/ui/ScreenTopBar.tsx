@@ -140,7 +140,7 @@ export function ScreenTopBar({ title, left = 'menu', right = DEFAULT_RIGHT_ACTIO
   const loadUnreadCount = useNotificationsStore((state) => state.loadUnreadCount);
   const subscription = useSubscriptionStore((state) => state.status);
   const canShowStore = canShowStoreSurface(subscription);
-  const visibleRight = useMemo(() => right.filter((action) => action !== 'store' || canShowStore), [canShowStore, right]);
+  const visibleRight = useMemo(() => right.filter((action) => action !== 'home' && (action !== 'store' || canShowStore)), [canShowStore, right]);
 
   useEffect(() => {
     if (visibleRight.includes('notifications')) void loadUnreadCount();

@@ -73,6 +73,18 @@ export const useNavigationStore = create<NavigationState>((set, get) => ({
   navigateTo: (screen) => {
     const { currentScreen, history } = get();
 
+    if (screen === 'dashboard') {
+      set({
+        currentScreen: 'dashboard',
+        history: [],
+        isNavigationMenuOpen: false,
+        isNotificationsOpen: false,
+        settingsSection: null,
+        journalFilters: null,
+      });
+      return;
+    }
+
     if (screen === currentScreen) {
       set({
         isNavigationMenuOpen: false,

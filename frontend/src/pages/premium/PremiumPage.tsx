@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigationStore } from '@/features/navigation/model/navigation.store';
 import { usePremiumStore } from '@/features/premium/model/premium.store';
-import { storeCards, storeFeatures, type StoreCard } from '@/features/store/model/storeCatalog';
-import { StoreProductCarousel } from '@/features/store/ui/StoreProductCarousel';
+import { useAppModalStore } from '@/features/modals/model/appModal.store';
+import { storeFeatures, storeProductCards, type StoreCard } from '@/features/store/model/storeCatalog';
+import { StoreLimitsSheet } from '@/features/store/ui/StoreLimitsSheet';
 import { StorePaymentSheet } from '@/features/store/ui/StorePaymentSheet';
+import { StoreProductDetail } from '@/features/store/ui/StoreProductDetail';
+import { StoreProductGrid } from '@/features/store/ui/StoreProductGrid';
 import { StoreStatusCard } from '@/features/store/ui/StoreStatusCard';
 import { StoreTrialCard } from '@/features/store/ui/StoreTrialCard';
-import { StoreUsageCard } from '@/features/store/ui/StoreUsageCard';
 import { useSubscriptionStore } from '@/features/subscription/model/subscription.store';
 import { hasRealPremiumAccess, hasRealBusinessAccess } from '@/features/subscription/lib/entitlements';
 import { useI18n } from '@/shared/lib/i18n';
@@ -50,9 +52,10 @@ export default function PremiumPage() {
   const subscription = useSubscriptionStore((state) => state.status);
   const isLoading = useSubscriptionStore((state) => state.isLoading);
   const loadSubscription = useSubscriptionStore((state) => state.load);
-  const startTrial = useSubscriptionStore((state) => state.startTrial);
-  const [selectedTone, setSelectedTone] = useState<StoreCard['tone']>('premium');
+  const openModal = useAppModalStore((state) => state.openModal);
+  const [selectedProductId, setSelectedProductId] = useState<string>('premium');
   const [paymentProduct, setPaymentProduct] = useState<StoreCard | null>(null);
+  const [limitsOpen, setLimitsOpen] = useState(false);
   const hasPremium = hasRealPremiumAccess(subscription);
   const hasBusiness = hasRealBusinessAccess(subscription);
 
@@ -60,24 +63,17 @@ export default function PremiumPage() {
     void loadSubscription();
   }, [loadSubscription]);
 
-  const carouselCards = useMemo(
-    () => storeCards.filter((card) => card.tone === 'premium' || card.tone === 'business'),
-    [],
-  );
-
   const selectedCard = useMemo(
-    () => carouselCards.find((card) => card.tone === selectedTone) ?? carouselCards[0] ?? storeCards[0],
-    [carouselCards, selectedTone],
+    () => storeProductCards.find((card) => card.id === selectedProductId) ?? storeProductCards[0],
+    [selectedProductId],
   );
 
   const handleStartTrial = async () => {
-    await startTrial();
+    openModal({ type: 'trial-offer', source: 'store' });
   };
 
   const handleOpenPayment = (card: StoreCard) => {
-    if (card.tone === 'premium' || card.tone === 'business') {
-      setPaymentProduct(card);
-    }
+    if (card.product) setPaymentProduct(card);
   };
 
   const handleOpenReferral = () => {
@@ -99,24 +95,32 @@ export default function PremiumPage() {
       <div className="app-page__inner space-y-4">
         <ScreenTopBar title={t('screen.store')} left="back" right={['home', 'settings']} />
 
-        <StoreProductCarousel
-          cards={carouselCards}
-          activeTone={selectedTone}
+        <StoreProductGrid
+          cards={storeProductCards}
+          activeProductId={selectedProductId}
           hasPremium={hasPremium}
           hasBusiness={hasBusiness}
-          onSelect={(card) => setSelectedTone(card.tone)}
-          onBuy={handleOpenPayment}
+          onSelect={(card) => setSelectedProductId(card.id)}
         />
 
-        <div className="store-minimal-grid">
+        {selectedCard ? (
+          <StoreProductDetail card={selectedCard} hasPremium={hasPremium} hasBusiness={hasBusiness} onBuy={handleOpenPayment} />
+        ) : null}
+
+        <div className="store-minimal-grid store-minimal-grid--status">
           <StoreStatusCard subscription={subscription} isLoading={isLoading} />
-          <StoreUsageCard subscription={subscription} />
+          <button type="button" className="app-card monetization-section store-limits-button" onClick={() => setLimitsOpen(true)}>
+            <span className="app-eyebrow">{t('store.limits.eyebrow')}</span>
+            <strong>{t('store.limits.title')}</strong>
+            <small>{t('store.limits.caption')}</small>
+          </button>
         </div>
 
         <StoreTrialCard subscription={subscription} isLoading={isLoading} onStartTrial={handleStartTrial} />
         <StoreCompactExtras onOpenReferral={handleOpenReferral} onOpenPremium={handleOpenPremiumSheet} />
       </div>
 
+      <StoreLimitsSheet open={limitsOpen} subscription={subscription} onClose={() => setLimitsOpen(false)} />
       <StorePaymentSheet open={Boolean(paymentProduct)} product={paymentProduct} onClose={() => setPaymentProduct(null)} />
     </div>
   );

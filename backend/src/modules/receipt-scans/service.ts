@@ -165,11 +165,13 @@ export class ReceiptScanService {
 
     const access = await subscriptionService.getFeatureAccess(userId, 'receiptScan');
     const usage = access.usage.receiptScansThisMonth;
-    if (!access.allowed || usage.remaining <= 0) {
+    const packageUsage = access.packageCredits.receiptScans;
+    if (!access.allowed || (usage.remaining <= 0 && packageUsage.remaining <= 0)) {
       throw new ForbiddenError('Receipt scan limit reached', {
         feature: 'receiptScan',
         used: usage.used,
         limit: usage.limit,
+        packageRemaining: packageUsage.remaining,
       });
     }
 

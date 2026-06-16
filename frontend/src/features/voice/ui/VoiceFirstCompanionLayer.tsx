@@ -21,7 +21,6 @@ export function VoiceFirstCompanionLayer() {
   const hasTextChatOverlay = modalStack.some((modal) => modal.type === 'ai-text-overlay');
   const navigateTo = useNavigationStore((state) => state.navigateTo);
   const goBack = useNavigationStore((state) => state.goBack);
-  const currentScreen = useNavigationStore((state) => state.currentScreen);
   const openAIWithCommand = useNavigationStore((state) => state.openAIWithCommand);
 
   const chat = useChatController();
@@ -75,7 +74,7 @@ export function VoiceFirstCompanionLayer() {
   const microphoneNeedsAction = canUseVoice && (!voicePermissionPrompted || microphoneBlocked);
   const voicePermissionReady = canUseVoice && voicePermissionPrompted && !microphoneBlocked;
   const canStartManualRecording = voicePermissionReady && !hasPending && !chat.isSending && !isDispatching && voice.state === 'idle';
-  const tapToTextEnabled = currentScreen !== 'dashboard';
+  const tapToTextEnabled = false;
 
   useEffect(() => {
     void voice.refreshPermissionState?.();

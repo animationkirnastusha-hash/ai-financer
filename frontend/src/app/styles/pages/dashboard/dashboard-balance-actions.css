@@ -1,0 +1,101 @@
+/* Pack 124: compact home balance actions and receipt gate. */
+.app-home-balance-card {
+  padding-bottom: 14px !important;
+}
+
+.app-home-balance-card__metrics {
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  align-items: stretch !important;
+}
+
+.app-home-balance-card__metrics .app-home-metric {
+  min-height: 58px;
+  align-content: center;
+}
+
+.app-home-balance-card__footer {
+  display: grid !important;
+  gap: 10px !important;
+  align-items: stretch !important;
+  justify-content: stretch !important;
+}
+
+.app-home-balance-card__dots {
+  justify-content: flex-start;
+}
+
+.app-home-balance-card__actions {
+  display: grid;
+  grid-template-columns: minmax(0, .86fr) minmax(0, 1.14fr);
+  gap: 8px;
+  width: 100%;
+}
+
+.app-home-balance-card__actions button {
+  width: 100%;
+  min-height: 42px;
+  border-radius: 999px;
+  padding: 0 12px !important;
+  font-size: 12px !important;
+  font-weight: 820;
+  white-space: nowrap;
+}
+
+.app-home-balance-card__receipt {
+  border: 1px solid rgba(255,255,255,.10) !important;
+  background: rgba(255,255,255,.045) !important;
+  color: rgba(255,255,255,.62) !important;
+}
+
+.app-home-balance-card__receipt[data-locked="false"] {
+  border-color: rgba(110,231,183,.24) !important;
+  background: rgba(110,231,183,.09) !important;
+  color: rgba(220,255,243,.92) !important;
+}
+
+.app-home-balance-card__accounts {
+  border-color: rgba(110,231,183,.26) !important;
+  background: linear-gradient(135deg, rgba(110,231,183,.16), rgba(110,231,183,.08)) !important;
+  color: rgba(220,255,243,.94) !important;
+}
+
+.dashboard-receipt-lock__body {
+  display: grid;
+  gap: 12px;
+}
+
+.dashboard-receipt-lock__body h2 {
+  margin-top: 6px;
+  color: rgba(255,255,255,.96);
+  font-size: 24px;
+  line-height: 1.05;
+  letter-spacing: -.045em;
+  font-weight: 780;
+}
+
+.dashboard-receipt-lock__body p {
+  margin-top: 8px;
+  color: rgba(255,255,255,.58);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.dashboard-receipt-lock__actions {
+  display: grid;
+  grid-template-columns: .9fr 1.1fr;
+  gap: 10px;
+}
+
+.fina-command-bar--compact + .fina-command-bar__below {
+  display: none !important;
+}
+
+@media (max-width: 360px) {
+  .app-home-balance-card__actions {
+    grid-template-columns: 1fr;
+  }
+
+  .app-home-metric b {
+    font-size: 12px !important;
+  }
+}

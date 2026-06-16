@@ -9,13 +9,12 @@ function getFirstName(user: ReturnType<typeof useAuthStore.getState>['user']) {
   return user?.firstName || user?.username || '';
 }
 
-const ONBOARDING_CHAT_COMMAND = 'Привет, я новый пользователь. Познакомь меня с Финой коротко, объясни что можно писать или говорить голосом, и помоги спокойно начать с первого счёта.';
+const ONBOARDING_CHAT_MESSAGE_KEY = 'onboarding.chatStart.assistantMessage';
 
 export function LaunchOnboardingSheet() {
   const { t } = useI18n();
   const isOpen = useOnboardingStore((state) => state.isOpen);
   const complete = useOnboardingStore((state) => state.complete);
-  const skip = useOnboardingStore((state) => state.skip);
   const user = useAuthStore((state) => state.user);
   const navigateTo = useNavigationStore((state) => state.navigateTo);
   const openModal = useAppModalStore((state) => state.openModal);
@@ -44,15 +43,9 @@ export function LaunchOnboardingSheet() {
     window.setTimeout(() => {
       openModal({
         type: 'ai-text-overlay',
-        initialCommand: ONBOARDING_CHAT_COMMAND,
-        autoSubmitInitialCommand: true,
+        initialAssistantMessage: t(ONBOARDING_CHAT_MESSAGE_KEY),
       });
     }, 120);
-  };
-
-  const skipOnboarding = () => {
-    skip();
-    navigateTo('dashboard');
   };
 
   return (
@@ -72,12 +65,24 @@ export function LaunchOnboardingSheet() {
             <strong>{t('onboarding.chatStart.title')}</strong>
             <span>{t('onboarding.chatStart.caption')}</span>
           </section>
+
+          <section className="onboarding-quick-rules" aria-label={t('onboarding.quick.aria')}>
+            <div>
+              <strong>{t('onboarding.quick.text.title')}</strong>
+              <span>{t('onboarding.quick.text.caption')}</span>
+            </div>
+            <div>
+              <strong>{t('onboarding.quick.voice.title')}</strong>
+              <span>{t('onboarding.quick.voice.caption')}</span>
+            </div>
+            <div>
+              <strong>{t('onboarding.quick.account.title')}</strong>
+              <span>{t('onboarding.quick.account.caption')}</span>
+            </div>
+          </section>
         </div>
 
-        <footer className="app-modal-footer onboarding-setup-footer onboarding-setup-footer--compact">
-          <button type="button" className="app-secondary-button" onClick={skipOnboarding}>
-            {t('onboarding.action.later')}
-          </button>
+        <footer className="app-modal-footer onboarding-setup-footer onboarding-setup-footer--compact onboarding-setup-footer--single">
           <button type="button" className="app-primary-button" onClick={continueInChat}>
             {t('onboarding.action.continueChat')}
           </button>

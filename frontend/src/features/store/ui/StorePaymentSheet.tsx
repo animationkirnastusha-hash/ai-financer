@@ -1,4 +1,3 @@
-import type { StorePaymentProduct } from '@/features/payments/api/payments.api';
 import { StorePaymentActions } from '@/features/payments/ui/StorePaymentActions';
 import type { StoreCard } from '@/features/store/model/storeCatalog';
 import { Drawer } from '@/shared/ui/Drawer';
@@ -10,13 +9,9 @@ type Props = {
   onClose: () => void;
 };
 
-function getPaymentProduct(product: StoreCard | null): StorePaymentProduct {
-  return product?.tone === 'business' ? 'business' : 'premium';
-}
-
 export function StorePaymentSheet({ open, product, onClose }: Props) {
   const { t } = useI18n();
-  const paymentProduct = getPaymentProduct(product);
+  const paymentProduct = product?.product;
 
   return (
     <Drawer
@@ -33,7 +28,7 @@ export function StorePaymentSheet({ open, product, onClose }: Props) {
           <p>{t(product.caption)}</p>
         </div>
       ) : null}
-      <StorePaymentActions product={paymentProduct} />
+      {paymentProduct ? <StorePaymentActions product={paymentProduct} /> : null}
     </Drawer>
   );
 }

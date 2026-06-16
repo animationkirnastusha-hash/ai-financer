@@ -7,6 +7,7 @@ const OBLIGATION_MODAL_TYPES = new Set<AppModalDescriptor['type']>(['obligation-
 const NOTIFICATION_MODAL_TYPES = new Set<AppModalDescriptor['type']>(['notifications']);
 const REPORT_MODAL_TYPES = new Set<AppModalDescriptor['type']>(['report-export']);
 const TEXT_CHAT_MODAL_TYPES = new Set<AppModalDescriptor['type']>(['ai-text-overlay']);
+const TRIAL_OFFER_MODAL_TYPES = new Set<AppModalDescriptor['type']>(['trial-offer']);
 const UTILITY_MODAL_TYPES = new Set<AppModalDescriptor['type']>(['accounts-tools', 'taxonomy-tools', 'taxonomy-section']);
 
 export function isAccountModal(modal: AppModalDescriptor): modal is Extract<AppModalDescriptor, { type: 'account-create' | 'account-details' | 'account-transfer' | 'account-edit' }> {
@@ -39,4 +40,8 @@ export function isReportModal(modal: AppModalDescriptor): modal is Extract<AppMo
 
 export function isTextChatModal(modal: AppModalDescriptor): modal is Extract<AppModalDescriptor, { type: 'ai-text-overlay' }> {
   return TEXT_CHAT_MODAL_TYPES.has(modal.type);
+}
+
+export function isTrialOfferModal(modal: AppModalDescriptor): modal is Extract<AppModalDescriptor, { type: 'trial-offer' }> {
+  return TRIAL_OFFER_MODAL_TYPES.has(modal.type);
 }

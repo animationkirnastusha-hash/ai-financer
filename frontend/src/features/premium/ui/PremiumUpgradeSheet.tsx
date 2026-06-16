@@ -4,6 +4,7 @@ import { usePremiumStore } from '../model/premium.store';
 import { useSubscriptionStore } from '@/features/subscription/model/subscription.store';
 import { useNavigationStore } from '@/features/navigation/model/navigation.store';
 import { StorePaymentActions } from '@/features/payments/ui/StorePaymentActions';
+import { useAppModalStore } from '@/features/modals/model/appModal.store';
 import { useI18n, type I18nKey } from '@/shared/lib/i18n';
 import { hasPaidAccess, hasRealPremiumAccess } from '@/features/subscription/lib/entitlements';
 
@@ -23,7 +24,7 @@ export function PremiumUpgradeSheet() {
   const subscription = useSubscriptionStore((state) => state.status);
   const isLoading = useSubscriptionStore((state) => state.isLoading);
   const loadSubscription = useSubscriptionStore((state) => state.load);
-  const startTrial = useSubscriptionStore((state) => state.startTrial);
+  const openModal = useAppModalStore((state) => state.openModal);
 
   useEffect(() => {
     if (open) void loadSubscription();
@@ -42,7 +43,8 @@ export function PremiumUpgradeSheet() {
   const trialUsed = Boolean(subscription?.access.trialUsed);
 
   const handleStartTrial = async () => {
-    await startTrial();
+    close();
+    window.setTimeout(() => openModal({ type: 'trial-offer', source: 'premium' }), 80);
   };
 
   const handleOpenStore = () => {

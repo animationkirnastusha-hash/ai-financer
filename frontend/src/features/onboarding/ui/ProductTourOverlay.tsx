@@ -127,6 +127,7 @@ export function ProductTourOverlay() {
   const { t } = useI18n();
   const currentScreen = useNavigationStore((state) => state.currentScreen);
   const modalStackSize = useAppModalStore((state) => state.stack.length);
+  const openModal = useAppModalStore((state) => state.openModal);
   const onboardingOpen = useOnboardingStore((state) => state.isOpen);
   const hasSeenOnboarding = useOnboardingStore((state) => state.hasSeenOnboarding);
   const isOpen = useProductTourStore((state) => state.isOpen);
@@ -221,9 +222,19 @@ export function ProductTourOverlay() {
 
   const isFirstStep = safeStepIndex === 0;
   const isLastStep = safeStepIndex >= steps.length - 1;
+  const openTrialOffer = (source: 'tour_complete' | 'tour_skip') => {
+    window.setTimeout(() => openModal({ type: 'trial-offer', source }), 120);
+  };
+
+  const skip = () => {
+    close();
+    openTrialOffer('tour_skip');
+  };
+
   const next = () => {
     if (isLastStep) {
       complete();
+      openTrialOffer('tour_complete');
       return;
     }
     setActiveStepIndex(safeStepIndex + 1);
@@ -282,7 +293,7 @@ export function ProductTourOverlay() {
 
         <div className={`product-tour__actions ${!isFirstStep ? 'product-tour__actions--no-skip' : ''}`}>
           {isFirstStep ? (
-            <button type="button" className="product-tour__link" onClick={close}>
+            <button type="button" className="product-tour__link" onClick={skip}>
               {t('onboarding.tour.skip')}
             </button>
           ) : <span aria-hidden="true" />}

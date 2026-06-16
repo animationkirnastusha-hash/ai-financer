@@ -20,8 +20,9 @@ export type AppModalDescriptor =
   | { type: 'goal-edit'; goal?: GoalDto | null; onAfterSave?: () => void }
   | { type: 'obligation-edit'; loan?: LoanDto | null; initialType?: LoanType | null }
   | { type: 'notifications' }
+  | { type: 'trial-offer'; source?: 'tour_complete' | 'tour_skip' | 'store' | 'premium' | 'manual' }
   | { type: 'report-export'; mode?: ReportMode }
-  | { type: 'ai-text-overlay'; initialCommand?: string | null; mode?: 'text' | 'voice'; autoStartVoice?: boolean; autoCloseOnVoiceResult?: boolean; autoSubmitInitialCommand?: boolean }
+  | { type: 'ai-text-overlay'; initialCommand?: string | null; initialAssistantMessage?: string | null; mode?: 'text' | 'voice'; autoStartVoice?: boolean; autoCloseOnVoiceResult?: boolean; autoSubmitInitialCommand?: boolean }
   | { type: 'home-chart-details'; mode: HomeCashflowMode; period: HomeCashflowPeriod }
   | { type: 'home-category-operations'; group: HomeFinanceGroup }
   | { type: 'accounts-tools' }

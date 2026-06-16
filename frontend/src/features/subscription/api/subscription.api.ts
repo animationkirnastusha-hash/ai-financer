@@ -19,6 +19,31 @@ export type SubscriptionUsageCounter = {
   remaining: number;
 };
 
+export type SubscriptionPackageCredit = {
+  granted: number;
+  used: number;
+  remaining: number;
+};
+
+export type SubscriptionActivePack = {
+  id: string;
+  product: 'bundle_try' | 'bundle_week' | string;
+  title: string;
+  expiresAt: string;
+  voiceCommands: number;
+  receiptScans: number;
+  advancedReports: number;
+  reports: number;
+};
+
+export type SubscriptionPackageCreditsDto = {
+  voiceCommands: SubscriptionPackageCredit;
+  receiptScans: SubscriptionPackageCredit;
+  advancedReports: SubscriptionPackageCredit;
+  reports: SubscriptionPackageCredit;
+  activePacks: SubscriptionActivePack[];
+};
+
 export type SubscriptionStatusDto = {
   access: SubscriptionAccess;
   features: Record<string, boolean>;
@@ -32,6 +57,7 @@ export type SubscriptionStatusDto = {
     receiptScansThisMonth: SubscriptionUsageCounter;
     advancedReportsThisMonth: SubscriptionUsageCounter;
   };
+  packageCredits?: SubscriptionPackageCreditsDto;
   referralBalance: number;
 };
 
@@ -41,10 +67,15 @@ export type SubscriptionFeatureAccessDto = {
   access: SubscriptionAccess;
   limits: SubscriptionStatusDto['limits'];
   usage?: SubscriptionStatusDto['usage'];
+  packageCredits?: SubscriptionPackageCreditsDto;
+};
+
+export type StartTrialPayload = {
+  telegramReminderConsent: boolean;
 };
 
 export const subscriptionApi = {
   me: () => apiClient.get<SubscriptionStatusDto>('/subscription/me'),
-  startTrial: () => apiClient.post<SubscriptionStatusDto>('/subscription/trial/start'),
+  startTrial: (payload: StartTrialPayload) => apiClient.post<SubscriptionStatusDto>('/subscription/trial/start', payload),
   feature: (feature: string) => apiClient.get<SubscriptionFeatureAccessDto>(`/subscription/features/${encodeURIComponent(feature)}`),
 };

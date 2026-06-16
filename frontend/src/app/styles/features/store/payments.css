@@ -192,3 +192,26 @@
     grid-template-columns: 1fr;
   }
 }
+
+.store-payment-one-time {
+  display: grid;
+  gap: 6px;
+  border: 1px solid rgba(109, 241, 194, .22);
+  border-radius: 22px;
+  background: linear-gradient(145deg, rgba(109, 241, 194, .14), rgba(255,255,255,.055));
+  padding: 15px;
+}
+
+.store-payment-one-time span,
+.store-payment-one-time small {
+  color: rgba(255,255,255,.58);
+  font-size: 12px;
+  line-height: 1.3;
+}
+
+.store-payment-one-time strong {
+  color: white;
+  font-size: 28px;
+  line-height: 1;
+  letter-spacing: -.045em;
+}

@@ -1,12 +1,12 @@
 import { create } from 'zustand';
-import { subscriptionApi, type SubscriptionStatusDto } from '@/features/subscription/api/subscription.api';
+import { subscriptionApi, type StartTrialPayload, type SubscriptionStatusDto } from '@/features/subscription/api/subscription.api';
 
 type SubscriptionState = {
   status: SubscriptionStatusDto | null;
   isLoading: boolean;
   error: string | null;
   load: () => Promise<SubscriptionStatusDto | null>;
-  startTrial: () => Promise<SubscriptionStatusDto | null>;
+  startTrial: (payload: StartTrialPayload) => Promise<SubscriptionStatusDto | null>;
   setStatus: (status: SubscriptionStatusDto | null) => void;
 };
 
@@ -30,10 +30,10 @@ export const useSubscriptionStore = create<SubscriptionState>((set, get) => ({
     }
   },
 
-  startTrial: async () => {
+  startTrial: async (payload) => {
     set({ isLoading: true, error: null });
     try {
-      const status = await subscriptionApi.startTrial();
+      const status = await subscriptionApi.startTrial(payload);
       set({ status, isLoading: false });
       return status;
     } catch (error) {

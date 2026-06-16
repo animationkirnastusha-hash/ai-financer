@@ -73,6 +73,7 @@
 @import "./pages/dashboard-ia.css";
 @import "./pages/dashboard/dashboard-chart-modal-final.css";
 @import "./pages/dashboard/dashboard-final-i18n.css";
+@import "./pages/dashboard/dashboard-balance-actions.css";
 @import "./layout/offline-status.css";
 @import "./layout/release-compact-scale.css";
 
@@ -82,3 +83,6 @@
 @import "./features/onboarding/product-tour.css";
 
 @import "./features/voice/voice-permission-compact.css";
+@import "./features/voice/voice-floating-placement.css";
+
+@import "./features/subscription/trial-offer.css";

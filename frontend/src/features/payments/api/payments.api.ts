@@ -1,8 +1,8 @@
 import { apiClient } from '@/shared/api/client';
 import type { SubscriptionStatusDto } from '@/features/subscription/api/subscription.api';
 
-export type StorePaymentProduct = 'premium' | 'business';
-export type StorePaymentDuration = 'month' | 'year';
+export type StorePaymentProduct = 'premium' | 'business' | 'bundle_try' | 'bundle_week';
+export type StorePaymentDuration = 'month' | 'year' | 'once';
 export type StorePaymentProvider = 'telegramStars' | 'crypto' | 'manual' | 'mock';
 
 export type StorePaymentOrderDto = {

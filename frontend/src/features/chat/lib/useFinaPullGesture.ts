@@ -2,15 +2,15 @@ import { useCallback, useRef, useState, type TouchEvent } from 'react';
 import type { AppModalDescriptor } from '@/features/modals/model/appModal.store';
 import type { AppScreen } from '@/features/navigation/model/navigation.store';
 
-const DASHBOARD_MIN_START_ZONE_PX = 260;
-const DASHBOARD_MAX_START_ZONE_PX = 560;
-const DASHBOARD_START_ZONE_SCREEN_SHARE = 0.56;
-const SAFE_PAGE_MIN_START_ZONE_PX = 96;
-const SAFE_PAGE_MAX_START_ZONE_PX = 184;
-const SAFE_PAGE_START_ZONE_SCREEN_SHARE = 0.22;
-const ACTIVATE_DRAG_PX = 8;
-const OPEN_DRAG_PX = 52;
-const MAX_VISUAL_DRAG_PX = 96;
+const DASHBOARD_MIN_START_ZONE_PX = 320;
+const DASHBOARD_MAX_START_ZONE_PX = 680;
+const DASHBOARD_START_ZONE_SCREEN_SHARE = 0.72;
+const SAFE_PAGE_MIN_START_ZONE_PX = 124;
+const SAFE_PAGE_MAX_START_ZONE_PX = 240;
+const SAFE_PAGE_START_ZONE_SCREEN_SHARE = 0.30;
+const ACTIVATE_DRAG_PX = 4;
+const OPEN_DRAG_PX = 38;
+const MAX_VISUAL_DRAG_PX = 104;
 const MAX_HORIZONTAL_DRIFT_PX = 86;
 
 const SAFE_PULL_SCREENS = new Set<AppScreen>([

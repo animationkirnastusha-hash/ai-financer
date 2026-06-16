@@ -10,6 +10,7 @@ import {
 import { useAccountsStore } from "@/features/accounts/model/accounts.store";
 import { AuditLogDrawer } from "@/features/audit-log/ui/AuditLogDrawer";
 import { useChatController } from "@/features/chat/model/useChatController";
+import { useChatStore } from "@/features/chat/model/chat.store";
 import { useSettingsStore } from "@/features/settings/model/settings.store";
 import { useReceiptScansStore } from "@/features/receipt-scans/model/receiptScans.store";
 import { useSubscriptionStore } from "@/features/subscription/model/subscription.store";
@@ -32,10 +33,12 @@ import { TextChatOverlayHeader } from "@/features/chat/ui/text-chat-overlay/Text
 import { TextChatMessages } from "@/features/chat/ui/text-chat-overlay/TextChatMessages";
 import { TextChatEmptyState } from "@/features/chat/ui/text-chat-overlay/TextChatEmptyState";
 import { TextChatComposer } from "@/features/chat/ui/text-chat-overlay/TextChatComposer";
+import { VoicePermissionIntro } from "@/features/voice/ui/VoicePermissionIntro";
 
 type TextChatOverlayProps = {
   open: boolean;
   initialCommand?: string | null;
+  initialAssistantMessage?: string | null;
   mode?: "text" | "voice";
   autoStartVoice?: boolean;
   autoCloseOnVoiceResult?: boolean;
@@ -47,6 +50,7 @@ type TextChatOverlayProps = {
 export function TextChatOverlay({
   open,
   initialCommand,
+  initialAssistantMessage,
   mode = "text",
   autoStartVoice = false,
   autoCloseOnVoiceResult = false,
@@ -74,6 +78,9 @@ export function TextChatOverlay({
   const lastAutoClosedMessageKeyRef = useRef("");
   const autoCloseTimerRef = useRef<number | null>(null);
   const voicePermissionRequestRef = useRef(false);
+  const initialAssistantMessageKeyRef = useRef<string | null>(null);
+  const [permissionIntroOpen, setPermissionIntroOpen] = useState(false);
+  const [isPrimingPermission, setIsPrimingPermission] = useState(false);
   const dragStartYRef = useRef<number | null>(null);
   const [dragOffset, setDragOffset] = useState(0);
   const [shouldRender, setShouldRender] = useState(open);
@@ -83,6 +90,7 @@ export function TextChatOverlay({
   const [receiptHint, setReceiptHint] = useState<string | null>(null);
 
   const chat = useChatController();
+  const appendChatMessage = useChatStore((state) => state.appendMessage);
   const accounts = useAccountsStore((state) => state.items);
   const transactions = useTransactionsStore((state) => state.items);
   const subscription = useSubscriptionStore((state) => state.status);
@@ -237,33 +245,33 @@ export function TextChatOverlay({
       voice.state === "uploading"
     )
       return false;
+
+    const sessionKey = "ai-financer-microphone-intro-shown:session";
+    const alreadyShownThisSession = sessionStorage.getItem(sessionKey) === "true";
+
+    if (voice.permissionState !== "granted" && !alreadyShownThisSession) {
+      sessionStorage.setItem(sessionKey, "true");
+      setIsVoicePressed(false);
+      setPermissionIntroOpen(true);
+      setVoiceHint(t("textChat.voice.needPermission"));
+      voice.reset?.();
+      return false;
+    }
+
     setIsVoicePressed(true);
     setVoiceHint(t("textChat.voice.listening"));
 
     const result = await voice.start();
     if (result === "started") return true;
 
+    setIsVoicePressed(false);
+    voice.reset?.();
+
     if (result === "permission-ready") {
-      setIsVoicePressed(false);
-      voice.cancel();
-
-      const sessionKey = "ai-financer-microphone-permission-requested:session";
-      const alreadyRequestedThisSession = sessionStorage.getItem(sessionKey) === "true";
-
-      if (!alreadyRequestedThisSession && !voicePermissionRequestRef.current) {
-        voicePermissionRequestRef.current = true;
+      if (!alreadyShownThisSession) {
         sessionStorage.setItem(sessionKey, "true");
+        setPermissionIntroOpen(true);
         setVoiceHint(t("textChat.voice.needPermission"));
-        try {
-          const allowed = await voice.primePermission();
-          setVoicePermissionPrompted(allowed);
-          setVoiceHint(allowed ? t("textChat.voice.permissionReady") : t("textChat.voice.startFailed"));
-        } catch {
-          setVoicePermissionPrompted(false);
-          setVoiceHint(t("textChat.voice.startFailed"));
-        } finally {
-          voicePermissionRequestRef.current = false;
-        }
       } else {
         setVoiceHint(t("textChat.voice.needPermission"));
       }
@@ -273,9 +281,33 @@ export function TextChatOverlay({
       setVoiceHint(t("textChat.voice.startFailed"));
     }
 
-    setIsVoicePressed(false);
     return false;
-  }, [chat.isSending, setVoicePermissionPrompted, t, voice]);
+  }, [chat.isSending, t, voice]);
+
+  const primeVoicePermission = useCallback(async () => {
+    if (voicePermissionRequestRef.current || isPrimingPermission) return;
+
+    voicePermissionRequestRef.current = true;
+    setIsPrimingPermission(true);
+    setIsVoicePressed(false);
+    setVoiceHint(t("textChat.voice.needPermission"));
+    voice.cancel();
+
+    try {
+      const allowed = await voice.primePermission();
+      setVoicePermissionPrompted(allowed);
+      setVoiceHint(allowed ? t("textChat.voice.permissionReady") : t("textChat.voice.startFailed"));
+      if (allowed) setPermissionIntroOpen(false);
+    } catch {
+      setVoicePermissionPrompted(false);
+      setVoiceHint(t("textChat.voice.startFailed"));
+    } finally {
+      setIsPrimingPermission(false);
+      voicePermissionRequestRef.current = false;
+      setIsVoicePressed(false);
+      voice.reset?.();
+    }
+  }, [isPrimingPermission, setVoicePermissionPrompted, t, voice]);
 
   const handleVoicePointerDown = useCallback(
     (event: PointerEvent<HTMLButtonElement>) => {
@@ -352,6 +384,28 @@ export function TextChatOverlay({
     if (!open || subscription) return;
     void loadSubscription();
   }, [loadSubscription, open, subscription]);
+
+  useEffect(() => {
+    if (!open) return;
+    const text = initialAssistantMessage?.trim();
+    if (!text) return;
+
+    const key = `onboarding:${text}`;
+    if (initialAssistantMessageKeyRef.current === key) return;
+    if (chat.messages.some((message) => message.role === "assistant" && message.text === text)) {
+      initialAssistantMessageKeyRef.current = key;
+      return;
+    }
+
+    initialAssistantMessageKeyRef.current = key;
+    appendChatMessage({
+      id: crypto.randomUUID(),
+      role: "assistant",
+      kind: "text",
+      text,
+      createdAt: new Date().toISOString(),
+    });
+  }, [appendChatMessage, chat.messages, initialAssistantMessage, open]);
 
   useEffect(() => {
     if (
@@ -520,6 +574,27 @@ export function TextChatOverlay({
     [hasReceiptAccess, isReceiptUploading, t, uploadReceipt],
   );
 
+  useEffect(() => {
+    if (!voice.error) return;
+
+    setIsVoicePressed(false);
+
+    if (
+      voice.error === 'microphone-denied' ||
+      voice.error === 'not-allowed' ||
+      voice.error === 'service-not-allowed'
+    ) {
+      setVoicePermissionPrompted(false);
+      setPermissionIntroOpen(true);
+      setVoiceHint(t('textChat.voice.needPermission'));
+      voice.reset?.();
+      return;
+    }
+
+    setVoiceHint(t('textChat.voice.startFailed'));
+    voice.reset?.();
+  }, [setVoicePermissionPrompted, t, voice, voice.error]);
+
   useEffect(
     () => () => {
       if (autoCloseTimerRef.current !== null)
@@ -642,6 +717,20 @@ export function TextChatOverlay({
           onVoicePointerCancel={handleVoicePointerCancel}
         />
       </div>
+
+      {permissionIntroOpen ? (
+        <VoicePermissionIntro
+          wakeName={companionName}
+          isPriming={isPrimingPermission}
+          permissionState={voice.permissionState}
+          onPrime={() => void primeVoicePermission()}
+          onSkip={() => {
+            setPermissionIntroOpen(false);
+            setIsVoicePressed(false);
+            voice.reset?.();
+          }}
+        />
+      ) : null}
 
       <AuditLogDrawer
         open={chat.isAuditOpen}

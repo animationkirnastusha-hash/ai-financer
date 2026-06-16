@@ -5,7 +5,6 @@ import { HomeCashflowChart } from '@/features/dashboard/ui/HomeCashflowChart';
 import { HomeFinanceInsight } from '@/features/dashboard/ui/HomeFinanceInsight';
 import { HomeObligationsWidget } from '@/features/obligations/ui/HomeObligationsWidget';
 import { FinaCommandBar } from '@/features/fina/ui/FinaCommandBar';
-import { ReceiptQuickAction } from '@/features/receipt-scans/ui/ReceiptQuickAction';
 import { ProductLearningCard } from '@/features/onboarding/ui/ProductLearningCard';
 import { useSubscriptionStore } from '@/features/subscription/model/subscription.store';
 import { useI18n } from '@/shared/lib/i18n';
@@ -49,6 +48,7 @@ export default function DashboardPage() {
 
   const [cashflowMode, setCashflowMode] = useState<HomeCashflowMode>('expense');
   const [cashflowPeriod, setCashflowPeriod] = useState<HomeCashflowPeriod>('month');
+  const [receiptSheetOpen, setReceiptSheetOpen] = useState(false);
 
   const mainCurrency = useSettingsStore((state) => state.mainCurrency);
   const secondaryCurrencyEnabled = useSettingsStore((state) => state.secondaryCurrencyEnabled);
@@ -62,11 +62,21 @@ export default function DashboardPage() {
 
   const rates = useMemo(() => ({ usd: rubToUsdRate || 90, eur: rubToEurRate || 100 }), [rubToEurRate, rubToUsdRate]);
   const hasBusiness = Boolean(subscription?.access?.hasBusiness);
+  const hasReceiptAccess = Boolean(subscription?.access?.hasPremium || subscription?.access?.hasBusiness || subscription?.features?.receiptScan);
   const financeIsInitiallyLoading = (accountsLoading || transactionsLoading) && accounts.length === 0 && transactions.length === 0;
   const financeLoadError = accounts.length === 0 && transactions.length === 0 ? accountsError || transactionsError : null;
 
   const retryFinanceLoad = () => {
     void Promise.allSettled([loadAccounts(true), loadTransactions(true), loadSubscription()]);
+  };
+
+  const openReceiptFlow = () => {
+    if (hasReceiptAccess) {
+      navigateTo('receipt-scans');
+      return;
+    }
+
+    setReceiptSheetOpen(true);
   };
 
   const month = useMemo(() => {
@@ -123,6 +133,8 @@ export default function DashboardPage() {
             expenses={month.expenses}
             delta={month.delta}
             onOpenAccounts={() => navigateTo('accounts')}
+            onReceiptClick={openReceiptFlow}
+            receiptAvailable={hasReceiptAccess}
           />
         </div>
 
@@ -133,10 +145,7 @@ export default function DashboardPage() {
             titleKey="dashboard.fina.title"
             captionKey="dashboard.fina.caption"
             placeholderKey="dashboard.fina.placeholder"
-            suggestions={[
-              { key: 'dashboard.fina.expense', command: 'Потратил на кофе' },
-              { key: 'dashboard.fina.payments', command: 'какие ближайшие платежи на неделю' },
-            ]}
+            suggestions={[]}
           />
         </div>
 
@@ -158,10 +167,6 @@ export default function DashboardPage() {
             <small>{t('dashboard.ia.obligations.caption')}</small>
           </button>
         </section>
-
-        <div data-product-tour="home-receipt">
-          <ReceiptQuickAction />
-        </div>
 
         <HomeObligationsWidget />
 
@@ -188,6 +193,33 @@ export default function DashboardPage() {
         </div>
       </div>
 
+      {receiptSheetOpen ? (
+        <div className="app-modal-backdrop dashboard-receipt-lock" data-no-swipe="true" onClick={() => setReceiptSheetOpen(false)}>
+          <div className="app-modal-sheet dashboard-receipt-lock__sheet" data-no-swipe="true" onClick={(event) => event.stopPropagation()}>
+            <div className="app-modal-handle" />
+            <div className="app-modal-body dashboard-receipt-lock__body">
+              <div>
+                <div className="app-eyebrow">{t('dashboard.receipt.lock.eyebrow')}</div>
+                <h2>{t('dashboard.receipt.lock.title')}</h2>
+                <p>{t('dashboard.receipt.lock.caption')}</p>
+              </div>
+            </div>
+            <footer className="app-modal-footer dashboard-receipt-lock__actions">
+              <button type="button" className="app-secondary-button" onClick={() => setReceiptSheetOpen(false)}>{t('common.close')}</button>
+              <button
+                type="button"
+                className="app-primary-button"
+                onClick={() => {
+                  setReceiptSheetOpen(false);
+                  navigateTo('store');
+                }}
+              >
+                {t('dashboard.receipt.lock.store')}
+              </button>
+            </footer>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

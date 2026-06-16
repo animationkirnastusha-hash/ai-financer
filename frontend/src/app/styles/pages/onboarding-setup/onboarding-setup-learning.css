@@ -173,3 +173,37 @@
   font-size: .84rem;
   line-height: 1.45;
 }
+
+.onboarding-quick-rules {
+  display: grid;
+  gap: 8px;
+}
+
+.onboarding-quick-rules div {
+  display: grid;
+  gap: 4px;
+  padding: 11px 12px;
+  border: 1px solid rgba(255,255,255,.075);
+  border-radius: 18px;
+  background: rgba(0,0,0,.14);
+}
+
+.onboarding-quick-rules strong {
+  color: rgba(255,255,255,.9);
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.onboarding-quick-rules span {
+  color: rgba(255,255,255,.54);
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.onboarding-setup-footer--single {
+  justify-content: stretch;
+}
+
+.onboarding-setup-footer--single .app-primary-button {
+  width: 100%;
+}

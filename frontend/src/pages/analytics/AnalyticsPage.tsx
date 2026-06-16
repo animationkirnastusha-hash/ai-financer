@@ -101,7 +101,7 @@ export default function AnalyticsPage() {
   return (
     <div className="app-page app-analytics-page text-white">
       <div className="app-page__inner space-y-4">
-        <ScreenTopBar title={t('common.analytics')} right={['notifications', 'history', 'settings']} />
+        <ScreenTopBar title={t('common.analytics')} right={['notifications', 'analytics', 'settings']} />
 
         <header className="app-card app-card--hero analytics-hero-card analytics-hero-card--final">
           <div className="analytics-hero-card__grid">
