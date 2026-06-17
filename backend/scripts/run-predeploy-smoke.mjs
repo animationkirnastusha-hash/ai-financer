@@ -6,7 +6,7 @@ const checks = [
   ['accounts/balances', 'scripts/smoke/check-accounts-balances.mjs'],
   ['transactions', 'scripts/smoke/check-transactions.mjs'],
   ['taxonomy crud', 'scripts/smoke/check-taxonomy.mjs'],
-  ['taxonomy autocategory', 'scripts/smoke/check-taxonomy-autocategory.mjs'],
+  ['taxonomy contract', 'scripts/smoke/check-taxonomy-autocategory.mjs'],
   ['goals/limits', 'scripts/smoke/check-goals-limits.mjs'],
   ['obligations/reports', 'scripts/smoke/check-obligations-reports.mjs'],
   ['analytics', 'scripts/smoke/check-analytics.mjs'],

@@ -9,7 +9,7 @@ import {
   AIValidatedPlan,
 } from './types';
 import { getToolDefinition } from './tools/tool-registry';
-import { convertMoney, detectCurrencyInText, normalizeCurrency, normalizeMoneyAmount } from './utils/amount-normalizer';
+import { convertMoney, normalizeCurrency, normalizeMoneyAmount } from './utils/amount-normalizer';
 import { AIEntityResolverService } from './semantic/semantic-entity-resolver.service';
 import { normalizeSemanticText } from './semantic/semantic-normalizer';
 import { semanticSimilarityScore, semanticThreshold } from './semantic/semantic-scorer';
@@ -149,7 +149,7 @@ export class AIValidatorService {
         const fallbackName = `Счёт ${plannedAccounts.size + accounts.length + 1}`;
         const name = rawName && !isGenericAccountName ? rawName : fallbackName;
         const type = this.coerceAccountType(input.type, 'cash');
-        const currency: AICurrency = this.coerceCurrency(input.currency, '', 'RUB') ?? 'RUB';
+        const currency: AICurrency = this.coerceCurrency(input.currency, 'RUB') ?? 'RUB';
         const initialBalance = normalizeMoneyAmount(input.initialBalance) ?? 0;
         const existingAccount = this.resolveAccount(accounts, name);
 
@@ -184,7 +184,7 @@ export class AIValidatorService {
 
         if (action.tool === 'update_account') {
           const type = this.coerceAccountType(input.type, null);
-          const currency = this.coerceCurrency(input.currency, '', null);
+          const currency = this.coerceCurrency(input.currency, null);
           const balance = normalizeMoneyAmount(input.balance);
 
           if (input.name !== null && input.name !== undefined) input.name = this.cleanEntityName(input.name);
@@ -255,7 +255,7 @@ export class AIValidatorService {
         const account = this.resolveAccount(accounts, accountRef) ?? defaultAccount;
         const plannedAccount = plannedAccounts.get(this.key(accountRef));
         const targetCurrency: AICurrency = account ? this.ensureCurrency(account.currency, 'RUB') : plannedAccount?.currency ?? 'RUB';
-        const moneyCurrency = this.coerceCurrency(input.currency, '', targetCurrency) ?? targetCurrency;
+        const moneyCurrency = this.coerceCurrency(input.currency, targetCurrency) ?? targetCurrency;
 
         if (!kind) issues.push({ code: 'missing_transaction_kind', message: 'AI не указал тип операции: income или expense.', actionIndex: index, field: 'kind' });
         if (!amount) issues.push({ code: 'missing_amount', message: 'Не хватает суммы операции.', actionIndex: index, field: 'amount' });
@@ -416,7 +416,7 @@ export class AIValidatorService {
         if (input.description !== null && input.description !== undefined) input.description = this.cleanEntityName(input.description);
         else delete input.description;
 
-        const currency = this.coerceCurrency(input.currency, '', null);
+        const currency = this.coerceCurrency(input.currency, null);
         if (currency) input.currency = currency;
         else delete input.currency;
 
@@ -431,7 +431,7 @@ export class AIValidatorService {
         const from = this.resolveAccount(accounts, fromName);
         const to = this.resolveAccount(accounts, toName);
         const fromCurrency: AICurrency = from ? this.ensureCurrency(from.currency, 'RUB') : 'RUB';
-        const moneyCurrency = this.coerceCurrency(input.currency, '', fromCurrency) ?? fromCurrency;
+        const moneyCurrency = this.coerceCurrency(input.currency, fromCurrency) ?? fromCurrency;
 
         if (!amount) issues.push({ code: 'missing_amount', message: 'Не хватает суммы перевода.', actionIndex: index, field: 'amount' });
         if (!from) issues.push({ code: 'from_account_not_found', message: fromName ? `Не нашёл счёт списания: ${fromName}` : 'Не хватает счёта списания.', actionIndex: index, field: 'fromAccount' });
@@ -575,7 +575,7 @@ export class AIValidatorService {
         const principalAmount = normalizeMoneyAmount(input.principalAmount || input.amount) ?? 0;
         const currentDebt = normalizeMoneyAmount(input.currentDebt) ?? principalAmount;
         const monthlyPayment = normalizeMoneyAmount(input.monthlyPayment || input.payment) ?? 0;
-        const currency = this.coerceCurrency(input.currency, '', 'RUB') ?? 'RUB';
+        const currency = this.coerceCurrency(input.currency, 'RUB') ?? 'RUB';
         const accountName = this.cleanString(input.account);
         const account = accountName ? this.resolveAccount(accounts, accountName) : null;
         const paymentDay = this.optionalDay(input.paymentDay);
@@ -624,7 +624,7 @@ export class AIValidatorService {
           const accountName = this.cleanString(input.account);
           const account = accountName ? this.resolveAccount(accounts, accountName) : null;
           const status = this.cleanString(input.status).toLowerCase();
-          const currency = this.coerceCurrency(input.currency, '', null);
+          const currency = this.coerceCurrency(input.currency, null);
           const nextPaymentDate = this.optionalDate(input.nextPaymentDate);
 
           if (title) input.title = title; else delete input.title;
@@ -786,7 +786,7 @@ export class AIValidatorService {
         const title = this.cleanEntityName(input.title || input.name || input.goal);
         const targetAmount = normalizeMoneyAmount(input.targetAmount || input.amount);
         const currentAmount = normalizeMoneyAmount(input.currentAmount) ?? 0;
-        const currency = this.coerceCurrency(input.currency, '', 'RUB') ?? 'RUB';
+        const currency = this.coerceCurrency(input.currency, 'RUB') ?? 'RUB';
         const accountName = this.cleanString(input.account);
         const account = accountName ? this.resolveAccount(accounts, accountName) : null;
         const autoSavePercent = this.optionalPercent(input.autoSavePercent, 0);
@@ -1044,14 +1044,11 @@ export class AIValidatorService {
     return ACCOUNT_TYPES.includes(raw as AIAccountType) ? raw as AIAccountType : fallback;
   }
 
-  private coerceCurrency(value: unknown, contextText: string, fallback: AICurrency | null): AICurrency | null {
+  private coerceCurrency(value: unknown, fallback: AICurrency | null): AICurrency | null {
     if (typeof value === 'string') {
       const upper = value.trim().toUpperCase();
       if (CURRENCIES.includes(upper as AICurrency)) return upper as AICurrency;
     }
-
-    const fromText = detectCurrencyInText(contextText);
-    if (fromText) return fromText;
 
     return fallback ? normalizeCurrency(value, fallback) : null;
   }

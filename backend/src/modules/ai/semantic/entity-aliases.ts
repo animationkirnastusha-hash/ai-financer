@@ -9,8 +9,8 @@ const ACCOUNT_TYPE_ALIASES: Record<string, string[]> = {
 };
 
 // Category and section aliases are intentionally built from actual entity names only.
-// Financial meaning must come from the AI planner/taxonomy contract, not from keyword
-// routing such as “word X means category Y”.
+// Financial meaning must come from the AI planner/taxonomy contract.
+// This resolver only matches already-known entity names and technical account wording.
 
 export function buildEntityAliases(entity: SemanticEntityLike, kind: SemanticEntityKind = 'generic') {
   const label = normalizeSemanticText(entity.name || entity.title || '');
@@ -28,16 +28,6 @@ export function buildEntityAliases(entity: SemanticEntityLike, kind: SemanticEnt
     addNameBasedAccountAliases(label, aliases);
   }
 
-  if (kind === 'category' || kind === 'section') {
-    addCategoryMeaningAliases(label, aliases);
-  }
-
-  if (kind === 'goal') {
-    aliases.add('копилка');
-    aliases.add('цель');
-    aliases.add('накопления');
-    addNameBasedGoalAliases(label, aliases);
-  }
 
   return Array.from(aliases).filter(Boolean);
 }
@@ -53,21 +43,5 @@ function addNameBasedAccountAliases(label: string, aliases: Set<string>) {
 
   if (label.includes('цель') || label.includes('копил') || label.includes('накоп')) {
     ['цель', 'копилка', 'копилку', 'накопления', 'сбережения'].forEach((alias) => aliases.add(normalizeSemanticText(alias)));
-  }
-}
-
-function addCategoryMeaningAliases(label: string, aliases: Set<string>) {
-  // Keep only morphology/stem/name-based aliases. Do not add semantic category
-  // decisions here; the planner owns financial meaning, while this resolver only
-  // matches user wording to already existing entities.
-  if (!label) return;
-}
-
-function addNameBasedGoalAliases(label: string, aliases: Set<string>) {
-  if (label.includes('подуш')) {
-    ['подушка', 'финансовая подушка', 'резерв', 'заначка'].forEach((alias) => aliases.add(normalizeSemanticText(alias)));
-  }
-  if (label.includes('отпуск') || label.includes('путешеств')) {
-    ['отпуск', 'поездка', 'путешествие'].forEach((alias) => aliases.add(normalizeSemanticText(alias)));
   }
 }

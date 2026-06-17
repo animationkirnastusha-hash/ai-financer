@@ -1,41 +1,30 @@
 import { runSmoke } from './lib/test-context.mjs';
 import { requestJson } from './lib/http-client.mjs';
 
-const OTHER_NAMES = new Set(['другое', 'прочее', 'other', 'misc']);
-
-function normalizeName(value) {
-  return String(value ?? '').trim().toLowerCase();
+function assertEntity(entity, label) {
+  if (!entity?.id) throw new Error(`${label}: id is missing`);
+  if (!entity?.name) throw new Error(`${label}: name is missing`);
 }
 
-function assertSemanticSection(section, label) {
-  if (!section?.id) throw new Error(`${label}: section is missing`);
-  const name = normalizeName(section.name);
-  if (!name) throw new Error(`${label}: section name is empty`);
-  if (OTHER_NAMES.has(name)) {
-    throw new Error(`${label}: section must not fall back to ${section.name}`);
-  }
+function assertAppearance(entity, label) {
+  assertEntity(entity, label);
+  if (!entity.icon) throw new Error(`${label}: icon is missing`);
+  if (!entity.color) throw new Error(`${label}: color is missing`);
 }
 
-function assertCategory(category, label) {
-  if (!category?.id) throw new Error(`${label}: category is missing`);
-  if (!category.name) throw new Error(`${label}: category name is missing`);
-  if (!category.icon) throw new Error(`${label}: category icon was not assigned`);
-  if (!category.color) throw new Error(`${label}: category color was not assigned`);
-}
-
-await runSmoke('taxonomy-autocategory', async (context) => {
+await runSmoke('taxonomy-contract', async (context) => {
   const accountResponse = await requestJson(context, '/accounts', {
     method: 'POST',
     expected: [201],
     body: {
-      name: `Taxonomy smoke account ${context.suffix}`,
+      name: `Taxonomy contract account ${context.suffix}`,
       type: 'cash',
       currency: 'RUB',
       balance: 12000,
     },
   });
   const accountId = accountResponse.payload?.account?.id;
-  if (!accountId) throw new Error('Account for taxonomy autocategory was not created');
+  if (!accountId) throw new Error('Account for taxonomy contract smoke was not created');
 
   const txResponse = await requestJson(context, '/transactions', {
     method: 'POST',
@@ -45,27 +34,26 @@ await runSmoke('taxonomy-autocategory', async (context) => {
       amount: 777,
       type: 'expense',
       title: `Канцтовары бумага ручки ${context.suffix}`,
-      description: 'taxonomy autocategory smoke',
+      description: 'taxonomy contract smoke',
     },
   });
 
   const transaction = txResponse.payload?.transaction;
-  if (!transaction?.id) throw new Error('Autocategory transaction was not created');
-  assertCategory(transaction.category, 'transaction');
-  assertSemanticSection(transaction.section ?? transaction.category?.section, 'transaction');
+  if (!transaction?.id) throw new Error('Transaction was not created');
+  assertAppearance(transaction.category, 'transaction fallback category');
+  assertAppearance(transaction.section ?? transaction.category?.section, 'transaction fallback section');
 
-  const sectionsResponse = await requestJson(context, '/sections');
-  const sections = sectionsResponse.payload?.sections ?? [];
-  if (!Array.isArray(sections) || !sections.some((section) => section.id === (transaction.sectionId ?? transaction.section?.id ?? transaction.category?.sectionId))) {
-    throw new Error('Autocreated transaction section is not visible on /sections');
+  if (transaction.category.name !== 'Расход') {
+    throw new Error(`Manual transaction must not be semantically categorized by title: ${transaction.category.name}`);
   }
 
-  const categoriesResponse = await requestJson(context, '/categories');
-  const categories = categoriesResponse.payload?.categories ?? [];
-  const listedCategory = Array.isArray(categories) ? categories.find((category) => category.id === transaction.category.id) : null;
-  if (!listedCategory) throw new Error('Autocreated transaction category is not visible on /categories');
-  assertCategory(listedCategory, 'listed category');
-  assertSemanticSection(listedCategory.section ?? transaction.section, 'listed category');
+  const manualSectionResponse = await requestJson(context, '/sections', {
+    method: 'POST',
+    expected: [201],
+    body: { name: `Семья ${context.suffix}` },
+  });
+  const manualSection = manualSectionResponse.payload?.section;
+  assertAppearance(manualSection, 'manual section');
 
   const manualCategoryResponse = await requestJson(context, '/categories', {
     method: 'POST',
@@ -73,17 +61,20 @@ await runSmoke('taxonomy-autocategory', async (context) => {
     body: {
       name: `Детский сад ${context.suffix}`,
       type: 'expense',
+      sectionId: manualSection.id,
     },
   });
   const manualCategory = manualCategoryResponse.payload?.category;
-  assertCategory(manualCategory, 'manual category');
-  assertSemanticSection(manualCategory.section, 'manual category');
+  assertAppearance(manualCategory, 'manual category');
+  if (manualCategory.sectionId !== manualSection.id) {
+    throw new Error('Manual category lost explicit section link');
+  }
 
-  context.log('taxonomy autocategory flow passed', {
+  context.log('taxonomy contract flow passed', {
     transactionId: transaction.id,
-    category: transaction.category.name,
-    section: (transaction.section ?? transaction.category.section)?.name,
+    fallbackCategory: transaction.category.name,
+    fallbackSection: (transaction.section ?? transaction.category.section)?.name,
     manualCategory: manualCategory.name,
-    manualSection: manualCategory.section?.name,
+    manualSection: manualSection.name,
   });
 });

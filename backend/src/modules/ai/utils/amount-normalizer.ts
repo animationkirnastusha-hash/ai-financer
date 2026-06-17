@@ -23,22 +23,6 @@ export function normalizeCurrency(value: unknown, fallback: AICurrency = 'RUB'):
   return fallback;
 }
 
-export function detectCurrencyInText(text: unknown, fallback?: AICurrency): AICurrency | undefined {
-  if (typeof text !== 'string' || !text.trim()) return fallback;
-  const tokens = text
-    .toLowerCase()
-    .replace(/[.,;:!?()\[\]{}]/g, ' ')
-    .split(/\s+/)
-    .filter(Boolean);
-
-  for (const token of tokens) {
-    const normalized = normalizeCurrency(token, '__fallback__' as AICurrency);
-    if (normalized !== ('__fallback__' as AICurrency)) return normalized;
-  }
-
-  return fallback;
-}
-
 /**
  * Accepts structured numeric contract values produced by the AI tool contract.
  * This function intentionally does not read the user's natural-language command text.

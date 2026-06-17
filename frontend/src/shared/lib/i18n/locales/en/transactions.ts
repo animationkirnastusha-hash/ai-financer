@@ -30,7 +30,7 @@ export const transactionsDictionary = {
   'transactions.page.add': 'Add',
   'transactions.command.title': 'Command line',
   'transactions.command.placeholder': 'Ask Fina about operations',
-  'transactions.command.caption': 'Fina can find spending, prepare an operation or suggest a rule.',
+  'transactions.command.caption': 'Fina can find spending, prepare an operation or help organize records.',
   'transactions.command.today': 'Today',
   'transactions.command.cafe': 'Cafes',
   'transactions.command.find': 'Find',

@@ -48,9 +48,6 @@ export class AIDialogRouterService {
     context: unknown,
     tier: AIUserTier,
   ): Promise<AIDialogRoute> {
-    const heuristic = this.routeByHeuristic(command, tier);
-    if (heuristic) return heuristic;
-
     try {
       const raw = await this.provider.generateJson<RouteResponse>({
         system: this.systemPrompt(),
@@ -73,39 +70,11 @@ export class AIDialogRouterService {
     }
   }
 
-  private routeByHeuristic(
-    command: string,
-    tier: AIUserTier,
-  ): AIDialogRoute | null {
-    const text = command.toLowerCase().replace(/ё/g, "е").trim();
-    const isIdentityQuestion =
-      /\b(кто ты|что ты умеешь|как с тобой работать|как работать с тобой|что можешь|расскажи о себе|познакомь|новый пользователь|первый запуск|чем отличается|что дает premium|что дает премиум|что дает business|что дает бизнес|фри|free|premium|премиум|business|бизнес|who are you|what are you|what can you do|how do i use you|how to use you|how can i use you|what is fina|tell me about yourself|new user|first launch|get started)\b/.test(
-        text,
-      );
-
-    if (!isIdentityQuestion) return null;
-
-    const tierText = String(tier || "FREE").toUpperCase();
-    return {
-      intent: "identity_help",
-      shouldUseTools: false,
-      answerStyle:
-        tierText === "BUSINESS"
-          ? "business_accountant"
-          : tierText === "PREMIUM"
-            ? "premium_companion"
-            : "free_companion",
-      confidence: 0.92,
-      summary:
-        "User asks about Fina, onboarding or product capabilities. Answer in the same language as the user message. Explain text and voice naturally, then suggest creating the first account if user is new.",
-    };
-  }
-
   private systemPrompt() {
     return [
       "Return ONLY strict JSON. No markdown. No prose.",
       "Classify the user message before financial planning.",
-      "Do not extract amounts, accounts, categories or other financial fields. This is not a command parser.",
+      "Do not extract amounts, accounts, categories or other financial fields in this routing step.",
       "Choose whether the message should go to tools or to a natural answer.",
       "Use tools only when the user wants to change app data, open/show app data, or ask a data-backed finance question.",
       "Use a natural answer when the user wants advice, emotional support, salary/budget discussion, or casual conversation.",
@@ -121,7 +90,7 @@ export class AIDialogRouterService {
       String(tier || "FREE").toUpperCase(),
       "CONTEXT_HINTS:",
       JSON.stringify(this.compactContext(context)),
-      "ROUTING_RULES:",
+      "ROUTING_GUIDE:",
       "- financial_action: user wants to create/update/delete/record/pay/transfer/set something in the app. shouldUseTools=true.",
       "- financial_question: user asks about their spending, income, balance, accounts, goals, obligations or reports. shouldUseTools=true.",
       "- app_navigation: user asks to open/show an app screen or list. shouldUseTools=true.",
