@@ -38,14 +38,14 @@ export const AI_TOOL_REGISTRY: AIToolDefinition[] = [
   },
   {
     name: 'create_transaction',
-    description: 'Record expense/income/top-up/deposit/salary. Backend validates amount, balance and auto-execute policy.',
+    description: 'Record one finished expense or income. Use semantic fields: category/section = money purpose, merchant/place = where it happened, items/tags/description = context. Do not use this for transfers, goals, obligations, or recurring payments.',
     risk: 'low',
     requiresConfirmation: false,
-    input: { kind: 'income|expense', amount: 'number|string', currency: 'RUB|USD|EUR|VND|null', account: 'string|null', title: 'string|null', category: 'string|null', section: 'string|null', description: 'string|null', merchant: 'string|null', place: 'string|null', items: 'string[]|null', tags: 'string[]|null' },
+    input: { kind: 'income|expense', amount: 'number|string', currency: 'RUB|USD|EUR|VND|null', account: 'string|null', title: 'short clean label|null', category: 'financial meaning|null', section: 'financial group|null', description: 'notes/context|null', merchant: 'store/person/business|null', place: 'location/channel|null', items: 'purchased item meanings[]|null', tags: 'search context[]|null' },
   },
   {
     name: 'update_transaction',
-    description: 'Edit an existing income/expense/transfer operation. Use for corrections to amount, description, account, category, section, type or date. Never use create_transaction when the user asks to change, fix, correct, rename or edit an existing operation.',
+    description: 'Edit an existing income/expense/transfer operation. Use for corrections to amount, title, description, account, category, section, type or date. Never use create_transaction when the user asks to change, fix, correct, rename or edit an existing operation.',
     risk: 'medium',
     requiresConfirmation: true,
     input: { transaction: 'string|null', target: 'last|last_income|last_expense|last_transfer|null', kind: 'income|expense|transfer|null', amount: 'number|string|null', currency: 'RUB|USD|EUR|VND|null', account: 'string|null', toAccount: 'string|null', category: 'string|null', section: 'string|null', description: 'string|null', date: 'string|null' },

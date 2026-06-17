@@ -7,7 +7,7 @@ const CAPABILITIES = [
   { key: 'companion_basic', tier: 'FREE', description: 'Basic companion reactions.' },
   { key: 'advanced_memory', tier: 'PREMIUM', description: 'Deeper long-term memory and preferences.' },
   { key: 'proactive_insights', tier: 'PREMIUM', description: 'Proactive financial insights.' },
-  { key: 'advanced_automation', tier: 'PREMIUM', description: 'More automation rules and routines.' },
+  { key: 'advanced_automation', tier: 'PREMIUM', description: 'More automation flows and routines.' },
   { key: 'premium_companion', tier: 'PREMIUM', description: 'Custom companion behavior and tone depth.' },
   { key: 'deep_analytics', tier: 'PREMIUM', description: 'Forecasting and richer long-term analytics.' },
 ] as const;

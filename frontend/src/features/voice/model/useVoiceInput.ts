@@ -26,7 +26,7 @@ async function queryMicrophonePermissionState(): Promise<PermissionState | null>
   }
 }
 
-export function useVoiceInput({ onText, lang = 'ru-RU', sessionMs = 5200, permissionWasPrompted = false }: UseVoiceInputParams) {
+export function useVoiceInput({ onText, lang = 'ru-RU', sessionMs = 5200 }: UseVoiceInputParams) {
   const [permissionPrimed, setPermissionPrimed] = useState(false);
   const [permissionState, setPermissionState] = useState<MicrophonePermissionState>('unknown');
   const [permissionError, setPermissionError] = useState<string | null>(null);
@@ -133,7 +133,14 @@ export function useVoiceInput({ onText, lang = 'ru-RU', sessionMs = 5200, permis
     try {
       const currentPermission = await refreshPermissionState();
 
-      if (!permissionPrimed && currentPermission !== 'granted' && !permissionWasPrompted) {
+      if (currentPermission === 'denied') {
+        logVoiceDebugEvent('manual_voice_start_blocked_permission_denied', { permissionState: currentPermission });
+        setPermissionPrimed(false);
+        setPermissionError('microphone-denied');
+        return 'permission-ready';
+      }
+
+      if (currentPermission !== 'granted' && !permissionPrimed) {
         logVoiceDebugEvent('manual_voice_start_blocked_permission', { permissionState: currentPermission });
         return 'permission-ready';
       }
@@ -144,7 +151,7 @@ export function useVoiceInput({ onText, lang = 'ru-RU', sessionMs = 5200, permis
       console.error(error);
       return 'error';
     }
-  }, [permissionPrimed, permissionWasPrompted, recorder, refreshPermissionState]);
+  }, [permissionPrimed, recorder, refreshPermissionState]);
 
   const stop = useCallback(() => {
     recorder.stopRecording();

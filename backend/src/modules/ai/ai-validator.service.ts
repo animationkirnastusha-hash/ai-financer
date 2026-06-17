@@ -1166,27 +1166,13 @@ export class AIValidatorService {
 
   private looksLikeTransactionCommandEcho(value: string) {
     if (!value) return false;
-    const commandWords = [
-      'потратил',
-      'потратила',
-      'потратить',
-      'израсходовал',
-      'запиши',
-      'записать',
-      'добавь',
-      'добавить',
-      'создай',
-      'создать',
-      'расход',
-      'доход',
-      'трата',
-      'руб',
-      'рублей',
-    ];
 
-    const words = value.split(' ').filter(Boolean);
+    const words = value.split(/\s+/).filter(Boolean);
     if (words.length >= 6) return true;
-    return commandWords.some((word) => value.includes(word));
+    if (words.length >= 4 && /[:;·]/.test(value)) return true;
+    if (/\d/.test(value) && words.length >= 3) return true;
+
+    return false;
   }
 
 

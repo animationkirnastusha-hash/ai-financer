@@ -249,9 +249,8 @@ export function TextChatOverlay({
       return false;
 
     const sessionKey = "ai-financer-microphone-intro-shown:session";
-    const alreadyShownThisSession = sessionStorage.getItem(sessionKey) === "true";
 
-    if (voice.permissionState !== "granted" && !alreadyShownThisSession) {
+    if (voice.permissionState !== "granted" && !voice.permissionPrimed) {
       sessionStorage.setItem(sessionKey, "true");
       setIsVoicePressed(false);
       setPermissionIntroOpen(true);
@@ -260,23 +259,27 @@ export function TextChatOverlay({
       return false;
     }
 
-    setIsVoicePressed(true);
     setVoiceHint(t("textChat.voice.listening"));
 
     const result = await voice.start();
-    if (result === "started") return true;
+    if (result === "started") {
+      setIsVoicePressed(true);
+      if (voicePointerIdRef.current === null) {
+        window.setTimeout(() => {
+          setIsVoicePressed(false);
+          voice.stop();
+        }, 80);
+      }
+      return true;
+    }
 
     setIsVoicePressed(false);
     voice.reset?.();
 
     if (result === "permission-ready") {
-      if (!alreadyShownThisSession) {
-        sessionStorage.setItem(sessionKey, "true");
-        setPermissionIntroOpen(true);
-        setVoiceHint(t("textChat.voice.needPermission"));
-      } else {
-        setVoiceHint(t("textChat.voice.needPermission"));
-      }
+      sessionStorage.setItem(sessionKey, "true");
+      setPermissionIntroOpen(true);
+      setVoiceHint(t("textChat.voice.needPermission"));
     } else if (result === "busy") {
       setVoiceHint(t("textChat.voice.busy"));
     } else {

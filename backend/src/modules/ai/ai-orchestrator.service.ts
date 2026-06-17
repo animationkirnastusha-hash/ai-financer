@@ -47,6 +47,7 @@ export class AIOrchestratorService {
     if (!trimmed) throw new BadRequestError("command is required");
 
     const plannerCommand = this.commandBuilder.build(trimmed, options);
+    const dryRun = options.execute === false;
 
     try {
       const clarificationResult = await this.tryAnswerPendingClarification(
@@ -111,6 +112,39 @@ export class AIOrchestratorService {
         const clarification = this.clarification.build(validated);
         if (clarification) {
           const parsedWithClarification = { ...parsed, clarification };
+
+          if (dryRun) {
+            const audit = await this.audit.create({
+              userId,
+              command: plannerCommand,
+              intent: parsed.intent,
+              riskLevel: validated.riskLevel,
+              requiresConfirmation: false,
+              executed: false,
+              status: "dry_run_clarification",
+              parsed: parsedWithClarification,
+              errorMessage: clarification.question,
+            });
+
+            return {
+              success: true,
+              intent: "clarification",
+              executed: false,
+              requiresConfirmation: false,
+              riskLevel: validated.riskLevel,
+              message: clarification.question,
+              parsed: parsedWithClarification as unknown as Record<
+                string,
+                unknown
+              >,
+              meta: {
+                auditLogId: audit.id,
+                clarification,
+                dryRun: true,
+              },
+            };
+          }
+
           const pending = await this.pending.create({
             userId,
             command: plannerCommand,
@@ -181,6 +215,30 @@ export class AIOrchestratorService {
           message,
           parsed: parsed as unknown as Record<string, unknown>,
           meta: { auditLogId: audit.id },
+        };
+      }
+
+      if (dryRun) {
+        const audit = await this.audit.create({
+          userId,
+          command: plannerCommand,
+          intent: parsed.intent,
+          riskLevel: validated.riskLevel,
+          requiresConfirmation: validated.requiresConfirmation,
+          executed: false,
+          status: "dry_run",
+          parsed,
+        });
+
+        return {
+          success: true,
+          intent: parsed.intent,
+          executed: false,
+          requiresConfirmation: validated.requiresConfirmation,
+          riskLevel: validated.riskLevel,
+          message: this.preview.buildMessage(parsed),
+          parsed: parsed as unknown as Record<string, unknown>,
+          meta: { auditLogId: audit.id, dryRun: true },
         };
       }
 

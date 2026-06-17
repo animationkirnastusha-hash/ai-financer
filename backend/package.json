@@ -27,7 +27,9 @@
     "smoke:full": "npm run smoke:predeploy && npm run smoke:monetization",
     "smoke:tester-critical": "node scripts/smoke/check-tester-critical-paths.mjs",
     "test:product-scenarios": "node scripts/run-product-scenarios.mjs",
-    "test:mass": "node scripts/run-mass-tester-check.mjs"
+    "test:mass": "node scripts/run-mass-tester-check.mjs",
+    "test:ai-commands": "node scripts/smoke/check-ai-finance-commands.mjs",
+    "smoke:ai-commands": "node scripts/smoke/check-ai-finance-commands.mjs"
   },
   "keywords": [],
   "author": "",

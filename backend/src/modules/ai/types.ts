@@ -138,6 +138,7 @@ export interface AIResult {
       actionType?: string;
       targetId?: string;
     };
+    dryRun?: boolean;
   };
 }
 

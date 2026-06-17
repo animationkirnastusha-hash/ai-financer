@@ -105,21 +105,15 @@ export class AIExecutorService {
   }
 
   private looksLikeTransactionCommandEcho(value: string) {
-    const text = value.toLowerCase();
-    if (text.split(/\s+/).filter(Boolean).length >= 6) return true;
-    return [
-      'потратил',
-      'потратила',
-      'потратить',
-      'добавь',
-      'добавить',
-      'запиши',
-      'записать',
-      'создай',
-      'создать',
-      'руб',
-      'рублей',
-    ].some((word) => text.includes(word));
+    const text = value.trim();
+    if (!text) return false;
+
+    const words = text.split(/\s+/).filter(Boolean);
+    if (words.length >= 6) return true;
+    if (words.length >= 4 && /[:;·]/.test(text)) return true;
+    if (/\d/.test(text) && words.length >= 3) return true;
+
+    return false;
   }
 
   private applyStructuredBatchGuards(actions: AIValidatedAction[]) {

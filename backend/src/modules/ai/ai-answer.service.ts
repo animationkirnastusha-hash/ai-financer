@@ -65,7 +65,7 @@ export class AIAnswerService {
     options: AIAnswerOptions = {},
   ): Promise<string> {
     const style = options.style ?? this.defaultStyle(options.tier, context);
-    const answerLanguage = this.detectAnswerLanguage(command);
+    const answerLanguage = this.resolveAnswerLanguageFromScript(command);
     const system = this.buildSystemPrompt(
       style,
       modelRole,
@@ -158,7 +158,7 @@ export class AIAnswerService {
     return "Speak in the same language as the current user message. If the message is mixed, prefer the language used for the main question.";
   }
 
-  private detectAnswerLanguage(command: string): "en" | "ru" | null {
+  private resolveAnswerLanguageFromScript(command: string): "en" | "ru" | null {
     const text = command.trim();
     if (!text) return null;
 
@@ -167,20 +167,6 @@ export class AIAnswerService {
 
     if (latinCount >= 2 && latinCount >= cyrillicCount * 2) return "en";
     if (cyrillicCount >= 2 && cyrillicCount >= latinCount) return "ru";
-
-    const lowered = text.toLowerCase();
-    if (
-      /\b(who are you|what can you do|help me|how do i|how can i|what is fina|tell me about|start|hello|hi)\b/.test(
-        lowered,
-      )
-    )
-      return "en";
-    if (
-      /\b(кто ты|что ты умеешь|помоги|как мне|как с тобой|привет|расскажи)\b/.test(
-        lowered,
-      )
-    )
-      return "ru";
 
     return null;
   }
