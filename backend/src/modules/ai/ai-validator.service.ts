@@ -284,14 +284,26 @@ export class AIValidatorService {
           }
         }
 
-        const rawCategory = this.cleanGenericTaxonomyName(input.category, kind, 'category');
-        const rawSection = this.cleanGenericTaxonomyName(input.section, kind, 'section');
         const rawDescription = this.cleanEntityName(input.description);
         const merchant = this.cleanEntityName(input.merchant || input.place || input.store || input.shop);
         const items = this.cleanStringList(input.items);
-        const tags = this.cleanStringList(input.tags);
-        const rawTitle = this.cleanTransactionTitle(input.title, kind, rawCategory, rawDescription);
-        const description = this.cleanTransactionDescription(rawDescription, rawTitle, rawCategory, kind);
+        const taxonomy = this.normalizeTransactionTaxonomy({
+          kind,
+          category: input.category,
+          section: input.section,
+          merchant,
+          items,
+        });
+        const rawTitle = this.cleanTransactionTitle({
+          value: input.title,
+          kind,
+          category: taxonomy.category,
+          description: rawDescription,
+          merchant,
+          items,
+        });
+        const description = this.cleanTransactionDescription(rawDescription, rawTitle, taxonomy.category, kind);
+        const tags = this.normalizeTransactionTags(input.tags, merchant, items);
         const structuredDescription = buildStructuredTransactionDescription({
           description,
           merchant,
@@ -304,8 +316,8 @@ export class AIValidatorService {
         input.account = accountRef || input.account || null;
         input.currency = moneyCurrency;
         input.title = rawTitle || null;
-        input.category = rawCategory || null;
-        input.section = rawSection || null;
+        input.category = taxonomy.category || null;
+        input.section = taxonomy.section || null;
         input.description = structuredDescription ?? description;
         input.merchant = merchant || null;
         input.place = null;
@@ -335,8 +347,8 @@ export class AIValidatorService {
           resolved.amountInAccountCurrency = convertMoney(amount, moneyCurrency, plannedAccount.currency);
         }
 
-        const existingCategory = rawCategory ? this.findByName(categories, rawCategory) : null;
-        const existingSection = rawSection ? this.findByName(sections, rawSection) : null;
+        const existingCategory = taxonomy.category ? this.findByName(categories, taxonomy.category) : null;
+        const existingSection = taxonomy.section ? this.findByName(sections, taxonomy.section) : null;
         if (existingCategory) {
           resolved.categoryId = existingCategory.id;
           if (typeof existingCategory.sectionId === 'string') resolved.sectionId = existingCategory.sectionId;
@@ -1161,17 +1173,106 @@ export class AIValidatorService {
     return clean;
   }
 
-  private cleanTransactionTitle(value: unknown, kind: 'income' | 'expense' | null, category: string, description: string) {
-    const raw = this.cleanEntityName(value);
+  private normalizeTransactionTaxonomy(params: {
+    kind: 'income' | 'expense' | null;
+    category: unknown;
+    section: unknown;
+    merchant: string;
+    items: string[];
+  }) {
+    let category = this.cleanGenericTaxonomyName(params.category, params.kind, 'category');
+    let section = this.cleanGenericTaxonomyName(params.section, params.kind, 'section');
+
+    if (params.kind !== 'expense') return { category, section };
+
+    const merchantKey = this.key(params.merchant);
+    const itemKeys = params.items.map((item) => this.key(item)).filter(Boolean);
+    const categoryKey = this.key(category);
+    const sectionKey = this.key(section);
+    const isGasStation = this.isGasStationText(merchantKey);
+    const hasTobacco = itemKeys.some((item) => this.isTobaccoText(item));
+    const mixedPurchase = params.items.length >= 2 || (Boolean(params.merchant) && params.items.length >= 1);
+    const groceryLikeTaxonomy = categoryKey === 'продукты'
+      || categoryKey === 'еда'
+      || categoryKey === 'продукт'
+      || sectionKey === 'продукты'
+      || sectionKey === 'еда';
+
+    if (isGasStation && (mixedPurchase || groceryLikeTaxonomy || hasTobacco)) {
+      category = 'Покупки на АЗС';
+      section = section && sectionKey !== 'продукты' && sectionKey !== 'еда' ? section : 'Авто';
+      return { category, section };
+    }
+
+    if (groceryLikeTaxonomy && hasTobacco && mixedPurchase) {
+      category = '';
+      if (sectionKey === 'продукты' || sectionKey === 'еда') section = '';
+    }
+
+    return { category, section };
+  }
+
+  private normalizeTransactionTags(value: unknown, merchant: string, items: string[]) {
+    const tags = this.cleanStringList(value);
+    const extraTags: string[] = [];
+
+    if (merchant && this.isGasStationText(this.key(merchant))) extraTags.push('АЗС');
+    if (items.some((item) => this.isTobaccoText(this.key(item)))) extraTags.push('табак');
+
+    return Array.from(new Set([...tags, ...extraTags]))
+      .filter((tag) => tag.length >= 2 && tag.length <= 80)
+      .slice(0, 8);
+  }
+
+  private cleanTransactionTitle(params: {
+    value: unknown;
+    kind: 'income' | 'expense' | null;
+    category: string;
+    description: string;
+    merchant: string;
+    items: string[];
+  }) {
+    const raw = this.cleanEntityName(params.value);
     if (!raw) return '';
 
     const normalized = this.key(raw);
     const tooLong = raw.length > 48;
-    const looksLikeCommandEcho = this.looksLikeTransactionCommandEcho(normalized);
-    const duplicatesDescription = Boolean(description) && this.key(description) === normalized;
+    const looksLikeCommandEcho = this.looksLikeTransactionCommandEcho(raw) || this.looksLikeTransactionCommandEcho(normalized);
+    const duplicatesDescription = Boolean(params.description) && this.key(params.description) === normalized;
+    const duplicatesCategory = Boolean(params.category) && this.key(params.category) === normalized;
+    const copiesPurchaseContext = this.titleCopiesPurchaseContext({
+      title: normalized,
+      merchant: params.merchant,
+      items: params.items,
+    });
 
-    if (tooLong || looksLikeCommandEcho || duplicatesDescription) return '';
+    if (tooLong || looksLikeCommandEcho || duplicatesDescription || duplicatesCategory || copiesPurchaseContext) return '';
     return raw;
+  }
+
+  private titleCopiesPurchaseContext(params: { title: string; merchant: string; items: string[] }) {
+    const title = params.title;
+    if (!title) return false;
+
+    const merchantKey = this.key(params.merchant);
+    const itemKeys = params.items.map((item) => this.key(item)).filter(Boolean);
+    const hasMerchant = Boolean(merchantKey) && (title.includes(merchantKey) || merchantKey.includes(title));
+    const matchedItems = itemKeys.filter((item) => title.includes(item) || item.includes(title));
+
+    if (hasMerchant && matchedItems.length >= 1) return true;
+    if (matchedItems.length >= 2) return true;
+    if (this.isGasStationText(title) && matchedItems.length >= 1) return true;
+    if (this.isGasStationText(title) && this.isTobaccoText(title) && title.includes('напит')) return true;
+
+    return false;
+  }
+
+  private isGasStationText(value: string) {
+    return value.includes('заправ') || value.includes('азс') || value.includes('бензоколон');
+  }
+
+  private isTobaccoText(value: string) {
+    return value.includes('сигар') || value.includes('табак') || value.includes('вейп');
   }
 
   private cleanTransactionDescription(description: string, title: string, category: string, kind: 'income' | 'expense' | null) {
