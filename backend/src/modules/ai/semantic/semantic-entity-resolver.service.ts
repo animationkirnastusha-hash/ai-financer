@@ -55,6 +55,19 @@ export class AIEntityResolverService {
     const query = normalizeSemanticText(raw);
     if (!query) return null;
 
+    for (const item of items) {
+      const label = params.getLabel(item);
+      if (normalizeSemanticText(label) === query) {
+        return {
+          item,
+          score: 1,
+          reason: 'exact_label',
+          matchedText: query,
+          confidence: 'high',
+        };
+      }
+    }
+
     const queryVariants = buildSemanticVariants(query);
     let best: ResolvedEntity<T> | null = null;
 

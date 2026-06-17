@@ -93,13 +93,16 @@ export class AIPlannerService {
       'Action format: {"mode":"actions","actions":[{"tool":"create_transaction","input":{}}],"summary":"short result text"}.',
       'Reply format for non-action questions: {"mode":"reply","summary":"short human answer","actions":[]}.',
       'Use semantic understanding and the tool contract. Do not emulate old parsers, regex extraction, keyword shortcuts, or rule tables.',
-      'The current USER message is the primary source of truth. Context helps only with existing entities, pronouns, continuations, defaults, and recent operations.',
+      'The current USER message is the primary source of truth. Context helps only with availability, pronouns, continuations, defaults, and recent operations.',
+      'CTX entity names are reference material, not recommendations. Do not substitute a user-provided broad account/category/section with a narrower or different CTX entity unless the user clearly selected that exact entity.',
       'Context entity names are resolution candidates, not suggestions. Do not narrow a broad user-provided purpose into a more specific context category unless the user clearly selected that specific meaning.',
       'Never output accountId, categoryId, sectionId, goalId, transactionId, or raw database identifiers. Output natural entity names only; validator resolves them.',
       'Treat voice text as noisy natural speech: missing punctuation, informal words, pauses and compact numbers are normal. Preserve the intended amount and entity if it is clear.',
       'Amounts must be positive plain numbers. Compact spoken amount forms with thousand meaning must be expanded to the full number. If the amount is uncertain, leave amount missing for validator clarification.',
       'Separate financial dimensions: tool/action, amount, currency, source account, destination account, transaction title, financial category, section, merchant/place, purchased items, tags, description.',
-      'For transactions, category and section describe what the money is for. Merchant/place describes where it happened. A shop, gas station, marketplace, bank, person or place is not automatically a category or section.',
+      'For transactions, category and section describe what the money is for. Merchant/place describes where it happened. A shop, station, marketplace, bank, person or place is not automatically a category or section.',
+      'Keep transaction categories broad and useful for everyday finance. Do not split a broad user category into narrow subcategories unless the user explicitly names a narrow category.',
+      'Sections are higher-level life areas than categories. Category and section should not be the same unless the user is managing taxonomy directly.',
       'For mixed purchases with one total amount and no item-level prices, create exactly one transaction. Put every named purchased object/service into items as a string array, keep merchant/place separately, and choose a broad honest category/section only when semantically clear.',
       'When a transaction mentions concrete goods, services, or purchase components, preserve them in items even if prices for the individual items are not provided. Do not drop them into the title only.',
       'Transaction title must be short and clean. Do not copy the full spoken command, do not put amount/account into title, and do not use “merchant: items” as title. Use merchant/place/items fields for those details.',
@@ -121,13 +124,14 @@ export class AIPlannerService {
       'Use only listed tools and fields from the contract.',
       'Do not implement phrase-specific financial behavior. Decide by semantic meaning of the full request.',
       'Output null or omit fields that are not known. Do not invent missing data to avoid clarification.',
-      'Use CTX entity names when the user clearly refers to an existing account, category, section, goal, loan or transaction. Different endings and colloquial forms may refer to the same entity.',
+      'Use CTX only when the user clearly refers to an existing account, category, section, goal, loan or transaction. Do not choose CTX names merely because they look close or more specific.',
+      'Pass through natural account/category/section references from USER. Validator resolves them. Do not replace a broad USER reference with a concrete saved name from CTX.',
       'If the user gives a broad category or purpose, preserve that broad meaning. Do not replace it with a narrower existing category from CTX only because it is related or recent.',
       'For transaction and transfer account fields, preserve the user-provided natural account reference when it is broad or generic. Use a concrete CTX account display name only when the user clearly selected that concrete entity or a unique alias.',
       'Financial mutations must use the matching tool family: transactions, transfers, accounts, goals, obligations, taxonomy, settings, onboarding, analytics.',
       'For create_transaction: kind is income or expense; amount is one positive number; account is the user-provided natural account reference; title is a short label; category/section are financial meaning; merchant/place/items/tags/description carry context. items must be an array when named goods/services are present. Keep category as broad as the user made it unless the user clearly named a narrower purpose.',
       'For income, category/section should describe income source or broad income group, not the account receiving money.',
-      'For expense, category/section should describe purpose. If purpose has several unrelated items under one total, do not split the total; use one transaction with structured items/tags and a broad category/section. If no purpose category is confident, leave category/section empty instead of using generic Expense/Расход.',
+      'For expense, category/section should describe purpose. If purpose has several unrelated items under one total, do not split the total; use one transaction with structured items/tags and a broad category/section. Keep broad purpose broad. If no purpose category is confident, leave category/section empty instead of using generic Expense/Расход.',
       'Merchant/place must not replace category/section unless the user explicitly manages taxonomy and asks to create or rename that category/section.',
       'If no existing category/section fits and the meaning is still clear, output a concise natural category/section name; backend may create it. If meaning is unclear, leave category/section empty.',
       'Do not turn a store, location or brand into transaction title when items/purpose are present. Keep title independent from merchant.',
@@ -196,7 +200,7 @@ export class AIPlannerService {
           'Do not use regex, keyword shortcuts, rule tables, examples, or hard-coded financial mappings.',
           'Use semantic comparison only: every meaningful detail from USER must be represented in the structured fields or deliberately left missing for validation clarification.',
           'Preserve correct tool choices, amounts, and user-provided account references. Do not create extra actions unless the USER clearly requested more than one action.',
-          'Preserve broad user-provided category or purpose instead of substituting a narrower CTX category that the USER did not clearly select.',
+          'Preserve broad user-provided account/category/section references instead of substituting a narrower or different CTX entity that the USER did not clearly select.',
           'For create_transaction, category/section describe financial purpose; merchant/place describe where it happened; items/tags/description preserve concrete purchase context.',
           'If USER mentions concrete purchased goods/services/components and the draft omitted them, add them to items as a string array or to tags/description when items is unsuitable.',
           'If USER gives one total for multiple goods/services, keep exactly one create_transaction and do not invent per-item prices.',
@@ -229,10 +233,13 @@ export class AIPlannerService {
 
   private focusContext(context: unknown) {
     const value = this.asRecord(context) as UserContext;
+    const accounts = Array.isArray(value.accounts) ? value.accounts : [];
+    const categories = Array.isArray(value.categories) ? value.categories : [];
+    const sections = Array.isArray(value.sections) ? value.sections : [];
+
     return {
-      accounts: Array.isArray(value.accounts) ? value.accounts.slice(0, 8).map((item) => item.name).filter(Boolean) : [],
-      categories: Array.isArray(value.categories) ? value.categories.slice(0, 12).map((item) => item.name).filter(Boolean) : [],
-      sections: Array.isArray(value.sections) ? value.sections.slice(0, 12).map((item) => item.name).filter(Boolean) : [],
+      accountContext: this.compactAccountContext(accounts),
+      taxonomyContext: this.compactTaxonomyContext(categories, sections),
       goals: Array.isArray(value.goals) ? value.goals.slice(0, 8).map((item) => item.title).filter(Boolean) : [],
       obligations: Array.isArray(value.obligations) ? value.obligations.slice(0, 8).map((item) => item.title).filter(Boolean) : [],
     };
@@ -251,26 +258,43 @@ export class AIPlannerService {
       : [];
   }
 
+  private compactAccountContext(accounts: Array<{ type?: string; currency?: string }>) {
+    const types = Array.from(new Set(accounts.map((account) => account.type).filter((type): type is string => typeof type === 'string' && Boolean(type))));
+    const currencies = Array.from(new Set(accounts.map((account) => account.currency).filter((currency): currency is string => typeof currency === 'string' && Boolean(currency))));
+
+    return {
+      count: accounts.length,
+      types,
+      currencies,
+      policy: 'Do not choose a concrete saved account name from context. Preserve the natural account reference from USER; validator resolves it.',
+    };
+  }
+
+  private compactTaxonomyContext(
+    categories: Array<{ type?: string; sectionId?: string | null }>,
+    sections: Array<{ id?: string; name?: string }>,
+  ) {
+    return {
+      categoryCount: categories.length,
+      sectionCount: sections.length,
+      categoryTypes: Array.from(new Set(categories.map((category) => category.type).filter((type): type is string => typeof type === 'string' && Boolean(type)))),
+      policy: 'Existing category and section names are intentionally not listed. Keep USER category broad; do not infer narrow subcategories from saved taxonomy.',
+    };
+  }
+
   private compactContext(context: unknown) {
     const value = this.asRecord(context) as UserContext;
     const memory = value.memory && typeof value.memory === 'object' ? value.memory : {};
+    const accounts = Array.isArray(value.accounts) ? value.accounts : [];
+    const categories = Array.isArray(value.categories) ? value.categories : [];
+    const sections = Array.isArray(value.sections) ? value.sections : [];
 
     return {
-      accounts: Array.isArray(value.accounts)
-        ? value.accounts.slice(0, 8).map((account) => account.name).filter(Boolean)
-        : [],
+      accountContext: this.compactAccountContext(accounts),
+      taxonomyContext: this.compactTaxonomyContext(categories, sections),
       entityAliases: {
-        accounts: this.compactAliasList(memory.accountAliases, 8),
-        categories: this.compactAliasList(memory.categoryAliases, 10),
-        sections: this.compactAliasList(memory.sectionAliases, 8),
         goals: this.compactAliasList(memory.goalAliases, 8),
       },
-      categories: Array.isArray(value.categories)
-        ? value.categories.slice(0, 12).map((category) => category.name).filter(Boolean)
-        : [],
-      sections: Array.isArray(value.sections)
-        ? value.sections.slice(0, 12).map((section) => section.name).filter(Boolean)
-        : [],
       preferences: Array.isArray(memory.preferences) ? memory.preferences.slice(0, 6) : [],
       aiSettings: value.aiSettings
         ? {
@@ -325,8 +349,6 @@ export class AIPlannerService {
           amount: item.amount,
           description: item.description,
           account: item.account?.name,
-          category: item.category?.name,
-          section: item.section?.name,
           createdAt: item.createdAt,
         }))
         : [],

@@ -290,14 +290,7 @@ export class AIValidatorService {
         const merchant = this.cleanEntityName(input.merchant || input.place || input.store || input.shop);
         const items = this.cleanStringList(input.items);
         const tags = this.cleanStringList(input.tags);
-        const rawTitle = this.cleanTransactionTitle(input.title, kind, {
-          category: rawCategory,
-          section: rawSection,
-          description: rawDescription,
-          merchant,
-          items,
-          tags,
-        });
+        const rawTitle = this.cleanTransactionTitle(input.title, kind, rawCategory, rawDescription, { merchant, items, tags });
         const description = this.cleanTransactionDescription(rawDescription, rawTitle, rawCategory, kind);
         const structuredDescription = buildStructuredTransactionDescription({
           description,
@@ -1171,14 +1164,9 @@ export class AIValidatorService {
   private cleanTransactionTitle(
     value: unknown,
     kind: 'income' | 'expense' | null,
-    context: {
-      category: string;
-      section: string;
-      description: string;
-      merchant: string;
-      items: string[];
-      tags: string[];
-    },
+    category: string,
+    description: string,
+    context?: { merchant?: string; items?: string[]; tags?: string[] },
   ) {
     const raw = this.cleanEntityName(value);
     if (!raw) return '';
@@ -1186,50 +1174,41 @@ export class AIValidatorService {
     const normalized = this.key(raw);
     const tooLong = raw.length > 48;
     const looksLikeCommandEcho = this.looksLikeTransactionCommandEcho(normalized);
-    const duplicatesDescription = Boolean(context.description) && this.key(context.description) === normalized;
-    const duplicatesStructuredDetails = this.titleDuplicatesStructuredTransactionDetails(raw, context);
+    const duplicatesDescription = Boolean(description) && this.key(description) === normalized;
+    const duplicatesStructuredContext = this.isComposedFromStructuredTransactionContext(raw, context);
 
-    if (tooLong || looksLikeCommandEcho || duplicatesDescription || duplicatesStructuredDetails) return '';
+    if (tooLong || looksLikeCommandEcho || duplicatesDescription || duplicatesStructuredContext) return '';
     return raw;
   }
 
-  private titleDuplicatesStructuredTransactionDetails(
-    title: string,
-    context: {
-      category: string;
-      section: string;
-      description: string;
-      merchant: string;
-      items: string[];
-      tags: string[];
-    },
-  ) {
-    const titleKey = this.key(title);
-    if (!titleKey) return false;
+  private isComposedFromStructuredTransactionContext(value: string, context?: { merchant?: string; items?: string[]; tags?: string[] }) {
+    const titleKey = this.key(value);
+    if (!titleKey || !context) return false;
 
-    const structuralParts = [
-      context.merchant,
-      ...context.items,
-      ...context.tags,
-    ]
-      .map((part) => this.key(part))
-      .filter((part) => part.length >= 2);
+    const parts = [context.merchant, ...(context.items ?? []), ...(context.tags ?? [])]
+      .map((part) => this.key(this.cleanString(part)))
+      .filter((part) => part.length >= 3);
 
-    const uniqueParts = Array.from(new Set(structuralParts));
-    if (uniqueParts.length < 2) return false;
+    if (parts.length < 2) return false;
 
-    const matchedParts = uniqueParts.filter((part) => titleKey === part || titleKey.includes(part));
-    if (matchedParts.length < 2) return false;
+    const titleTokens = new Set(titleKey.split(/\s+/).filter((token) => token.length >= 3));
+    if (!titleTokens.size) return false;
 
-    const titleTokens = titleKey.split(' ').filter((token) => token.length >= 2);
-    const structuralTokens = Array.from(new Set(uniqueParts.flatMap((part) => part.split(' ').filter((token) => token.length >= 2))));
-    if (titleTokens.length < 2 || structuralTokens.length < 2) return false;
+    let matchedParts = 0;
+    let matchedTokens = 0;
 
-    const matchedTokenCount = titleTokens.filter((token) => structuralTokens.includes(token)).length;
-    const titleCoverage = matchedTokenCount / titleTokens.length;
-    const partsCoverage = matchedParts.length / uniqueParts.length;
+    for (const part of parts) {
+      const partTokens = part.split(/\s+/).filter((token) => token.length >= 3);
+      if (!partTokens.length) continue;
+      const partMatches = partTokens.some((token) => titleKey.includes(token));
+      if (!partMatches) continue;
+      matchedParts += 1;
+      for (const token of partTokens) {
+        if (titleTokens.has(token)) matchedTokens += 1;
+      }
+    }
 
-    return partsCoverage >= 0.66 && titleCoverage >= 0.66;
+    return matchedParts >= 2 && matchedTokens >= Math.min(titleTokens.size, matchedParts);
   }
 
   private cleanTransactionDescription(description: string, title: string, category: string, kind: 'income' | 'expense' | null) {

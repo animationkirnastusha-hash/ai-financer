@@ -9,7 +9,7 @@ export const transactionsDictionary = {
   'transaction.type.income': 'Доход',
   'transaction.type.transfer': 'Перевод',
   'transaction.create.name': 'Название',
-  'transaction.create.namePlaceholder': 'Например: колбаса',
+  'transaction.create.namePlaceholder': 'Например: продукты',
   'transaction.create.amount': 'Сумма',
   'transaction.create.description': 'Описание',
   'transaction.create.descriptionPlaceholder': 'Необязательно: магазин, детали покупки, комментарий',

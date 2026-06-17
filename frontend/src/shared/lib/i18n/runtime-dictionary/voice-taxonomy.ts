@@ -41,13 +41,6 @@ export const voiceTaxonomyRuntimeDictionary: Record<string, string> = {
   'Продукты': 'Groceries',
 
   'Продуктовый магазин': 'Grocery store',
-  'Мясо и колбасы': 'Meat and sausages',
-  'Молочные продукты': 'Dairy',
-  'Хлеб и выпечка': 'Bread and bakery',
-  'Овощи': 'Vegetables',
-  'Фрукты': 'Fruit',
-  'Рыба и морепродукты': 'Fish and seafood',
-  'Напитки': 'Drinks',
   'Бензин': 'Fuel',
   'Табак': 'Tobacco',
   'Покупки на АЗС': 'Gas station purchases',

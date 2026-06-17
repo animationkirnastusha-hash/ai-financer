@@ -6,6 +6,7 @@ import { useSectionsStore } from '@/features/sections/model/sections.store';
 import { TransactionTaxonomyPicker } from '@/features/transactions/ui/TransactionTaxonomyPicker';
 import type { DeleteTransactionBalanceMode, TransactionDto } from '@/features/transactions/api/transactions.api';
 import { formatMoney } from '@/shared/lib/money';
+import { useI18n } from '@/shared/lib/i18n';
 
 type TransactionType = 'income' | 'expense' | 'transfer';
 
@@ -71,6 +72,7 @@ export function TransactionEditSheet({
   onSave,
   onDelete,
 }: Props) {
+  const { t } = useI18n();
   const accounts = useAccountsStore((state) => state.items);
   const loadAccounts = useAccountsStore((state) => state.loadAccounts);
   const categories = useSectionsStore((state) => state.categories);
@@ -276,7 +278,7 @@ export function TransactionEditSheet({
           {type !== 'transfer' ? (
             <label className="app-field">
               <span>Название</span>
-              <input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Например: колбаса" />
+              <input value={title} onChange={(event) => setTitle(event.target.value)} placeholder={t('transaction.create.namePlaceholder')} />
             </label>
           ) : null}
 
