@@ -228,14 +228,14 @@
   white-space: nowrap;
 }
 .app-taxonomy-section-card > .app-secondary-button { margin-top: 12px; width: 100%; }
-.app-taxonomy-rules-grid,
+.app-taxonomy-summary-grid,
 .app-settings-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0,1fr));
   gap: 10px;
 }
 .app-settings-tile,
-.app-taxonomy-rule-tile {
+.app-taxonomy-summary-tile {
   min-width: 0;
   border-radius: 20px;
   border: 1px solid rgba(255,255,255,.08);
@@ -243,21 +243,21 @@
   padding: 12px;
 }
 .app-settings-tile small,
-.app-taxonomy-rule-tile small,
+.app-taxonomy-summary-tile small,
 .app-settings-tile b,
-.app-taxonomy-rule-tile b {
+.app-taxonomy-summary-tile b {
   display: block;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 .app-settings-tile small,
-.app-taxonomy-rule-tile small {
+.app-taxonomy-summary-tile small {
   color: rgba(255,255,255,.42);
   font-size: 11px;
   line-height: 1.25;
 }
 .app-settings-tile b,
-.app-taxonomy-rule-tile b {
+.app-taxonomy-summary-tile b {
   margin-top: 6px;
   color: rgba(255,255,255,.88);
   font-size: 13px;

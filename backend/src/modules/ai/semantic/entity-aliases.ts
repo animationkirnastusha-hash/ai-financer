@@ -8,14 +8,9 @@ const ACCOUNT_TYPE_ALIASES: Record<string, string[]> = {
   investment: ['investment', 'инвестиции', 'инвест', 'брокер', 'акции'],
 };
 
-const CATEGORY_HINT_ALIASES: Array<{ when: string[]; aliases: string[] }> = [
-  { when: ['кафе', 'кофе', 'ресторан', 'фастфуд'], aliases: ['еда вне дома', 'кафе', 'кофейня', 'фастфуд'] },
-  { when: ['такси', 'транспорт', 'метро', 'автобус'], aliases: ['транспорт', 'такси', 'дорога'] },
-  { when: ['заправ', 'бензин', 'топлив'], aliases: ['авто', 'топливо', 'заправка', 'бензин'] },
-  { when: ['сигар', 'табак'], aliases: ['табак', 'сигареты', 'другое'] },
-  { when: ['продукт', 'еда', 'магазин'], aliases: ['продукты', 'еда', 'магазины'] },
-  { when: ['зарплат', 'доход', 'аванс'], aliases: ['зарплата', 'доход', 'поступления'] },
-];
+// Category and section aliases are intentionally built from actual entity names only.
+// Financial meaning must come from the AI planner/taxonomy contract, not from keyword
+// routing such as “word X means category Y”.
 
 export function buildEntityAliases(entity: SemanticEntityLike, kind: SemanticEntityKind = 'generic') {
   const label = normalizeSemanticText(entity.name || entity.title || '');
@@ -62,11 +57,10 @@ function addNameBasedAccountAliases(label: string, aliases: Set<string>) {
 }
 
 function addCategoryMeaningAliases(label: string, aliases: Set<string>) {
-  for (const group of CATEGORY_HINT_ALIASES) {
-    if (group.when.some((part) => label.includes(part))) {
-      group.aliases.forEach((alias) => aliases.add(normalizeSemanticText(alias)));
-    }
-  }
+  // Keep only morphology/stem/name-based aliases. Do not add semantic category
+  // decisions here; the planner owns financial meaning, while this resolver only
+  // matches user wording to already existing entities.
+  if (!label) return;
 }
 
 function addNameBasedGoalAliases(label: string, aliases: Set<string>) {

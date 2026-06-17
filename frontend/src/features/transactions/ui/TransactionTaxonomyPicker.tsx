@@ -1,7 +1,6 @@
 import { useEffect, useMemo } from 'react';
 import { useAppModalStore } from '@/features/modals/model/appModal.store';
 import { useSectionsStore } from '@/features/sections/model/sections.store';
-import { resolveTaxonomyIcon } from '@/features/sections/lib/categoryIcons';
 import { useI18n } from '@/shared/lib/i18n';
 
 type TransactionKind = 'income' | 'expense';
@@ -18,7 +17,7 @@ function supportsType(categoryType: string | null | undefined, kind: Transaction
   return !categoryType || categoryType === 'both' || categoryType === kind;
 }
 
-export function TransactionTaxonomyPicker({ type, title, description = '', categoryId, onCategoryIdChange }: Props) {
+export function TransactionTaxonomyPicker({ type, categoryId, onCategoryIdChange }: Props) {
   const { t } = useI18n();
   const openModal = useAppModalStore((state) => state.openModal);
   const categories = useSectionsStore((state) => state.categories);
@@ -29,8 +28,6 @@ export function TransactionTaxonomyPicker({ type, title, description = '', categ
     void loadAll();
   }, [loadAll]);
 
-  const text = `${title} ${description}`.trim();
-  const suggestion = useMemo(() => resolveTaxonomyIcon(text || (type === 'income' ? 'доход' : 'расход'), type), [text, type]);
   const availableCategories = useMemo(
     () => categories.filter((category) => supportsType(category.type, type)),
     [categories, type],
@@ -43,17 +40,16 @@ export function TransactionTaxonomyPicker({ type, title, description = '', categ
 
   const sectionLabel = selectedSection
     ? `${selectedSection.icon ? `${selectedSection.icon} ` : ''}${selectedSection.name}`
-    : `${suggestion.sectionIcon ? `${suggestion.sectionIcon} ` : ''}${suggestion.sectionName}`;
+    : t('transaction.category.auto');
 
   const categoryLabel = selectedCategory
     ? `${selectedCategory.icon ? `${selectedCategory.icon} ` : ''}${selectedCategory.name}`
-    : `${suggestion.categoryIcon ? `${suggestion.categoryIcon} ` : ''}${suggestion.categoryName}`;
+    : t('transaction.category.auto');
 
-  const createSuggestedCategory = () => {
+  const createCategory = () => {
     openModal({
       type: 'category-edit',
       initialType: type,
-      prefillName: suggestion.categoryName,
       onSavedCategory: (category) => onCategoryIdChange(category.id),
     });
   };
@@ -65,7 +61,7 @@ export function TransactionTaxonomyPicker({ type, title, description = '', categ
           <div className="app-taxonomy-picker__eyebrow">{t('transaction.category.label')}</div>
           <div className="app-taxonomy-picker__title">{categoryLabel}</div>
         </div>
-        <button type="button" className="app-taxonomy-picker__create" onClick={createSuggestedCategory}>
+        <button type="button" className="app-taxonomy-picker__create" onClick={createCategory}>
           {t('transaction.category.create')}
         </button>
       </div>

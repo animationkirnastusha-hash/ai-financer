@@ -41,7 +41,7 @@ export const AI_TOOL_REGISTRY: AIToolDefinition[] = [
     description: 'Record expense/income/top-up/deposit/salary. Backend validates amount, balance and auto-execute policy.',
     risk: 'low',
     requiresConfirmation: false,
-    input: { kind: 'income|expense', amount: 'number|string', currency: 'RUB|USD|EUR|VND|null', account: 'string|null', title: 'string|null', category: 'string|null', section: 'string|null', description: 'string|null' },
+    input: { kind: 'income|expense', amount: 'number|string', currency: 'RUB|USD|EUR|VND|null', account: 'string|null', title: 'string|null', category: 'string|null', section: 'string|null', description: 'string|null', merchant: 'string|null', place: 'string|null', items: 'string[]|null', tags: 'string[]|null' },
   },
   {
     name: 'update_transaction',
@@ -314,7 +314,7 @@ export function getToolDefinition(name: string) {
 
 export function getPlannerToolContract() {
   return [
-    'create_transaction{kind:income|expense,amount,account,title,category,section,description,currency} // account/category/section are natural names, never ids; title is a short clean label',
+    'create_transaction{kind:income|expense,amount,account,title,category,section,description,merchant,place,items,tags,currency} // account/category/section are natural names, never ids; category/section describe meaning; merchant/place/items/tags describe context',
     'update_transaction{transaction,target:last|last_income|last_expense|last_transfer,kind,amount,account,toAccount,category,section,description,date,currency} // edit existing operation; use for corrections, never create a duplicate',
     'create_account{name,type:cash|card|savings|investment,currency,initialBalance} // initialBalance 0 when money is added by transaction',
     'update_account{account,name,type,currency,balance} // rename/change existing account; account is current account name',

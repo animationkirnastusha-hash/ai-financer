@@ -301,25 +301,25 @@
 .app-account-card__badge--yellow { border-color: rgba(253,224,71,.18); background: rgba(253,224,71,.10); color: rgba(254,249,195,.88); }
 .app-account-card__badge--red { border-color: rgba(251,113,133,.20); background: rgba(251,113,133,.10); color: rgba(255,228,230,.88); }
 
-.app-taxonomy-rules-grid {
+.app-taxonomy-summary-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0,1fr));
   gap: 10px;
 }
-.app-taxonomy-rule-card {
+.app-taxonomy-summary-card {
   min-width: 0;
   border-radius: 20px;
   border: 1px solid rgba(255,255,255,.08);
   background: rgba(255,255,255,.045);
   padding: 12px;
 }
-.app-taxonomy-rule-card b {
+.app-taxonomy-summary-card b {
   display: block;
   color: rgba(255,255,255,.88);
   font-size: 13px;
   line-height: 1.2;
 }
-.app-taxonomy-rule-card span {
+.app-taxonomy-summary-card span {
   display: block;
   margin-top: 5px;
   color: rgba(255,255,255,.44);

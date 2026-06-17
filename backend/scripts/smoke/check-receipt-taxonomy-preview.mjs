@@ -8,19 +8,19 @@ function normalizeName(value) {
 }
 
 function assertGroups(groups) {
-  if (!Array.isArray(groups) || groups.length < 2) {
-    throw new Error(`Receipt taxonomy groups are missing or too few: ${JSON.stringify(groups)}`);
+  if (!Array.isArray(groups) || groups.length < 1) {
+    throw new Error(`Receipt preview groups are missing: ${JSON.stringify(groups)}`);
   }
 
   for (const group of groups) {
     const sectionName = normalizeName(group.sectionName ?? group.name ?? group.section);
-    if (!sectionName) throw new Error(`Receipt taxonomy group has no section name: ${JSON.stringify(group)}`);
+    if (!sectionName) throw new Error(`Receipt preview group has no section name: ${JSON.stringify(group)}`);
     if (OTHER_NAMES.has(sectionName)) {
-      throw new Error(`Receipt taxonomy must not fall back to ${group.sectionName ?? group.name ?? group.section}`);
+      throw new Error(`Receipt preview must not fall back to ${group.sectionName ?? group.name ?? group.section}`);
     }
     const categories = group.categories ?? group.items ?? [];
     if (!Array.isArray(categories) || categories.length === 0) {
-      throw new Error(`Receipt taxonomy group has no categories/items: ${JSON.stringify(group)}`);
+      throw new Error(`Receipt preview group has no categories/items: ${JSON.stringify(group)}`);
     }
   }
 }
@@ -86,7 +86,7 @@ await runSmoke('receipt-taxonomy-preview', async (context) => {
   const groups = scan?.preview?.groups ?? reviewed.payload?.preview?.groups ?? [];
   assertGroups(groups);
 
-  context.log('receipt taxonomy preview passed', {
+  context.log('receipt preview flow passed', {
     scanId,
     groupCount: groups.length,
     groups: groups.map((group) => group.sectionName ?? group.name ?? group.section),

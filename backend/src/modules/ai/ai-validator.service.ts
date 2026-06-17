@@ -14,6 +14,7 @@ import { AIEntityResolverService } from './semantic/semantic-entity-resolver.ser
 import { normalizeSemanticText } from './semantic/semantic-normalizer';
 import { semanticSimilarityScore, semanticThreshold } from './semantic/semantic-scorer';
 import { aiRiskPolicyService } from './ai-risk-policy.service';
+import { buildStructuredTransactionDescription } from '../taxonomy/transaction-taxonomy';
 
 interface AccountLite {
   id: string;
@@ -113,7 +114,6 @@ export class AIValidatorService {
       }
 
       const input = { ...action.input };
-      const rawUserTextForAction = this.cleanString(action.input?.__userText || input.__userText);
       const resolved: Record<string, unknown> = {};
       delete input.__userText;
 
@@ -287,8 +287,17 @@ export class AIValidatorService {
         const rawCategory = this.cleanEntityName(input.category);
         const rawSection = this.cleanEntityName(input.section);
         const rawDescription = this.cleanEntityName(input.description);
+        const merchant = this.cleanEntityName(input.merchant || input.place || input.store || input.shop);
+        const items = this.cleanStringList(input.items);
+        const tags = this.cleanStringList(input.tags);
         const rawTitle = this.cleanTransactionTitle(input.title, kind, rawCategory, rawDescription);
         const description = this.cleanTransactionDescription(rawDescription, rawTitle, rawCategory, kind);
+        const structuredDescription = buildStructuredTransactionDescription({
+          description,
+          merchant,
+          items,
+          tags,
+        });
 
         input.kind = kind ?? 'expense';
         input.amount = amount ?? 0;
@@ -297,7 +306,11 @@ export class AIValidatorService {
         input.title = rawTitle || null;
         input.category = rawCategory || null;
         input.section = rawSection || null;
-        input.description = description;
+        input.description = structuredDescription ?? description;
+        input.merchant = merchant || null;
+        input.place = null;
+        input.items = items.length ? items : null;
+        input.tags = tags.length ? tags : null;
 
         const amountInAccountCurrency = amount ? convertMoney(amount, moneyCurrency, targetCurrency) : 0;
 
@@ -398,17 +411,6 @@ export class AIValidatorService {
           if (section) resolved.sectionId = section.id;
         } else {
           delete input.section;
-        }
-
-        if (this.shouldUseGenericGroceries(rawUserTextForAction, input.category)) {
-          input.category = 'Продукты';
-          input.section = 'Продуктовый магазин';
-          const category = this.findByName(categories.filter((item) => item.type === 'expense' || item.type === 'both'), 'Продукты');
-          const section = this.findByName(sections, 'Продуктовый магазин');
-          if (category) resolved.categoryId = category.id;
-          else delete resolved.categoryId;
-          if (section) resolved.sectionId = section.id;
-          else delete resolved.sectionId;
         }
 
         if (input.description !== null && input.description !== undefined) input.description = this.cleanEntityName(input.description);
@@ -1071,30 +1073,6 @@ export class AIValidatorService {
     return normalizeSemanticText(value);
   }
 
-
-  private shouldUseGenericGroceries(userText: string, categoryValue: unknown) {
-    const text = this.key(userText);
-    if (!text) return false;
-    const hasGenericProducts = /(^|\s)(продукт|продукты|продуктовый|groceries|grocery|food)(\s|$)/i.test(text);
-    if (!hasGenericProducts) return false;
-
-    const specificWords = [
-      'мяс', 'колбас', 'сосиск', 'ветчин', 'бекон', 'куриц', 'говядин', 'свинин',
-      'молок', 'кефир', 'йогурт', 'сыр', 'творог', 'сметан',
-      'хлеб', 'булк', 'выпеч', 'овощ', 'помидор', 'огурец', 'картоф',
-      'фрукт', 'яблок', 'банан', 'рыб', 'морепродукт', 'сладост', 'шоколад',
-      'meat', 'sausage', 'chicken', 'milk', 'cheese', 'bread', 'vegetable', 'fruit', 'fish',
-    ];
-    if (specificWords.some((word) => text.includes(word))) return false;
-
-    const category = this.key(this.cleanEntityName(categoryValue));
-    if (!category) return true;
-    if (category === 'продукты' || category === 'groceries' || category === 'grocery') return true;
-
-    const grocerySubcategoryWords = ['мяс', 'колбас', 'молоч', 'хлеб', 'выпеч', 'овощ', 'фрукт', 'рыб', 'морепродукт', 'сладост'];
-    return grocerySubcategoryWords.some((word) => category.includes(word));
-  }
-
   private lastPlannedAccountName(plannedAccounts: Map<string, { name: string; currency: AICurrency }>) {
     const values = Array.from(plannedAccounts.values());
     return values.length ? values[values.length - 1].name : '';
@@ -1156,6 +1134,16 @@ export class AIValidatorService {
   }
 
 
+
+
+  private cleanStringList(value: unknown) {
+    if (!Array.isArray(value)) return [];
+
+    return Array.from(new Set(value
+      .map((item) => this.cleanEntityName(item))
+      .filter((item) => item.length >= 2 && item.length <= 48)))
+      .slice(0, 8);
+  }
 
   private cleanTransactionTitle(value: unknown, kind: 'income' | 'expense' | null, category: string, description: string) {
     const raw = this.cleanEntityName(value);

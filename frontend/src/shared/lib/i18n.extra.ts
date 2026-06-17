@@ -76,7 +76,7 @@ export const extraRuntimeTextDictionary: Record<string, string> = {
   'Структура расходов': 'Expense structure',
   'Разделы и категории': 'Sections and categories',
   'Разделы помогают видеть расходы и доходы в понятном порядке.': 'Sections help view expenses and income in a clear order.',
-  'Правила категорий': 'Category rules',
+  'Настройка категорий': 'Category settings',
   'разделов': 'sections',
   'категорий': 'categories',
   'без раздела': 'without section',

@@ -30,7 +30,7 @@ export const transactionsDictionary = {
   'transactions.page.add': 'Добавить',
   'transactions.command.title': 'Командная строка',
   'transactions.command.placeholder': 'Спросите Фину по операциям',
-  'transactions.command.caption': 'Фина найдёт траты, подготовит операцию или предложит правило.',
+  'transactions.command.caption': 'Фина найдёт траты, подготовит операцию или поможет навести порядок.',
   'transactions.command.today': 'Сегодня',
   'transactions.command.cafe': 'Кафе',
   'transactions.command.find': 'Найти',

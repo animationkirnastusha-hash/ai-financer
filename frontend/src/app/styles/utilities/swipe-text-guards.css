@@ -20,7 +20,7 @@ body.ai-screen-slide-right .ai-screen-transition {
   }
   .app-accounts-actions,
   .app-taxonomy-actions,
-  .app-taxonomy-rules-grid,
+  .app-taxonomy-summary-grid,
   .app-settings-grid { grid-template-columns: 1fr; }
   .app-account-card { grid-template-columns: minmax(0,1fr); }
   .app-account-card__balance { max-width: 100%; text-align: left; }

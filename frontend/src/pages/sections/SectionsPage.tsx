@@ -66,7 +66,7 @@ export default function SectionsPage({ onBack }: Props) {
               <h1 className="app-hero-title">{t('sections.hero.title')}</h1>
               <p className="app-hero-caption">{t('sections.hero.caption')}</p>
             </div>
-            <button type="button" onClick={() => openModal({ type: 'taxonomy-tools' })} className="app-icon-button app-icon-button--lg" aria-label={t('sections.rules.open')}><SettingsGearIcon className="app-icon-button__svg" /></button>
+            <button type="button" onClick={() => openModal({ type: 'taxonomy-tools' })} className="app-icon-button app-icon-button--lg" aria-label={t('sections.manage.open')}><SettingsGearIcon className="app-icon-button__svg" /></button>
           </div>
 
           <div className="app-taxonomy-stats">
@@ -81,7 +81,7 @@ export default function SectionsPage({ onBack }: Props) {
           captionKey="sections.command.caption"
           placeholderKey="sections.command.placeholder"
           suggestions={[
-            { key: 'sections.command.rule', command: 'создай правило все Яндекс Такси транспорт' },
+            { key: 'sections.command.category', command: 'создай категорию Такси в разделе Транспорт' },
             { key: 'sections.command.merge', command: 'объедини кафе и кофейни' },
             { key: 'sections.command.rename', command: 'переименуй категорию еда в продукты' },
           ]}
@@ -98,11 +98,11 @@ export default function SectionsPage({ onBack }: Props) {
           </button>
         </section>
 
-        <section className="app-card app-taxonomy-rules-grid">
-          <div className="app-taxonomy-rule-tile"><small>{t('sections.types.expense')}</small><b>{t('sections.types.count', { count: countType(categories, 'expense') })}</b></div>
-          <div className="app-taxonomy-rule-tile"><small>{t('sections.types.income')}</small><b>{t('sections.types.count', { count: countType(categories, 'income') })}</b></div>
-          <div className="app-taxonomy-rule-tile"><small>{t('sections.types.both')}</small><b>{t('sections.types.count', { count: countType(categories, 'both') })}</b></div>
-          <div className="app-taxonomy-rule-tile"><small>{t('sections.types.ungrouped')}</small><b>{ungrouped.length}</b></div>
+        <section className="app-card app-taxonomy-summary-grid">
+          <div className="app-taxonomy-summary-tile"><small>{t('sections.types.expense')}</small><b>{t('sections.types.count', { count: countType(categories, 'expense') })}</b></div>
+          <div className="app-taxonomy-summary-tile"><small>{t('sections.types.income')}</small><b>{t('sections.types.count', { count: countType(categories, 'income') })}</b></div>
+          <div className="app-taxonomy-summary-tile"><small>{t('sections.types.both')}</small><b>{t('sections.types.count', { count: countType(categories, 'both') })}</b></div>
+          <div className="app-taxonomy-summary-tile"><small>{t('sections.types.ungrouped')}</small><b>{ungrouped.length}</b></div>
         </section>
 
         {error ? <div className="app-error-box">{error}</div> : null}

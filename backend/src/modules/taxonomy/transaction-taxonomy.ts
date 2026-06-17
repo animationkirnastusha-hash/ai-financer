@@ -1,5 +1,3 @@
-import { resolveTaxonomyForText, type TaxonomyMatch } from './taxonomy-icons';
-
 export type SemanticTransactionTaxonomyInput = {
   kind: 'income' | 'expense';
   title?: string | null;
@@ -8,251 +6,145 @@ export type SemanticTransactionTaxonomyInput = {
   categoryName?: string | null;
 };
 
-export type SemanticTransactionTaxonomy = TaxonomyMatch & {
+export type SemanticTransactionTaxonomy = {
+  categoryName: string;
+  sectionName: string;
+  categoryIcon: string;
+  sectionIcon: string;
+  categoryColor: string;
+  sectionColor: string;
   titleFallback?: string;
-  descriptionFallback?: string;
-  semanticCategories?: string[];
-  merchantName?: string | null;
+  descriptionFallback?: string | null;
+  source: 'ai' | 'fallback';
 };
 
+const EXPENSE_FALLBACK = {
+  categoryName: 'Расход',
+  sectionName: 'Расходы',
+  categoryIcon: '🧾',
+  sectionIcon: '🧾',
+  categoryColor: '#60A5FA',
+  sectionColor: '#60A5FA',
+};
 
-const GROCERY_SECTION = {
-  sectionName: 'Продуктовый магазин',
-  sectionIcon: '🛒',
+const INCOME_FALLBACK = {
+  categoryName: 'Доход',
+  sectionName: 'Доходы',
+  categoryIcon: '💰',
+  sectionIcon: '💰',
+  categoryColor: '#34D399',
   sectionColor: '#34D399',
 };
 
-const GROCERY_CATEGORY = {
-  categoryName: 'Продукты',
-  categoryIcon: '🛒',
-  categoryColor: '#34D399',
-};
-
-const GENERIC_GROCERY_WORDS = [
-  'продукты',
-  'продукт',
-  'продуктовый',
-  'продуктовом',
-  'groceries',
-  'grocery',
-  'food store',
-];
-
-const SPECIFIC_GROCERY_WORDS = [
-  'мясо', 'колбас', 'сосиск', 'ветчина', 'курица', 'говядина', 'свинина',
-  'молоко', 'кефир', 'йогурт', 'сыр', 'творог', 'сметана',
-  'хлеб', 'булка', 'выпечка', 'овощ', 'помидор', 'огурец', 'картоф',
-  'фрукт', 'яблок', 'банан', 'рыба', 'морепродукт', 'сладост', 'шоколад',
-  'meat', 'sausage', 'chicken', 'milk', 'cheese', 'bread', 'vegetable', 'fruit', 'fish',
-];
-
-const AZS_SECTION = {
-  sectionName: 'АЗС',
-  sectionIcon: '⛽',
-  sectionColor: '#FB7185',
-};
-
-const CATEGORY_META: Record<string, { icon: string; color: string }> = {
-  Бензин: { icon: '⛽', color: '#FB7185' },
-  Напитки: { icon: '🥤', color: '#2DD4BF' },
-  Табак: { icon: '🚬', color: '#94A3B8' },
-  'Покупки на АЗС': { icon: '🧾', color: '#F59E0B' },
-};
-
-const PLACE_AZS_WORDS = [
-  'азс',
-  'заправка',
-  'заправке',
-  'заправочную',
-  'заправочной',
-  'бензоколонка',
-  'лукойл',
-  'роснефть',
-  'газпромнефть',
-  'татнефть',
-  'shell',
-];
-
-const FUEL_WORDS = [
-  'бензин',
-  'топливо',
-  'дизель',
-  'солярка',
-  'заправился',
-  'заправилась',
-  'заправить',
-  'заправил',
-  'бак',
-  'аи92',
-  'аи95',
-  'аи98',
-  'а 92',
-  'а 95',
-  'а 98',
-];
-
-const DRINK_WORDS = [
-  'напиток',
-  'напитки',
-  'вода',
-  'энергетик',
-  'газировка',
-  'сок',
-  'кола',
-  'лимонад',
-  'чай',
-  'кофе',
-  'капучино',
-  'латте',
-];
-
-const TOBACCO_WORDS = [
-  'сигарет',
-  'сигареты',
-  'сигарета',
-  'табак',
-  'вейп',
-  'стики',
-  'сигары',
-  'iqos',
-  'heets',
-];
-
-const SHOP_MARKER_WORDS = [
-  'магазин',
-  'маркет',
-  'супермаркет',
-  'гипермаркет',
-  'лавка',
-  'точка',
-  'кафе',
-  'ресторан',
-  'аптека',
-  'азс',
-  'заправка',
-  'заправке',
-];
-
-function normalize(value?: string | null) {
-  return (value ?? '')
-    .toLowerCase()
-    .replace(/ё/g, 'е')
-    .replace(/[.,;:!?()\[\]{}«»"']/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-
-function hasAny(text: string, words: string[]) {
-  return words.some((word) => text.includes(word));
-}
-
-function uniq(values: string[]) {
-  return [...new Set(values.filter(Boolean))];
-}
-
-function composeDescription(original: string | null | undefined, details: string[]) {
-  const parts = [original?.trim(), ...details].filter((part): part is string => Boolean(part && part.trim()));
-  return uniq(parts).join(' · ');
-}
-
-
-function stripMerchantMetadata(value?: string | null) {
-  return (value ?? '')
-    .replace(/(^|[·;])\s*Место:\s*[^·;]+/gi, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-
-function compactText(value?: string | null) {
+function clean(value?: string | null) {
   return (value ?? '').trim().replace(/\s+/g, ' ');
 }
 
-export function looksLikePlaceOrMerchant(value?: string | null) {
-  const text = normalize(value);
-  if (!text) return false;
-  return hasAny(text, SHOP_MARKER_WORDS);
+function isSameText(left?: string | null, right?: string | null) {
+  const normalize = (value?: string | null) => clean(value).toLowerCase().replace(/ё/g, 'е');
+  return normalize(left) === normalize(right);
 }
 
-export function buildMerchantAwareDescription(params: {
-  original?: string | null;
-  merchant?: string | null;
-  details?: string[];
+function buildGenericFallback(kind: 'income' | 'expense') {
+  return kind === 'income' ? INCOME_FALLBACK : EXPENSE_FALLBACK;
+}
+
+function buildAiTaxonomy(params: {
+  kind: 'income' | 'expense';
+  categoryName: string;
+  sectionName: string;
 }) {
-  const merchant = compactText(params.merchant);
-  const details = params.details ?? [];
-  return composeDescription(params.original, [
-    merchant ? `Место: ${merchant}` : '',
-    ...details,
-  ]);
+  const fallback = buildGenericFallback(params.kind);
+
+  return {
+    categoryName: params.categoryName,
+    sectionName: params.sectionName,
+    categoryIcon: fallback.categoryIcon,
+    sectionIcon: fallback.sectionIcon,
+    categoryColor: fallback.categoryColor,
+    sectionColor: fallback.sectionColor,
+  };
 }
 
 export function resolveTransactionSemanticTaxonomy(input: SemanticTransactionTaxonomyInput): SemanticTransactionTaxonomy {
-  const text = normalize([
-    input.title,
-    input.description,
-    input.sectionName,
-    input.categoryName,
-  ].filter(Boolean).join(' '));
+  const aiCategory = clean(input.categoryName);
+  const aiSection = clean(input.sectionName);
+  const fallback = buildGenericFallback(input.kind);
 
-  const baseDescription = stripMerchantMetadata(input.description);
-  const base = resolveTaxonomyForText({
-    kind: input.kind,
-    title: input.categoryName || input.title || undefined,
-    description: baseDescription || undefined,
-  });
+  if (aiCategory || aiSection) {
+    const categoryName = aiCategory || fallback.categoryName;
+    const sectionName = aiSection || fallback.sectionName;
 
-  if (input.kind !== 'expense') {
-    return base;
-  }
-
-  const hasGenericGrocery = hasAny(text, GENERIC_GROCERY_WORDS);
-  const hasSpecificGrocery = hasAny(text, SPECIFIC_GROCERY_WORDS);
-
-  if (hasGenericGrocery && !hasSpecificGrocery) {
     return {
-      ...GROCERY_SECTION,
-      ...GROCERY_CATEGORY,
-      titleFallback: 'Продукты',
-      descriptionFallback: input.description ?? input.title ?? 'Продукты',
+      ...buildAiTaxonomy({ kind: input.kind, categoryName, sectionName }),
+      source: 'ai',
+      titleFallback: categoryName,
+      descriptionFallback: null,
     };
   }
 
-  const hasAzsPlace = hasAny(text, PLACE_AZS_WORDS);
-  const hasFuel = hasAny(text, FUEL_WORDS);
-  const hasDrink = hasAny(text, DRINK_WORDS);
-  const hasTobacco = hasAny(text, TOBACCO_WORDS);
+  return {
+    ...fallback,
+    source: 'fallback',
+    titleFallback: fallback.categoryName,
+    descriptionFallback: null,
+  };
+}
 
-  if (hasAzsPlace) {
-    const itemCategories = uniq([
-      hasFuel ? 'Бензин' : '',
-      hasDrink ? 'Напитки' : '',
-      hasTobacco ? 'Табак' : '',
-    ]);
+export function shouldUseTaxonomyTitleFallback(params: {
+  rawTitle?: string | null;
+  rawDescription?: string | null;
+  categoryName?: string | null;
+}) {
+  const title = clean(params.rawTitle);
+  if (!title) return false;
 
-    const mixedWithoutPrices = itemCategories.length > 1;
-    const primaryCategory = mixedWithoutPrices
-      ? 'Покупки на АЗС'
-      : itemCategories[0] ?? 'Покупки на АЗС';
-    const meta = CATEGORY_META[primaryCategory] ?? CATEGORY_META['Покупки на АЗС'];
+  if (title.length > 48) return true;
+  if (isSameText(title, params.rawDescription)) return true;
 
-    return {
-      ...AZS_SECTION,
-      categoryName: primaryCategory,
-      categoryIcon: meta.icon,
-      categoryColor: meta.color,
-      semanticCategories: itemCategories,
-      merchantName: 'АЗС',
-      titleFallback: mixedWithoutPrices || !itemCategories.length ? 'Покупка на АЗС' : primaryCategory,
-      descriptionFallback: composeDescription(input.description, [
-        'Место: АЗС',
-        itemCategories.length > 1
-          ? `Состав: ${itemCategories.join(', ')}`
-          : itemCategories.length === 1
-            ? `Категория: ${itemCategories[0]}`
-            : '',
-      ]),
-    };
+  const wordCount = title.split(' ').filter(Boolean).length;
+  if (wordCount >= 4 && /[:;·]/.test(title)) return true;
+
+  const category = clean(params.categoryName);
+  if (category && title.length > category.length + 18 && title.toLowerCase().includes(category.toLowerCase())) {
+    return true;
   }
 
-  return base;
+  return false;
+}
+
+function hasCyrillic(value: string) {
+  return /[а-яё]/i.test(value);
+}
+
+function cleanList(value: unknown) {
+  if (!Array.isArray(value)) return [];
+
+  return Array.from(new Set(value
+    .map((item) => clean(String(item ?? '')))
+    .filter((item) => item.length >= 2 && item.length <= 48)))
+    .slice(0, 8);
+}
+
+export function buildStructuredTransactionDescription(params: {
+  description?: string | null;
+  merchant?: unknown;
+  place?: unknown;
+  items?: unknown;
+  tags?: unknown;
+}) {
+  const description = clean(params.description);
+  const place = clean(String(params.merchant ?? params.place ?? ''));
+  const items = cleanList(params.items);
+  const tags = cleanList(params.tags);
+  const languageSeed = [description, place, ...items, ...tags].join(' ');
+  const ru = hasCyrillic(languageSeed);
+  const parts = [
+    description,
+    place ? `${ru ? 'Место' : 'Place'}: ${place}` : '',
+    items.length ? `${ru ? 'Состав' : 'Items'}: ${items.join(', ')}` : '',
+    tags.length ? `${ru ? 'Теги' : 'Tags'}: ${tags.join(', ')}` : '',
+  ].filter(Boolean);
+
+  return Array.from(new Set(parts)).join(' · ') || null;
 }

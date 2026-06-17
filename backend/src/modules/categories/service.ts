@@ -43,7 +43,7 @@ export class CategoryService {
     const name = this.normalizeName(input.name);
     const type = normalizeCategoryType(input.type);
     const appearance = resolveCategoryAppearance(name, taxonomyKind(type));
-    const sectionId = input.sectionId !== undefined ? input.sectionId : await this.ensureSemanticSection(userId, appearance);
+    const sectionId = input.sectionId !== undefined ? input.sectionId : null;
 
     const existing = await prisma.category.findFirst({ where: { userId, name } });
     if (existing) {
@@ -84,7 +84,7 @@ export class CategoryService {
     const appearance = resolveCategoryAppearance(nextName, taxonomyKind(nextType));
     const nextSectionId = input.sectionId !== undefined
       ? input.sectionId
-      : existing.sectionId ?? await this.ensureSemanticSection(userId, appearance);
+      : existing.sectionId;
 
     return prisma.category.update({
       where: { id: categoryId },
@@ -109,37 +109,6 @@ export class CategoryService {
     ]);
 
     return existing;
-  }
-
-  private async ensureSemanticSection(
-    userId: string,
-    appearance: { sectionName: string; sectionIcon: string; sectionColor: string },
-  ) {
-    const existing = await prisma.section.findFirst({ where: { userId, name: appearance.sectionName } });
-    if (existing) {
-      if (shouldReplaceGenericIcon(existing.icon) || !existing.color) {
-        const updated = await prisma.section.update({
-          where: { id: existing.id },
-          data: {
-            icon: shouldReplaceGenericIcon(existing.icon) ? appearance.sectionIcon : existing.icon,
-            color: existing.color ?? appearance.sectionColor,
-          },
-        });
-        return updated.id;
-      }
-      return existing.id;
-    }
-
-    const section = await prisma.section.create({
-      data: {
-        userId,
-        name: appearance.sectionName,
-        icon: appearance.sectionIcon,
-        color: appearance.sectionColor,
-      },
-    });
-
-    return section.id;
   }
 
   private normalizeName(value: string) {

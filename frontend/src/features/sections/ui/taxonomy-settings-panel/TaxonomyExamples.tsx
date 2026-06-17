@@ -3,7 +3,7 @@ import type { TranslateFn } from './taxonomySettingsPanel.types';
 const EXAMPLE_KEYS = [
   'settings.taxonomy.example.section',
   'settings.taxonomy.example.category',
-  'settings.taxonomy.example.rule',
+  'settings.taxonomy.example.moveCategory',
   'settings.taxonomy.example.expense',
 ];
 

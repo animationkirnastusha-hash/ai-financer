@@ -128,7 +128,7 @@ function buildReviewedPreview(scan: ReceiptScan): ReceiptScanPreview {
   return {
     title: scan.merchant || 'Чек проверен',
     caption: groups.length > 0
-      ? 'Позиции чека разложены по разделам и категориям. Проверь итог перед созданием расхода.'
+      ? 'Проверь сумму, счёт и данные чека перед созданием расхода.'
       : scan.transactionId ? 'Расход уже создан.' : 'Можно создать расход из этого чека.',
     fields: [
       { label: 'Сумма', value: scan.totalAmount ? `${scan.totalAmount} ${scan.currency}` : 'Не указана' },
@@ -234,16 +234,13 @@ export class ReceiptScanService {
     if (!reviewed.accountId) throw new BadRequestError('Account is required to create expense from receipt');
     if (!reviewed.totalAmount) throw new BadRequestError('Receipt amount is required to create expense');
 
-    const receiptGroups = groupReceiptTaxonomyItems(buildReceiptTaxonomyItems((await prisma.receiptScan.findFirst({ where: { id: receiptScanId, userId } }))?.rawText));
-    const primaryCategory = receiptGroups[0]?.categories[0]?.categoryName ?? null;
     const receiptTitle = input.title?.trim()
-      || primaryCategory
+      || reviewed.merchant
       || 'Расход по чеку';
     const receiptDescription = input.description?.trim()
       || [
         `Расход из чека ${reviewed.fileName}`,
         reviewed.merchant ? `Место: ${reviewed.merchant}` : '',
-        primaryCategory ? `Основная категория: ${primaryCategory}` : '',
       ].filter(Boolean).join(' · ');
 
     const transaction = await this.transactionService.createTransaction(userId, {

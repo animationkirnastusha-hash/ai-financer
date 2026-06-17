@@ -81,7 +81,7 @@ export const settingsDictionary = {
   'settings.taxonomy.examples.title': 'Что можно сказать или написать',
   'settings.taxonomy.example.section': 'создай раздел Дом',
   'settings.taxonomy.example.category': 'создай категорию Продукты в разделе Дом',
-  'settings.taxonomy.example.rule': 'все продукты отправляй в раздел Дом',
+  'settings.taxonomy.example.moveCategory': 'перенеси категорию Продукты в раздел Дом',
   'settings.taxonomy.example.expense': 'Потратил на кофе',
   'settings.taxonomy.preset.section.home': 'Дом',
   'settings.taxonomy.preset.section.home.description': 'Продукты, быт, семья, ремонт',

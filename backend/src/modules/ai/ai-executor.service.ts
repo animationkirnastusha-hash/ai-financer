@@ -7,7 +7,7 @@ import { aiPremiumService } from './ai-premium.service';
 import { aiCompanionService } from './ai-companion.service';
 import { aiAnalyticsService } from './ai-analytics.service';
 import { resolveCategoryAppearance, resolveSectionAppearance, shouldReplaceGenericIcon } from '../taxonomy/taxonomy-icons';
-import { looksLikePlaceOrMerchant, resolveTransactionSemanticTaxonomy } from '../taxonomy/transaction-taxonomy';
+import { resolveTransactionSemanticTaxonomy, shouldUseTaxonomyTitleFallback } from '../taxonomy/transaction-taxonomy';
 import { goalAutoSaveService } from '../goals/goal-autosave.service';
 
 const transactionInclude = {
@@ -86,13 +86,16 @@ export class AIExecutorService {
   private buildAITransactionTitle(params: {
     kind: 'income' | 'expense';
     rawTitle?: string | null;
+    rawDescription?: string | null;
     categoryName: string;
     taxonomyTitle?: string | null;
   }) {
     const rawTitle = this.cleanString(params.rawTitle);
     const taxonomyTitle = this.cleanString(params.taxonomyTitle);
 
-    if (rawTitle && rawTitle.length <= 48 && !this.looksLikeTransactionCommandEcho(rawTitle)) {
+    if (rawTitle
+      && !this.looksLikeTransactionCommandEcho(rawTitle)
+      && !shouldUseTaxonomyTitleFallback({ rawTitle, rawDescription: params.rawDescription, categoryName: params.categoryName })) {
       return rawTitle;
     }
 
@@ -266,17 +269,11 @@ export class AIExecutorService {
         categoryName: rawCategory,
       });
 
+      const sectionName = rawSection ?? taxonomy.sectionName;
+      const categoryName = rawCategory ?? taxonomy.categoryName;
       const sectionId = typeof resolved.sectionId === 'string'
         ? resolved.sectionId
-        : await this.findOrCreateSectionId(tx, userId, rawSection ?? taxonomy.sectionName);
-
-      const semanticCategoryNames = taxonomy.semanticCategories ?? [];
-      const shouldPreferSemanticCategory = semanticCategoryNames.length > 1
-        || Boolean(taxonomy.merchantName && rawCategory && semanticCategoryNames.length > 0 && !semanticCategoryNames.includes(rawCategory))
-        || (rawCategory ? looksLikePlaceOrMerchant(rawCategory) : false);
-      const categoryName = rawCategory && !shouldPreferSemanticCategory
-        ? rawCategory
-        : taxonomy.categoryName;
+        : await this.findOrCreateSectionId(tx, userId, sectionName);
 
       const categoryId = await this.findOrCreateCategoryId(tx, userId, {
         name: categoryName,
@@ -302,6 +299,7 @@ export class AIExecutorService {
           title: this.buildAITransactionTitle({
             kind,
             rawTitle,
+            rawDescription,
             categoryName,
             taxonomyTitle: taxonomy.titleFallback,
           }),

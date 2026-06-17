@@ -81,7 +81,7 @@ export const settingsDictionary = {
   'settings.taxonomy.examples.title': 'What you can say or type',
   'settings.taxonomy.example.section': 'create a Home section',
   'settings.taxonomy.example.category': 'create a Groceries category in Home',
-  'settings.taxonomy.example.rule': 'send all groceries to Home',
+  'settings.taxonomy.example.moveCategory': 'move Groceries to Home',
   'settings.taxonomy.example.expense': 'Spent on coffee',
   'settings.taxonomy.preset.section.home': 'Home',
   'settings.taxonomy.preset.section.home.description': 'Groceries, household, family and repairs',
