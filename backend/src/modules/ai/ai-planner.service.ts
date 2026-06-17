@@ -71,6 +71,13 @@ export class AIPlannerService {
       plan = this.normalizePlan(raw, command);
     }
 
+    if (plan.actions.length) {
+      const reviewedPlan = await this.reviewPlanAgainstContract(command, compactContext, plan);
+      if (reviewedPlan?.actions.length) {
+        plan = reviewedPlan;
+      }
+    }
+
     console.log('[AI] planner normalized', {
       mode: plan.mode,
       actions: plan.actions.map((action) => action.tool),
@@ -92,7 +99,8 @@ export class AIPlannerService {
       'Amounts must be positive plain numbers. Compact spoken amount forms with thousand meaning must be expanded to the full number. If the amount is uncertain, leave amount missing for validator clarification.',
       'Separate financial dimensions: tool/action, amount, currency, source account, destination account, transaction title, financial category, section, merchant/place, purchased items, tags, description.',
       'For transactions, category and section describe what the money is for. Merchant/place describes where it happened. A shop, gas station, marketplace, bank, person or place is not automatically a category or section.',
-      'For mixed purchases with one total amount and no item-level prices, create exactly one transaction. Put item meanings into items/tags/description and choose a broad honest category/section only when semantically clear.',
+      'For mixed purchases with one total amount and no item-level prices, create exactly one transaction. Put every named purchased object/service into items as a string array, keep merchant/place separately, and choose a broad honest category/section only when semantically clear.',
+      'When a transaction mentions concrete goods, services, or purchase components, preserve them in items even if prices for the individual items are not provided. Do not drop them into the title only.',
       'Transaction title must be short and clean. Do not copy the full spoken command, do not put amount/account into title, and do not use “merchant: items” as title. Use merchant/place/items fields for those details.',
       'If the user describes an existing operation correction, use update_transaction. Do not create a new transaction for corrections.',
       'Savings goals are not expenses or income. Goal target amount belongs to create_goal.targetAmount.',
@@ -114,9 +122,9 @@ export class AIPlannerService {
       'Output null or omit fields that are not known. Do not invent missing data to avoid clarification.',
       'Use CTX entity names when the user clearly refers to an existing account, category, section, goal, loan or transaction. Different endings and colloquial forms may refer to the same entity.',
       'Financial mutations must use the matching tool family: transactions, transfers, accounts, goals, obligations, taxonomy, settings, onboarding, analytics.',
-      'For create_transaction: kind is income or expense; amount is one positive number; account is natural account name; title is a short label; category/section are financial meaning; merchant/place/items/tags/description carry context.',
+      'For create_transaction: kind is income or expense; amount is one positive number; account is natural account name; title is a short label; category/section are financial meaning; merchant/place/items/tags/description carry context. items must be an array when named goods/services are present.',
       'For income, category/section should describe income source or broad income group, not the account receiving money.',
-      'For expense, category/section should describe purpose. If purpose has several unrelated items under one total, do not split the total; use one transaction with structured items/tags and a broad category/section.',
+      'For expense, category/section should describe purpose. If purpose has several unrelated items under one total, do not split the total; use one transaction with structured items/tags and a broad category/section. If no purpose category is confident, leave category/section empty instead of using generic Expense/Расход.',
       'Merchant/place must not replace category/section unless the user explicitly manages taxonomy and asks to create or rename that category/section.',
       'If no existing category/section fits and the meaning is still clear, output a concise natural category/section name; backend may create it. If meaning is unclear, leave category/section empty.',
       'Do not turn a store, location or brand into transaction title when items/purpose are present. Keep title independent from merchant.',
@@ -147,7 +155,7 @@ export class AIPlannerService {
         'Do not reuse names from context, memory, or previous commands when USER gives a new exact name.',
         'If the request requires multiple financial actions, return multiple tool calls in order.',
         'If meaning is unclear, return a minimal safe action plan with missing/null ambiguous fields for validator clarification.',
-        'For transactions, separate category/section from merchant/place/items/tags. Never copy the raw user sentence as title.',
+        'For transactions, separate category/section from merchant/place/items/tags. Preserve named goods/services in items. Never copy the raw user sentence as title.',
         'For VOICE_SESSION_COMMAND, merge segments into one final intent. Later correction segments override conflicting earlier details. Preserve earlier non-conflicting details.',
       ].join(' '),
       prompt: [
@@ -163,7 +171,7 @@ export class AIPlannerService {
         'Edits to existing operations must use update_transaction, not create_transaction.',
         'For off-topic, return reply with empty actions.',
         'Pass user-provided natural names through as tool input values. For amount fields, return unambiguous compact amounts as plain numeric values; if unsure, leave amount missing.',
-        'For mixed purchases with one total amount, do not create several expenses. Use one create_transaction and keep item/place details in items, merchant/place, tags or description.',
+        'For mixed purchases with one total amount, do not create several expenses. Use one create_transaction and keep named goods/services in items plus place details in merchant/place, tags or description.',
         'If no category/section fits confidently, leave category/section empty instead of misclassifying. A place is not a category.',
         'Do not copy the raw spoken phrase as a transaction name or title. Use a short clean title and keep store/place/items/tags as structured context fields.',
         'CONTEXT:', JSON.stringify(focusedContext),
@@ -174,6 +182,45 @@ export class AIPlannerService {
       timeoutMs: 18_000,
       numPredict: 760,
     });
+  }
+
+  private async reviewPlanAgainstContract(command: string, context: unknown, draft: AIPlan): Promise<AIPlan | null> {
+    try {
+      const raw = await this.provider.generateJson<Record<string, unknown>>({
+        system: [
+          'Return ONLY strict JSON. No markdown. No prose.',
+          'You are reviewing an AI financial tool plan against the current USER message and tool contract.',
+          'Do not use regex, keyword shortcuts, rule tables, examples, or hard-coded financial mappings.',
+          'Use semantic comparison only: every meaningful detail from USER must be represented in the structured fields or deliberately left missing for validation clarification.',
+          'Preserve correct tool choices and amounts. Do not create extra actions unless the USER clearly requested more than one action.',
+          'For create_transaction, category/section describe financial purpose; merchant/place describe where it happened; items/tags/description preserve concrete purchase context.',
+          'If USER mentions concrete purchased goods/services/components and the draft omitted them, add them to items as a string array or to tags/description when items is unsuitable.',
+          'If USER gives one total for multiple goods/services, keep exactly one create_transaction and do not invent per-item prices.',
+          'If draft uses a generic category/section such as Expense/Income/Расход/Доход only to avoid an empty field, remove that field. Validator can ask or use fallback safely.',
+          'Keep title short and clean. Do not copy the full command and do not use merchant plus item list as title.',
+        ].join(' '),
+        prompt: [
+          'TOOLS:',
+          getPlannerToolContract(),
+          'CTX:', JSON.stringify(context),
+          'USER:', command,
+          'DRAFT_PLAN:', JSON.stringify(draft),
+          'Return the corrected full plan JSON in the same schema: {"mode":"actions","summary":"...","actions":[{"tool":"...","input":{...}}]}.',
+        ].join('\n'),
+        temperature: 0,
+        modelRole: 'fast',
+        timeoutMs: 12_000,
+        numPredict: 760,
+      });
+
+      const reviewed = this.normalizePlan(raw, command);
+      return reviewed.actions.length ? reviewed : null;
+    } catch (error) {
+      console.warn('[AI] planner contract review skipped', {
+        message: error instanceof Error ? error.message : String(error),
+      });
+      return null;
+    }
   }
 
   private focusContext(context: unknown) {

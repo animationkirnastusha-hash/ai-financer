@@ -284,8 +284,8 @@ export class AIValidatorService {
           }
         }
 
-        const rawCategory = this.cleanEntityName(input.category);
-        const rawSection = this.cleanEntityName(input.section);
+        const rawCategory = this.cleanGenericTaxonomyName(input.category, kind, 'category');
+        const rawSection = this.cleanGenericTaxonomyName(input.section, kind, 'section');
         const rawDescription = this.cleanEntityName(input.description);
         const merchant = this.cleanEntityName(input.merchant || input.place || input.store || input.shop);
         const items = this.cleanStringList(input.items);
@@ -1134,12 +1134,31 @@ export class AIValidatorService {
 
 
   private cleanStringList(value: unknown) {
-    if (!Array.isArray(value)) return [];
+    const source = Array.isArray(value) ? value : typeof value === 'string' ? [value] : [];
 
-    return Array.from(new Set(value
+    return Array.from(new Set(source
       .map((item) => this.cleanEntityName(item))
-      .filter((item) => item.length >= 2 && item.length <= 48)))
+      .filter((item) => item.length >= 2 && item.length <= 80)))
       .slice(0, 8);
+  }
+
+  private cleanGenericTaxonomyName(value: unknown, kind: 'income' | 'expense' | null, field: 'category' | 'section') {
+    const clean = this.cleanEntityName(value);
+    if (!clean) return '';
+
+    const normalized = this.key(clean);
+    const genericExpense = field === 'section'
+      ? ['расходы', 'траты', 'expenses', 'spending']
+      : ['расход', 'трата', 'expense', 'spending'];
+    const genericIncome = field === 'section'
+      ? ['доходы', 'поступления', 'income', 'earnings']
+      : ['доход', 'поступление', 'income', 'earning'];
+    const genericOther = ['операция', 'операции', 'разное', 'прочее', 'other', 'misc'];
+
+    if (kind === 'expense' && [...genericExpense, ...genericOther].includes(normalized)) return '';
+    if (kind === 'income' && [...genericIncome, ...genericOther].includes(normalized)) return '';
+
+    return clean;
   }
 
   private cleanTransactionTitle(value: unknown, kind: 'income' | 'expense' | null, category: string, description: string) {
