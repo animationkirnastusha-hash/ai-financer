@@ -60,11 +60,15 @@ export class AIOrchestratorService {
       const tier = await this.modelRouter.getUserTier(userId);
       const route = await this.dialogRouter.route(trimmed, context, tier);
 
-      if (!route.shouldUseTools) {
+      const recoveredPlan = !route.shouldUseTools
+        ? await this.tryRecoverActionPlan(plannerCommand, context, route)
+        : null;
+
+      if (!route.shouldUseTools && !recoveredPlan) {
         return this.answerDialog(userId, plannerCommand, trimmed, context, tier, route);
       }
 
-      const plan = await this.planner.plan(plannerCommand, context);
+      const plan = recoveredPlan ?? await this.planner.plan(plannerCommand, context);
 
       if (this.planLimits.isExceeded(plan)) {
         const audit = await this.audit.create({
@@ -332,6 +336,25 @@ export class AIOrchestratorService {
         parsed: null,
         meta: { auditLogId: audit.id },
       };
+    }
+  }
+
+  private async tryRecoverActionPlan(
+    command: string,
+    context: unknown,
+    route: AIDialogRoute,
+  ): Promise<AIActionPlan | null> {
+    if (route.intent !== "financial_coaching" && route.intent !== "unclear") return null;
+
+    try {
+      const plan = await this.planner.plan(command, context);
+      return plan.actions.length ? plan : null;
+    } catch (error) {
+      console.warn("[AI] action recovery after natural route skipped", {
+        intent: route.intent,
+        message: error instanceof Error ? error.message : String(error),
+      });
+      return null;
     }
   }
 
