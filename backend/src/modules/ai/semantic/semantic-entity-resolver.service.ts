@@ -1,5 +1,5 @@
 import { buildEntityAliases } from './entity-aliases';
-import { buildSemanticVariants, normalizeSemanticText } from './semantic-normalizer';
+import { buildSemanticVariants, normalizeSemanticText, semanticStemText } from './semantic-normalizer';
 import { semanticBestScore, semanticThreshold } from './semantic-scorer';
 import { SemanticEntityKind, SemanticEntityLike, SemanticEntityMemoryItem, SemanticResolvedEntity } from './semantic-types';
 
@@ -21,6 +21,9 @@ export type ResolvedEntity<T> = SemanticResolvedEntity<T>;
 
 export class AIEntityResolverService {
   resolveAccount<T extends AccountLike>(accounts: T[], raw: unknown): ResolvedEntity<T> | null {
+    const exact = this.resolveExactLabel(accounts, raw, (account) => account.name);
+    if (exact) return exact;
+
     const primary = this.resolvePrimaryAccount(accounts, raw);
     if (primary) {
       return {
@@ -55,18 +58,8 @@ export class AIEntityResolverService {
     const query = normalizeSemanticText(raw);
     if (!query) return null;
 
-    for (const item of items) {
-      const label = params.getLabel(item);
-      if (normalizeSemanticText(label) === query) {
-        return {
-          item,
-          score: 1,
-          reason: 'exact_label',
-          matchedText: query,
-          confidence: 'high',
-        };
-      }
-    }
+    const exact = this.resolveExactLabel(items, raw, params.getLabel);
+    if (exact) return exact;
 
     const queryVariants = buildSemanticVariants(query);
     let best: ResolvedEntity<T> | null = null;
@@ -119,6 +112,30 @@ export class AIEntityResolverService {
 
   normalizeText(value: unknown) {
     return normalizeSemanticText(value);
+  }
+
+  private resolveExactLabel<T>(items: T[], raw: unknown, getLabel: (item: T) => string): ResolvedEntity<T> | null {
+    const query = normalizeSemanticText(raw);
+    if (!query) return null;
+
+    const queryStem = semanticStemText(query);
+
+    for (const item of items) {
+      const label = normalizeSemanticText(getLabel(item));
+      if (!label) continue;
+      const labelStem = semanticStemText(label);
+      if (label === query || labelStem === queryStem) {
+        return {
+          item,
+          score: 1,
+          reason: 'exact_label',
+          matchedText: query,
+          confidence: 'high',
+        };
+      }
+    }
+
+    return null;
   }
 
   private buildEntityMemoryAliases(entity: SemanticEntityLike, kind: SemanticEntityKind) {

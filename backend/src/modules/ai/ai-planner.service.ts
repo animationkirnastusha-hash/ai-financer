@@ -93,16 +93,14 @@ export class AIPlannerService {
       'Action format: {"mode":"actions","actions":[{"tool":"create_transaction","input":{}}],"summary":"short result text"}.',
       'Reply format for non-action questions: {"mode":"reply","summary":"short human answer","actions":[]}.',
       'Use semantic understanding and the tool contract. Do not emulate old parsers, regex extraction, keyword shortcuts, or rule tables.',
-      'The current USER message is the primary source of truth. Context helps only with availability, pronouns, continuations, defaults, and recent operations.',
-      'CTX entity names are reference material, not recommendations. Do not substitute a user-provided broad account/category/section with a narrower or different CTX entity unless the user clearly selected that exact entity.',
-      'Context entity names are resolution candidates, not suggestions. Do not narrow a broad user-provided purpose into a more specific context category unless the user clearly selected that specific meaning.',
+      'The current USER message is the primary source of truth. Context helps only with existing entities, pronouns, continuations, defaults, and recent operations.',
       'Never output accountId, categoryId, sectionId, goalId, transactionId, or raw database identifiers. Output natural entity names only; validator resolves them.',
       'Treat voice text as noisy natural speech: missing punctuation, informal words, pauses and compact numbers are normal. Preserve the intended amount and entity if it is clear.',
       'Amounts must be positive plain numbers. Compact spoken amount forms with thousand meaning must be expanded to the full number. If the amount is uncertain, leave amount missing for validator clarification.',
       'Separate financial dimensions: tool/action, amount, currency, source account, destination account, transaction title, financial category, section, merchant/place, purchased items, tags, description.',
-      'For transactions, category and section describe what the money is for. Merchant/place describes where it happened. A shop, station, marketplace, bank, person or place is not automatically a category or section.',
-      'Keep transaction categories broad and useful for everyday finance. Do not split a broad user category into narrow subcategories unless the user explicitly names a narrow category.',
-      'Sections are higher-level life areas than categories. Category and section should not be the same unless the user is managing taxonomy directly.',
+      'For transactions, category and section describe what the money is for. Merchant/place describes where it happened. A shop, gas station, marketplace, bank, person or place is not automatically a category or section.',
+      'Preserve broad user-provided account and taxonomy references. Do not replace a general user account reference with a specific saved account name from context unless the user clearly named that saved account.',
+      'Preserve broad user-provided category references. Do not narrow a broad category into a more specific saved category from context unless the user clearly chose that specific category.',
       'For mixed purchases with one total amount and no item-level prices, create exactly one transaction. Put every named purchased object/service into items as a string array, keep merchant/place separately, and choose a broad honest category/section only when semantically clear.',
       'When a transaction mentions concrete goods, services, or purchase components, preserve them in items even if prices for the individual items are not provided. Do not drop them into the title only.',
       'Transaction title must be short and clean. Do not copy the full spoken command, do not put amount/account into title, and do not use “merchant: items” as title. Use merchant/place/items fields for those details.',
@@ -124,20 +122,18 @@ export class AIPlannerService {
       'Use only listed tools and fields from the contract.',
       'Do not implement phrase-specific financial behavior. Decide by semantic meaning of the full request.',
       'Output null or omit fields that are not known. Do not invent missing data to avoid clarification.',
-      'Use CTX only when the user clearly refers to an existing account, category, section, goal, loan or transaction. Do not choose CTX names merely because they look close or more specific.',
-      'Pass through natural account/category/section references from USER. Validator resolves them. Do not replace a broad USER reference with a concrete saved name from CTX.',
-      'If the user gives a broad category or purpose, preserve that broad meaning. Do not replace it with a narrower existing category from CTX only because it is related or recent.',
-      'For transaction and transfer account fields, preserve the user-provided natural account reference when it is broad or generic. Use a concrete CTX account display name only when the user clearly selected that concrete entity or a unique alias.',
+      'Use CTX entity names when the user clearly refers to an existing account, category, section, goal, loan or transaction. Different endings and colloquial forms may refer to the same entity.',
       'Financial mutations must use the matching tool family: transactions, transfers, accounts, goals, obligations, taxonomy, settings, onboarding, analytics.',
-      'For create_transaction: kind is income or expense; amount is one positive number; account is the user-provided natural account reference; title is a short label; category/section are financial meaning; merchant/place/items/tags/description carry context. items must be an array when named goods/services are present. Keep category as broad as the user made it unless the user clearly named a narrower purpose.',
+      'For create_transaction: kind is income or expense; amount is one positive number; account is natural account name; title is a short label; category/section are financial meaning; merchant/place/items/tags/description carry context. items must be an array when named goods/services are present.',
       'For income, category/section should describe income source or broad income group, not the account receiving money.',
-      'For expense, category/section should describe purpose. If purpose has several unrelated items under one total, do not split the total; use one transaction with structured items/tags and a broad category/section. Keep broad purpose broad. If no purpose category is confident, leave category/section empty instead of using generic Expense/Расход.',
+      'For expense, category/section should describe purpose. If purpose has several unrelated items under one total, do not split the total; use one transaction with structured items/tags and a broad category/section. If no purpose category is confident, leave category/section empty instead of using generic Expense/Расход.',
+      'If a broad category is clear, keep it broad and place concrete purchase details in items/tags/description. Do not pick a narrower category just because it exists in context.',
       'Merchant/place must not replace category/section unless the user explicitly manages taxonomy and asks to create or rename that category/section.',
       'If no existing category/section fits and the meaning is still clear, output a concise natural category/section name; backend may create it. If meaning is unclear, leave category/section empty.',
       'Do not turn a store, location or brand into transaction title when items/purpose are present. Keep title independent from merchant.',
       'For account setup plus first operation, return the account action first and the requested financial action second where safe.',
       'When the user says they have money in a new place/account, treat it as account setup with initialBalance/top-up, not as an expense.',
-      'For transfers, use transfer_money and both user-provided account references. Do not replace broad account references with unrelated CTX defaults. Do not create expense/income pairs for transfers.',
+      'For transfers, use transfer_money and both account names. Do not create expense/income pairs for transfers.',
       'For analytics/show/list requests, use query_analytics or show_* tools; do not create or update data.',
       'For undo/cancel last completed operation, use undo_last_action. For cancelling a pending unconfirmed action, the UI lifecycle handles it.',
       'For corrections to an operation, use update_transaction and identify target with target/transaction fields.',
@@ -162,7 +158,7 @@ export class AIPlannerService {
         'Do not reuse names from context, memory, or previous commands when USER gives a new exact name.',
         'If the request requires multiple financial actions, return multiple tool calls in order.',
         'If meaning is unclear, return a minimal safe action plan with missing/null ambiguous fields for validator clarification.',
-        'For transactions, separate category/section from merchant/place/items/tags. Preserve named goods/services in items. Preserve broad user-provided category/account references unless a concrete CTX entity was clearly selected. Never copy the raw user sentence as title.',
+        'For transactions, separate category/section from merchant/place/items/tags. Preserve named goods/services in items. Never copy the raw user sentence as title.',
         'For VOICE_SESSION_COMMAND, merge segments into one final intent. Later correction segments override conflicting earlier details. Preserve earlier non-conflicting details.',
       ].join(' '),
       prompt: [
@@ -177,9 +173,10 @@ export class AIPlannerService {
         'For first-account setup continuations, create the account and keep the original request moving in the same plan where safe.',
         'Edits to existing operations must use update_transaction, not create_transaction.',
         'For off-topic, return reply with empty actions.',
-        'Pass user-provided natural names and broad account references through as tool input values. For amount fields, return unambiguous compact amounts as plain numeric values; if unsure, leave amount missing.',
+        'Pass user-provided natural names through as tool input values. For amount fields, return unambiguous compact amounts as plain numeric values; if unsure, leave amount missing.',
         'For mixed purchases with one total amount, do not create several expenses. Use one create_transaction and keep named goods/services in items plus place details in merchant/place, tags or description.',
-        'If no category/section fits confidently, leave category/section empty instead of misclassifying. A place is not a category. Do not narrow a broad user purpose into a detailed CTX category unless the user clearly selected that detailed purpose.',
+        'Keep user-provided account/category/section labels natural. Context is not a picklist and must not override the user message.',
+        'If no category/section fits confidently, leave category/section empty instead of misclassifying. A place is not a category.',
         'Do not copy the raw spoken phrase as a transaction name or title. Use a short clean title and keep store/place/items/tags as structured context fields.',
         'CONTEXT:', JSON.stringify(focusedContext),
         'USER:', command,
@@ -199,8 +196,7 @@ export class AIPlannerService {
           'You are reviewing an AI financial tool plan against the current USER message and tool contract.',
           'Do not use regex, keyword shortcuts, rule tables, examples, or hard-coded financial mappings.',
           'Use semantic comparison only: every meaningful detail from USER must be represented in the structured fields or deliberately left missing for validation clarification.',
-          'Preserve correct tool choices, amounts, and user-provided account references. Do not create extra actions unless the USER clearly requested more than one action.',
-          'Preserve broad user-provided account/category/section references instead of substituting a narrower or different CTX entity that the USER did not clearly select.',
+          'Preserve correct tool choices and amounts. Do not create extra actions unless the USER clearly requested more than one action.',
           'For create_transaction, category/section describe financial purpose; merchant/place describe where it happened; items/tags/description preserve concrete purchase context.',
           'If USER mentions concrete purchased goods/services/components and the draft omitted them, add them to items as a string array or to tags/description when items is unsuitable.',
           'If USER gives one total for multiple goods/services, keep exactly one create_transaction and do not invent per-item prices.',
@@ -233,17 +229,15 @@ export class AIPlannerService {
 
   private focusContext(context: unknown) {
     const value = this.asRecord(context) as UserContext;
-    const accounts = Array.isArray(value.accounts) ? value.accounts : [];
-    const categories = Array.isArray(value.categories) ? value.categories : [];
-    const sections = Array.isArray(value.sections) ? value.sections : [];
 
     return {
-      accountContext: this.compactAccountContext(accounts),
-      taxonomyContext: this.compactTaxonomyContext(categories, sections),
+      accountContext: this.safeAccountContext(value),
+      taxonomyContext: this.safeTaxonomyContext(value),
       goals: Array.isArray(value.goals) ? value.goals.slice(0, 8).map((item) => item.title).filter(Boolean) : [],
       obligations: Array.isArray(value.obligations) ? value.obligations.slice(0, 8).map((item) => item.title).filter(Boolean) : [],
     };
   }
+
 
 
   private compactAliasList(value: unknown, limit: number) {
@@ -258,49 +252,29 @@ export class AIPlannerService {
       : [];
   }
 
-  private compactAccountContext(accounts: Array<{ type?: string; currency?: string }>) {
-    const types = Array.from(new Set(accounts.map((account) => account.type).filter((type): type is string => typeof type === 'string' && Boolean(type))));
-    const currencies = Array.from(new Set(accounts.map((account) => account.currency).filter((currency): currency is string => typeof currency === 'string' && Boolean(currency))));
-
-    return {
-      count: accounts.length,
-      types,
-      currencies,
-      policy: 'Do not choose a concrete saved account name from context. Preserve the natural account reference from USER; validator resolves it.',
-    };
-  }
-
-  private compactTaxonomyContext(
-    categories: Array<{ type?: string; sectionId?: string | null }>,
-    sections: Array<{ id?: string; name?: string }>,
-  ) {
-    return {
-      categoryCount: categories.length,
-      sectionCount: sections.length,
-      categoryTypes: Array.from(new Set(categories.map((category) => category.type).filter((type): type is string => typeof type === 'string' && Boolean(type)))),
-      policy: 'Existing category and section names are intentionally not listed. Keep USER category broad; do not infer narrow subcategories from saved taxonomy.',
-    };
-  }
-
   private compactContext(context: unknown) {
     const value = this.asRecord(context) as UserContext;
     const memory = value.memory && typeof value.memory === 'object' ? value.memory : {};
-    const accounts = Array.isArray(value.accounts) ? value.accounts : [];
-    const categories = Array.isArray(value.categories) ? value.categories : [];
-    const sections = Array.isArray(value.sections) ? value.sections : [];
 
     return {
-      accountContext: this.compactAccountContext(accounts),
-      taxonomyContext: this.compactTaxonomyContext(categories, sections),
-      entityAliases: {
-        goals: this.compactAliasList(memory.goalAliases, 8),
-      },
+      accountContext: this.safeAccountContext(value),
+      taxonomyContext: this.safeTaxonomyContext(value),
+      goals: Array.isArray(value.goals)
+        ? value.goals.slice(0, 8).map((goal) => ({
+          title: goal.title,
+          targetAmount: goal.targetAmount,
+          currentAmount: goal.currentAmount,
+          currency: goal.currency,
+          status: goal.status,
+        }))
+        : [],
+      goalAliases: this.compactAliasList(memory.goalAliases, 8),
       preferences: Array.isArray(memory.preferences) ? memory.preferences.slice(0, 6) : [],
       aiSettings: value.aiSettings
         ? {
           preset: value.aiSettings.preset,
-          defaultExpenseAccountId: value.aiSettings.defaultExpenseAccountId,
-          defaultIncomeAccountId: value.aiSettings.defaultIncomeAccountId,
+          hasDefaultExpenseAccount: Boolean(value.aiSettings.defaultExpenseAccountId),
+          hasDefaultIncomeAccount: Boolean(value.aiSettings.defaultIncomeAccountId),
           autoConfirmExpenseLimit: value.aiSettings.autoConfirmExpenseLimit,
           autoConfirmIncomeLimit: value.aiSettings.autoConfirmIncomeLimit,
           autoConfirmTransferLimit: value.aiSettings.autoConfirmTransferLimit,
@@ -314,15 +288,6 @@ export class AIPlannerService {
           skipped: value.onboardingState.skipped,
         }
         : null,
-      goals: Array.isArray(value.goals)
-        ? value.goals.slice(0, 8).map((goal) => ({
-          title: goal.title,
-          targetAmount: goal.targetAmount,
-          currentAmount: goal.currentAmount,
-          currency: goal.currency,
-          status: goal.status,
-        }))
-        : [],
       obligations: Array.isArray(value.obligations)
         ? value.obligations.slice(0, 8).map((item) => ({
           title: item.title,
@@ -343,17 +308,44 @@ export class AIPlannerService {
         }))
         : [],
       recentTransactions: Array.isArray(value.recentTransactions)
-        ? value.recentTransactions.slice(0, 8).map((item) => ({
+        ? value.recentTransactions.slice(0, 6).map((item) => ({
           id: item.id,
           type: item.type,
           amount: item.amount,
           description: item.description,
-          account: item.account?.name,
           createdAt: item.createdAt,
         }))
         : [],
     };
   }
+
+  private safeAccountContext(value: UserContext) {
+    const accounts = Array.isArray(value.accounts) ? value.accounts : [];
+    const typeCounts = accounts.reduce<Record<string, number>>((acc, account) => {
+      const type = typeof account.type === 'string' && account.type ? account.type : 'unknown';
+      acc[type] = (acc[type] ?? 0) + 1;
+      return acc;
+    }, {});
+
+    return {
+      count: accounts.length,
+      typeCounts,
+      currencies: Array.from(new Set(accounts.map((account) => account.currency).filter(Boolean))).slice(0, 4),
+    };
+  }
+
+  private safeTaxonomyContext(value: UserContext) {
+    const categories = Array.isArray(value.categories) ? value.categories : [];
+    const sections = Array.isArray(value.sections) ? value.sections : [];
+
+    return {
+      categoryCount: categories.length,
+      sectionCount: sections.length,
+      hasExpenseCategories: categories.some((category) => category.type === 'expense'),
+      hasIncomeCategories: categories.some((category) => category.type === 'income'),
+    };
+  }
+
 
   private normalizePlan(raw: Record<string, unknown>, command: string): AIPlan {
     const rawActions = Array.isArray(raw.actions)
@@ -384,7 +376,7 @@ export class AIPlannerService {
     const alias = this.normalizeToolAlias(rawTool);
     if (!alias) return null;
 
-    const nextInput = { ...input, ...alias.extraInput };
+    const nextInput = { ...input, ...alias.extraInput, __userText: command };
 
     const reason = typeof item.reason === 'string' && item.reason.trim() ? item.reason.trim() : undefined;
     return reason ? { tool: alias.tool, input: nextInput, reason } : { tool: alias.tool, input: nextInput };

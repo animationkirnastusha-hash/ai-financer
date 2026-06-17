@@ -40,7 +40,6 @@ export const voiceTaxonomyRuntimeDictionary: Record<string, string> = {
   'Категории и структура': 'Categories and structure',
   'Продукты': 'Groceries',
 
-  'Продуктовый магазин': 'Grocery store',
   'Бензин': 'Fuel',
   'Табак': 'Tobacco',
   'Покупки на АЗС': 'Gas station purchases',
@@ -52,6 +51,7 @@ export const voiceTaxonomyRuntimeDictionary: Record<string, string> = {
   'Такси': 'Taxi',
   'Зарплата': 'Salary',
   'Развлечения': 'Entertainment',
+  'Отдых': 'Leisure',
   'Работа': 'Work',
   'Дом': 'Home',
   'Подписки': 'Subscriptions',

@@ -73,6 +73,32 @@ const OBLIGATION_STATUSES = ['active', 'paused', 'closed'];
 const SPENDING_LIMIT_PERIODS = ['daily', 'weekly', 'monthly'];
 const SPENDING_LIMIT_TARGET_TYPES = ['account', 'category', 'total'];
 
+const CURATED_CATEGORY_REPLACEMENTS: Record<string, string> = {
+  'мясо и колбасы': 'Продукты',
+  'молочные продукты': 'Продукты',
+  'хлеб и выпечка': 'Продукты',
+  'овощи': 'Продукты',
+  'фрукты': 'Продукты',
+  'рыба и морепродукты': 'Продукты',
+  'напитки': 'Продукты',
+};
+
+const CURATED_SECTION_REPLACEMENTS: Record<string, string> = {
+  'продуктовый магазин': 'Дом',
+  'магазин': 'Дом',
+  'повседневные расходы': 'Дом',
+};
+
+const CURATED_CATEGORY_SECTIONS: Record<string, string> = {
+  'продукты': 'Дом',
+  'развлечения': 'Отдых',
+  'отдых': 'Отдых',
+  'транспорт': 'Транспорт',
+  'покупки на азс': 'Транспорт',
+  'бензин': 'Транспорт',
+  'зарплата': 'Доходы',
+};
+
 export class AIValidatorService {
   private readonly entityResolver = new AIEntityResolverService();
   async validate(userId: string, plan: AIActionPlan): Promise<AIValidatedPlan> {
@@ -115,6 +141,7 @@ export class AIValidatorService {
 
       const input = { ...action.input };
       const resolved: Record<string, unknown> = {};
+      const sourceText = this.cleanString(input.__userText);
       delete input.__userText;
 
     if (action.tool === 'create_account') {
@@ -241,16 +268,16 @@ export class AIValidatorService {
 
       if (action.tool === 'create_transaction') {
         const kind = input.kind === 'income' || input.kind === 'expense' ? input.kind : null;
-        const amount = normalizeMoneyAmount(input.amount);
+        let amount = normalizeMoneyAmount(input.amount);
+        if (amount !== null && !this.isContractAmountGroundedInUserText(amount, sourceText)) amount = null;
         const explicitAccountRef = this.cleanString(input.account);
         const plannedAccountRef = this.lastPlannedAccountName(plannedAccounts);
         const defaultAccount = this.resolveDefaultTransactionAccount(accounts, kind, aiSettings);
         const hasNoUsableAccounts = accounts.length === 0 && plannedAccounts.size === 0 && !defaultAccount;
-        const shouldAskAccount = !explicitAccountRef && !plannedAccountRef && !defaultAccount && kind === 'expense' && accounts.length > 0;
         const accountRef = explicitAccountRef
           || plannedAccountRef
           || (defaultAccount?.name ?? '')
-          || (shouldAskAccount || hasNoUsableAccounts ? '' : accounts[0]?.name || '');
+          || (hasNoUsableAccounts ? '' : accounts[0]?.name || '');
 
         const account = this.resolveAccount(accounts, accountRef) ?? defaultAccount;
         const plannedAccount = plannedAccounts.get(this.key(accountRef));
@@ -267,13 +294,6 @@ export class AIValidatorService {
               actionIndex: index,
               field: 'accountSetup',
             });
-          } else if (shouldAskAccount) {
-            issues.push({
-              code: 'needs_account_clarification',
-              message: 'С какого счёта списать расход?',
-              actionIndex: index,
-              field: 'account',
-            });
           } else {
             issues.push({
               code: 'account_not_found',
@@ -284,13 +304,16 @@ export class AIValidatorService {
           }
         }
 
-        const rawCategory = this.cleanGenericTaxonomyName(input.category, kind, 'category');
-        const rawSection = this.cleanGenericTaxonomyName(input.section, kind, 'section');
+        let rawCategory = this.cleanGenericTaxonomyName(input.category, kind, 'category');
+        let rawSection = this.cleanGenericTaxonomyName(input.section, kind, 'section');
+        const curatedTaxonomy = this.curateTransactionTaxonomy(rawCategory, rawSection, kind);
+        rawCategory = curatedTaxonomy.category;
+        rawSection = curatedTaxonomy.section;
         const rawDescription = this.cleanEntityName(input.description);
         const merchant = this.cleanEntityName(input.merchant || input.place || input.store || input.shop);
         const items = this.cleanStringList(input.items);
         const tags = this.cleanStringList(input.tags);
-        const rawTitle = this.cleanTransactionTitle(input.title, kind, rawCategory, rawDescription, { merchant, items, tags });
+        const rawTitle = this.cleanTransactionTitle(input.title, kind, rawCategory, rawDescription, { merchant, items, tags, section: rawSection });
         const description = this.cleanTransactionDescription(rawDescription, rawTitle, rawCategory, kind);
         const structuredDescription = buildStructuredTransactionDescription({
           description,
@@ -1166,7 +1189,7 @@ export class AIValidatorService {
     kind: 'income' | 'expense' | null,
     category: string,
     description: string,
-    context?: { merchant?: string; items?: string[]; tags?: string[] },
+    structured?: { merchant?: string; items?: string[]; tags?: string[]; section?: string },
   ) {
     const raw = this.cleanEntityName(value);
     if (!raw) return '';
@@ -1175,40 +1198,18 @@ export class AIValidatorService {
     const tooLong = raw.length > 48;
     const looksLikeCommandEcho = this.looksLikeTransactionCommandEcho(normalized);
     const duplicatesDescription = Boolean(description) && this.key(description) === normalized;
-    const duplicatesStructuredContext = this.isComposedFromStructuredTransactionContext(raw, context);
+    const duplicatesStructuredDetails = this.titleDuplicatesStructuredTransactionDetails(raw, {
+      category,
+      description,
+      merchant: structured?.merchant,
+      items: structured?.items,
+      tags: structured?.tags,
+      section: structured?.section,
+    });
 
-    if (tooLong || looksLikeCommandEcho || duplicatesDescription || duplicatesStructuredContext) return '';
+    if (tooLong || looksLikeCommandEcho || duplicatesDescription || duplicatesStructuredDetails) return '';
+    if (!category && kind === 'expense' && structured?.items?.length) return '';
     return raw;
-  }
-
-  private isComposedFromStructuredTransactionContext(value: string, context?: { merchant?: string; items?: string[]; tags?: string[] }) {
-    const titleKey = this.key(value);
-    if (!titleKey || !context) return false;
-
-    const parts = [context.merchant, ...(context.items ?? []), ...(context.tags ?? [])]
-      .map((part) => this.key(this.cleanString(part)))
-      .filter((part) => part.length >= 3);
-
-    if (parts.length < 2) return false;
-
-    const titleTokens = new Set(titleKey.split(/\s+/).filter((token) => token.length >= 3));
-    if (!titleTokens.size) return false;
-
-    let matchedParts = 0;
-    let matchedTokens = 0;
-
-    for (const part of parts) {
-      const partTokens = part.split(/\s+/).filter((token) => token.length >= 3);
-      if (!partTokens.length) continue;
-      const partMatches = partTokens.some((token) => titleKey.includes(token));
-      if (!partMatches) continue;
-      matchedParts += 1;
-      for (const token of partTokens) {
-        if (titleTokens.has(token)) matchedTokens += 1;
-      }
-    }
-
-    return matchedParts >= 2 && matchedTokens >= Math.min(titleTokens.size, matchedParts);
   }
 
   private cleanTransactionDescription(description: string, title: string, category: string, kind: 'income' | 'expense' | null) {
@@ -1231,6 +1232,94 @@ export class AIValidatorService {
     return false;
   }
 
+
+
+  private curateTransactionTaxonomy(category: string, section: string, kind: 'income' | 'expense' | null) {
+    if (kind !== 'expense' && kind !== 'income') return { category, section };
+
+    let nextCategory = this.replaceCuratedCategory(category);
+    let nextSection = this.replaceCuratedSection(section);
+
+    const categorySection = nextCategory ? CURATED_CATEGORY_SECTIONS[this.key(nextCategory)] : '';
+    if (categorySection && (!nextSection || this.shouldPreferCuratedSection(nextSection))) {
+      nextSection = categorySection;
+    }
+
+    return { category: nextCategory, section: nextSection };
+  }
+
+  private replaceCuratedCategory(value: string) {
+    if (!value) return '';
+    return CURATED_CATEGORY_REPLACEMENTS[this.key(value)] ?? value;
+  }
+
+  private replaceCuratedSection(value: string) {
+    if (!value) return '';
+    return CURATED_SECTION_REPLACEMENTS[this.key(value)] ?? value;
+  }
+
+  private shouldPreferCuratedSection(value: string) {
+    const key = this.key(value);
+    return !key || key === 'расходы' || key === 'расход' || key === 'траты' || key === 'прочее' || key === 'разное' || key in CURATED_SECTION_REPLACEMENTS;
+  }
+
+  private titleDuplicatesStructuredTransactionDetails(rawTitle: string, context: {
+    category?: string;
+    section?: string;
+    description?: string;
+    merchant?: string;
+    items?: string[];
+    tags?: string[];
+  }) {
+    const title = this.key(rawTitle);
+    if (!title) return false;
+
+    const parts = [
+      context.category,
+      context.section,
+      context.description,
+      context.merchant,
+      ...(context.items ?? []),
+      ...(context.tags ?? []),
+    ]
+      .map((part) => this.key(part ?? ''))
+      .filter(Boolean);
+
+    if (!parts.length) return false;
+    if (parts.some((part) => part === title)) return true;
+
+    const composed = parts.join(' ');
+    const titleTokens = new Set(title.split(' ').filter((token) => token.length >= 3));
+    if (titleTokens.size < 2) return false;
+
+    let covered = 0;
+    for (const token of titleTokens) {
+      if (composed.includes(token)) covered += 1;
+    }
+
+    return covered >= Math.max(2, Math.ceil(titleTokens.size * 0.75));
+  }
+
+  private isContractAmountGroundedInUserText(amount: number, sourceText: string) {
+    if (!sourceText) return true;
+
+    const compactText = sourceText
+      .toLowerCase()
+      .replace(/ё/g, 'е')
+      .replace(/[^\p{L}\p{N}]+/gu, '');
+
+    if (!compactText) return false;
+
+    const plain = String(Math.round(amount));
+    if (compactText.includes(plain)) return true;
+
+    if (amount >= 1000 && amount % 1000 === 0) {
+      const thousands = String(amount / 1000);
+      if (compactText.includes(`${thousands}к`) || compactText.includes(`${thousands}k`) || compactText.includes(`${thousands}тыс`)) return true;
+    }
+
+    return false;
+  }
 
   private normalizeSpendingLimitTargetType(value: unknown, input: Record<string, unknown>, optional = false) {
     const raw = this.cleanString(value).toLowerCase();
