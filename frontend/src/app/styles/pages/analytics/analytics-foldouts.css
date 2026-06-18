@@ -19,13 +19,6 @@
   display: none;
 }
 
-.analytics-foldout > summary span,
-.analytics-foldout > summary small,
-.analytics-foldout > summary b {
-  display: block;
-  min-width: 0;
-}
-
 .analytics-foldout > summary small {
   color: rgba(255,255,255,.46);
   font-size: 10px;
@@ -80,15 +73,6 @@
   display: grid;
   gap: 12px;
   padding: 0 15px 15px;
-}
-
-.analytics-action-grid {
-  display: grid;
-  gap: 9px;
-}
-
-.analytics-action-grid--two {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .analytics-action-grid button {

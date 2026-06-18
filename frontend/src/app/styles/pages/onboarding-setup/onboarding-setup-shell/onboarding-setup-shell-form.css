@@ -1,11 +1,4 @@
 /* Onboarding examples, forms, fields and chips. */
-.onboarding-example-list,
-.onboarding-form-grid,
-.onboarding-summary-grid,
-.onboarding-feature-list {
-  display: grid;
-  gap: 10px;
-}
 
 .onboarding-example-item {
   border: 1px solid rgba(255,255,255,.08);
@@ -28,12 +21,6 @@
   font-size: 11px;
 }
 
-.onboarding-currency-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
-}
-
 .onboarding-form-card {
   display: grid;
   gap: 12px;
@@ -41,11 +28,6 @@
   border-radius: 26px;
   background: rgba(255,255,255,.045);
   padding: 14px;
-}
-
-.onboarding-field {
-  display: grid;
-  gap: 7px;
 }
 
 .onboarding-field span {
@@ -89,12 +71,6 @@
   height: 18px;
   accent-color: #34d399;
   flex-shrink: 0;
-}
-
-.onboarding-chip-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
 }
 
 .onboarding-chip {

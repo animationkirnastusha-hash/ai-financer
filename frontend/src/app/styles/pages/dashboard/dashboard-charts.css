@@ -65,15 +65,6 @@
   text-transform: uppercase;
 }
 
-.app-home-chart-legend__items {
-  display: grid;
-  gap: 7px;
-}
-
-.app-home-chart-legend[data-compact="true"] .app-home-chart-legend__items {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
 .app-home-chart-legend__item {
   min-width: 0;
   min-height: 42px;

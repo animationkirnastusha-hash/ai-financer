@@ -5,11 +5,6 @@
   padding-bottom: calc(env(safe-area-inset-bottom) + 132px) !important;
 }
 
-.app-home-cashflow-card {
-  display: grid;
-  gap: 14px;
-}
-
 .app-home-cashflow-card__head {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;

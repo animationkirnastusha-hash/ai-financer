@@ -17,15 +17,6 @@
   overflow-wrap: anywhere;
 }
 
-.app-dashboard-grid,
-.app-actions-grid,
-.app-operations-filters,
-.app-goals-grid,
-.app-analytics-grid,
-.app-insight-grid {
-  min-width: 0;
-}
-
 .app-operations-page .app-card--hero,
 .app-goals-page .app-card--hero,
 .app-analytics-page .app-card--hero {

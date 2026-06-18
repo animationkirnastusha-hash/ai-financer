@@ -1,8 +1,4 @@
 /* moved from app/styles/29-reports.css. Keep order through app/styles/index.css. */
-.report-export-sheet {
-  display: grid;
-  gap: 14px;
-}
 
 .report-export-hero {
   border: 1px solid rgba(255, 255, 255, 0.1);
@@ -42,18 +38,6 @@
   color: rgba(255, 255, 255, 0.62);
   font-size: 13px;
   line-height: 1.45;
-}
-
-.report-export-section {
-  display: grid;
-  gap: 10px;
-}
-
-.report-export-segment,
-.report-export-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
 }
 
 .report-export-segment button,
@@ -96,12 +80,6 @@
   background: rgba(255, 255, 255, 0.07);
   color: #fff;
   font-size: 16px;
-}
-
-.report-export-preview {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
 }
 
 .report-export-metric {
@@ -178,7 +156,6 @@
   gap: 10px;
   margin-top: 14px;
 }
-
 
 /* pack-33b: report sheet polish */
 .report-export-sheet {

@@ -45,12 +45,6 @@
   max-width: 100%;
 }
 
-.app-xp-card,
-.app-dashboard-page [class*="xp"],
-.app-dashboard-page [class*="XP"] {
-  min-width: 0;
-}
-
 .app-xp-card h1,
 .app-xp-card h2,
 .app-xp-card p,
@@ -80,7 +74,6 @@
     padding-bottom: 12px !important;
   }
 }
-
 
 /* Patch 74: stable chat composer, confirmation sheet, XP text. */
 .app-ai-text-page .app-page__inner {

@@ -238,16 +238,6 @@
   opacity: .72;
 }
 
-.store-minimal-grid {
-  display: grid;
-  gap: 12px;
-}
-
-.store-compact-extras {
-  display: grid;
-  gap: 12px;
-}
-
 .store-compact-card {
   display: grid;
   gap: 7px;

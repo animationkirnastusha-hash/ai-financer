@@ -1,8 +1,4 @@
 /* Store cards, product badges and legacy Store surfaces. */
-.store-card-grid {
-  display: grid;
-  gap: 12px;
-}
 
 .store-card {
   position: relative;
@@ -55,7 +51,6 @@
   margin-right: 8px;
   color: rgba(52,211,153,.95);
 }
-
 
 .store-usage-card {
   position: relative;

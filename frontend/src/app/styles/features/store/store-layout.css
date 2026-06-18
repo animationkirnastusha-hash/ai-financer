@@ -9,19 +9,6 @@
   margin-bottom: 8px;
 }
 
-.monetization-hero,
-.store-card,
-.store-showcase,
-.store-status-card,
-.store-trial-card,
-.store-usage-card,
-.store-payment-section,
-.store-feature-section,
-.store-product-detail,
-.store-feature-card {
-  min-width: 0;
-}
-
 .monetization-hero {
   position: relative;
   overflow: hidden;
@@ -121,12 +108,6 @@
   gap: 12px;
 }
 
-.store-card,
-.store-feature-card,
-.store-usage-grid > div {
-  min-width: 0;
-}
-
 .store-showcase,
 .monetization-section {
   display: grid;
@@ -219,11 +200,6 @@
   padding: 0;
   border: 0;
   background: transparent;
-}
-
-.store-product-detail__copy {
-  display: grid;
-  gap: 12px;
 }
 
 .store-card ul,

@@ -29,15 +29,6 @@
   font-style: normal;
 }
 
-.receipt-taxonomy-group__head b,
-.receipt-taxonomy-group__head small {
-  display: block;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 .receipt-taxonomy-group__head b {
   color: rgba(255,255,255,.92);
   font-size: 13px;

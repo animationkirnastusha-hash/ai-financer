@@ -167,11 +167,6 @@
   background: rgba(255,255,255,.08);
 }
 
-.business-mini-app-shell {
-  display: grid;
-  gap: 14px;
-}
-
 .business-tabbar {
   display: flex;
   gap: 8px;
@@ -192,12 +187,6 @@
 .business-tabbar button.is-active {
   background: rgba(255,255,255,.17);
   border-color: rgba(255,255,255,.24);
-}
-
-.business-money-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
 }
 
 .business-money-grid article,
@@ -221,11 +210,6 @@
   margin-top: 6px;
   font-size: 15px;
   color: rgba(255,255,255,.93);
-}
-
-.business-account-list {
-  display: grid;
-  gap: 10px;
 }
 
 @keyframes app-rise-in {

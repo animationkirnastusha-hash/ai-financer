@@ -8,11 +8,6 @@
   padding-top: 6px;
 }
 
-.app-obligation-form {
-  display: grid;
-  gap: 10px;
-}
-
 .app-obligation-section {
   display: grid;
   gap: 10px;
@@ -98,10 +93,6 @@
 
 .app-obligation-grid--2 {
   grid-template-columns: minmax(0, 1fr) minmax(120px, 0.55fr);
-}
-
-.app-obligation-grid--3 {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .app-obligation-field {

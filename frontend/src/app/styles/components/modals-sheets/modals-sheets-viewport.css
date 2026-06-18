@@ -82,10 +82,6 @@
   gap: 14px;
 }
 
-.app-settings-modal__head > div {
-  min-width: 0;
-}
-
 .app-settings-modal__head h2,
 .app-settings-modal__head p,
 .app-danger-card b,

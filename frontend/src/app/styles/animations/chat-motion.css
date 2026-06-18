@@ -96,20 +96,6 @@
     box-shadow 200ms ease;
 }
 
-.app-primary-button:active,
-.app-secondary-button:active,
-.app-icon-button:active,
-.text-chat-overlay__composer button:active,
-.text-chat-overlay__chips button:active,
-.premium-upgrade-later:active,
-.premium-upgrade-trigger:active,
-.store-card:active,
-.app-list-button:active,
-.app-action-card:active,
-.app-card:active {
-  transform: scale(.985);
-}
-
 @keyframes assistantTypingCursor {
   0%, 100% { opacity: .2; }
   45%, 65% { opacity: .9; }

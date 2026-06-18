@@ -1,17 +1,4 @@
 /* Pack 148: analytics shell, hero and compact KPI layout. */
-.app-analytics-page .app-card,
-.analytics-hero-card,
-.analytics-chart-card,
-.analytics-fina-card,
-.analytics-mini-card,
-.analytics-foldout {
-  min-width: 0;
-}
-
-.analytics-hero-card {
-  display: grid;
-  gap: 14px;
-}
 
 .analytics-hero-main {
   display: grid;
@@ -47,20 +34,6 @@
   font-size: 12px;
   font-weight: 850;
   white-space: nowrap;
-}
-
-.analytics-kpi-grid,
-.analytics-grid-two {
-  display: grid;
-  gap: 10px;
-}
-
-.analytics-kpi-grid {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-
-.analytics-grid-two {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .analytics-kpi-grid article,
@@ -130,12 +103,6 @@
   height: 5px;
   border-radius: 999px;
   background: rgba(0,0,0,.62);
-}
-
-.analytics-fina-card b,
-.analytics-fina-card span {
-  display: block;
-  min-width: 0;
 }
 
 .analytics-fina-card b {

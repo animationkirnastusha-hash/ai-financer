@@ -9,7 +9,7 @@
   text-align: left;
   transition: transform 160ms ease, background-color 160ms ease, border-color 160ms ease;
 }
-.app-account-card:active { transform: scale(.985); }
+
 .app-account-card__main {
   display: grid;
   grid-template-columns: minmax(0,1fr) auto;

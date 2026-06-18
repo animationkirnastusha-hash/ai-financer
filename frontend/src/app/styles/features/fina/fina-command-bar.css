@@ -7,13 +7,6 @@
     linear-gradient(180deg, rgba(255, 255, 255, .07), rgba(255, 255, 255, .038));
 }
 
-.fina-command-bar__copy span,
-.fina-command-bar__copy strong,
-.fina-command-bar__copy p {
-  display: block;
-  min-width: 0;
-}
-
 .fina-command-bar__copy span {
   color: rgba(167, 243, 208, .62);
   font-size: 10px;

@@ -10,18 +10,6 @@
   line-height: 1.35;
 }
 
-.app-home-section-breakdown__head,
-.app-home-chart-group--nested,
-.app-transaction-row {
-  min-width: 0;
-}
-
-.app-home-section-breakdown__head > span,
-.app-home-chart-group--nested > span,
-.app-transaction-row > div:first-child {
-  min-width: 0;
-}
-
 .app-home-section-breakdown__head strong,
 .app-home-chart-group--nested strong,
 .app-transaction-row > div:last-child {

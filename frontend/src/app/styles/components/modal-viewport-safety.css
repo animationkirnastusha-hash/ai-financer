@@ -122,13 +122,3 @@
   min-width: 0;
   max-width: 100%;
 }
-
-.app-drawer-sheet .grid,
-.app-modal-sheet .grid {
-  min-width: 0;
-}
-
-.app-drawer-sheet .grid > *,
-.app-modal-sheet .grid > * {
-  min-width: 0;
-}

@@ -18,8 +18,7 @@
   width: 76px !important;
   height: 76px !important;
 }
-.app-companion-presence__content,
-.app-companion-presence__content * { min-width: 0; }
+
 .app-companion-presence__content p {
   display: -webkit-box;
   overflow: hidden;

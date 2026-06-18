@@ -2,12 +2,9 @@ import { useCallback, useRef, useState, type TouchEvent } from 'react';
 import type { AppModalDescriptor } from '@/features/modals/model/appModal.store';
 import type { AppScreen } from '@/features/navigation/model/navigation.store';
 
-const DASHBOARD_MIN_START_ZONE_PX = 320;
-const DASHBOARD_MAX_START_ZONE_PX = 680;
-const DASHBOARD_START_ZONE_SCREEN_SHARE = 0.72;
-const SAFE_PAGE_MIN_START_ZONE_PX = 220;
-const SAFE_PAGE_MAX_START_ZONE_PX = 520;
-const SAFE_PAGE_START_ZONE_SCREEN_SHARE = 0.56;
+const PULL_START_ZONE_MIN_PX = 220;
+const PULL_START_ZONE_MAX_PX = 520;
+const PULL_START_ZONE_SCREEN_SHARE = 0.56;
 const ACTIVATE_DRAG_PX = 1;
 const OPEN_DRAG_PX = 20;
 const MAX_VISUAL_DRAG_PX = 92;
@@ -91,21 +88,20 @@ function isScrollableParentBusy(target: EventTarget | null, scrollRoot: HTMLElem
   while (node && node !== scrollRoot) {
     const style = window.getComputedStyle(node);
     const canScrollY = /(auto|scroll)/.test(style.overflowY) && node.scrollHeight > node.clientHeight + 1;
-    if (canScrollY) return true;
+    if (canScrollY && node.scrollTop > 2) return true;
     node = node.parentElement;
   }
 
   return false;
 }
 
-function getStartZonePx(scrollRoot: HTMLElement, screen: AppScreen) {
+function getStartZonePx(scrollRoot: HTMLElement) {
   const rootHeight = scrollRoot.getBoundingClientRect().height || window.innerHeight;
-  const isDashboard = screen === 'dashboard';
-  const min = isDashboard ? DASHBOARD_MIN_START_ZONE_PX : SAFE_PAGE_MIN_START_ZONE_PX;
-  const max = isDashboard ? DASHBOARD_MAX_START_ZONE_PX : SAFE_PAGE_MAX_START_ZONE_PX;
-  const share = isDashboard ? DASHBOARD_START_ZONE_SCREEN_SHARE : SAFE_PAGE_START_ZONE_SCREEN_SHARE;
 
-  return Math.min(max, Math.max(min, rootHeight * share));
+  return Math.min(
+    PULL_START_ZONE_MAX_PX,
+    Math.max(PULL_START_ZONE_MIN_PX, rootHeight * PULL_START_ZONE_SCREEN_SHARE),
+  );
 }
 
 type UseFinaPullGestureOptions = {
@@ -161,7 +157,7 @@ export function useFinaPullGesture({ blocked = false, currentScreen, openModal }
       hasBlockingLayer() ||
       !rootAtTop ||
       startYInRoot < 0 ||
-      startYInRoot > getStartZonePx(scrollRoot, currentScreen) ||
+      startYInRoot > getStartZonePx(scrollRoot) ||
       isInteractiveTarget(event.target) ||
       isScrollableParentBusy(event.target, scrollRoot);
 

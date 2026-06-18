@@ -26,14 +26,7 @@
   padding: 14px;
   text-align: left;
 }
-.app-action-card span,
-.app-action-card small {
-  display: block;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
+
 .app-action-card span {
   color: rgba(255,255,255,.92);
   font-size: 15px;
@@ -64,14 +57,7 @@
   gap: 5px;
   padding: 12px 13px;
 }
-.app-list-button span,
-.app-list-button small {
-  display: block;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
+
 .app-list-button span {
   color: rgba(255,255,255,.86);
   font-size: 13px;
@@ -99,4 +85,3 @@
   gap: 12px;
   padding: 12px;
 }
-.app-transaction-row > * { min-width: 0; }

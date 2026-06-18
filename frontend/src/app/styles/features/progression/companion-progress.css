@@ -73,15 +73,6 @@
   line-height: 1.15;
 }
 
-.app-xp-panel__top span,
-.app-xp-panel__top b {
-  display: block;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 .app-xp-panel__top b {
   flex: 0 0 auto;
   color: rgba(167,243,208,.96);

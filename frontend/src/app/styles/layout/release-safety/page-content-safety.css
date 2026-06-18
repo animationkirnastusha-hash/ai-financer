@@ -96,13 +96,6 @@
   align-items: center;
 }
 
-.receipt-preview-card__fields div,
-.receipt-taxonomy-group__head,
-.app-home-section-breakdown__head,
-.analytics-bar-row > div {
-  min-width: 0;
-}
-
 .receipt-preview-card__fields strong,
 .receipt-taxonomy-group__head strong,
 .app-home-section-breakdown__head strong,

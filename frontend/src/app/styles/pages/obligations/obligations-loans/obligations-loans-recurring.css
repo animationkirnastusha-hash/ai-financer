@@ -1,15 +1,4 @@
 /* Recurring payments card and row layout. */
-.app-recurring-card {
-  display: grid;
-  gap: 14px;
-}
-
-.app-recurring-card__head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 14px;
-}
 
 .app-recurring-card__head h2 {
   margin: 2px 0 0;
@@ -23,11 +12,6 @@
   font-size: 16px;
   font-weight: 850;
   color: rgba(255, 255, 255, 0.92);
-}
-
-.app-recurring-list {
-  display: grid;
-  gap: 10px;
 }
 
 .app-recurring-row {

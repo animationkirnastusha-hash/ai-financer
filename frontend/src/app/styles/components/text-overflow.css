@@ -1,0 +1,55 @@
+/* Shared text overflow and min-width safeguards. Keep selector-based primitives here to avoid duplicating truncation rules across pages. */
+.app-action-card span,
+.app-action-card small,
+.app-list-button span,
+.app-list-button small,
+.app-xp-panel__top span,
+.app-xp-panel__top b,
+.app-home-metric span,
+.app-home-metric b,
+.app-action-card b,
+.app-action-card small,
+.app-accounts-actions .app-action-card b,
+.app-accounts-actions .app-action-card small,
+.app-home-chart-group b,
+.app-home-chart-group small,
+.app-home-section-breakdown__head b,
+.app-home-section-breakdown__head small,
+.receipt-taxonomy-group__head b,
+.receipt-taxonomy-group__head small {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-accounts-stats span,
+.app-taxonomy-stats span,
+.app-accounts-stats small,
+.app-taxonomy-stats small,
+.journal-summary-grid span,
+.journal-summary-grid strong,
+.journal-row__content b,
+.journal-row__content small,
+.journal-row__meta b,
+.journal-row__meta small,
+.profile-hub-hero__stats span,
+.profile-hub-hero__stats strong {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-home-chart-modal__actions button,
+.app-home-quick-action span,
+.app-home-quick-action small,
+.app-home-metric span,
+.app-home-metric b,
+.app-analytics-row__top span:first-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

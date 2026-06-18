@@ -7,10 +7,9 @@
 .app-dashboard-page .app-list-button,
 .app-dashboard-page .app-empty-button { overflow: hidden; }
 .app-dashboard-page .app-money-hero { font-size: clamp(42px, 13vw, 74px); line-height: .92; letter-spacing: -.075em; }
-.app-home-metrics-grid { min-width: 0; }
+
 .app-home-metric { min-width: 0; display: grid; gap: 5px; }
-.app-home-metric span,
-.app-home-metric b { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
 .app-fina-primary-card { display: grid; gap: 16px; background: radial-gradient(circle at top right, rgba(129,239,208,.12), transparent 44%), rgba(255,255,255,.045); }
 .app-fina-primary-card h2 { font-size: 24px; line-height: 1.05; letter-spacing: -.045em; font-weight: 760; }
 .app-fina-primary-card p { margin-top: 8px; color: rgba(255,255,255,.52); font-size: 14px; line-height: 1.65; }

@@ -3,14 +3,7 @@
   gap: 4px;
   min-width: 0;
 }
-.app-action-card b,
-.app-action-card small {
-  display: block;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
+
 .app-action-card b {
   color: rgba(255,255,255,.92);
   font-size: 14px;
@@ -54,15 +47,7 @@
   background: rgba(0,0,0,.15);
   padding: 10px;
 }
-.app-accounts-stats span,
-.app-taxonomy-stats span,
-.app-accounts-stats small,
-.app-taxonomy-stats small {
-  display: block;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
+
 .app-accounts-stats span,
 .app-taxonomy-stats span {
   color: rgba(255,255,255,.9);
@@ -94,7 +79,7 @@
   text-align: left;
   transition: transform .16s ease, background .16s ease, border-color .16s ease;
 }
-.app-account-card:active { transform: scale(.985); }
+
 .app-account-card__main { display: grid; gap: 7px; min-width: 0; }
 .app-account-card__title { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .app-account-card__name {
@@ -153,7 +138,7 @@
 .app-account-badge--red { border-color: rgba(251,113,133,.22); background: rgba(251,113,133,.08); color: rgba(255,228,230,.92); }
 
 /* taxonomy page */
-.app-taxonomy-grid { display: grid; gap: 12px; }
+
 .app-taxonomy-section-card { padding: 14px !important; }
 .app-taxonomy-section-card__title {
   display: grid;

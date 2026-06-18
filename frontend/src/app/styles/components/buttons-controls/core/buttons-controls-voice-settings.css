@@ -7,10 +7,7 @@
   background: rgba(0,0,0,.16);
   padding: 14px;
 }
-.voice-settings-field {
-  display: grid;
-  gap: 8px;
-}
+
 .voice-settings-field span {
   color: rgba(255,255,255,.56);
   font-size: 12px;

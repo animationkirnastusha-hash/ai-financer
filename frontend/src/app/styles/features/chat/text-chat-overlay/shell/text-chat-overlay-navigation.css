@@ -3,16 +3,6 @@
   padding-bottom: calc(env(safe-area-inset-bottom) + 18px);
 }
 
-.app-navigation-groups {
-  display: grid;
-  gap: 14px;
-}
-
-.app-navigation-group {
-  display: grid;
-  gap: 8px;
-}
-
 .app-navigation-group__title {
   padding: 0 2px;
   color: rgba(255, 255, 255, 0.42);

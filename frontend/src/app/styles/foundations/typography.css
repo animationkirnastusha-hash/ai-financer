@@ -8,19 +8,6 @@
   box-sizing: border-box;
 }
 
-.app-card,
-.app-card *,
-.app-modal-sheet,
-.app-modal-sheet *,
-.app-list-button,
-.app-action-card,
-.app-account-card,
-.app-transaction-row,
-.app-settings-card,
-.app-toggle-row {
-  min-width: 0;
-}
-
 .app-card p,
 .app-modal-sheet p,
 .app-settings-card small,

@@ -54,11 +54,7 @@
   font-size: 13px;
   font-weight: 820;
 }
-.app-onboarding-step b,
-.app-onboarding-step small {
-  display: block;
-  min-width: 0;
-}
+
 .app-onboarding-step b { color: white; font-size: 13px; line-height: 1.25; }
 .app-onboarding-step small { margin-top: 3px; color: rgba(255,255,255,.46); font-size: 11px; line-height: 1.45; }
 .app-onboarding-examples {

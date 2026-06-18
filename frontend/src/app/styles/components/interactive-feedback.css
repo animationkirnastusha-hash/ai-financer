@@ -1,0 +1,25 @@
+/* Shared active-state feedback for tappable surfaces. */
+.app-primary-button:active,
+.app-secondary-button:active,
+.app-icon-button:active,
+.text-chat-overlay__composer button:active,
+.text-chat-overlay__chips button:active,
+.premium-upgrade-later:active,
+.premium-upgrade-trigger:active,
+.store-card:active,
+.app-list-button:active,
+.app-action-card:active,
+.app-card:active,
+.ai-confirm-mode-grid button:active,
+.product-learning-task:active,
+.store-product-tile:active,
+.app-account-card:active,
+.onboarding-learning-task:active,
+.onboarding-language-actions button:active,
+.onboarding-choice:active,
+.onboarding-currency:active,
+.onboarding-chip:active,
+.app-action-card:active,
+.app-goal-card:active {
+  transform: scale(.985);
+}

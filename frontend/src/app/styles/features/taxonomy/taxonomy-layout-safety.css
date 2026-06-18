@@ -1,12 +1,4 @@
 /* Pack 89: taxonomy/category UX polish. */
-.app-taxonomy-page .app-taxonomy-actions,
-.app-taxonomy-page .app-taxonomy-rule-grid,
-.app-taxonomy-page .app-taxonomy-suggestions,
-.taxonomy-picker,
-.taxonomy-picker__suggestion,
-.taxonomy-picker__category-list {
-  min-width: 0;
-}
 
 .app-taxonomy-actions .app-action-card {
   min-height: 72px;

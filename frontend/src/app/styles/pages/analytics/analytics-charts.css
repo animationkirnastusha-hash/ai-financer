@@ -1,8 +1,4 @@
 /* Pack 148: analytics charts and color legend. */
-.analytics-chart-card {
-  display: grid;
-  gap: 14px;
-}
 
 .analytics-section-card__head {
   display: grid;

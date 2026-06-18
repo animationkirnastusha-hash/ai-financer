@@ -4,42 +4,9 @@
   --app-content-gap: 14px;
 }
 
-.app-page__inner,
-.app-shell__content,
-.app-screen-body {
-  min-width: 0;
-}
-
 .app-page__inner {
   max-width: var(--app-page-max-width);
   margin-inline: auto;
-}
-
-.app-card,
-.app-action-card,
-.app-list-button,
-.app-empty-button,
-.app-bottom-sheet,
-.drawer-panel {
-  min-width: 0;
-}
-
-.app-card > *,
-.app-action-card > *,
-.app-list-button > *,
-.app-empty-button > * {
-  min-width: 0;
-}
-
-.app-page h1,
-.app-page h2,
-.app-page h3,
-.app-page p,
-.app-card span,
-.app-card small,
-.app-card strong,
-.app-card b {
-  min-width: 0;
 }
 
 .app-page h1,

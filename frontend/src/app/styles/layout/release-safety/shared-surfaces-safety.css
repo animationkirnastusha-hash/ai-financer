@@ -15,12 +15,6 @@
   min-width: 0;
 }
 
-.app-card > *,
-.app-stat-card > *,
-.app-action-card > * {
-  min-width: 0;
-}
-
 .app-primary-button,
 .app-secondary-button,
 .app-icon-button {

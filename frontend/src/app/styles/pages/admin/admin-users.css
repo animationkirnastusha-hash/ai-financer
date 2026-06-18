@@ -1,8 +1,4 @@
-.admin-users-panel,
-.admin-users-list {
-  display: grid;
-  gap: 12px;
-}
+
 
 .admin-users-search {
   display: grid;
@@ -75,14 +71,6 @@
   display: grid;
   gap: 14px;
   padding: 16px;
-}
-
-.admin-user-card__head,
-.admin-user-access__head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
 }
 
 .admin-user-card__identity {
@@ -200,23 +188,10 @@
   font-size: 13px;
 }
 
-.admin-user-actions {
-  display: grid;
-  gap: 8px;
-}
-
-.admin-user-actions--access {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
 .admin-user-actions button {
   min-height: 42px;
   padding: 8px 10px;
   font-size: 11px;
-}
-
-.admin-user-actions--danger {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .admin-user-actions--danger button:last-child {

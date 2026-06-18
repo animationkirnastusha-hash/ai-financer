@@ -4,13 +4,6 @@
   padding: 14px;
 }
 
-.product-learning-card__head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-}
-
 .product-learning-card h2 {
   margin: 6px 0 0;
   color: rgba(255,255,255,.94);
@@ -74,10 +67,6 @@
   transition: transform .16s ease, border-color .16s ease, background .16s ease;
 }
 
-.product-learning-task:active {
-  transform: scale(.985);
-}
-
 .product-learning-task[data-complete="true"] {
   border-color: rgba(52,211,153,.22);
   background: rgba(52,211,153,.08);
@@ -94,11 +83,6 @@
   color: rgba(209,250,229,.9);
   font-size: 12px;
   font-weight: 850;
-}
-
-.product-learning-task b,
-.product-learning-task small {
-  min-width: 0;
 }
 
 .product-learning-task b {

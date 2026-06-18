@@ -70,11 +70,6 @@
   font-size: 14px;
 }
 
-.onboarding-learning-list {
-  display: grid;
-  gap: 8px;
-}
-
 .onboarding-learning-task {
   display: grid;
   gap: 4px;
@@ -85,10 +80,6 @@
   padding: 11px 12px;
   text-align: left;
   transition: transform .18s ease, border-color .18s ease, background .18s ease;
-}
-
-.onboarding-learning-task:active {
-  transform: scale(.985);
 }
 
 .onboarding-learning-task:hover {
@@ -174,11 +165,6 @@
   line-height: 1.45;
 }
 
-.onboarding-quick-rules {
-  display: grid;
-  gap: 8px;
-}
-
 .onboarding-quick-rules div {
   display: grid;
   gap: 4px;
@@ -251,10 +237,6 @@
   font-size: 13px;
   font-weight: 760;
   transition: transform .16s ease, border-color .16s ease, background .16s ease, color .16s ease;
-}
-
-.onboarding-language-actions button:active {
-  transform: scale(.985);
 }
 
 .onboarding-language-actions button.is-active {

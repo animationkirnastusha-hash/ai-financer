@@ -47,15 +47,6 @@
   box-shadow: inset 0 1px 0 rgba(255,255,255,.18);
 }
 
-.app-home-section-breakdown__head b,
-.app-home-section-breakdown__head small {
-  display: block;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 .app-home-section-breakdown__head b {
   color: rgba(255,255,255,.94);
   font-size: 15px;
@@ -72,11 +63,6 @@
   color: rgba(255,255,255,.9);
   font-size: 14px;
   white-space: nowrap;
-}
-
-.app-home-section-breakdown__categories {
-  display: grid;
-  gap: 8px;
 }
 
 .app-home-chart-group--nested {

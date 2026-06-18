@@ -1,8 +1,4 @@
 /* Obligation account source picker. */
-.app-obligation-source-panel {
-  display: grid;
-  gap: 10px;
-}
 
 .app-obligation-account-picker {
   display: grid;

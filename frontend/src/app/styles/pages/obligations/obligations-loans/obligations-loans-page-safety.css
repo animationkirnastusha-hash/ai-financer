@@ -10,21 +10,6 @@
   padding-inline: clamp(14px, 4vw, 22px);
 }
 
-.app-obligations-hero,
-.app-next-payment-card,
-.app-reminders-card,
-.app-closed-loans-card,
-.app-loan-card {
-  min-width: 0;
-}
-
-.app-obligations-hero__top > div,
-.app-next-payment-card__body > div,
-.app-loan-card__head > div,
-.app-reminder-row > div {
-  min-width: 0;
-}
-
 .app-obligations-hero h1,
 .app-obligations-hero h2,
 .app-next-payment-card h2,

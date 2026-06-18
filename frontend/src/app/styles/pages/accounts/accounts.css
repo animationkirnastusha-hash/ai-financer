@@ -7,7 +7,6 @@
 .app-account-card small { overflow-wrap:anywhere; }
 .app-account-card .truncate { min-width:0; }
 
-
 /* Pack 34: account screen polish. */
 .app-accounts-hero--compact {
   padding: 24px 22px 22px;
@@ -94,15 +93,6 @@
   font-weight: 850;
 }
 
-.app-accounts-actions .app-action-card b,
-.app-accounts-actions .app-action-card small {
-  display: block;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 .app-accounts-actions .app-action-card b {
   color: rgba(255,255,255,.94);
   font-size: 16px;
@@ -138,10 +128,6 @@
   grid-template-columns: minmax(0, 1fr);
   gap: 18px;
   align-items: stretch;
-}
-
-.app-account-card__identity {
-  min-width: 0;
 }
 
 .app-account-card__title-row {

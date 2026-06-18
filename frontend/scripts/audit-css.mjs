@@ -13,6 +13,8 @@ const IGNORE_DIRS = new Set(['node_modules', 'dist', 'build', '.git', 'reports',
 const MAX_LINES = Number(process.env.CSS_AUDIT_MAX_LINES || 520);
 const MAX_IMPORTANT = Number(process.env.CSS_AUDIT_MAX_IMPORTANT || 35);
 const MAX_ROOT_CSS_FILES = Number(process.env.CSS_AUDIT_MAX_ROOT_CSS_FILES || 1);
+const BLOCKED_CSS_NAME_PARTS = ['fix', 'final', 'polish', 'repair', 'test', 'predeploy', 'legacy'];
+const BLOCKED_STYLE_DIR_NAMES = new Set(['fixes', 'screens', 'legacy']);
 
 function normalize(value) {
   return value.split(path.sep).join('/');
@@ -31,6 +33,16 @@ function walk(dir, files = []) {
 
 function relative(filePath) {
   return normalize(path.relative(frontendRoot, filePath));
+}
+
+function hasBlockedNamePart(filePath) {
+  const basename = path.basename(filePath, '.css').toLowerCase();
+  return BLOCKED_CSS_NAME_PARTS.some((part) => new RegExp(`(^|[-_])${part}($|[-_])`).test(basename));
+}
+
+function hasBlockedStyleDir(filePath) {
+  const relParts = path.relative(stylesDir, filePath).split(path.sep);
+  return relParts.some((part) => BLOCKED_STYLE_DIR_NAMES.has(part.toLowerCase()));
 }
 
 function read(filePath) {
@@ -107,6 +119,12 @@ function main() {
     }
     if (isRootCss && !isManifest) {
       problems.push({ type: 'flat-root-css', file: rel, detail: 'root styles folder should contain only index.css; move to a logical subfolder' });
+    }
+    if (!isManifest && hasBlockedNamePart(file)) {
+      problems.push({ type: 'temporary-css-name', file: rel, detail: 'rename CSS by feature or component, not by fix/final/polish/repair/test/predeploy/legacy' });
+    }
+    if (!isManifest && hasBlockedStyleDir(file)) {
+      problems.push({ type: 'temporary-css-folder', file: rel, detail: 'move CSS out of fixes/screens/legacy folders into a logical page, feature, component, layout, or foundation folder' });
     }
   }
 

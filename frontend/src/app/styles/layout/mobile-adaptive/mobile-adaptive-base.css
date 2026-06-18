@@ -67,17 +67,7 @@ body.ai-any-modal-open .voice-first-companion,
 body.ai-core-modal-open .voice-first-companion { display: none !important; }
 
 /* restore main page and action cards */
-.app-card,
-.app-nav-card,
-.app-action-card,
-.app-list-button,
-.app-small-link,
-.app-toggle-row,
-.app-account-card,
-.app-taxonomy-section-card {
-  min-width: 0;
-}
-.app-card * { min-width: 0; }
+
 .app-action-card {
   display: grid !important;
   grid-template-columns: auto minmax(0,1fr);

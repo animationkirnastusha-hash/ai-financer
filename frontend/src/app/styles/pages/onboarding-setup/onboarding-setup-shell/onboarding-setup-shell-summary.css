@@ -1,10 +1,4 @@
 /* Onboarding summary, feature list, footer and mobile layout. */
-.onboarding-two-cols,
-.onboarding-summary-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
-}
 
 .onboarding-test-box {
   align-items: flex-start;
@@ -33,10 +27,6 @@
   color: rgba(254,240,138,.95);
   font-size: 11px;
   font-weight: 900;
-}
-
-.onboarding-feature-list {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .onboarding-feature-list span,

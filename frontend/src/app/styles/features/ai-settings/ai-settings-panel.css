@@ -1,7 +1,4 @@
-.ai-settings-panel {
-  display: grid;
-  gap: 12px;
-}
+
 
 .ai-settings-group {
   display: grid;
@@ -12,13 +9,6 @@
     rgba(255,255,255,.035);
   border-radius: 26px;
   padding: 14px;
-}
-
-.ai-settings-group__head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 14px;
 }
 
 .ai-settings-group__head h3 {
@@ -63,11 +53,6 @@
   color: rgba(255,238,180,.9);
 }
 
-.ai-confirm-mode-grid {
-  display: grid;
-  gap: 8px;
-}
-
 .ai-confirm-mode-grid button {
   display: grid;
   gap: 5px;
@@ -78,10 +63,6 @@
   padding: 13px;
   text-align: left;
   transition: transform .16s ease, border-color .16s ease, background .16s ease;
-}
-
-.ai-confirm-mode-grid button:active {
-  transform: scale(.985);
 }
 
 .ai-confirm-mode-grid button[data-active='true'] {
@@ -101,16 +82,6 @@
   color: rgba(255,255,255,.52);
   font-size: 12px;
   line-height: 1.45;
-}
-
-.ai-settings-fields {
-  display: grid;
-  gap: 9px;
-}
-
-.ai-settings-fields label {
-  display: grid;
-  gap: 7px;
 }
 
 .ai-settings-fields span {

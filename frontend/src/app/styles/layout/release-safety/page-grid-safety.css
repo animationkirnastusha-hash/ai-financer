@@ -19,15 +19,6 @@
   align-items: stretch;
 }
 
-.limits-guide-card,
-.referral-benefit-card,
-.store-compact-card,
-.business-account-list article,
-.business-detail-lists article,
-.receipt-history-card__head {
-  min-width: 0;
-}
-
 .spending-limits-page select,
 .spending-limits-page input,
 .referral-page input,

@@ -68,7 +68,7 @@
   text-align: left;
   transition: transform 160ms ease, background-color 160ms ease;
 }
-.app-goal-card:active { transform: scale(.985); }
+
 .app-goal-card__head {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -121,9 +121,7 @@
   display: grid;
   gap: 13px;
 }
-.app-analytics-row {
-  min-width: 0;
-}
+
 .app-analytics-row__top {
   display: grid;
   grid-template-columns: minmax(0,1fr) auto;
@@ -132,12 +130,7 @@
   font-size: 13px;
   line-height: 1.2;
 }
-.app-analytics-row__top span:first-child {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
+
 .app-analytics-bar {
   height: 9px;
   overflow: hidden;

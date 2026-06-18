@@ -6,14 +6,6 @@
   padding-bottom: calc(var(--app-bottom-safe, 24px) + 158px);
 }
 
-.limits-hero,
-.limits-form-card,
-.limits-guide-card,
-.limits-card,
-.limits-empty {
-  min-width: 0;
-}
-
 .limits-hero {
   position: relative;
   overflow: hidden;
@@ -49,13 +41,6 @@
   color: rgba(255,255,255,.66);
   font-size: clamp(17px, 4.4vw, 24px);
   line-height: 1.45;
-}
-
-.limits-hero__stats,
-.limits-guide-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
 }
 
 .limits-hero__stats article,
@@ -112,11 +97,6 @@
   border-radius: 32px;
 }
 
-.limits-form {
-  display: grid;
-  gap: 14px;
-}
-
 .limits-form label {
   display: grid;
   gap: 8px;
@@ -157,11 +137,6 @@
   color: #fecaca;
   padding: 11px 13px;
   font-size: 13px;
-}
-
-.limits-list {
-  display: grid;
-  gap: 12px;
 }
 
 .limits-card,

@@ -6,10 +6,6 @@
   padding-bottom: calc(env(safe-area-inset-bottom) + 148px) !important;
 }
 
-.app-home-section {
-  min-width: 0;
-}
-
 .app-home-balance-card {
   position: relative;
   overflow: hidden;
@@ -140,14 +136,6 @@
   display: grid;
   align-content: center;
   gap: 5px;
-}
-
-.app-home-quick-action span,
-.app-home-quick-action small {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .app-home-quick-action span {

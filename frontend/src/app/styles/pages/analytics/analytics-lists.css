@@ -1,9 +1,4 @@
 /* Pack 148: analytics bars, income lists and empty states. */
-.analytics-bars,
-.analytics-income-grid {
-  display: grid;
-  gap: 10px;
-}
 
 .analytics-bar-row,
 .analytics-income-grid button {
@@ -71,10 +66,6 @@
   display: block;
   height: 100%;
   border-radius: inherit;
-}
-
-.analytics-income-grid {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .analytics-income-grid .analytics-empty-line {

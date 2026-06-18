@@ -3,11 +3,6 @@
   max-width: 520px;
 }
 
-.store-payment-sheet__body {
-  display: grid;
-  gap: 14px;
-}
-
 .store-payment-sheet__intro {
   display: grid;
   gap: 8px;

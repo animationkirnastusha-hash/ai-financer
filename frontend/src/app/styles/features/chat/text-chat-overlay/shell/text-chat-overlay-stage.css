@@ -36,10 +36,6 @@
   padding: calc(env(safe-area-inset-top) + 18px) 16px 10px;
 }
 
-.text-chat-overlay__title-block {
-  min-width: 0;
-}
-
 .text-chat-overlay__head h2 {
   margin: 4px 0 0;
   font-size: 24px;

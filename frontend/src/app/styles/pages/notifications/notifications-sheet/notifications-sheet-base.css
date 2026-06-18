@@ -165,10 +165,6 @@
   border-color: rgba(248, 113, 113, 0.25);
 }
 
-.notification-card__main {
-  min-width: 0;
-}
-
 .notification-card__top {
   display: flex;
   align-items: flex-start;
@@ -195,12 +191,6 @@
   color: rgba(255, 255, 255, 0.58);
   font-size: 12px;
   line-height: 1.38;
-}
-
-.notification-card__actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
 }
 
 .notification-empty {

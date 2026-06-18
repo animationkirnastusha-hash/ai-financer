@@ -13,11 +13,6 @@
   box-shadow: 0 18px 42px rgba(0, 0, 0, 0.22);
 }
 
-.receipt-hero {
-  display: grid;
-  gap: 12px;
-}
-
 .receipt-hero h1 {
   margin: 0;
   font-size: 28px;
@@ -33,19 +28,6 @@
   margin: 0;
   color: rgba(255, 255, 255, 0.68);
   line-height: 1.45;
-}
-
-.receipt-upload-card {
-  display: grid;
-  gap: 14px;
-}
-
-.receipt-upload-card__head,
-.receipt-preview-card__head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
 }
 
 .receipt-upload-card__head h2 {
@@ -69,11 +51,6 @@
   width: 100%;
 }
 
-.receipt-list {
-  display: grid;
-  gap: 12px;
-}
-
 .receipt-preview-card {
   display: grid;
   gap: 12px;
@@ -91,11 +68,6 @@
   margin-top: 4px;
   color: rgba(255, 255, 255, 0.54);
   font-size: 12px;
-}
-
-.receipt-preview-card__fields {
-  display: grid;
-  gap: 8px;
 }
 
 .receipt-preview-card__fields div {
@@ -130,7 +102,6 @@
   color: rgba(254, 226, 226, 0.92);
   font-size: 14px;
 }
-
 
 .receipt-preview-card__toggle {
   width: 100%;

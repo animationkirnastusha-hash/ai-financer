@@ -27,23 +27,6 @@
   line-height: 1.45;
 }
 
-.journal-filter-card,
-.journal-filter-grid,
-.journal-date-grid {
-  display: grid;
-  gap: 12px;
-}
-
-.journal-filter-grid,
-.journal-date-grid,
-.journal-summary-grid {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-
-.journal-date-grid {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
 .journal-search-field,
 .journal-filter-grid label,
 .journal-date-grid label {
@@ -121,23 +104,10 @@
   font-size: 11px;
 }
 
-.journal-summary-grid {
-  display: grid;
-  gap: 10px;
-}
-
 .journal-summary-grid article {
   display: grid;
   gap: 7px;
   min-width: 0;
-}
-
-.journal-summary-grid span,
-.journal-summary-grid strong {
-  display: block;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .journal-summary-grid span {
@@ -203,16 +173,6 @@
   display: grid;
   gap: 4px;
   min-width: 0;
-}
-
-.journal-row__content b,
-.journal-row__content small,
-.journal-row__meta b,
-.journal-row__meta small {
-  display: block;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .journal-row__content b {

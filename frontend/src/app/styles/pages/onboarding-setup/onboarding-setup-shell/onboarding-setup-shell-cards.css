@@ -41,16 +41,6 @@
   line-height: 1.45;
 }
 
-.onboarding-choice-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
-}
-
-.onboarding-choice-grid.two {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
 .onboarding-choice,
 .onboarding-currency {
   min-height: 86px;
@@ -60,12 +50,6 @@
   padding: 14px;
   text-align: left;
   transition: border-color .18s ease, background .18s ease, transform .18s ease;
-}
-
-.onboarding-choice:active,
-.onboarding-currency:active,
-.onboarding-chip:active {
-  transform: scale(.985);
 }
 
 .onboarding-choice.is-active,

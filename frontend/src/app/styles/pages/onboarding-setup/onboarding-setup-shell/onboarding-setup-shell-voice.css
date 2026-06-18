@@ -4,12 +4,6 @@
   align-items: center;
 }
 
-.onboarding-flow,
-.onboarding-rule-list {
-  display: grid;
-  gap: 10px;
-}
-
 .onboarding-flow div,
 .onboarding-rule-list div,
 .onboarding-live-voice-guide {

@@ -1,8 +1,4 @@
 /* Pack 145: compact Store secondary sections. */
-.store-foldout-stack {
-  display: grid;
-  gap: 12px;
-}
 
 .store-foldout-section {
   overflow: hidden;
@@ -109,11 +105,6 @@
 
 .store-product-detail-card li {
   font-size: 13px;
-}
-
-.store-compact-extras {
-  display: grid;
-  gap: 10px;
 }
 
 .store-compact-card {

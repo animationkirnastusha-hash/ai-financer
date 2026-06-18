@@ -1,8 +1,5 @@
 /* Accounts, taxonomy cards, compact chips and empty states. */
-.app-settings-grid {
-  display: grid;
-  gap: 10px;
-}
+
 .app-settings-tile {
   min-width: 0;
   border: 1px solid rgba(255,255,255,.08);
@@ -25,16 +22,6 @@
   font-size: 14px;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.app-accounts-hero__top,
-.app-accounts-group__head,
-.app-taxonomy-section-card__head,
-.app-taxonomy-modal__head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 14px;
 }
 
 .app-accounts-stats,
@@ -86,10 +73,6 @@
   padding: 14px !important;
 }
 
-.app-taxonomy-grid {
-  display: grid;
-  gap: 12px;
-}
 .app-taxonomy-section-card__title {
   display: grid;
   min-width: 0;

@@ -7,13 +7,6 @@
   padding: 14px;
 }
 
-.app-taxonomy-picker__head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-}
-
 .app-taxonomy-picker__eyebrow,
 .app-taxonomy-category-preview__label {
   color: rgba(255,255,255,.44);
@@ -39,12 +32,6 @@
   font-size: 12px;
   font-weight: 900;
   padding: 0 13px;
-}
-
-.app-taxonomy-picker__meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
 }
 
 .app-taxonomy-picker__meta span,
