@@ -48,6 +48,7 @@
 @import "./pages/analytics-layout.css";
 @import "./pages/admin/ai-training.css";
 @import "./features/store/store-layout.css";
+@import "./features/store/store-foldouts.css";
 @import "./animations/app-motion.css";
 @import "./animations/store-motion.css";
 @import "./screens/product-final-pass.css";

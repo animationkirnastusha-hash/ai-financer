@@ -6,6 +6,7 @@ import { storeFeatures, storeProductCards, type StoreCard } from '@/features/sto
 import { StoreLimitsSheet } from '@/features/store/ui/StoreLimitsSheet';
 import { StorePaymentSheet } from '@/features/store/ui/StorePaymentSheet';
 import { StoreProductDetail } from '@/features/store/ui/StoreProductDetail';
+import { StoreFoldoutSection } from '@/features/store/ui/StoreFoldoutSection';
 import { StoreProductGrid } from '@/features/store/ui/StoreProductGrid';
 import { StoreStatusCard } from '@/features/store/ui/StoreStatusCard';
 import { StoreTrialCard } from '@/features/store/ui/StoreTrialCard';
@@ -107,17 +108,39 @@ export default function PremiumPage() {
           <StoreProductDetail card={selectedCard} hasPremium={hasPremium} hasBusiness={hasBusiness} onBuy={handleOpenPayment} />
         ) : null}
 
-        <div className="store-minimal-grid store-minimal-grid--status">
-          <StoreStatusCard subscription={subscription} isLoading={isLoading} />
-          <button type="button" className="app-card monetization-section store-limits-button" onClick={() => setLimitsOpen(true)}>
-            <span className="app-eyebrow">{t('store.limits.eyebrow')}</span>
-            <strong>{t('store.limits.title')}</strong>
-            <small>{t('store.limits.caption')}</small>
-          </button>
-        </div>
+        <section className="store-foldout-stack" aria-label={t('store.foldouts.aria')}>
+          <StoreFoldoutSection
+            eyebrowKey="store.foldouts.access.eyebrow"
+            titleKey="store.foldouts.access.title"
+            captionKey="store.foldouts.access.caption"
+            defaultOpen
+          >
+            <div className="store-minimal-grid store-minimal-grid--status">
+              <StoreStatusCard subscription={subscription} isLoading={isLoading} />
+              <button type="button" className="app-card monetization-section store-limits-button" onClick={() => setLimitsOpen(true)}>
+                <span className="app-eyebrow">{t('store.limits.eyebrow')}</span>
+                <strong>{t('store.limits.title')}</strong>
+                <small>{t('store.limits.caption')}</small>
+              </button>
+            </div>
+          </StoreFoldoutSection>
 
-        <StoreTrialCard subscription={subscription} isLoading={isLoading} onStartTrial={handleStartTrial} />
-        <StoreCompactExtras onOpenReferral={handleOpenReferral} onOpenPremium={handleOpenPremiumSheet} />
+          <StoreFoldoutSection
+            eyebrowKey="store.foldouts.trial.eyebrow"
+            titleKey="store.foldouts.trial.title"
+            captionKey="store.foldouts.trial.caption"
+          >
+            <StoreTrialCard subscription={subscription} isLoading={isLoading} onStartTrial={handleStartTrial} />
+          </StoreFoldoutSection>
+
+          <StoreFoldoutSection
+            eyebrowKey="store.foldouts.bonus.eyebrow"
+            titleKey="store.foldouts.bonus.title"
+            captionKey="store.foldouts.bonus.caption"
+          >
+            <StoreCompactExtras onOpenReferral={handleOpenReferral} onOpenPremium={handleOpenPremiumSheet} />
+          </StoreFoldoutSection>
+        </section>
       </div>
 
       <StoreLimitsSheet open={limitsOpen} subscription={subscription} onClose={() => setLimitsOpen(false)} />

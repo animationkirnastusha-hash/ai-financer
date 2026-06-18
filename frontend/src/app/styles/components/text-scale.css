@@ -1,0 +1,55 @@
+/* Pack 144: compact shared text scale for tester-ready screens. */
+:root {
+  --app-title-sm: clamp(18px, 4.4vw, 24px);
+  --app-title-md: clamp(22px, 5.6vw, 30px);
+  --app-title-lg: clamp(25px, 6.8vw, 36px);
+  --app-money-lg: clamp(28px, 8.2vw, 40px);
+  --app-money-md: clamp(22px, 6vw, 32px);
+}
+
+.app-page h1,
+.app-hero-title,
+.app-card--hero h1,
+.monetization-hero h1,
+.app-settings-hero h1 {
+  font-size: var(--app-title-lg);
+  line-height: 1.04;
+  letter-spacing: -0.052em;
+}
+
+.app-page h2,
+.monetization-section h2,
+.store-showcase h2,
+.app-settings-modal h2,
+.app-modal-title {
+  font-size: var(--app-title-sm);
+  line-height: 1.12;
+  letter-spacing: -0.035em;
+}
+
+.app-money-hero,
+.app-balance-card__amount,
+.app-currency-card__amount,
+.home-balance-carousel__amount,
+.dashboard-balance-card__amount,
+.store-payment-selected-price strong,
+.store-payment-one-time strong {
+  max-width: 100%;
+  font-size: var(--app-money-lg);
+  line-height: .96;
+  letter-spacing: -0.065em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 390px) {
+  :root {
+    --app-title-lg: clamp(23px, 6.2vw, 32px);
+    --app-money-lg: clamp(25px, 7.4vw, 34px);
+  }
+
+  .app-section-title,
+  .app-eyebrow {
+    letter-spacing: .18em;
+  }
+}

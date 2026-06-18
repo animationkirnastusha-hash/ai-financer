@@ -15,11 +15,11 @@ type DrawerProps = PropsWithChildren<{
   layer?: number;
 }>;
 
-const DISMISS_DRAG_PX = 84;
-const ACTIVATE_DRAG_PX = 8;
+const DISMISS_DRAG_PX = 76;
+const ACTIVATE_DRAG_PX = 6;
 const CANCEL_UPWARD_DRAG_PX = -10;
-const SHEET_TOP_DRAG_ZONE_RATIO = 0.55;
-const SHEET_TOP_DRAG_ZONE_MIN_PX = 260;
+const SHEET_TOP_DRAG_ZONE_RATIO = 0.72;
+const SHEET_TOP_DRAG_ZONE_MIN_PX = 320;
 
 function isInteractiveTarget(target: EventTarget | null) {
   if (!(target instanceof HTMLElement)) return false;
@@ -163,7 +163,7 @@ export function Drawer({
 
   return (
     <div
-      className="app-modal-backdrop"
+      className="app-modal-backdrop app-drawer-backdrop"
       style={layer ? { zIndex: layer } : undefined}
       data-no-swipe="true"
       data-ai-core-modal="true"
@@ -173,7 +173,7 @@ export function Drawer({
     >
       <div
         ref={sheetRef}
-        className={cn('app-modal-sheet', className)}
+        className={cn('app-modal-sheet app-drawer-sheet', className)}
         style={{ transform: dragOffset ? `translateY(${dragOffset}px)` : undefined }}
         data-no-swipe="true"
         data-ai-core-modal="true"
@@ -208,7 +208,7 @@ export function Drawer({
             ×
           </button>
         )}
-        <div ref={bodyRef} className={cn('app-modal-body', bodyClassName)}>{children}</div>
+        <div ref={bodyRef} className={cn('app-modal-body app-drawer-body', bodyClassName)}>{children}</div>
         {footer ? <footer className="app-modal-footer">{footer}</footer> : null}
       </div>
     </div>

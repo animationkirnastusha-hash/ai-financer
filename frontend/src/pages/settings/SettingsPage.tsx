@@ -3,6 +3,7 @@ import { useSettingsStore } from '@/features/settings/model/settings.store';
 import { useNavigationStore, type SettingsSection } from '@/features/navigation/model/navigation.store';
 import { LanguageSwitcher } from '@/shared/ui/LanguageSwitcher';
 import { ScreenTopBar } from '@/shared/ui/ScreenTopBar';
+import { Drawer } from '@/shared/ui/Drawer';
 import { useAuthStore } from '@/features/auth/model/auth.store';
 import { dataResetApi, type DataResetMode } from '@/features/data-reset/api/dataReset.api';
 import { useNotificationsStore } from '@/features/notifications/model/notifications.store';
@@ -16,22 +17,16 @@ const currencyOptions: AppCurrency[] = ['RUB', 'USD', 'EUR', 'KZT', 'UZS', 'KGS'
 
 function ModalShell({ title, caption, children, onClose }: { title: string; caption?: string; children: ReactNode; onClose: () => void }) {
   return (
-    <div className="app-modal-backdrop" data-no-swipe="true" onClick={onClose}>
-      <div className="app-modal-sheet app-settings-modal" data-no-swipe="true" onClick={(event) => event.stopPropagation()}>
-        <div className="app-modal-handle" />
-        <div className="app-modal-body">
-          <div className="app-settings-modal__head">
-            <div>
-              <div className="app-eyebrow">Настройки</div>
-              <h2>{title}</h2>
-              {caption ? <p>{caption}</p> : null}
-            </div>
-            <button type="button" className="app-icon-button" onClick={onClose} aria-label="Закрыть">×</button>
-          </div>
-          {children}
-        </div>
-      </div>
-    </div>
+    <Drawer
+      open
+      onClose={onClose}
+      title={title}
+      subtitle={caption}
+      className="app-settings-modal"
+      bodyClassName="app-settings-modal__body"
+    >
+      {children}
+    </Drawer>
   );
 }
 
@@ -117,8 +112,8 @@ export default function SettingsPage() {
 
   const handleReset = async (mode: DataResetMode) => {
     const text = mode === 'finance'
-      ? 'Очистить все финансовые данные? XP, уровень и прогресс останутся.'
-      : 'Сбросить всё по аккаунту? Финансы, XP, уровень, достижения и прогресс будут обнулены. Профиль останется.';
+      ? t('settings.data.confirm.finance')
+      : t('settings.data.confirm.full');
 
     if (!window.confirm(text)) return;
 
@@ -127,10 +122,10 @@ export default function SettingsPage() {
 
     try {
       await dataResetApi.resetMe(mode);
-      setResetStatus(mode === 'finance' ? 'Финансовые данные очищены.' : 'Аккаунт обнулён.');
+      setResetStatus(mode === 'finance' ? t('settings.data.status.finance') : t('settings.data.status.full'));
       window.setTimeout(() => window.location.reload(), 700);
     } catch (error) {
-      setResetStatus(error instanceof Error ? error.message : 'Не удалось выполнить сброс.');
+      setResetStatus(error instanceof Error ? error.message : t('settings.data.status.error'));
     } finally {
       setResetMode(null);
     }
@@ -143,7 +138,7 @@ export default function SettingsPage() {
         <ScreenTopBar title={t('settings.title')} left="back" right={['notifications', 'home']} />
 
         <header className="app-card app-card--hero app-settings-hero">
-          <div className="app-eyebrow">Настройки</div>
+          <div className="app-eyebrow">{t('settings.hero.eyebrow')}</div>
           <h1>{t('settings.hero.title')}</h1>
           <p>{t('settings.hero.caption')}</p>
         </header>
@@ -168,39 +163,39 @@ export default function SettingsPage() {
         {user ? (
           <section className="app-card app-settings-user">
             <div className="app-section-title">{t('settings.profile.title')}</div>
-            <p>{user.firstName || user.username || 'Пользователь'}</p>
+            <p>{user.firstName || user.username || t('settings.profile.fallback')}</p>
             <small>ID: {user.telegramId}</small>
           </section>
         ) : null}
       </div>
 
       {modal === 'voice' ? (
-        <ModalShell title="Голос" caption="Запись начинается только когда ты зажимаешь Фину. Фон не отправляется в распознавание." onClose={() => setModal(null)}>
+        <ModalShell title={t('settings.voice.title')} caption={t('settings.voice.caption')} onClose={() => setModal(null)}>
           <div className="grid gap-3">
-            <ToggleLine title="Голосовой ввод" caption="Микрофон включается только на время удержания кнопки Фины." checked={voiceEnabled} onChange={setVoiceEnabled} />
-            <ToggleLine title="Голос Фины" caption="Короткие ответы голосом Nova: «Я здесь», «Слушаю», «Готово»." checked={voiceRepliesEnabled} onChange={setVoiceRepliesEnabled} />
-            <ToggleLine title="Распознавание голоса" caption="Единое распознавание голоса для iPhone и Android." checked={voiceBetaEnabled} onChange={setVoiceBetaEnabled} />
+            <ToggleLine title={t('settings.voice.input.title')} caption={t('settings.voice.input.caption')} checked={voiceEnabled} onChange={setVoiceEnabled} />
+            <ToggleLine title={t('settings.voice.replies.title')} caption={t('settings.voice.replies.caption')} checked={voiceRepliesEnabled} onChange={setVoiceRepliesEnabled} />
+            <ToggleLine title={t('settings.voice.recognition.title')} caption={t('settings.voice.recognition.caption')} checked={voiceBetaEnabled} onChange={setVoiceBetaEnabled} />
           </div>
-          <p className="app-settings-note mt-4">Подтверждения остаются в обычных модалках. После отпускания запись отправляется в распознавание один раз.</p>
+          <p className="app-settings-note mt-4">{t('settings.voice.note')}</p>
         </ModalShell>
       ) : null}
 
       {modal === 'fina' ? (
-        <ModalShell title="Фина" caption="Фина работает как голосовая кнопка и не слушает фон." onClose={() => setModal(null)}>
+        <ModalShell title={t('settings.fina.modal.title')} caption={t('settings.fina.modal.caption')} onClose={() => setModal(null)}>
           <div className="app-fina-rules">
-            <div><b>1</b><span>Зажми Фину</span></div>
-            <div><b>2</b><span>Скажи финансовую команду</span></div>
-            <div><b>3</b><span>Отпусти, чтобы отправить</span></div>
+            <div><b>1</b><span>{t('settings.fina.step.hold')}</span></div>
+            <div><b>2</b><span>{t('settings.fina.step.say')}</span></div>
+            <div><b>3</b><span>{t('settings.fina.step.release')}</span></div>
           </div>
-          <p className="app-settings-note">Фон не распознаётся. Все проверки, отмены и изменения остаются в обычных модалках приложения.</p>
+          <p className="app-settings-note">{t('settings.fina.note')}</p>
         </ModalShell>
       ) : null}
 
       {modal === 'currency' ? (
-        <ModalShell title="Валюты" caption="Выбери, что показывать на главной карточке баланса." onClose={() => setModal(null)}>
+        <ModalShell title={t('settings.currency.modal.title')} caption={t('settings.currency.modal.caption')} onClose={() => setModal(null)}>
           <div className="app-currency-settings-grid">
             <div className="app-currency-row">
-              <div className="app-currency-row__head"><b>Главная валюта</b><small>{mainCurrency}</small></div>
+              <div className="app-currency-row__head"><b>{t('settings.currency.main')}</b><small>{mainCurrency}</small></div>
               <div className="app-currency-pills">
                 {currencyOptions.map((currency) => (
                   <button key={currency} type="button" data-active={currency === mainCurrency} onClick={() => setMainCurrency(currency)}>{currency}</button>
@@ -208,10 +203,10 @@ export default function SettingsPage() {
               </div>
             </div>
 
-            <ToggleLine title="Конвертация" caption="Показывать пересчёт выбранного счёта в другой валюте." checked={secondaryCurrencyEnabled} onChange={setSecondaryCurrencyEnabled} />
+            <ToggleLine title={t('settings.currency.conversion.title')} caption={t('settings.currency.conversion.caption')} checked={secondaryCurrencyEnabled} onChange={setSecondaryCurrencyEnabled} />
 
             <div className="app-currency-row">
-              <div className="app-currency-row__head"><b>Дополнительная</b><small>{secondaryCurrency}</small></div>
+              <div className="app-currency-row__head"><b>{t('settings.currency.secondary')}</b><small>{secondaryCurrency}</small></div>
               <div className="app-currency-pills">
                 {currencyOptions.filter((currency) => currency !== mainCurrency).map((currency) => (
                   <button key={currency} type="button" data-active={currency === secondaryCurrency} onClick={() => setSecondaryCurrency(currency)}>{currency}</button>
@@ -220,12 +215,12 @@ export default function SettingsPage() {
             </div>
 
             <div className="app-currency-row">
-              <div className="app-currency-row__head"><b>Курс доллара</b><small>1 USD в рублях</small></div>
+              <div className="app-currency-row__head"><b>{t('settings.currency.usdRate')}</b><small>{t('settings.currency.usdRate.caption')}</small></div>
               <input className="app-currency-rate-input" inputMode="decimal" value={usdDraft} onChange={(event) => setUsdDraft(event.target.value)} onBlur={saveUsdRate} />
             </div>
 
             <div className="app-currency-row">
-              <div className="app-currency-row__head"><b>Курс евро</b><small>1 EUR в рублях</small></div>
+              <div className="app-currency-row__head"><b>{t('settings.currency.eurRate')}</b><small>{t('settings.currency.eurRate.caption')}</small></div>
               <input className="app-currency-rate-input" inputMode="decimal" value={eurDraft} onChange={(event) => setEurDraft(event.target.value)} onBlur={saveEurRate} />
             </div>
           </div>
@@ -246,29 +241,29 @@ export default function SettingsPage() {
 
 
       {modal === 'notifications' ? (
-        <ModalShell title="Уведомления" caption="Каналы и важные события. Срок напоминания задаётся в самом платеже." onClose={() => setModal(null)}>
+        <ModalShell title={t('settings.notifications.modal.title')} caption={t('settings.notifications.modal.caption')} onClose={() => setModal(null)}>
           <div className="grid gap-3">
             <ToggleLine
-              title="В приложении"
-              caption="Показывать уведомления в панели сверху."
+              title={t('settings.notifications.inApp.title')}
+              caption={t('settings.notifications.inApp.caption')}
               checked={notificationSettings?.inAppEnabled !== false}
               onChange={(value) => void updateNotificationSettings({ inAppEnabled: value })}
             />
             <ToggleLine
-              title="В Telegram"
-              caption="Отправлять напоминания в бота."
+              title={t('settings.notifications.telegram.title')}
+              caption={t('settings.notifications.telegram.caption')}
               checked={notificationSettings?.telegramEnabled !== false}
               onChange={(value) => void updateNotificationSettings({ telegramEnabled: value })}
             />
             <ToggleLine
-              title="В день платежа"
-              caption="Напоминать в дату списания."
+              title={t('settings.notifications.due.title')}
+              caption={t('settings.notifications.due.caption')}
               checked={notificationSettings?.remindOnDueDate !== false}
               onChange={(value) => void updateNotificationSettings({ remindOnDueDate: value })}
             />
             <ToggleLine
-              title="Просрочка"
-              caption="Показывать, если платёж не отмечен."
+              title={t('settings.notifications.overdue.title')}
+              caption={t('settings.notifications.overdue.caption')}
               checked={notificationSettings?.remindOverdue !== false}
               onChange={(value) => void updateNotificationSettings({ remindOverdue: value })}
             />
@@ -278,15 +273,15 @@ export default function SettingsPage() {
       ) : null}
 
       {modal === 'data' ? (
-        <ModalShell title="Данные" caption="Для тестов можно начать заново без удаления профиля." onClose={() => setModal(null)}>
+        <ModalShell title={t('settings.data.modal.title')} caption={t('settings.data.modal.caption')} onClose={() => setModal(null)}>
           <div className="grid gap-3">
             <button type="button" className="app-danger-card" disabled={resetMode !== null} onClick={() => handleReset('finance')}>
-              <b>Очистить финансы</b>
-              <small>Счета, операции, цели, категории, разделы и финансовый контекст. XP останется.</small>
+              <b>{t('settings.data.clearFinance.title')}</b>
+              <small>{t('settings.data.clearFinance.caption')}</small>
             </button>
             <button type="button" className="app-danger-card app-danger-card--hard" disabled={resetMode !== null} onClick={() => handleReset('full')}>
-              <b>Сбросить всё</b>
-              <small>Финансы, XP, уровень, достижения и прогресс. Профиль останется.</small>
+              <b>{t('settings.data.resetAll.title')}</b>
+              <small>{t('settings.data.resetAll.caption')}</small>
             </button>
             {resetStatus ? <div className="app-status-box">{resetStatus}</div> : null}
           </div>

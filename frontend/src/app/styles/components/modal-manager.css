@@ -1,0 +1,65 @@
+/* Pack 144: unified bottom-sheet viewport contract. */
+.app-modal-backdrop.app-drawer-backdrop,
+.app-modal-backdrop {
+  width: 100vw;
+  min-height: 100dvh;
+  align-items: flex-end;
+  overflow: hidden;
+  padding-top: max(8px, env(safe-area-inset-top));
+}
+
+.app-modal-sheet.app-drawer-sheet,
+.app-modal-sheet {
+  width: min(100%, 620px);
+  max-height: calc(100dvh - max(8px, env(safe-area-inset-top)));
+  min-height: 0;
+  transform: translate3d(0, 0, 0);
+}
+
+.app-drawer-body,
+.app-modal-body {
+  min-height: 0;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.app-settings-modal,
+.store-payment-sheet,
+.store-limits-sheet,
+.trial-offer-sheet,
+.notification-sheet {
+  max-height: calc(100dvh - max(8px, env(safe-area-inset-top)));
+}
+
+.app-settings-modal__body,
+.store-payment-sheet__body,
+.store-limits-sheet__body,
+.trial-offer-sheet__body,
+.notification-sheet__body {
+  display: grid;
+  gap: 14px;
+  min-height: 0;
+  padding-bottom: max(18px, calc(18px + env(safe-area-inset-bottom)));
+}
+
+.app-modal-header {
+  padding: 6px 16px 12px;
+}
+
+.app-modal-footer {
+  flex-shrink: 0;
+}
+
+@media (max-width: 560px) {
+  .app-modal-sheet.app-drawer-sheet,
+  .app-modal-sheet,
+  .app-settings-modal,
+  .store-payment-sheet,
+  .store-limits-sheet,
+  .trial-offer-sheet,
+  .notification-sheet {
+    width: 100%;
+    max-height: calc(100dvh - max(6px, env(safe-area-inset-top)));
+    border-radius: 26px 26px 0 0;
+  }
+}

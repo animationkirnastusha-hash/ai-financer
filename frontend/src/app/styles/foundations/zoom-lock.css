@@ -1,0 +1,27 @@
+/* Pack 144: viewport zoom lock for Telegram/iOS webviews. */
+html,
+body,
+#root,
+.ai-app-shell {
+  touch-action: pan-x pan-y;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+button,
+a,
+[role='button'],
+.app-card,
+.app-action-card,
+.app-list-button,
+.app-modal-sheet,
+.app-page {
+  touch-action: manipulation;
+}
+
+input,
+textarea,
+select,
+[contenteditable='true'] {
+  touch-action: auto;
+}

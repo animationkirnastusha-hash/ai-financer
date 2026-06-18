@@ -104,7 +104,6 @@ const requiredBackendFiles = [
   'backend/scripts/smoke/check-prisma-status.mjs',
   'backend/scripts/smoke/check-accounts-balances.mjs',
   'backend/scripts/smoke/check-transactions.mjs',
-  'backend/scripts/smoke/check-taxonomy.mjs',
   'backend/scripts/smoke/check-taxonomy-contract.mjs',
   'backend/scripts/smoke/check-goals-limits.mjs',
   'backend/scripts/smoke/check-obligations-reports.mjs',

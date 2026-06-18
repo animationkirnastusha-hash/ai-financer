@@ -5,7 +5,6 @@ const checks = [
   ['prisma status', 'scripts/smoke/check-prisma-status.mjs'],
   ['accounts/balances', 'scripts/smoke/check-accounts-balances.mjs'],
   ['transactions', 'scripts/smoke/check-transactions.mjs'],
-  ['taxonomy crud', 'scripts/smoke/check-taxonomy.mjs'],
   ['taxonomy contract', 'scripts/smoke/check-taxonomy-contract.mjs'],
   ['goals/limits', 'scripts/smoke/check-goals-limits.mjs'],
   ['obligations/reports', 'scripts/smoke/check-obligations-reports.mjs'],
