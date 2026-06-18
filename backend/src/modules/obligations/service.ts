@@ -186,6 +186,7 @@ export class ObligationService {
     return {
       loans: loans.map((loan) => this.serializeLoan(loan)),
       activeLoansCount: loans.length,
+      monthlyPayment: monthlyPaymentTotal,
       monthlyPaymentTotal,
       totalDebt,
       dueThisMonthCount: dueThisMonth.length,

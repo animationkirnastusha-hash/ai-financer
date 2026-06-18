@@ -1,12 +1,12 @@
 #!/usr/bin/env node
-import dotenv from 'dotenv';
 import jwt from 'jsonwebtoken';
 import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { PrismaClient } from '@prisma/client';
+import { loadBackendEnv } from './lib/load-backend-env.mjs';
 
-dotenv.config({ override: true });
+loadBackendEnv({ backendRoot: process.cwd() });
 
 const prisma = new PrismaClient();
 
