@@ -114,18 +114,27 @@ function IconButton({ children, label, onClick, badge }: { children: ReactNode; 
   );
 }
 
-function TextButton({ children, label, onClick }: { children: ReactNode; label: string; onClick: () => void }) {
+function TextButton({ children, label, onClick, compact = false }: { children: ReactNode; label: string; onClick: () => void; compact?: boolean }) {
   return (
     <button
       type="button"
       onClick={onClick}
       aria-label={label}
-      className="screen-top-bar__text-button"
+      className={compact ? 'screen-top-bar__text-button screen-top-bar__text-button--chevron' : 'screen-top-bar__text-button'}
       data-no-swipe="true"
     >
       {children}
     </button>
   );
+}
+
+function BackChevron() {
+  return <span className="screen-top-bar__chevron" aria-hidden="true">‹</span>;
+}
+
+function isBackLabel(label: string) {
+  const normalized = label.trim().toLowerCase();
+  return normalized === 'назад' || normalized === 'back' || normalized === '<' || normalized === '‹';
 }
 
 export function ScreenTopBar({ title, left = 'menu', right = DEFAULT_RIGHT_ACTIONS, className = '' }: Props) {
@@ -164,8 +173,12 @@ export function ScreenTopBar({ title, left = 'menu', right = DEFAULT_RIGHT_ACTIO
       <div className="screen-top-bar__actions">
         <div className="screen-top-bar__side screen-top-bar__side--left">
           {left === 'menu' ? <TextButton label={t('common.menu')} onClick={openNavigationMenu}>{t('common.menu')}</TextButton> : null}
-          {left === 'back' ? <TextButton label={t('common.back')} onClick={goBack}>{t('common.back')}</TextButton> : null}
-          {typeof left === 'object' ? <TextButton label={left.label} onClick={left.onClick}>{left.label}</TextButton> : null}
+          {left === 'back' ? <TextButton label={t('common.back')} onClick={goBack} compact><BackChevron /></TextButton> : null}
+          {typeof left === 'object' ? (
+            <TextButton label={left.label} onClick={left.onClick} compact={isBackLabel(left.label)}>
+              {isBackLabel(left.label) ? <BackChevron /> : left.label}
+            </TextButton>
+          ) : null}
         </div>
 
         <div className="screen-top-bar__side screen-top-bar__side--right">

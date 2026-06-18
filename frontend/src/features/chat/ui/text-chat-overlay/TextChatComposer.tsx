@@ -19,6 +19,8 @@ type Props = {
   voiceLabel: string;
   receiptActionLabel: string;
   receiptCameraLabel: string;
+  voiceCancelHint: string;
+  voiceCancelledLabel: string;
   onValueChange: (value: string) => void;
   onSubmit: () => void | Promise<void>;
   onReceiptFile: (file: File | null) => void | Promise<void>;
@@ -44,6 +46,8 @@ export function TextChatComposer({
   voiceLabel,
   receiptActionLabel,
   receiptCameraLabel,
+  voiceCancelHint,
+  voiceCancelledLabel,
   onValueChange,
   onSubmit,
   onReceiptFile,
@@ -114,6 +118,11 @@ export function TextChatComposer({
         placeholder={placeholder}
         disabled={isSending}
       />
+      {isVoicePressed || voiceState === 'recording' ? (
+        <div className="text-chat-overlay__voice-cancel-hint" data-cancelled={isVoiceCancelledBySwipe ? 'true' : 'false'}>
+          {isVoiceCancelledBySwipe ? voiceCancelledLabel : voiceCancelHint}
+        </div>
+      ) : null}
       {value.trim() ? (
         <button type="submit" disabled={isSending} aria-label={sendLabel}>
           ↑

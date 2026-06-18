@@ -31,6 +31,12 @@ export function VoicePermissionIntro({ wakeName, isPriming, permissionState = 'u
           <p>{t('voiceIntro.caption')}</p>
         )}
 
+        <div className="voice-first-intro__steps" aria-hidden="true">
+          <span>{t('voiceIntro.step.permission')}</span>
+          <span>{t('voiceIntro.step.system')}</span>
+          <span>{t('voiceIntro.step.use')}</span>
+        </div>
+
         <div className={denied ? 'voice-first-intro__hint voice-first-intro__hint--warning' : 'voice-first-intro__hint'}>
           {t('voiceIntro.hint')}
         </div>

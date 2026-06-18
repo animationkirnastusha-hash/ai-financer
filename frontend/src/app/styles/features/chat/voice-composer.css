@@ -15,3 +15,29 @@
 .text-chat-overlay__composer textarea:not(:placeholder-shown) + .text-chat-overlay__voice-send {
   display: none;
 }
+
+.text-chat-overlay__voice-send[data-recording='true'] {
+  transform: translateY(-14px) scale(1.04);
+}
+
+.text-chat-overlay__voice-cancel-hint {
+  position: absolute;
+  right: 76px;
+  bottom: calc(env(safe-area-inset-bottom) + 78px);
+  z-index: 2;
+  pointer-events: none;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  border-radius: 999px;
+  background: rgba(3, 7, 12, 0.72);
+  padding: 8px 12px;
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 12px;
+  line-height: 1;
+  backdrop-filter: blur(14px);
+}
+
+.text-chat-overlay__voice-cancel-hint[data-cancelled='true'] {
+  color: rgba(251, 113, 133, 0.92);
+  border-color: rgba(251, 113, 133, 0.22);
+  background: rgba(127, 29, 29, 0.36);
+}

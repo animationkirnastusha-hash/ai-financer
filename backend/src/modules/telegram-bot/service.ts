@@ -48,24 +48,33 @@ function getMiniAppUrl() {
   );
 }
 
+function readCommand(text: string) {
+  const value = text.trim();
+  const [rawCommand = '', ...rest] = value.split(/\s+/);
+  const command = rawCommand.toLowerCase().replace(/@[^\s]+$/, '');
+  const payload = rest.join(' ').trim().toLowerCase();
+
+  return { command, payload, value: value.toLowerCase() };
+}
+
 function isLoginCommand(text: string) {
-  const value = text.trim().toLowerCase();
-  return value === '/login' || value === 'код' || value === 'войти' || value.startsWith('/start login');
+  const { command, payload, value } = readCommand(text);
+  return command === '/login' || value === 'код' || value === 'войти' || (command === '/start' && payload === 'login');
 }
 
 function isLanguageCommand(text: string) {
-  const value = text.trim().toLowerCase();
-  return value === '/language' || value === '/settings' || value === 'language' || value === 'язык';
+  const { command, value } = readCommand(text);
+  return command === '/language' || command === '/settings' || value === 'language' || value === 'язык';
 }
 
 function isStartCommand(text: string) {
-  const value = text.trim().toLowerCase();
-  return value === '/start' || (value.startsWith('/start ') && !value.startsWith('/start login'));
+  const { command, payload } = readCommand(text);
+  return command === '/start' && payload !== 'login';
 }
 
 function isHelpCommand(text: string) {
-  const value = text.trim().toLowerCase();
-  return value === '/help' || value === 'help' || value === 'помощь';
+  const { command, value } = readCommand(text);
+  return command === '/help' || value === 'help' || value === 'помощь';
 }
 
 function isBotCommand(text: string) {
@@ -278,16 +287,20 @@ async function handleFinancialMessage(message: TelegramBotMessage) {
   if (!user) return { handled: false, reason: 'USER_NOT_FOUND' };
 
   const storedLocale = getStoredLocale(user);
-  const locale = storedLocale ?? DEFAULT_BOT_LOCALE;
+  const locale = storedLocale ?? normalizeUserLocale(from.language_code) ?? DEFAULT_BOT_LOCALE;
   const text = typeof message.text === 'string' ? message.text.trim() : '';
   const messageId = Number.isFinite(Number(message.message_id)) ? Number(message.message_id) : Date.now();
 
   if (text) {
+    if (isStartCommand(text) || isHelpCommand(text)) {
+      if (!storedLocale && normalizeUserLocale(from.language_code)) {
+        await authService.updateUserLocale(user.id, locale);
+      }
+      return sendStart(chatId, locale);
+    }
     if (isLanguageCommand(text)) return sendLanguageChoice(chatId);
-    if (!storedLocale) return sendLanguageChoice(chatId);
-
     if (isLoginCommand(text)) return sendLoginCode(chatId, from, locale);
-    if (isStartCommand(text) || isHelpCommand(text)) return sendStart(chatId, locale);
+    if (!storedLocale) return sendLanguageChoice(chatId);
 
     if (isBotCommand(text)) {
       await telegramBotClient.sendMessage(chatId, escapeHtml(botT(locale, 'unknownCommand')), buildOpenAppMarkup(locale));

@@ -3,6 +3,7 @@ import type { MouseEvent } from 'react';
 
 import { Button, Surface } from '@/shared/ui';
 import { cn } from '@/shared/lib/cn';
+import { useI18n } from '@/shared/lib/i18n';
 import type { PendingActionItem } from '@/features/pending-actions/model/pendingActions.types';
 import { getPendingActionView } from '@/features/pending-actions/lib/pendingActionView';
 
@@ -110,7 +111,8 @@ function updateNestedActionField(action: EditableAction, key: string, value: str
 export function PendingActionCard({ item, onConfirm, onCancel, onUpdate }: Props) {
   const [processingAction, setProcessingAction] = useState<'confirm' | 'cancel' | 'save' | null>(null);
   const [showEditor, setShowEditor] = useState(false);
-  const view = getPendingActionView(item);
+  const { language } = useI18n();
+  const view = getPendingActionView(item, language);
   const originalParsed = useMemo(() => readParsed(item), [item]);
   const [actions, setActions] = useState<EditableAction[]>(() => getActions(originalParsed));
   const isProcessing = processingAction !== null;

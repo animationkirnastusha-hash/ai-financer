@@ -6,13 +6,14 @@
 
 .app-fina-pull-indicator {
   position: fixed;
-  top: calc(env(safe-area-inset-top) + 6px);
-  left: 50%;
+  top: 50%;
+  right: max(10px, env(safe-area-inset-right));
+  left: auto;
   z-index: 42;
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  max-width: min(86vw, 320px);
+  max-width: min(76vw, 300px);
   min-height: 34px;
   padding: 7px 13px;
   border: 1px solid rgba(110, 231, 183, 0.20);
@@ -38,7 +39,6 @@
 .app-fina-pull-indicator[data-ready='true'] {
   border-color: rgba(52, 211, 153, 0.44);
   background: rgba(12, 40, 32, 0.90);
-  transform: translateX(-50%) scale(1.02);
 }
 
 .app-fina-pull-indicator__dot {
@@ -48,6 +48,13 @@
   border-radius: 999px;
   background: rgba(52, 211, 153, 0.92);
   box-shadow: 0 0 18px rgba(52, 211, 153, 0.48);
+}
+
+@media (max-width: 390px) {
+  .app-fina-pull-indicator {
+    max-width: min(72vw, 260px);
+    font-size: 11px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

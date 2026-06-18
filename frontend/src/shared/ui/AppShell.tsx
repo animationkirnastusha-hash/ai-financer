@@ -61,7 +61,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         data-ready={finaPull.isReadyToOpen ? 'true' : 'false'}
         style={{
           opacity: finaPull.pullOffset ? Math.min(1, finaPull.pullOffset / 72) : 0,
-          transform: `translate(-50%, ${Math.min(58, Math.max(0, finaPull.pullOffset - 20))}px)`,
+          transform: `translate(${-(Math.min(72, Math.max(0, finaPull.pullOffset - 18)))}px, -50%)`,
         }}
       >
         <span className="app-fina-pull-indicator__dot" />

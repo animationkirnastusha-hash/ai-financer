@@ -2,15 +2,15 @@ import { useCallback, useRef, useState, type TouchEvent } from 'react';
 import type { AppModalDescriptor } from '@/features/modals/model/appModal.store';
 import type { AppScreen } from '@/features/navigation/model/navigation.store';
 
-const PULL_START_ZONE_MIN_PX = 220;
-const PULL_START_ZONE_MAX_PX = 520;
-const PULL_START_ZONE_SCREEN_SHARE = 0.56;
-const ACTIVATE_DRAG_PX = 1;
-const OPEN_DRAG_PX = 20;
-const MAX_VISUAL_DRAG_PX = 92;
-const MAX_HORIZONTAL_DRIFT_PX = 96;
+const EDGE_START_ZONE_MIN_PX = 120;
+const EDGE_START_ZONE_MAX_PX = 260;
+const EDGE_START_ZONE_SCREEN_SHARE = 0.42;
+const ACTIVATE_SWIPE_PX = 8;
+const OPEN_SWIPE_PX = 76;
+const MAX_VISUAL_SWIPE_PX = 112;
+const MAX_VERTICAL_DRIFT_PX = 78;
 
-const SAFE_PULL_SCREENS = new Set<AppScreen>([
+const SAFE_CHAT_SWIPE_SCREENS = new Set<AppScreen>([
   'dashboard',
   'accounts',
   'analytics',
@@ -72,35 +72,26 @@ function isInteractiveTarget(target: EventTarget | null) {
   );
 }
 
-function findScrollRoot(target: EventTarget | null, root: HTMLElement) {
-  if (isHTMLElement(target)) {
-    const closestPage = target.closest<HTMLElement>('.app-page');
-    if (closestPage && root.contains(closestPage)) return closestPage;
-  }
-
-  return root.querySelector<HTMLElement>('.app-page') ?? root;
-}
-
-function isScrollableParentBusy(target: EventTarget | null, scrollRoot: HTMLElement) {
+function hasHorizontalScrollTarget(target: EventTarget | null) {
   if (!isHTMLElement(target)) return false;
 
   let node: HTMLElement | null = target;
-  while (node && node !== scrollRoot) {
+  while (node && node !== document.body) {
     const style = window.getComputedStyle(node);
-    const canScrollY = /(auto|scroll)/.test(style.overflowY) && node.scrollHeight > node.clientHeight + 1;
-    if (canScrollY && node.scrollTop > 2) return true;
+    const canScrollX = /(auto|scroll)/.test(style.overflowX) && node.scrollWidth > node.clientWidth + 4;
+    if (canScrollX) return true;
     node = node.parentElement;
   }
 
   return false;
 }
 
-function getStartZonePx(scrollRoot: HTMLElement) {
-  const rootHeight = scrollRoot.getBoundingClientRect().height || window.innerHeight;
+function getEdgeStartZonePx(root: HTMLElement) {
+  const rootWidth = root.getBoundingClientRect().width || window.innerWidth;
 
   return Math.min(
-    PULL_START_ZONE_MAX_PX,
-    Math.max(PULL_START_ZONE_MIN_PX, rootHeight * PULL_START_ZONE_SCREEN_SHARE),
+    EDGE_START_ZONE_MAX_PX,
+    Math.max(EDGE_START_ZONE_MIN_PX, rootWidth * EDGE_START_ZONE_SCREEN_SHARE),
   );
 }
 
@@ -111,7 +102,7 @@ type UseFinaPullGestureOptions = {
 };
 
 export function canUseFinaPullOnScreen(screen: AppScreen) {
-  return SAFE_PULL_SCREENS.has(screen);
+  return SAFE_CHAT_SWIPE_SCREENS.has(screen);
 }
 
 export function useFinaPullGesture({ blocked = false, currentScreen, openModal }: UseFinaPullGestureOptions) {
@@ -121,17 +112,16 @@ export function useFinaPullGesture({ blocked = false, currentScreen, openModal }
     y: number;
     active: boolean;
     blocked: boolean;
-    scrollRoot: HTMLElement | null;
   } | null>(null);
   const pullOffsetRef = useRef(0);
   const [pullOffset, setPullOffset] = useState(0);
   const [isReadyToOpen, setIsReadyToOpen] = useState(false);
 
   const setVisualOffset = useCallback((offset: number) => {
-    const nextOffset = Math.min(MAX_VISUAL_DRAG_PX, Math.max(0, offset));
+    const nextOffset = Math.min(MAX_VISUAL_SWIPE_PX, Math.max(0, offset));
     pullOffsetRef.current = nextOffset;
     setPullOffset(nextOffset);
-    setIsReadyToOpen(nextOffset >= OPEN_DRAG_PX);
+    setIsReadyToOpen(nextOffset >= OPEN_SWIPE_PX);
   }, []);
 
   const reset = useCallback(() => {
@@ -146,46 +136,38 @@ export function useFinaPullGesture({ blocked = false, currentScreen, openModal }
     const root = rootRef.current;
     if (!touch || !root) return;
 
-    const scrollRoot = findScrollRoot(event.target, root);
-    const rootTop = scrollRoot.getBoundingClientRect().top;
-    const startYInRoot = touch.clientY - rootTop;
-    const rootAtTop = scrollRoot.scrollTop <= 2;
+    const rootRect = root.getBoundingClientRect();
+    const startFromRight = rootRect.right - touch.clientX;
     const shouldBlock =
       blocked ||
       !canUseFinaPullOnScreen(currentScreen) ||
       hasActiveEditableElement() ||
       hasBlockingLayer() ||
-      !rootAtTop ||
-      startYInRoot < 0 ||
-      startYInRoot > getStartZonePx(scrollRoot) ||
+      startFromRight < 0 ||
+      startFromRight > getEdgeStartZonePx(root) ||
       isInteractiveTarget(event.target) ||
-      isScrollableParentBusy(event.target, scrollRoot);
+      hasHorizontalScrollTarget(event.target);
 
     startRef.current = {
       x: touch.clientX,
       y: touch.clientY,
       active: false,
       blocked: shouldBlock,
-      scrollRoot,
     };
   }, [blocked, currentScreen]);
 
   const onTouchMove = useCallback((event: TouchEvent<HTMLElement>) => {
     const origin = startRef.current;
     const touch = event.touches[0];
-    if (!origin || !touch || origin.blocked || !origin.scrollRoot) return;
+    if (!origin || !touch || origin.blocked) return;
 
     const dx = touch.clientX - origin.x;
     const dy = touch.clientY - origin.y;
     const absDx = Math.abs(dx);
+    const absDy = Math.abs(dy);
 
-    if (dy <= ACTIVATE_DRAG_PX) return;
-    if (absDx > MAX_HORIZONTAL_DRIFT_PX || absDx > dy * 0.92) {
-      origin.blocked = true;
-      setVisualOffset(0);
-      return;
-    }
-    if (origin.scrollRoot.scrollTop > 2) {
+    if (dx >= -ACTIVATE_SWIPE_PX) return;
+    if (absDy > MAX_VERTICAL_DRIFT_PX || absDy > absDx * 0.86) {
       origin.blocked = true;
       setVisualOffset(0);
       return;
@@ -195,12 +177,12 @@ export function useFinaPullGesture({ blocked = false, currentScreen, openModal }
     event.preventDefault();
     event.stopPropagation();
 
-    setVisualOffset(dy);
+    setVisualOffset(-dx);
   }, [setVisualOffset]);
 
   const onTouchEnd = useCallback((event: TouchEvent<HTMLElement>) => {
     const origin = startRef.current;
-    const shouldOpen = Boolean(origin?.active && !origin.blocked && pullOffsetRef.current >= OPEN_DRAG_PX);
+    const shouldOpen = Boolean(origin?.active && !origin.blocked && pullOffsetRef.current >= OPEN_SWIPE_PX);
 
     if (origin?.active) {
       event.preventDefault();

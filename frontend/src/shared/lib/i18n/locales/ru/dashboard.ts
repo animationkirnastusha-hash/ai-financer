@@ -92,6 +92,6 @@ export const dashboardDictionary = {
   'dashboard.ia.limits.caption': 'Контроль 50/80/100%',
   'dashboard.ia.goals.title': 'Цели',
   'dashboard.ia.goals.caption': 'Прогресс накоплений',
-  'dashboard.finaPull.pull': 'Потяни вниз, чтобы открыть диалог',
+  'dashboard.finaPull.pull': 'Проведи влево, чтобы открыть диалог',
   'dashboard.finaPull.release': 'Отпусти, чтобы открыть диалог',
 } as const;

@@ -92,6 +92,6 @@ export const dashboardDictionary = {
   'dashboard.ia.limits.caption': '50/80/100% control',
   'dashboard.ia.goals.title': 'Goals',
   'dashboard.ia.goals.caption': 'Savings progress',
-  'dashboard.finaPull.pull': 'Pull down to open the dialog',
+  'dashboard.finaPull.pull': 'Swipe left to open the dialog',
   'dashboard.finaPull.release': 'Release to open chat',
 } as const;

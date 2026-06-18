@@ -161,6 +161,8 @@ export function TextChatOverlay({
     const timer = window.setTimeout(() => {
       setShouldRender(false);
       setIsClosing(false);
+      setPermissionIntroOpen(false);
+      setIsVoicePressed(false);
     }, 220);
 
     return () => window.clearTimeout(timer);
@@ -527,14 +529,13 @@ export function TextChatOverlay({
   ]);
 
   const closeOverlay = useCallback(() => {
-    if (hasBlockingConfirmation) {
-      setVoiceHint(t("textChat.close.pending"));
-      return;
-    }
-    if (voice.state === "recording" || voice.state === "uploading")
-      voice.cancel();
+    if (voice.state === "recording" || voice.state === "uploading") voice.cancel();
+    setIsVoicePressed(false);
+    setPermissionIntroOpen(false);
+    setVoiceHint(null);
+    sessionStorage.removeItem("ai-financer-microphone-intro-shown:session");
     onClose();
-  }, [hasBlockingConfirmation, onClose, t, voice]);
+  }, [onClose, voice]);
 
   const handleDragPointerDown = useCallback(
     (event: PointerEvent<HTMLButtonElement>) => {
@@ -713,6 +714,8 @@ export function TextChatOverlay({
           voiceLabel={t("textChat.voice.hold")}
           receiptActionLabel={t("textChat.receipt.action")}
           receiptCameraLabel={t("textChat.receipt.camera")}
+          voiceCancelHint={t("textChat.voice.swipeCancel")}
+          voiceCancelledLabel={t("textChat.voice.cancelled")}
           onValueChange={setValue}
           onSubmit={submit}
           onReceiptFile={handleReceiptFile}

@@ -274,12 +274,16 @@ export class AIValidatorService {
         const plannedAccountRef = this.lastPlannedAccountName(plannedAccounts);
         const defaultAccount = this.resolveDefaultTransactionAccount(accounts, kind, aiSettings);
         const hasNoUsableAccounts = accounts.length === 0 && plannedAccounts.size === 0 && !defaultAccount;
-        const accountRef = explicitAccountRef
-          || plannedAccountRef
-          || (defaultAccount?.name ?? '')
-          || (hasNoUsableAccounts ? '' : accounts[0]?.name || '');
+        const hasExplicitAccount = Boolean(explicitAccountRef || plannedAccountRef || defaultAccount?.name);
+        const shouldAskAccount = !hasExplicitAccount && !hasNoUsableAccounts && accounts.length > 1;
+        const accountRef = shouldAskAccount
+          ? ''
+          : explicitAccountRef
+            || plannedAccountRef
+            || (defaultAccount?.name ?? '')
+            || (hasNoUsableAccounts ? '' : accounts[0]?.name || '');
 
-        const account = this.resolveAccount(accounts, accountRef) ?? defaultAccount;
+        const account = this.resolveAccount(accounts, accountRef) ?? (shouldAskAccount ? null : defaultAccount);
         const plannedAccount = plannedAccounts.get(this.key(accountRef));
         const targetCurrency: AICurrency = account ? this.ensureCurrency(account.currency, 'RUB') : plannedAccount?.currency ?? 'RUB';
         const moneyCurrency = this.coerceCurrency(input.currency, targetCurrency) ?? targetCurrency;
@@ -297,7 +301,7 @@ export class AIValidatorService {
           } else {
             issues.push({
               code: 'account_not_found',
-              message: accountRef ? `Не найден счёт для операции: ${accountRef}` : 'Не найден счёт для операции.',
+              message: shouldAskAccount ? 'Уточни счёт для операции.' : accountRef ? `Не найден счёт для операции: ${accountRef}` : 'Не найден счёт для операции.',
               actionIndex: index,
               field: 'account',
             });

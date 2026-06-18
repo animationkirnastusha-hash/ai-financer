@@ -172,3 +172,16 @@
   color: rgba(255, 255, 255, 0.86);
   box-shadow: 0 18px 42px rgba(0, 0, 0, 0.28);
 }
+
+.text-chat-preview-card {
+  font-size: 0.94em;
+}
+
+.text-chat-preview-card .button,
+.text-chat-preview-card button {
+  min-height: 44px;
+}
+
+.text-chat-message__preview {
+  width: min(100%, 380px);
+}

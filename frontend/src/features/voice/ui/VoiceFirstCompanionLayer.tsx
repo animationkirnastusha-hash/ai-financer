@@ -157,6 +157,22 @@ export function VoiceFirstCompanionLayer() {
     return false;
   }, [canStartManualRecording, explainVoiceUnavailable, resetVoiceMachine, showThought, t, voice]);
 
+  const handleCompanionTap = useCallback(() => {
+    if (!canUseVoice || !voicePermissionReady) {
+      setPermissionIntroOpen(true);
+      setPermissionIntroDismissed(false);
+      showThought(t('voice.thought.allowMicFirst'), 'warning', 2400);
+      return;
+    }
+
+    if (hasPending) {
+      showThought(t('voice.thought.closeActionFirst'), 'warning', 2400);
+      return;
+    }
+
+    showThought(t('voice.fina.holdVoiceOnly'), 'neutral', 1900);
+  }, [canUseVoice, hasPending, showThought, t, voicePermissionReady]);
+
   const primeVoicePermission = useCallback(async () => {
     setIsPriming(true);
     try {
@@ -201,6 +217,7 @@ export function VoiceFirstCompanionLayer() {
     stopVoice: voice.stop,
     openTextOverlay,
     onCancelRecording,
+    onTap: handleCompanionTap,
     showThought,
     tapToTextEnabled,
     labels: {

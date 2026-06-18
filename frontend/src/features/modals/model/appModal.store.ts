@@ -41,7 +41,12 @@ type AppModalState = {
 export const useAppModalStore = create<AppModalState>((set, get) => ({
   stack: [],
 
-  openModal: (modal) => set((state) => ({ stack: [...state.stack, modal] })),
+  openModal: (modal) => set((state) => {
+    if (modal.type === 'ai-text-overlay') {
+      return { stack: [...state.stack.filter((item) => item.type !== 'ai-text-overlay'), modal] };
+    }
+    return { stack: [...state.stack, modal] };
+  }),
 
   replaceModal: (modal) => set((state) => ({ stack: [...state.stack.slice(0, -1), modal] })),
 

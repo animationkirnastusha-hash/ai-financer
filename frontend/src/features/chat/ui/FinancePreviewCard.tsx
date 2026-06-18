@@ -22,13 +22,13 @@ export function FinancePreviewCard({
   onConfirm,
   onCancel,
 }: FinancePreviewCardProps) {
-  const { t } = useI18n();
+  const { language, t } = useI18n();
   const [isConfirming, setIsConfirming] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
   const [submittedAction, setSubmittedAction] = useState<
     "confirm" | "cancel" | null
   >(null);
-  const view = getPreviewFromMessageData({ title, intent, data });
+  const view = getPreviewFromMessageData({ title, intent, data, language });
   const requiresConfirmation = Boolean(actionId);
   const isProcessing = Boolean(submittedAction) || isConfirming || isCancelling;
 
@@ -57,8 +57,8 @@ export function FinancePreviewCard({
   };
 
   return (
-    <Surface className="mx-auto w-full max-w-[400px] overflow-hidden border-emerald-300/16 bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.12),transparent_35%),rgba(255,255,255,0.045)]">
-      <div className="p-3.5">
+    <Surface className="text-chat-preview-card mx-auto w-full max-w-[360px] overflow-hidden border-emerald-300/16 bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.12),transparent_35%),rgba(255,255,255,0.045)]">
+      <div className="p-3">
         <div className="flex flex-wrap items-center gap-2">
           <span className="rounded-full border border-emerald-300/20 bg-emerald-300/10 px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.16em] text-emerald-100/85">
             {t("chat.preview.check")}
@@ -82,7 +82,7 @@ export function FinancePreviewCard({
           {view.intentLabel}
         </div>
 
-        <div className="mt-1 text-2xl font-semibold tracking-[-0.04em] text-white">
+        <div className="mt-1 text-xl font-semibold tracking-[-0.035em] text-white">
           {view.amountLabel || view.title}
         </div>
 
@@ -92,16 +92,16 @@ export function FinancePreviewCard({
           </div>
         ) : null}
 
-        <div className="mt-3 rounded-[18px] border border-white/8 bg-black/20 px-3 py-2.5 text-[13px] leading-5 text-white/72">
+        <div className="mt-2 rounded-2xl border border-white/8 bg-black/20 px-3 py-2 text-[12px] leading-5 text-white/72">
           {view.explanation}
         </div>
 
         {view.rows.length > 0 ? (
-          <div className="mt-2 grid gap-1.5">
+          <div className="mt-2 grid gap-1">
             {view.rows.map((row) => (
               <div
                 key={`${row.label}-${row.value}`}
-                className="flex items-center justify-between gap-3 rounded-2xl border border-white/8 bg-white/[0.035] px-3 py-2 text-[13px]"
+                className="flex items-center justify-between gap-3 rounded-2xl border border-white/8 bg-white/[0.035] px-3 py-1.5 text-[12px]"
               >
                 <span className="text-white/45">{row.label}</span>
                 <span className="max-w-[62%] truncate text-right font-medium text-white/88">
@@ -113,7 +113,7 @@ export function FinancePreviewCard({
         ) : null}
 
         {requiresConfirmation ? (
-          <div className="mt-3 grid grid-cols-[1.15fr_0.85fr] gap-2">
+          <div className="mt-3 grid grid-cols-2 gap-2">
             <Button fullWidth disabled={isProcessing} onClick={handleConfirm}>
               {submittedAction === "confirm" && !isConfirming
                 ? t("chat.preview.confirmed")

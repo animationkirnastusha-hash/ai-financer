@@ -32,7 +32,7 @@ export function useChatPendingActionHandlers({
 
       try {
         const response: any = await pendingActionsApi.confirm(actionId);
-        const assistantText = response?.message || t("textChat.result.actionDone");
+        const assistantText = t("textChat.result.actionDone");
 
         setMessages((prev) =>
           appendLocalMessages(prev, {
@@ -82,7 +82,7 @@ export function useChatPendingActionHandlers({
 
       try {
         const response: any = await pendingActionsApi.cancel(actionId);
-        const assistantText = response?.message || t("textChat.result.actionCancelled");
+        const assistantText = t("textChat.result.actionCancelled");
 
         setMessages((prev) =>
           appendLocalMessages(prev, {

@@ -25,8 +25,26 @@ import { useI18n } from "@/shared/lib/i18n";
 let requestAbortController: AbortController | null = null;
 let requestSeq = 0;
 
+function hasCyrillic(value: unknown) {
+  return typeof value === "string" && /[А-Яа-яЁё]/.test(value);
+}
+
+function resolveAssistantText(response: any, t: (key: string) => string, language: "ru" | "en") {
+  const raw = typeof response?.message === "string" ? response.message.trim() : "";
+
+  if (response?.executed) return t("textChat.result.actionDone");
+  if (response?.intent === "clarification" && language === "en" && hasCyrillic(raw)) {
+    const field = response?.meta?.clarification?.field || response?.parsed?.clarification?.field;
+    if (field === "amount") return t("textChat.clarification.amount");
+    if (field === "account" || field === "accountSetup") return t("textChat.clarification.account");
+    return t("textChat.clarification.generic");
+  }
+
+  return raw || t("textChat.result.done");
+}
+
 export function useChatController() {
-  const { t } = useI18n();
+  const { language, t } = useI18n();
   const messages = useChatStore((state) => state.messages) as ChatMessage[];
   const setMessages = useChatStore((state) => state.setMessages) as (
     value: ChatMessage[] | ((messages: ChatMessage[]) => ChatMessage[]),
@@ -129,7 +147,7 @@ export function useChatController() {
 
         if (requestSeq !== currentRequestSeq || controller.signal.aborted) return;
 
-        const assistantText = response.message || t("textChat.result.done");
+        const assistantText = resolveAssistantText(response, t, language);
         const responseData =
           response.parsed && typeof response.parsed === "object"
             ? (response.parsed as Record<string, unknown>)
@@ -192,7 +210,7 @@ export function useChatController() {
         if (requestSeq === currentRequestSeq) setIsSending(false);
       }
     },
-    [goBack, isSending, navigateTo, refreshFinanceState, setIsSending, setMessages, t],
+    [goBack, isSending, language, navigateTo, refreshFinanceState, setIsSending, setMessages, t],
   );
 
   const clarificationActions = useMemo(
