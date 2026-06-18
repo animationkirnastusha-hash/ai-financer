@@ -1,0 +1,60 @@
+/* Obligations page text and hero safety. */
+/* Pack 71: obligations page text and hero safety after CSS split. */
+.app-obligations-page {
+  overflow-x: hidden;
+}
+
+.app-obligations-page .app-page__inner {
+  width: min(100%, 760px);
+  margin-inline: auto;
+  padding-inline: clamp(14px, 4vw, 22px);
+}
+
+.app-obligations-hero,
+.app-next-payment-card,
+.app-reminders-card,
+.app-closed-loans-card,
+.app-loan-card {
+  min-width: 0;
+}
+
+.app-obligations-hero__top > div,
+.app-next-payment-card__body > div,
+.app-loan-card__head > div,
+.app-reminder-row > div {
+  min-width: 0;
+}
+
+.app-obligations-hero h1,
+.app-obligations-hero h2,
+.app-next-payment-card h2,
+.app-reminders-card h2,
+.app-loan-card h3 {
+  overflow-wrap: normal;
+  word-break: normal;
+  line-height: 1.08;
+}
+
+.app-obligations-hero .app-primary-button {
+  max-width: 100%;
+}
+
+@media (max-width: 560px) {
+  .app-obligations-hero__top,
+  .app-next-payment-card__body,
+  .app-loan-card__head,
+  .app-reminder-row {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .app-obligations-summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .app-obligations-widget__amount,
+  .app-next-payment-card strong,
+  .app-loan-card__head strong {
+    text-align: left;
+  }
+}

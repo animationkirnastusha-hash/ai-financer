@@ -143,3 +143,17 @@ textarea { color-scheme: dark; }
 .ai-app-shell img,
 .ai-app-shell svg { -webkit-user-drag: none; }
 
+
+/* Pack 155: hard horizontal overflow guard for Telegram iOS WebView. */
+html,
+body,
+#root,
+.telegram-app-shell,
+.telegram-app-content {
+  max-width: 100vw;
+  overflow-x: hidden;
+}
+
+body {
+  position: relative;
+}

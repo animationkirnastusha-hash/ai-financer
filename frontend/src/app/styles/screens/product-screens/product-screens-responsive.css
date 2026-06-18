@@ -1,0 +1,11 @@
+/* Small viewport adjustments for product screens. */
+@media (max-width: 390px) {
+  :root {
+    --ai-companion-size: 72px;
+    --ai-bottom-reserve: calc(138px + env(safe-area-inset-bottom));
+  }
+  .app-accounts-actions,
+  .app-taxonomy-actions { grid-template-columns: 1fr; }
+  .app-hero-title { font-size: clamp(27px, 9vw, 36px); }
+  .voice-first-status { display: none !important; }
+}

@@ -1,0 +1,112 @@
+/* Voice companion placement and intro card styling. */
+.voice-settings-card__head {
+  display: grid;
+  grid-template-columns: auto minmax(0,1fr);
+  align-items: center;
+  gap: 12px;
+}
+.voice-settings-card__badge {
+  display: grid;
+  min-width: 58px;
+  height: 40px;
+  place-items: center;
+  border: 1px solid rgba(129,239,208,.20);
+  border-radius: 16px;
+  background: rgba(129,239,208,.10);
+  color: rgba(218,255,245,.95);
+  font-size: 14px;
+  font-weight: 820;
+}
+
+.app-modal-backdrop .voice-first-companion,
+body.ai-modal-open .voice-first-companion,
+body.ai-any-modal-open .voice-first-companion,
+body.ai-core-modal-open .voice-first-companion {
+  display: none !important;
+}
+
+.voice-first-companion {
+  right: 10px !important;
+  bottom: var(--ai-companion-bottom) !important;
+  transform: translate3d(0,0,0) !important;
+  backface-visibility: hidden;
+  contain: layout paint;
+}
+.voice-first-companion .ai-companion-control {
+  width: var(--ai-companion-size) !important;
+  height: var(--ai-companion-size) !important;
+}
+.voice-first-companion .ai-companion-avatar {
+  width: calc(var(--ai-companion-size) - 8px) !important;
+  height: calc(var(--ai-companion-size) - 8px) !important;
+}
+.voice-first-companion__controls {
+  align-items: flex-end !important;
+}
+.voice-first-companion__voice-panel {
+  margin-bottom: 4px;
+}
+.voice-first-status {
+  max-width: min(190px, calc(100vw - 112px)) !important;
+}
+.voice-first-mic-toggle {
+  max-width: min(178px, calc(100vw - 112px)) !important;
+}
+.voice-first-bubble {
+  margin-right: 4px;
+  margin-bottom: 4px;
+  transform: translate3d(0,0,0);
+  backface-visibility: hidden;
+  filter: none !important;
+}
+
+.voice-first-intro__card--polished {
+  position: relative;
+  padding-top: 24px !important;
+}
+.voice-first-intro__avatar {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 12px;
+}
+.voice-first-intro__avatar .ai-companion-control {
+  width: 76px !important;
+  height: 76px !important;
+}
+.voice-first-intro__eyebrow {
+  color: rgba(129,239,208,.84);
+  font-size: 11px;
+  font-weight: 820;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+}
+.voice-first-intro__steps {
+  display: grid;
+  gap: 8px;
+  margin-top: 14px;
+}
+.voice-first-intro__steps div {
+  display: grid;
+  grid-template-columns: 28px minmax(0,1fr);
+  align-items: center;
+  gap: 10px;
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 16px;
+  background: rgba(255,255,255,.045);
+  padding: 9px 10px;
+}
+.voice-first-intro__steps b {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  border-radius: 50%;
+  background: rgba(129,239,208,.12);
+  color: rgba(218,255,245,.94);
+  font-size: 12px;
+}
+.voice-first-intro__steps span {
+  color: rgba(255,255,255,.78);
+  font-size: 12px;
+  line-height: 1.35;
+}

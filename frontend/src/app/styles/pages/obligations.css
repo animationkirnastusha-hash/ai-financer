@@ -1,3 +1,0 @@
-/* obligations: logical CSS manifest. Keep order through app/styles/index.css. */
-@import "./obligations/obligations-summary.css";
-@import "./obligations/obligations-loans.css";

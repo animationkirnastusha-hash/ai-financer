@@ -37,3 +37,21 @@
     background: rgba(3, 19, 14, 0.18);
   }
 }
+
+/* Pack 155: compact copy icon instead of a text pill. */
+.text-chat-message__copy {
+  display: inline-grid;
+  place-items: center;
+  min-width: 34px;
+  width: 34px;
+  height: 28px;
+  padding: 0;
+  border-radius: 999px;
+  font-size: 14px;
+  line-height: 1;
+}
+
+.text-chat-message__copy span {
+  display: block;
+  transform: translateY(-1px);
+}

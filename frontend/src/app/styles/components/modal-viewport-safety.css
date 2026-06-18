@@ -102,3 +102,33 @@
   overscroll-behavior-y: contain;
   -webkit-overflow-scrolling: touch;
 }
+
+/* Pack 155: modal content must stay inside viewport with keyboard open. */
+.app-modal-sheet,
+.app-drawer-sheet,
+.app-modal-body,
+.app-drawer-body {
+  max-width: 100vw;
+  overflow-x: hidden;
+}
+
+.app-modal-body > *,
+.app-drawer-body > *,
+.app-modal-footer > *,
+.app-field,
+.app-field input,
+.app-field textarea,
+.app-field select {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.app-drawer-sheet .grid,
+.app-modal-sheet .grid {
+  min-width: 0;
+}
+
+.app-drawer-sheet .grid > *,
+.app-modal-sheet .grid > * {
+  min-width: 0;
+}

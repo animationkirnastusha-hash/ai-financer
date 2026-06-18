@@ -1,0 +1,73 @@
+/* Onboarding hero and intro examples. */
+.app-onboarding-hero {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(129,239,208,.16);
+  border-radius: 30px;
+  background: radial-gradient(circle at 50% 0%, rgba(129,239,208,.20), transparent 42%), linear-gradient(145deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
+  padding: 18px;
+  text-align: center;
+}
+.app-onboarding-hero__avatar {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 10px;
+}
+.app-onboarding-hero__avatar .ai-companion-control {
+  width: 82px !important;
+  height: 82px !important;
+}
+.app-onboarding-hero h2 {
+  margin-top: 10px;
+  color: white;
+  font-size: clamp(28px, 8vw, 36px);
+  font-weight: 780;
+  letter-spacing: -.06em;
+  line-height: .95;
+}
+.app-onboarding-hero p {
+  margin: 12px auto 0;
+  max-width: 29rem;
+  color: rgba(255,255,255,.58);
+  font-size: 13px;
+  line-height: 1.58;
+}
+.app-onboarding-step {
+  display: grid;
+  grid-template-columns: 34px minmax(0,1fr);
+  gap: 12px;
+  align-items: center;
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 22px;
+  background: rgba(255,255,255,.045);
+  padding: 12px;
+}
+.app-onboarding-step > div {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border: 1px solid rgba(129,239,208,.20);
+  border-radius: 50%;
+  background: rgba(129,239,208,.10);
+  color: rgba(218,255,245,.96);
+  font-size: 13px;
+  font-weight: 820;
+}
+.app-onboarding-step b,
+.app-onboarding-step small {
+  display: block;
+  min-width: 0;
+}
+.app-onboarding-step b { color: white; font-size: 13px; line-height: 1.25; }
+.app-onboarding-step small { margin-top: 3px; color: rgba(255,255,255,.46); font-size: 11px; line-height: 1.45; }
+.app-onboarding-examples {
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 26px;
+  background: rgba(0,0,0,.18);
+  padding: 14px;
+}
+body:has(.app-modal-backdrop) .voice-first-companion,
+html:has(.app-modal-backdrop) .voice-first-companion {
+  display: none !important;
+}

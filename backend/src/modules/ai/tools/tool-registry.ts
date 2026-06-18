@@ -200,10 +200,10 @@ export const AI_TOOL_REGISTRY: AIToolDefinition[] = [
   },
   {
     name: 'query_analytics',
-    description: 'Answer analytics questions about spending, income, balance, categories, accounts and periods.',
+    description: 'Answer analytics questions about spending, income, balance, categories, accounts, periods and filtered transaction searches. Use filter/search/category when the user asks for expenses about a specific place, category, item or word such as cafe, taxi or medicine.',
     risk: 'low',
     requiresConfirmation: false,
-    input: { period: 'today|week|month|year|all|null', metric: 'summary|spending|income|top_categories|accounts|cashflow|null', limit: 'number|null' },
+    input: { period: 'today|week|month|year|all|null', metric: 'summary|spending|income|top_categories|accounts|cashflow|null', limit: 'number|null', filter: 'specific place/category/item/search text|null', category: 'category name|null', search: 'search text|null' },
   },
   {
     name: 'undo_last_action',
@@ -342,7 +342,7 @@ export function getPlannerToolContract() {
     'create_obligation_reminder{obligation,title,message,dueDate,remindAt,channel}',
     'show_accounts{}',
     'show_transactions{limit}',
-    'query_analytics{period,metric,limit}',
+    'query_analytics{period,metric,limit,filter,category,search}',
     'undo_last_action{target}',
     'show_companion_reactions{limit,onlyUnseen}',
     'mark_companion_reactions_seen{}',

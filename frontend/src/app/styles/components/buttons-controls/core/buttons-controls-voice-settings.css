@@ -1,0 +1,41 @@
+/* Voice settings controls. */
+.voice-settings-card,
+.voice-window-control {
+  min-width: 0;
+  border-radius: 24px;
+  border: 1px solid rgba(255,255,255,.08);
+  background: rgba(0,0,0,.16);
+  padding: 14px;
+}
+.voice-settings-field {
+  display: grid;
+  gap: 8px;
+}
+.voice-settings-field span {
+  color: rgba(255,255,255,.56);
+  font-size: 12px;
+  font-weight: 650;
+}
+.voice-settings-field input,
+.voice-window-control select {
+  width: 100%;
+  min-height: 42px;
+  border: 1px solid rgba(255,255,255,.10);
+  border-radius: 16px;
+  outline: none;
+  background: rgba(255,255,255,.06);
+  color: rgba(255,255,255,.92);
+  padding: 0 12px;
+}
+.voice-settings-example {
+  margin-top: 10px;
+  color: rgba(255,255,255,.45);
+  font-size: 12px;
+  line-height: 1.45;
+}
+.voice-window-control {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 112px;
+  align-items: center;
+  gap: 12px;
+}

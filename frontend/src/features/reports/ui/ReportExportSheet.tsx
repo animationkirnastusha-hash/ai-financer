@@ -1,6 +1,8 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { reportsApi, type ReportFormat, type ReportMode, type ReportPreviewDto, type ReportType } from '@/features/reports/api/reports.api';
 import { useNavigationStore } from '@/features/navigation/model/navigation.store';
+import { hasRealBusinessAccess, hasRealPremiumAccess } from '@/features/subscription/lib/entitlements';
+import { useSubscriptionStore } from '@/features/subscription/model/subscription.store';
 import { Drawer } from '@/shared/ui/Drawer';
 import { formatMoney } from '@/shared/lib/money';
 
@@ -65,9 +67,19 @@ export function ReportExportSheet({ open, mode = 'base', layer, onClose }: Props
   const [isDownloading, setIsDownloading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const navigateTo = useNavigationStore((state) => state.navigateTo);
+  const subscription = useSubscriptionStore((state) => state.status);
+  const loadSubscription = useSubscriptionStore((state) => state.load);
+
+  useEffect(() => {
+    if (open) void loadSubscription();
+  }, [loadSubscription, open]);
 
   const copy = modeCopy[mode];
-  const isHeroClickable = mode === 'premium' || mode === 'business';
+  const hasPremiumAccess = hasRealPremiumAccess(subscription);
+  const hasBusinessAccess = hasRealBusinessAccess(subscription);
+  const isLockedPremiumReport = mode === 'premium' && !hasPremiumAccess;
+  const isLockedBusinessReport = mode === 'business' && !hasBusinessAccess;
+  const isHeroClickable = isLockedPremiumReport || isLockedBusinessReport;
 
   function changePeriod(next: PeriodPreset) {
     setPeriod(next);

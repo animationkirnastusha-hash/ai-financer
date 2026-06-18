@@ -1,0 +1,74 @@
+/* Predeploy shared page/card/filer foundation. */
+/* Predeploy polish: operations, goals, analytics and shared cards. */
+/* from final-polish55.css */
+
+/* Patch 55: pre-premium UI cleanup for Operations, Goals, Analytics and shared cards. */
+.app-prepremium-page .app-card,
+.app-operations-page .app-card,
+.app-goals-page .app-card,
+.app-analytics-page .app-card {
+  border-color: rgba(255,255,255,.10);
+}
+
+.app-hero-title,
+.app-card h1,
+.app-card h2,
+.app-card h3 {
+  overflow-wrap: anywhere;
+}
+
+.app-dashboard-grid,
+.app-actions-grid,
+.app-operations-filters,
+.app-goals-grid,
+.app-analytics-grid,
+.app-insight-grid {
+  min-width: 0;
+}
+
+.app-operations-page .app-card--hero,
+.app-goals-page .app-card--hero,
+.app-analytics-page .app-card--hero {
+  padding: 18px !important;
+}
+
+.app-operations-hero__top,
+.app-goals-hero__top,
+.app-analytics-hero__top {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 12px;
+}
+
+.app-operations-filters {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  border-radius: 24px;
+  border: 1px solid rgba(255,255,255,.08);
+  background: rgba(0,0,0,.16);
+  padding: 8px;
+}
+
+.app-filter-pill {
+  display: inline-flex;
+  min-width: 0;
+  min-height: 38px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  border-radius: 16px;
+  background: transparent;
+  color: rgba(255,255,255,.52);
+  padding: 0 8px;
+  font-size: 11px;
+  line-height: 1;
+  font-weight: 750;
+  white-space: nowrap;
+}
+.app-filter-pill--active {
+  border-color: rgba(129,239,208,.26);
+  background: rgba(129,239,208,.12);
+  color: rgba(224,255,247,.94);
+}

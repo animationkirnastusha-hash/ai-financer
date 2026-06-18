@@ -1,0 +1,123 @@
+/* Onboarding summary, feature list, footer and mobile layout. */
+.onboarding-two-cols,
+.onboarding-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.onboarding-test-box {
+  align-items: flex-start;
+  flex-direction: column;
+}
+
+.onboarding-test-box > span {
+  color: rgba(255,255,255,.46);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.onboarding-premium-card {
+  justify-content: space-between;
+  align-items: flex-start;
+  background: linear-gradient(135deg, rgba(250,204,21,.11), rgba(52,211,153,.08)), rgba(255,255,255,.045);
+}
+
+.onboarding-premium-card__badge {
+  flex-shrink: 0;
+  border-radius: 999px;
+  background: rgba(250,204,21,.14);
+  padding: 7px 10px;
+  color: rgba(254,240,138,.95);
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.onboarding-feature-list {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.onboarding-feature-list span,
+.onboarding-summary-grid div {
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 20px;
+  background: rgba(0,0,0,.16);
+  padding: 12px;
+}
+
+.onboarding-feature-list span {
+  color: rgba(255,255,255,.76);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.onboarding-summary-grid span {
+  display: block;
+  color: rgba(255,255,255,.42);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+}
+
+.onboarding-summary-grid strong {
+  display: block;
+  margin-top: 6px;
+  color: rgba(255,255,255,.9);
+  font-size: 14px;
+  font-weight: 850;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.onboarding-setup-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.onboarding-footer-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.onboarding-setup-footer .app-secondary-button,
+.onboarding-setup-footer .app-primary-button {
+  min-width: 104px;
+}
+
+@media (max-width: 480px) {
+  .onboarding-setup-sheet {
+    max-height: 94vh;
+  }
+
+  .onboarding-choice-grid,
+  .onboarding-choice-grid.two,
+  .onboarding-currency-grid,
+  .onboarding-two-cols,
+  .onboarding-summary-grid,
+  .onboarding-feature-list {
+    grid-template-columns: 1fr;
+  }
+
+  .onboarding-setup-footer {
+    align-items: stretch;
+    flex-direction: column-reverse;
+  }
+
+  .onboarding-footer-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .onboarding-setup-footer .app-secondary-button,
+  .onboarding-setup-footer .app-primary-button {
+    width: 100%;
+    min-width: 0;
+  }
+}

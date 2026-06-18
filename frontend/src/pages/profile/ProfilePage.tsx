@@ -116,10 +116,10 @@ export default function ProfilePage() {
             <h1>{displayName}</h1>
             <p>{t('profile.hero.caption')}</p>
             {publicId ? (
-              <button type="button" className="profile-public-id" onClick={() => void copyPublicId()}>
+              <button type="button" className="profile-public-id" onClick={() => void copyPublicId()} aria-label={t('profile.publicId.copy')}>
                 <span>{t('profile.publicId.label')}</span>
                 <b>{publicId}</b>
-                <small>{publicIdCopied ? t('common.copied') : t('profile.publicId.copy')}</small>
+                <small aria-hidden="true">{publicIdCopied ? '✓' : '⧉'}</small>
               </button>
             ) : null}
           </div>

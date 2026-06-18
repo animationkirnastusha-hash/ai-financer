@@ -1,3 +1,0 @@
-/* buttons-controls: logical CSS manifest. Keep order through app/styles/index.css. */
-@import "./buttons-controls/buttons-controls-core.css";
-@import "./buttons-controls/buttons-controls-cards.css";

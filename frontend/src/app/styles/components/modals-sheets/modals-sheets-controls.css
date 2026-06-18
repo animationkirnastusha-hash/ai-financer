@@ -1,0 +1,78 @@
+/* Modal icon, chip, choice, field and error controls. */
+.app-icon-button,
+.app-icon-action {
+  display: inline-grid;
+  place-items: center;
+  min-width: 38px;
+  width: 38px;
+  height: 38px;
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,.10);
+  background: rgba(255,255,255,.06);
+  color: rgba(255,255,255,.78);
+  font-size: 16px;
+  line-height: 1;
+}
+
+.app-chip,
+.app-choice {
+  border: 1px solid rgba(255,255,255,.10);
+  background: rgba(255,255,255,.06);
+  color: rgba(255,255,255,.72);
+}
+.app-chip {
+  border-radius: 999px;
+  padding: 8px 11px;
+  font-size: 12px;
+  line-height: 1;
+}
+.app-chip--muted { color: rgba(255,255,255,.38); background: rgba(255,255,255,.035); }
+.app-choice {
+  min-height: 44px;
+  border-radius: 18px;
+  font-size: 13px;
+}
+.app-choice--active {
+  border-color: rgba(129,239,208,.30);
+  background: rgba(129,239,208,.12);
+  color: rgba(236,255,250,.94);
+}
+
+.app-field {
+  display: block;
+  border: 1px solid rgba(255,255,255,.09);
+  border-radius: 22px;
+  background: rgba(0,0,0,.22);
+  padding: 11px 13px;
+}
+.app-field > span {
+  display: block;
+  margin-bottom: 8px;
+  color: rgba(255,255,255,.42);
+  font-size: 12px;
+  line-height: 1;
+}
+.app-field input,
+.app-field select,
+.app-field textarea {
+  width: 100%;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: white;
+  font-size: 15px;
+  line-height: 1.3;
+}
+.app-field textarea { min-height: 78px; resize: none; }
+.app-field input::placeholder,
+.app-field textarea::placeholder { color: rgba(255,255,255,.25); }
+
+.app-error-box {
+  border: 1px solid rgba(248,113,113,.18);
+  border-radius: 20px;
+  background: rgba(248,113,113,.10);
+  color: rgba(254,202,202,.92);
+  padding: 12px 14px;
+  font-size: 13px;
+  line-height: 1.45;
+}

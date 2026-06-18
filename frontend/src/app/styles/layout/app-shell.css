@@ -246,3 +246,12 @@
   .screen-top-bar__icon { width: 36px; min-width: 36px; height: 36px; }
 }
 
+
+/* Pack 155: pages must not create side-scroll when cards, chips or modals are focused. */
+.app-page,
+.app-page__inner,
+.app-section,
+.app-card {
+  max-width: 100%;
+  overflow-x: clip;
+}

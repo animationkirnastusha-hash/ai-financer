@@ -5,13 +5,13 @@ import type { AppScreen } from '@/features/navigation/model/navigation.store';
 const DASHBOARD_MIN_START_ZONE_PX = 320;
 const DASHBOARD_MAX_START_ZONE_PX = 680;
 const DASHBOARD_START_ZONE_SCREEN_SHARE = 0.72;
-const SAFE_PAGE_MIN_START_ZONE_PX = 156;
-const SAFE_PAGE_MAX_START_ZONE_PX = 300;
-const SAFE_PAGE_START_ZONE_SCREEN_SHARE = 0.36;
-const ACTIVATE_DRAG_PX = 2;
-const OPEN_DRAG_PX = 26;
+const SAFE_PAGE_MIN_START_ZONE_PX = 220;
+const SAFE_PAGE_MAX_START_ZONE_PX = 520;
+const SAFE_PAGE_START_ZONE_SCREEN_SHARE = 0.56;
+const ACTIVATE_DRAG_PX = 1;
+const OPEN_DRAG_PX = 20;
 const MAX_VISUAL_DRAG_PX = 92;
-const MAX_HORIZONTAL_DRIFT_PX = 86;
+const MAX_HORIZONTAL_DRIFT_PX = 96;
 
 const SAFE_PULL_SCREENS = new Set<AppScreen>([
   'dashboard',
@@ -22,11 +22,15 @@ const SAFE_PULL_SCREENS = new Set<AppScreen>([
   'obligations',
   'spending-limits',
   'profile',
+  'settings',
+  'sections',
+  'companion',
   'store',
   'premium',
   'business-accountant',
   'receipt-scans',
   'referral',
+  'admin',
 ]);
 
 function isHTMLElement(value: unknown): value is HTMLElement {
@@ -180,7 +184,7 @@ export function useFinaPullGesture({ blocked = false, currentScreen, openModal }
     const absDx = Math.abs(dx);
 
     if (dy <= ACTIVATE_DRAG_PX) return;
-    if (absDx > MAX_HORIZONTAL_DRIFT_PX || absDx > dy * 0.78) {
+    if (absDx > MAX_HORIZONTAL_DRIFT_PX || absDx > dy * 0.92) {
       origin.blocked = true;
       setVisualOffset(0);
       return;

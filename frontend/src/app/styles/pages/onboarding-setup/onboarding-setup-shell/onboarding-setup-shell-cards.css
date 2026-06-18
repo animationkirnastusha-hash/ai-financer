@@ -1,0 +1,102 @@
+/* Onboarding hero, cards and choice tiles. */
+.onboarding-step-shell__body {
+  margin-top: 18px;
+  display: grid;
+  gap: 14px;
+}
+
+.onboarding-fina-hero,
+.onboarding-voice-card,
+.onboarding-tip-card,
+.onboarding-test-box,
+.onboarding-premium-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  border: 1px solid rgba(255,255,255,.09);
+  border-radius: 26px;
+  background: rgba(255,255,255,.055);
+  padding: 14px;
+}
+
+.onboarding-fina-hero strong,
+.onboarding-voice-card strong,
+.onboarding-tip-card strong,
+.onboarding-test-box strong,
+.onboarding-premium-card strong {
+  display: block;
+  color: rgba(255,255,255,.94);
+  font-size: 14px;
+}
+
+.onboarding-fina-hero span,
+.onboarding-voice-card span,
+.onboarding-tip-card span,
+.onboarding-test-box small,
+.onboarding-premium-card small {
+  display: block;
+  margin-top: 4px;
+  color: rgba(255,255,255,.5);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.onboarding-choice-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.onboarding-choice-grid.two {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.onboarding-choice,
+.onboarding-currency {
+  min-height: 86px;
+  border: 1px solid rgba(255,255,255,.09);
+  border-radius: 24px;
+  background: rgba(255,255,255,.045);
+  padding: 14px;
+  text-align: left;
+  transition: border-color .18s ease, background .18s ease, transform .18s ease;
+}
+
+.onboarding-choice:active,
+.onboarding-currency:active,
+.onboarding-chip:active {
+  transform: scale(.985);
+}
+
+.onboarding-choice.is-active,
+.onboarding-currency.is-active,
+.onboarding-chip.is-active {
+  border-color: rgba(52,211,153,.42);
+  background: rgba(52,211,153,.12);
+}
+
+.onboarding-choice span,
+.onboarding-currency strong {
+  display: block;
+  color: rgba(255,255,255,.94);
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.onboarding-choice small,
+.onboarding-currency small {
+  display: block;
+  margin-top: 6px;
+  color: rgba(255,255,255,.46);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.onboarding-voice-card__pulse {
+  flex-shrink: 0;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(52,211,153,.95), rgba(52,211,153,.14) 62%, transparent 64%);
+  box-shadow: 0 0 30px rgba(52,211,153,.22);
+}

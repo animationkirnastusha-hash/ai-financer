@@ -1,0 +1,30 @@
+/* Primary and secondary button base styles. */
+/* moved from app/styles/04-buttons-and-controls.css. Keep order through app/styles/index.css. */
+/* 03-ui-components.css: generated CSS layer. */
+
+
+/* from components.css */
+.app-primary-button,
+.app-secondary-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 42px;
+  border-radius: 18px;
+  padding: 0 15px;
+  font-size: 14px;
+  line-height: 1;
+  font-weight: 700;
+}
+
+.app-primary-button {
+  border: 1px solid rgba(129, 239, 208, 0.30);
+  background: linear-gradient(135deg, rgba(129,239,208,.24), rgba(148,199,255,.14));
+  color: white;
+}
+
+.app-secondary-button {
+  border: 1px solid rgba(255,255,255,.11);
+  background: rgba(255,255,255,.07);
+  color: rgba(255,255,255,.78);
+}

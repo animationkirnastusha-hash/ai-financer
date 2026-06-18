@@ -1,4 +1,0 @@
-/* onboarding-setup: logical CSS manifest. Keep order through app/styles/index.css. */
-@import "./onboarding-setup/onboarding-setup-shell.css";
-@import "./onboarding-setup/onboarding-setup-learning.css";
-@import "./onboarding-setup/onboarding-setup-steps.css";

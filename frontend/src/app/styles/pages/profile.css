@@ -214,3 +214,39 @@
     grid-column: 1 / -1;
   }
 }
+
+/* Pack 155: compact public ID chip. */
+.profile-public-id {
+  grid-template-columns: auto auto auto;
+  width: max-content;
+  max-width: 100%;
+}
+
+.profile-public-id span {
+  color: rgba(255,255,255,.46);
+  font-size: 10px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
+.profile-public-id small {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  background: rgba(255,255,255,.08);
+  color: rgba(236,255,248,.92);
+  font-size: 13px;
+}
+
+@media (max-width: 390px) {
+  .profile-public-id {
+    grid-template-columns: auto auto auto;
+    border-radius: 999px;
+  }
+
+  .profile-public-id small {
+    grid-column: auto;
+  }
+}

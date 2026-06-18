@@ -112,11 +112,7 @@ export function MessageCard({
               onClick={handleCopy}
               aria-label={t('textChat.message.copy')}
             >
-              {copyState === 'copied'
-                ? t('textChat.message.copied')
-                : copyState === 'failed'
-                  ? t('textChat.message.copyFailed')
-                  : t('textChat.message.copy')}
+              <span aria-hidden="true">{copyState === 'copied' ? '✓' : copyState === 'failed' ? '!' : '⧉'}</span>
             </button>
           ) : null}
         </div>

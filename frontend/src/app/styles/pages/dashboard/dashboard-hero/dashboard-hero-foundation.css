@@ -1,0 +1,31 @@
+/* Dashboard page foundation, Fina card and home menu head. */
+/* moved from app/styles/10-dashboard.css. Keep order through app/styles/index.css. */
+/* Dashboard, home menu and voice-first entry. */
+.app-dashboard-page .app-page__inner { padding-bottom: calc(env(safe-area-inset-bottom) + 156px) !important; }
+.app-dashboard-page .app-card,
+.app-dashboard-page .app-action-card,
+.app-dashboard-page .app-list-button,
+.app-dashboard-page .app-empty-button { overflow: hidden; }
+.app-dashboard-page .app-money-hero { font-size: clamp(42px, 13vw, 74px); line-height: .92; letter-spacing: -.075em; }
+.app-home-metrics-grid { min-width: 0; }
+.app-home-metric { min-width: 0; display: grid; gap: 5px; }
+.app-home-metric span,
+.app-home-metric b { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.app-fina-primary-card { display: grid; gap: 16px; background: radial-gradient(circle at top right, rgba(129,239,208,.12), transparent 44%), rgba(255,255,255,.045); }
+.app-fina-primary-card h2 { font-size: 24px; line-height: 1.05; letter-spacing: -.045em; font-weight: 760; }
+.app-fina-primary-card p { margin-top: 8px; color: rgba(255,255,255,.52); font-size: 14px; line-height: 1.65; }
+.app-fina-hints { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 8px; }
+.app-fina-hints > div { min-width: 0; border: 1px solid rgba(255,255,255,.08); background: rgba(0,0,0,.18); border-radius: 20px; padding: 12px; }
+.app-fina-hints b,
+.app-fina-hints small { display:block; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.app-fina-hints b { font-size: 13px; color: rgba(255,255,255,.88); }
+.app-fina-hints small { margin-top: 5px; font-size: 11px; color: rgba(255,255,255,.42); }
+.app-fina-actions { display:grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.app-home-menu-sheet { max-height: 82dvh; }
+.app-home-menu-head { display:flex; justify-content:space-between; align-items:flex-start; gap:16px; margin-bottom:14px; }
+.app-home-menu-head h2 { margin-top:6px; font-size:26px; line-height:1; letter-spacing:-.045em; font-weight:760; }
+.app-home-menu-grid { display:grid; gap:8px; }
+@media (max-width: 380px) {
+  .app-fina-hints { grid-template-columns: 1fr; }
+  .app-fina-actions { grid-template-columns: 1fr; }
+}

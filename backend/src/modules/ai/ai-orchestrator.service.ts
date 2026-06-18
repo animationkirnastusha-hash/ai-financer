@@ -969,15 +969,18 @@ export class AIOrchestratorService {
     const analytics = this.asResultObject(first.analytics);
     const totals = this.asResultObject(analytics.totals);
     const transactionsCount = Number(totals.transactionsCount ?? 0);
+    const filter = typeof analytics.filter === 'string' ? analytics.filter.trim() : '';
     const expenses = Number(totals.expenses ?? 0);
     const income = Number(totals.income ?? 0);
     const period = this.analyticsPeriodLabel(String(analytics.period ?? parsed.actions[0]?.input?.period ?? 'month'));
 
     if (!transactionsCount) {
-      return `${period} операций пока нет. Когда появятся расходы или доходы, я покажу итог прямо здесь.`;
+      return filter
+        ? `${period} расходов по запросу «${filter}» не нашла.`
+        : `${period} операций пока нет. Когда появятся расходы или доходы, я покажу итог прямо здесь.`;
     }
 
-    const parts = [`${period} расходы: ${this.formatRub(expenses)}.`];
+    const parts = [filter ? `${period} расходы по запросу «${filter}»: ${this.formatRub(expenses)}.` : `${period} расходы: ${this.formatRub(expenses)}.`];
     if (income > 0) parts.push(`Доходы: ${this.formatRub(income)}.`);
 
     const topCategories = Array.isArray(analytics.topCategories) ? analytics.topCategories : [];

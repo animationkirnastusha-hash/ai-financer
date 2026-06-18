@@ -76,13 +76,11 @@ const SPENDING_LIMIT_TARGET_TYPES = ['account', 'category', 'total'];
 const CURATED_CATEGORY_REPLACEMENTS: Record<string, string> = {
   'мясо и колбасы': 'Продукты',
   'молочные продукты': 'Продукты',
-  'молочка': 'Продукты',
   'хлеб и выпечка': 'Продукты',
   'овощи': 'Продукты',
   'фрукты': 'Продукты',
   'рыба и морепродукты': 'Продукты',
   'напитки': 'Продукты',
-  'продуктовый магазин': 'Продукты',
 };
 
 const CURATED_SECTION_REPLACEMENTS: Record<string, string> = {
@@ -93,15 +91,11 @@ const CURATED_SECTION_REPLACEMENTS: Record<string, string> = {
 
 const CURATED_CATEGORY_SECTIONS: Record<string, string> = {
   'продукты': 'Дом',
-  'кофе': 'Еда вне дома',
   'развлечения': 'Отдых',
   'отдых': 'Отдых',
   'транспорт': 'Транспорт',
-  'покупки на азс': 'АЗС',
+  'покупки на азс': 'Транспорт',
   'бензин': 'Транспорт',
-  'такси': 'Транспорт',
-  'аптека': 'Здоровье',
-  'табак': 'Покупки',
   'зарплата': 'Доходы',
 };
 
@@ -312,19 +306,13 @@ export class AIValidatorService {
 
         let rawCategory = this.cleanGenericTaxonomyName(input.category, kind, 'category');
         let rawSection = this.cleanGenericTaxonomyName(input.section, kind, 'section');
+        const curatedTaxonomy = this.curateTransactionTaxonomy(rawCategory, rawSection, kind);
+        rawCategory = curatedTaxonomy.category;
+        rawSection = curatedTaxonomy.section;
         const rawDescription = this.cleanEntityName(input.description);
         const merchant = this.cleanEntityName(input.merchant || input.place || input.store || input.shop);
         const items = this.cleanStringList(input.items);
         const tags = this.cleanStringList(input.tags);
-        const curatedTaxonomy = this.curateTransactionTaxonomy(rawCategory, rawSection, kind, {
-          title: this.cleanEntityName(input.title),
-          description: rawDescription,
-          merchant,
-          items,
-          tags,
-        });
-        rawCategory = curatedTaxonomy.category;
-        rawSection = curatedTaxonomy.section;
         const rawTitle = this.cleanTransactionTitle(input.title, kind, rawCategory, rawDescription, { merchant, items, tags, section: rawSection });
         const description = this.cleanTransactionDescription(rawDescription, rawTitle, rawCategory, kind);
         const structuredDescription = buildStructuredTransactionDescription({
@@ -577,6 +565,16 @@ export class AIValidatorService {
         input.metric = ['summary', 'spending', 'income', 'top_categories', 'accounts', 'cashflow'].includes(this.cleanString(input.metric)) ? this.cleanString(input.metric) : 'summary';
         const limit = Number(input.limit ?? 5);
         input.limit = Number.isFinite(limit) ? Math.min(Math.max(Math.floor(limit), 1), 20) : 5;
+        const filter = this.cleanEntityName(input.filter || input.search || input.category || input.merchant || input.place || input.item);
+        if (filter) {
+          input.filter = filter;
+          input.search = filter;
+        } else {
+          delete input.filter;
+          delete input.search;
+        }
+        const category = this.cleanEntityName(input.category);
+        if (category) input.category = category; else delete input.category;
       }
 
       if (action.tool === 'undo_last_action') {
@@ -1246,58 +1244,11 @@ export class AIValidatorService {
 
 
 
-  private curateTransactionTaxonomy(category: string, section: string, kind: 'income' | 'expense' | null, context: {
-    title?: string;
-    description?: string;
-    merchant?: string;
-    items?: string[];
-    tags?: string[];
-  } = {}) {
+  private curateTransactionTaxonomy(category: string, section: string, kind: 'income' | 'expense' | null) {
     if (kind !== 'expense' && kind !== 'income') return { category, section };
 
     let nextCategory = this.replaceCuratedCategory(category);
     let nextSection = this.replaceCuratedSection(section);
-    const text = [
-      nextCategory,
-      nextSection,
-      context.title,
-      context.description,
-      context.merchant,
-      ...(context.items ?? []),
-      ...(context.tags ?? []),
-    ].map((part) => this.key(part ?? '')).filter(Boolean).join(' ');
-
-    if (kind === 'income') {
-      if ((!nextCategory || this.isGenericTaxonomyName(nextCategory, kind, 'category')) && this.textIncludesAny(text, ['зарплат', 'salary', 'аванс'])) {
-        nextCategory = 'Зарплата';
-      }
-    }
-
-    if (kind === 'expense') {
-      const hasAzs = this.textIncludesAny(text, ['азс', 'заправк', 'заправоч', 'бензоколон']);
-      const hasFuel = this.textIncludesAny(text, ['бензин', 'топлив', 'аи 92', 'аи-92', 'аи 95', 'аи-95', 'дизел']);
-      const hasDrink = this.textIncludesAny(text, ['напит', 'кофе', 'чай', 'вода', 'сок']);
-      const hasTobacco = this.textIncludesAny(text, ['сигар', 'табак', 'вейп']);
-      const categoryIsWeak = !nextCategory || this.isGenericTaxonomyName(nextCategory, kind, 'category') || (hasAzs && this.key(nextCategory) === 'продукты');
-
-      if (hasAzs && categoryIsWeak) {
-        if (hasFuel && !hasDrink && !hasTobacco) {
-          nextCategory = 'Бензин';
-          nextSection = 'Транспорт';
-          return { category: nextCategory, section: nextSection };
-        }
-        nextCategory = 'Покупки на АЗС';
-        nextSection = 'АЗС';
-        return { category: nextCategory, section: nextSection };
-      }
-
-      if (categoryIsWeak && hasFuel) nextCategory = 'Бензин';
-      if (categoryIsWeak && this.textIncludesAny(text, ['такси', 'яндекс такси', 'taxi'])) nextCategory = 'Такси';
-      if (categoryIsWeak && this.textIncludesAny(text, ['аптек', 'лекарств', 'витамин', 'здоров'])) nextCategory = 'Аптека';
-      if (categoryIsWeak && this.textIncludesAny(text, ['кофе', 'капучино', 'латте', 'эспрессо'])) nextCategory = 'Кофе';
-      if (categoryIsWeak && hasTobacco) nextCategory = 'Табак';
-      if (categoryIsWeak && this.textIncludesAny(text, ['продукт', 'молоко', 'молоч', 'хлеб', 'овощ', 'фрукт', 'сыр', 'магазин продуктов'])) nextCategory = 'Продукты';
-    }
 
     const categorySection = nextCategory ? CURATED_CATEGORY_SECTIONS[this.key(nextCategory)] : '';
     if (categorySection && (!nextSection || this.shouldPreferCuratedSection(nextSection))) {
@@ -1317,28 +1268,9 @@ export class AIValidatorService {
     return CURATED_SECTION_REPLACEMENTS[this.key(value)] ?? value;
   }
 
-  private textIncludesAny(text: string, fragments: string[]) {
-    return fragments.some((fragment) => text.includes(fragment));
-  }
-
-  private isGenericTaxonomyName(value: string, kind: 'income' | 'expense', field: 'category' | 'section') {
-    const normalized = this.key(value);
-    if (!normalized) return true;
-    const genericExpense = field === 'section'
-      ? ['расходы', 'траты', 'expenses', 'spending']
-      : ['расход', 'трата', 'expense', 'spending'];
-    const genericIncome = field === 'section'
-      ? ['доходы', 'поступления', 'income', 'earnings']
-      : ['доход', 'поступление', 'income', 'earning'];
-    const genericOther = ['операция', 'операции', 'разное', 'прочее', 'other', 'misc'];
-
-    if (kind === 'expense') return [...genericExpense, ...genericOther].includes(normalized);
-    return [...genericIncome, ...genericOther].includes(normalized);
-  }
-
   private shouldPreferCuratedSection(value: string) {
     const key = this.key(value);
-    return !key || key === 'расходы' || key === 'расход' || key === 'траты' || key === 'прочее' || key === 'разное' || key === 'продукты' || key in CURATED_SECTION_REPLACEMENTS;
+    return !key || key === 'расходы' || key === 'расход' || key === 'траты' || key === 'прочее' || key === 'разное' || key in CURATED_SECTION_REPLACEMENTS;
   }
 
   private titleDuplicatesStructuredTransactionDetails(rawTitle: string, context: {

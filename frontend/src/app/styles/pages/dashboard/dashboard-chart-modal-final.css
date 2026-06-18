@@ -48,3 +48,26 @@
     font-size: .78rem;
   }
 }
+
+/* Pack 155: chart modal shows category colors only, not separate palette blocks. */
+.app-home-chart-modal__visual--single {
+  display: grid;
+  justify-items: center;
+  min-height: 220px;
+  margin-top: 8px;
+}
+
+.app-home-chart-modal__visual--single .app-home-donut--large {
+  width: min(54vw, 220px) !important;
+  height: min(54vw, 220px) !important;
+}
+
+.app-home-section-breakdown__section-icon {
+  border: 1px solid rgba(255,255,255,.09);
+  background: rgba(255,255,255,.055) !important;
+  box-shadow: none !important;
+}
+
+.app-home-section-breakdown__head i:not(.app-home-section-breakdown__section-icon) {
+  background: rgba(255,255,255,.055);
+}

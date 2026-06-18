@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 
 import { AuthService } from './service';
+import { telegramBotService } from '../telegram-bot/service';
 import { env } from '../../config/env';
 import { prisma } from '../../lib/prisma';
 import { BadRequestError, UnauthorizedError } from '../../shared/core/errors';
@@ -140,7 +141,7 @@ export const telegramFallbackWebhook = asyncHandler(async (req: Request, res: Re
     }
   }
 
-  const result = await authService.handleFallbackTelegramUpdate(req.body);
+  const result = await telegramBotService.handleUpdate(req.body ?? {});
 
   res.json({ success: true, ...result });
 });

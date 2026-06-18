@@ -1,5 +1,0 @@
-/* text-chat-overlay: logical CSS manifest. Keep order through app/styles/index.css. */
-@import "./text-chat-overlay/text-chat-overlay-shell.css";
-@import "./text-chat-overlay/text-chat-overlay-messages.css";
-
-@import "./text-chat-overlay/text-chat-overlay-actions.css";

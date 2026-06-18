@@ -260,3 +260,34 @@
   padding-top: 6px !important;
   background: linear-gradient(180deg, transparent, rgba(6, 10, 17, 0.88) 45%, rgba(6, 10, 17, 0.96));
 }
+
+/* Pack 155: report sheet should not cover text with fixed actions. */
+.report-export-sheet {
+  min-width: 0;
+  padding-bottom: calc(env(safe-area-inset-bottom) + 82px);
+}
+
+.report-export-hero > div,
+.report-export-section,
+.report-export-note,
+.report-export-preview {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.report-export-hero small[hidden] {
+  display: none !important;
+}
+
+.report-export-note {
+  margin-bottom: 0;
+}
+
+.report-export-actions {
+  position: sticky;
+  bottom: calc(env(safe-area-inset-bottom) + 0px);
+  z-index: 2;
+  margin-top: -2px;
+  padding: 10px 0 0 !important;
+  background: linear-gradient(180deg, transparent, rgba(6, 10, 17, 0.92) 36%, rgba(6, 10, 17, 0.98));
+}
