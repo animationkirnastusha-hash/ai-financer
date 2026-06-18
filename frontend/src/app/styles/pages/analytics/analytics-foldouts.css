@@ -1,0 +1,118 @@
+/* Pack 148: analytics foldouts and secondary actions. */
+.analytics-foldout {
+  padding: 0 !important;
+  overflow: hidden;
+}
+
+.analytics-foldout > summary {
+  min-height: 68px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 34px;
+  align-items: center;
+  gap: 12px;
+  padding: 15px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.analytics-foldout > summary::-webkit-details-marker {
+  display: none;
+}
+
+.analytics-foldout > summary span,
+.analytics-foldout > summary small,
+.analytics-foldout > summary b {
+  display: block;
+  min-width: 0;
+}
+
+.analytics-foldout > summary small {
+  color: rgba(255,255,255,.46);
+  font-size: 10px;
+  font-weight: 850;
+  letter-spacing: .12em;
+  line-height: 1.1;
+  text-transform: uppercase;
+}
+
+.analytics-foldout > summary b {
+  margin-top: 5px;
+  color: rgba(255,255,255,.92);
+  font-size: 17px;
+  line-height: 1.12;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.analytics-foldout > summary i {
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  background: rgba(255,255,255,.07);
+  position: relative;
+}
+
+.analytics-foldout > summary i::before,
+.analytics-foldout > summary i::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 12px;
+  height: 2px;
+  border-radius: 999px;
+  background: rgba(255,255,255,.72);
+  transform: translate(-50%, -50%);
+}
+
+.analytics-foldout > summary i::after {
+  transform: translate(-50%, -50%) rotate(90deg);
+  transition: transform .18s ease, opacity .18s ease;
+}
+
+.analytics-foldout[open] > summary i::after {
+  opacity: 0;
+  transform: translate(-50%, -50%) rotate(0deg);
+}
+
+.analytics-foldout__body {
+  display: grid;
+  gap: 12px;
+  padding: 0 15px 15px;
+}
+
+.analytics-action-grid {
+  display: grid;
+  gap: 9px;
+}
+
+.analytics-action-grid--two {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.analytics-action-grid button {
+  min-width: 0;
+  border: 1px solid rgba(255,255,255,.10);
+  border-radius: 18px;
+  background: rgba(255,255,255,.06);
+  color: rgba(255,255,255,.9);
+  padding: 12px;
+  text-align: left;
+  font-size: 13px;
+  line-height: 1.25;
+}
+
+.analytics-premium-caption,
+.analytics-empty-line {
+  margin: 0;
+  color: rgba(255,255,255,.58);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+@media (max-width: 430px) {
+  .analytics-action-grid--two {
+    grid-template-columns: 1fr;
+  }
+}

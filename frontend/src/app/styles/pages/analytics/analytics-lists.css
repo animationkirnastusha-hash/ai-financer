@@ -1,0 +1,93 @@
+/* Pack 148: analytics bars, income lists and empty states. */
+.analytics-bars,
+.analytics-income-grid {
+  display: grid;
+  gap: 10px;
+}
+
+.analytics-bar-row,
+.analytics-income-grid button {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  border-radius: 17px;
+  background: rgba(255,255,255,.045);
+  color: inherit;
+  padding: 10px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.analytics-bar-row:hover,
+.analytics-income-grid button:hover,
+.analytics-legend-item:hover,
+.analytics-action-grid button:hover {
+  background: rgba(255,255,255,.075);
+}
+
+.analytics-bar-row > div,
+.analytics-income-grid button {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+}
+
+.analytics-bar-row span,
+.analytics-income-grid span {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: rgba(255,255,255,.86);
+  font-size: 13px;
+  line-height: 1.18;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.analytics-bar-row strong,
+.analytics-income-grid strong {
+  min-width: 0;
+  color: rgba(255,255,255,.92);
+  font-size: 13px;
+  font-weight: 850;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+  text-align: right;
+}
+
+.analytics-bar-row em {
+  display: block;
+  height: 7px;
+  margin-top: 8px;
+  border-radius: 999px;
+  background: rgba(255,255,255,.08);
+  overflow: hidden;
+}
+
+.analytics-bar-row em b {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+}
+
+.analytics-income-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.analytics-income-grid .analytics-empty-line {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 430px) {
+  .analytics-income-grid,
+  .analytics-income-grid button {
+    grid-template-columns: 1fr;
+  }
+
+  .analytics-income-grid strong {
+    text-align: left;
+  }
+}

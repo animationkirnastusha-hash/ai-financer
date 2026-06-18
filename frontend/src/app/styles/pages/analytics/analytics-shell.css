@@ -1,0 +1,163 @@
+/* Pack 148: analytics shell, hero and compact KPI layout. */
+.app-analytics-page .app-card,
+.analytics-hero-card,
+.analytics-chart-card,
+.analytics-fina-card,
+.analytics-mini-card,
+.analytics-foldout {
+  min-width: 0;
+}
+
+.analytics-hero-card {
+  display: grid;
+  gap: 14px;
+}
+
+.analytics-hero-main {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 12px;
+}
+
+.analytics-hero-main h1 {
+  max-width: 100%;
+  margin: 0;
+  font-size: clamp(26px, 7vw, 36px) !important;
+  line-height: 1.02 !important;
+  letter-spacing: -.055em !important;
+}
+
+.analytics-hero-main p {
+  margin: 8px 0 0;
+  color: rgba(255,255,255,.62);
+  font-size: 13px;
+  line-height: 1.42;
+}
+
+.analytics-period-pill {
+  min-height: 32px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(110,231,183,.22);
+  border-radius: 999px;
+  background: rgba(110,231,183,.10);
+  color: rgba(220,255,245,.94);
+  padding: 7px 11px;
+  font-size: 12px;
+  font-weight: 850;
+  white-space: nowrap;
+}
+
+.analytics-kpi-grid,
+.analytics-grid-two {
+  display: grid;
+  gap: 10px;
+}
+
+.analytics-kpi-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.analytics-grid-two {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.analytics-kpi-grid article,
+.analytics-mini-card {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+  border: 1px solid rgba(255,255,255,.09);
+  border-radius: 18px !important;
+  background: rgba(255,255,255,.052);
+  padding: 10px !important;
+}
+
+.analytics-kpi-grid span,
+.analytics-mini-card__label,
+.analytics-mini-card__caption {
+  display: block;
+  min-width: 0;
+  color: rgba(255,255,255,.54);
+  font-size: 11px !important;
+  line-height: 1.25;
+}
+
+.analytics-kpi-grid strong,
+.analytics-mini-card__value {
+  display: block;
+  min-width: 0;
+  color: rgba(255,255,255,.94);
+  font-size: clamp(15px, 4.2vw, 19px) !important;
+  line-height: 1.08;
+  overflow-wrap: anywhere;
+}
+
+.analytics-mini-card--button {
+  border: 1px solid rgba(255,255,255,.09);
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.analytics-mini-card--button:hover {
+  background: rgba(255,255,255,.075);
+}
+
+.analytics-fina-card {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  padding: 14px !important;
+}
+
+.analytics-fina-card__avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 18px;
+  background: radial-gradient(circle at 40% 30%, rgba(255,255,255,.74), rgba(103,232,249,.18) 38%, rgba(99,102,241,.20));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  animation: app-fina-float 3.4s ease-in-out infinite;
+}
+
+.analytics-fina-card__avatar span {
+  width: 5px;
+  height: 5px;
+  border-radius: 999px;
+  background: rgba(0,0,0,.62);
+}
+
+.analytics-fina-card b,
+.analytics-fina-card span {
+  display: block;
+  min-width: 0;
+}
+
+.analytics-fina-card b {
+  color: rgba(255,255,255,.92);
+  font-size: 14px;
+}
+
+.analytics-fina-card span {
+  margin-top: 3px;
+  color: rgba(255,255,255,.62);
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+@media (max-width: 430px) {
+  .analytics-hero-main,
+  .analytics-kpi-grid,
+  .analytics-grid-two {
+    grid-template-columns: 1fr;
+  }
+
+  .analytics-period-pill {
+    justify-self: start;
+  }
+}
