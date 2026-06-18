@@ -29,7 +29,9 @@
     "test:product-scenarios": "node scripts/run-product-scenarios.mjs",
     "test:mass": "node scripts/run-mass-tester-check.mjs",
     "test:ai-commands": "node scripts/smoke/check-ai-finance-commands.mjs",
-    "smoke:ai-commands": "node scripts/smoke/check-ai-finance-commands.mjs"
+    "smoke:ai-commands": "node scripts/smoke/check-ai-finance-commands.mjs",
+    "test:ai-regression": "node scripts/smoke/check-ai-command-regression.mjs",
+    "smoke:ai-regression": "node scripts/smoke/check-ai-command-regression.mjs"
   },
   "keywords": [],
   "author": "",
