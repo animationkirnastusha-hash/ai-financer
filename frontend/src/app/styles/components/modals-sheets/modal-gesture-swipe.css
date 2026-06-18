@@ -1,4 +1,4 @@
-/* Pack 110: safer modal viewport and gesture polish. */
+/* Modal sheet drag, swipe and viewport safety. */
 .app-modal-backdrop {
   touch-action: none;
 }
@@ -29,7 +29,7 @@
   }
 }
 
-/* Pack 116: sheet-wide swipe down without blocking modal body scroll. */
+/* Sheet-wide swipe down without blocking modal body scroll. */
 .app-modal-backdrop {
   touch-action: auto;
 }
@@ -49,9 +49,6 @@
   -webkit-overflow-scrolling: touch;
 }
 
-.app-modal-footer {
-  flex-shrink: 0;
-}
 
 @media (max-width: 560px) {
   .app-modal-sheet,

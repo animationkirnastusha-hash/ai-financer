@@ -1,4 +1,0 @@
-/* notifications: logical CSS manifest. Keep order through app/styles/index.css. */
-@import "./notifications/notifications-sheet.css";
-@import "./notifications/notifications-cards.css";
-@import "./notifications/notifications-settings.css";

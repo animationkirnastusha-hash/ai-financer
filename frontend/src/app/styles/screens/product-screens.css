@@ -1,7 +1,0 @@
-/* Product screens manifest. Keep imports ordered; do not add raw rules here. */
-@import "./product-screens/product-screens-shell.css";
-@import "./product-screens/product-screens-actions.css";
-@import "./product-screens/product-screens-taxonomy-accounts.css";
-@import "./product-screens/product-screens-voice.css";
-@import "./product-screens/product-screens-responsive.css";
-@import "./product-screens/product-screens-onboarding.css";

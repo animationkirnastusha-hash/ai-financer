@@ -37,9 +37,6 @@
   font-size: 11px !important;
 }
 
-.profile-hub-grid {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
 
 .profile-hub-tile {
   padding: 12px !important;

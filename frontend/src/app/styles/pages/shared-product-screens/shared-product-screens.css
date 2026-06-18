@@ -1,0 +1,10 @@
+/* Shared product screens manifest. Keep imports ordered; do not add raw rules here. */
+@import "./base-shell.css";
+@import "./actions-lists.css";
+@import "./accounts-taxonomy.css";
+@import "./voice-settings.css";
+@import "./responsive.css";
+@import "./onboarding-intro.css";
+@import "./release-foundation.css";
+@import "./goals-analytics.css";
+@import "./accounts-taxonomy-cards.css";

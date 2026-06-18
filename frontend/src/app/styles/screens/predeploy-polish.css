@@ -1,4 +1,0 @@
-/* Predeploy polish manifest. Keep imports ordered; do not add raw rules here. */
-@import "./predeploy-polish/predeploy-polish-foundation.css";
-@import "./predeploy-polish/predeploy-polish-goals-analytics.css";
-@import "./predeploy-polish/predeploy-polish-accounts-taxonomy.css";

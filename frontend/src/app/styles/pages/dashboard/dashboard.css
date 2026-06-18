@@ -1,0 +1,4 @@
+/* dashboard: logical CSS manifest. Keep order through app/styles/index.css. */
+@import "./dashboard-hero.css";
+@import "./dashboard-currency.css";
+@import "./dashboard-device-safety.css";

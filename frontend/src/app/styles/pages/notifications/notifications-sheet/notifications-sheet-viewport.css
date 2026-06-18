@@ -1,4 +1,4 @@
-/* pack-33b: notification sheet visual polish */
+/* Notification sheet viewport, header and compact action controls. */
 .notification-sheet {
   max-height: min(68dvh, 590px);
   border-top-left-radius: 30px;

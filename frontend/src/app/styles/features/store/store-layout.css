@@ -284,6 +284,7 @@
 
 .store-usage-grid {
   grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-top: 14px;
 }
 
 .store-usage-grid > div {

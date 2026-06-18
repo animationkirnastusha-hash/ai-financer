@@ -1,4 +1,4 @@
-/* moved from app/styles/34-store.css. Keep order through app/styles/index.css. */
+/* Store cards, product badges and legacy Store surfaces. */
 .store-card-grid {
   display: grid;
   gap: 12px;
@@ -62,43 +62,7 @@
   overflow: hidden;
 }
 
-.store-usage-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
-  margin-top: 14px;
-}
-
-.store-usage-grid > div {
-  min-width: 0;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(255, 255, 255, 0.055);
-  border-radius: 18px;
-  padding: 12px;
-}
-
-.store-usage-grid strong {
-  display: block;
-  font-size: 22px;
-  line-height: 1;
-  letter-spacing: -0.03em;
-}
-
-.store-usage-grid span {
-  display: block;
-  margin-top: 6px;
-  color: rgba(255, 255, 255, 0.68);
-  font-size: 11px;
-  line-height: 1.25;
-}
-
-@media (max-width: 390px) {
-  .store-usage-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
-/* Pack 45: Premium visual polish and soft gates. */
+/* Premium and Business Store card states. */
 .monetization-badge {
   flex-shrink: 0;
 }
