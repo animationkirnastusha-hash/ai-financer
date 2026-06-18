@@ -5,6 +5,19 @@ import { env } from '../../config/env';
 import { prisma } from '../../lib/prisma';
 import type { TelegramInitDataUser } from '../../shared/utils/telegramAuth';
 import { createPublicUserId } from '../users/lib/public-user-id';
+import { normalizeUserLocale, readUserLocale, writeUserLocale, type UserLocale } from '../users/lib/user-locale';
+
+type SerializableUser = {
+  id: string;
+  telegramId: bigint;
+  username: string | null;
+  firstName: string;
+  lastName: string | null;
+  photoUrl: string | null;
+  tier?: string;
+  isAdmin?: boolean;
+  locale?: string | null;
+};
 
 type FallbackLoginCodeRecord = {
   code: string;
@@ -111,7 +124,7 @@ export class AuthService {
     const firstName = telegramUser.first_name || 'Telegram user';
     const isEnvAdmin = env.adminTelegramIds.includes(telegramIdString);
 
-    return prisma.user.upsert({
+    const user = await prisma.user.upsert({
       where: {
         telegramId,
       },
@@ -131,6 +144,23 @@ export class AuthService {
         isAdmin: isEnvAdmin,
       },
     });
+
+    return this.hydrateUserLocale(user);
+  }
+
+  async hydrateUserLocale<T extends { id: string }>(user: T): Promise<T & { locale: UserLocale | null }> {
+    const locale = await readUserLocale(user.id);
+    return { ...user, locale };
+  }
+
+  async updateUserLocale(userId: string, rawLocale: unknown) {
+    const locale = normalizeUserLocale(rawLocale);
+    if (!locale) return null;
+
+    await writeUserLocale(userId, locale);
+
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    return user ? this.hydrateUserLocale(user) : null;
   }
 
   generateToken(userId: string) {
@@ -151,18 +181,10 @@ export class AuthService {
     );
   }
 
-  serializeUser(user: {
-    id: string;
-    telegramId: bigint;
-    username: string | null;
-    firstName: string;
-    lastName: string | null;
-    photoUrl: string | null;
-    tier?: string;
-    isAdmin?: boolean;
-  }) {
+  serializeUser(user: SerializableUser) {
     const telegramId = user.telegramId.toString();
     const isAdmin = Boolean(user.isAdmin) || env.adminTelegramIds.includes(telegramId);
+    const locale = normalizeUserLocale(user.locale);
 
     return {
       id: user.id,
@@ -174,6 +196,7 @@ export class AuthService {
       photoUrl: user.photoUrl,
       tier: user.tier,
       isAdmin,
+      locale,
     };
   }
 

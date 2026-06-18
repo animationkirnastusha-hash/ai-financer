@@ -3,7 +3,7 @@ import { Request, Response } from 'express';
 import { AuthService } from './service';
 import { env } from '../../config/env';
 import { prisma } from '../../lib/prisma';
-import { UnauthorizedError } from '../../shared/core/errors';
+import { BadRequestError, UnauthorizedError } from '../../shared/core/errors';
 import { asyncHandler } from '../../shared/utils/asyncHandler';
 import {
   parseTelegramInitData,
@@ -85,6 +85,24 @@ export const getMe = asyncHandler(async (req: Request, res: Response) => {
 
   if (!user) {
     throw new UnauthorizedError('User not found');
+  }
+
+  const userWithLocale = await authService.hydrateUserLocale(user);
+
+  res.json({
+    user: authService.serializeUser(userWithLocale),
+  });
+});
+
+export const updateLocale = asyncHandler(async (req: Request, res: Response) => {
+  if (!req.userId) {
+    throw new UnauthorizedError();
+  }
+
+  const user = await authService.updateUserLocale(req.userId, req.body?.locale);
+
+  if (!user) {
+    throw new BadRequestError('Unsupported locale');
   }
 
   res.json({

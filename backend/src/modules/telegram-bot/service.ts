@@ -6,6 +6,8 @@ import { aiIdempotencyService } from '../ai/ai-idempotency.service';
 import { aiResponseNormalizer } from '../ai/ai-response-normalizer.service';
 import { subscriptionService } from '../subscription/service';
 import { voiceService } from '../../services/voice.service';
+import { normalizeUserLocale, type UserLocale } from '../users/lib/user-locale';
+import { botT, DEFAULT_BOT_LOCALE, getBotLanguageLabels } from './bot-locale';
 import { telegramBotClient } from './telegram-client';
 import type { AIResult } from '../ai/types';
 import type { TelegramBotCallbackQuery, TelegramBotMessage, TelegramBotUpdate, TelegramBotUser } from './types';
@@ -16,7 +18,12 @@ const aiService = new AIService();
 const CALLBACK_PREFIX = 'fina:';
 const CALLBACK_CONFIRM = `${CALLBACK_PREFIX}confirm:`;
 const CALLBACK_CANCEL = `${CALLBACK_PREFIX}cancel:`;
+const CALLBACK_LANGUAGE = `${CALLBACK_PREFIX}lang:`;
 const MAX_CALLBACK_ACTION_ID_LENGTH = 48;
+
+function getStoredLocale(user: unknown): UserLocale | null {
+  return normalizeUserLocale((user as { locale?: unknown } | null | undefined)?.locale);
+}
 
 function escapeHtml(value: unknown) {
   return String(value ?? '')
@@ -46,6 +53,11 @@ function isLoginCommand(text: string) {
   return value === '/login' || value === 'код' || value === 'войти' || value.startsWith('/start login');
 }
 
+function isLanguageCommand(text: string) {
+  const value = text.trim().toLowerCase();
+  return value === '/language' || value === '/settings' || value === 'language' || value === 'язык';
+}
+
 function isStartCommand(text: string) {
   const value = text.trim().toLowerCase();
   return value === '/start' || (value.startsWith('/start ') && !value.startsWith('/start login'));
@@ -53,7 +65,7 @@ function isStartCommand(text: string) {
 
 function isHelpCommand(text: string) {
   const value = text.trim().toLowerCase();
-  return value === '/help' || value === 'помощь';
+  return value === '/help' || value === 'help' || value === 'помощь';
 }
 
 function isBotCommand(text: string) {
@@ -68,64 +80,73 @@ function getCallbackChatId(callback?: TelegramBotCallbackQuery | null) {
   return callback?.message?.chat?.id ?? null;
 }
 
-function buildOpenAppMarkup() {
+function buildOpenAppMarkup(locale: UserLocale) {
   const miniAppUrl = getMiniAppUrl();
   if (!miniAppUrl) return undefined;
   return {
     inline_keyboard: [[
-      { text: 'Открыть Фину', web_app: { url: miniAppUrl } },
+      { text: botT(locale, 'openApp'), web_app: { url: miniAppUrl } },
     ]],
   };
 }
 
-function buildConfirmMarkup(pendingActionId: string) {
+function buildLanguageMarkup() {
+  return {
+    inline_keyboard: [[
+      { text: getBotLanguageLabels().en, callback_data: `${CALLBACK_LANGUAGE}en` },
+      { text: getBotLanguageLabels().ru, callback_data: `${CALLBACK_LANGUAGE}ru` },
+    ]],
+  };
+}
+
+function buildConfirmMarkup(pendingActionId: string, locale: UserLocale) {
   const safeId = pendingActionId.slice(0, MAX_CALLBACK_ACTION_ID_LENGTH);
   return {
     inline_keyboard: [[
-      { text: 'Подтвердить', callback_data: `${CALLBACK_CONFIRM}${safeId}` },
-      { text: 'Отменить', callback_data: `${CALLBACK_CANCEL}${safeId}` },
+      { text: botT(locale, 'confirm'), callback_data: `${CALLBACK_CONFIRM}${safeId}` },
+      { text: botT(locale, 'cancel'), callback_data: `${CALLBACK_CANCEL}${safeId}` },
     ]],
   };
 }
 
-function buildResultText(result: AIResult) {
+function buildResultText(result: AIResult, locale: UserLocale) {
   const message = compactText(result.message || '', 900);
 
   if (result.executed) {
-    return `Готово. ${escapeHtml(message || 'Записала.')}`;
+    return `${botT(locale, 'done')} ${escapeHtml(message || botT(locale, 'written'))}`;
   }
 
   if (result.requiresConfirmation) {
-    return `Проверь действие. ${escapeHtml(message || 'Нужно подтверждение.')}`;
+    return `${botT(locale, 'checkAction')} ${escapeHtml(message || botT(locale, 'needConfirm'))}`;
   }
 
   if (result.intent === 'clarification') {
-    return escapeHtml(message || 'Уточни, пожалуйста, детали.');
+    return escapeHtml(message || botT(locale, 'clarify'));
   }
 
   if (!result.success) {
-    return escapeHtml(message || 'Не получилось выполнить запрос.');
+    return escapeHtml(message || botT(locale, 'failed'));
   }
 
-  return escapeHtml(message || 'Готово.');
+  return escapeHtml(message || botT(locale, 'done'));
 }
 
-function getUserFacingError(error: unknown) {
+function getUserFacingError(error: unknown, locale: UserLocale) {
   if (error && typeof error === 'object' && 'code' in error) {
     const code = String((error as { code?: unknown }).code || '');
-    if (code === 'FORBIDDEN') return 'Похоже, лимит для этой функции закончился. Проверь лимиты в магазине или напиши команду текстом.';
-    if (code === 'BAD_REQUEST') return 'Не получилось разобрать запрос. Напиши его чуть короче.';
-    if (code === 'UNAUTHORIZED') return 'Не получилось связать сообщение с пользователем. Открой Фину из Telegram и попробуй снова.';
+    if (code === 'FORBIDDEN') return botT(locale, 'limitEnded');
+    if (code === 'BAD_REQUEST') return botT(locale, 'badRequest');
+    if (code === 'UNAUTHORIZED') return botT(locale, 'unauthorized');
   }
 
   if (error instanceof Error) {
-    if (error.name === 'VoiceTranscriptionNotConfiguredError') return 'Голосовые сообщения сейчас недоступны. Напиши команду текстом.';
-    if (error.name === 'VoiceAudioTooLargeError') return 'Голосовое слишком длинное. Запиши короче или напиши текстом.';
-    if (error.name === 'VoiceAudioUnsupportedError') return 'Не получилось прочитать формат голосового. Напиши команду текстом.';
-    if (error.name === 'VoiceProviderRequestError') return 'Не получилось распознать голосовое. Напиши команду текстом или попробуй позже.';
+    if (error.name === 'VoiceTranscriptionNotConfiguredError') return botT(locale, 'voiceUnavailable');
+    if (error.name === 'VoiceAudioTooLargeError') return botT(locale, 'voiceTooLarge');
+    if (error.name === 'VoiceAudioUnsupportedError') return botT(locale, 'voiceUnsupported');
+    if (error.name === 'VoiceProviderRequestError') return botT(locale, 'voiceProvider');
   }
 
-  return 'Не получилось выполнить запрос. Попробуй ещё раз или напиши команду короче.';
+  return botT(locale, 'failed');
 }
 
 function telegramUserToAuthUser(from: TelegramBotUser) {
@@ -134,6 +155,7 @@ function telegramUserToAuthUser(from: TelegramBotUser) {
     first_name: from.first_name || 'Telegram user',
     last_name: from.last_name,
     username: from.username,
+    language_code: from.language_code,
   };
 }
 
@@ -158,24 +180,31 @@ async function withIdempotency<T>(userId: string, key: string, payload: unknown,
   return { result, cached: false };
 }
 
-async function sendLoginCode(chatId: number | string, from: TelegramBotUser) {
+async function sendLanguageChoice(chatId: number | string) {
+  await telegramBotClient.sendMessage(
+    chatId,
+    `${escapeHtml(botT(DEFAULT_BOT_LOCALE, 'chooseLanguageTitle'))}\n\n${escapeHtml(botT(DEFAULT_BOT_LOCALE, 'chooseLanguageCaption'))}`,
+    buildLanguageMarkup(),
+  );
+
+  return { handled: true, action: 'language_choice_sent' };
+}
+
+async function sendLoginCode(chatId: number | string, from: TelegramBotUser, locale: UserLocale) {
   const record = authService.createFallbackLoginCode(telegramUserToAuthUser(from));
   const ttlMs = Number(process.env.AUTH_FALLBACK_CODE_TTL_MS || 10 * 60 * 1000);
   const minutes = Math.max(1, Math.round(ttlMs / 60_000));
 
-  await telegramBotClient.sendMessage(
-    chatId,
-    `Код входа: <b>${escapeHtml(record.code)}</b>\n\nОн действует ${minutes} минут. Не отправляй его другим людям.`,
-  );
+  await telegramBotClient.sendMessage(chatId, botT(locale, 'loginCode', { code: escapeHtml(record.code), minutes }));
 
   return { handled: true, action: 'login_code_sent' };
 }
 
-async function sendStart(chatId: number | string) {
+async function sendStart(chatId: number | string, locale: UserLocale) {
   await telegramBotClient.sendMessage(
     chatId,
-    'Я могу принять расход или доход прямо здесь. Напиши обычной фразой, например: «Потратил на продукты» или «Получил зарплату».',
-    buildOpenAppMarkup(),
+    `${escapeHtml(botT(locale, 'start'))}\n\n${escapeHtml(botT(locale, 'startExamples'))}`,
+    buildOpenAppMarkup(locale),
   );
 
   return { handled: true, action: 'start_sent' };
@@ -201,7 +230,7 @@ function readAudioPayload(message: TelegramBotMessage) {
   return null;
 }
 
-async function transcribeTelegramAudio(message: TelegramBotMessage) {
+async function transcribeTelegramAudio(message: TelegramBotMessage, locale: UserLocale) {
   const audio = readAudioPayload(message);
   if (!audio) return null;
 
@@ -212,7 +241,7 @@ async function transcribeTelegramAudio(message: TelegramBotMessage) {
     buffer,
     mimeType: audio.mimeType,
     originalName: file.file_path?.split('/').pop() || audio.originalName,
-    language: 'ru',
+    language: locale,
   });
 }
 
@@ -248,15 +277,20 @@ async function handleFinancialMessage(message: TelegramBotMessage) {
   const user = await ensureUser(from);
   if (!user) return { handled: false, reason: 'USER_NOT_FOUND' };
 
+  const storedLocale = getStoredLocale(user);
+  const locale = storedLocale ?? DEFAULT_BOT_LOCALE;
   const text = typeof message.text === 'string' ? message.text.trim() : '';
   const messageId = Number.isFinite(Number(message.message_id)) ? Number(message.message_id) : Date.now();
 
   if (text) {
-    if (isLoginCommand(text)) return sendLoginCode(chatId, from);
-    if (isStartCommand(text) || isHelpCommand(text)) return sendStart(chatId);
+    if (isLanguageCommand(text)) return sendLanguageChoice(chatId);
+    if (!storedLocale) return sendLanguageChoice(chatId);
+
+    if (isLoginCommand(text)) return sendLoginCode(chatId, from, locale);
+    if (isStartCommand(text) || isHelpCommand(text)) return sendStart(chatId, locale);
 
     if (isBotCommand(text)) {
-      await telegramBotClient.sendMessage(chatId, 'Напиши расход или доход обычной фразой. Команды с косой чертой здесь не нужны.', buildOpenAppMarkup());
+      await telegramBotClient.sendMessage(chatId, escapeHtml(botT(locale, 'unknownCommand')), buildOpenAppMarkup(locale));
       return { handled: true, action: 'unknown_command_sent' };
     }
 
@@ -264,43 +298,47 @@ async function handleFinancialMessage(message: TelegramBotMessage) {
       const result = await runAiCommand(user.id, text, 'text', `text:${chatId}:${messageId}`);
       await telegramBotClient.sendMessage(
         chatId,
-        buildResultText(result),
-        result.requiresConfirmation && result.meta?.pendingActionId ? buildConfirmMarkup(result.meta.pendingActionId) : undefined,
+        buildResultText(result, locale),
+        result.requiresConfirmation && result.meta?.pendingActionId ? buildConfirmMarkup(result.meta.pendingActionId, locale) : undefined,
       );
       return { handled: true, action: 'ai_text_handled', resultIntent: result.intent, executed: result.executed };
     } catch (error) {
       console.warn('[telegram-bot] text command failed', error instanceof Error ? error.message : error);
-      await telegramBotClient.sendMessage(chatId, escapeHtml(getUserFacingError(error)), buildOpenAppMarkup());
+      await telegramBotClient.sendMessage(chatId, escapeHtml(getUserFacingError(error, locale)), buildOpenAppMarkup(locale));
       return { handled: true, action: 'ai_text_failed' };
     }
   }
 
   const audio = readAudioPayload(message);
   if (audio) {
+    if (!storedLocale) return sendLanguageChoice(chatId);
+
     try {
-      const transcript = await transcribeTelegramAudio(message);
+      const transcript = await transcribeTelegramAudio(message, locale);
       const command = transcript?.text?.trim() || '';
 
       if (!command) {
-        await telegramBotClient.sendMessage(chatId, 'Не расслышала голосовое. Напиши команду текстом или попробуй записать ещё раз.');
+        await telegramBotClient.sendMessage(chatId, escapeHtml(botT(locale, 'voiceEmpty')));
         return { handled: true, action: 'voice_empty' };
       }
 
       const result = await runAiCommand(user.id, command, 'voice', `voice:${chatId}:${messageId}`);
       await telegramBotClient.sendMessage(
         chatId,
-        buildResultText(result),
-        result.requiresConfirmation && result.meta?.pendingActionId ? buildConfirmMarkup(result.meta.pendingActionId) : undefined,
+        buildResultText(result, locale),
+        result.requiresConfirmation && result.meta?.pendingActionId ? buildConfirmMarkup(result.meta.pendingActionId, locale) : undefined,
       );
       return { handled: true, action: 'ai_voice_handled', resultIntent: result.intent, executed: result.executed };
     } catch (error) {
       console.warn('[telegram-bot] voice command failed', error instanceof Error ? error.message : error);
-      await telegramBotClient.sendMessage(chatId, escapeHtml(getUserFacingError(error)), buildOpenAppMarkup());
+      await telegramBotClient.sendMessage(chatId, escapeHtml(getUserFacingError(error, locale)), buildOpenAppMarkup(locale));
       return { handled: true, action: 'ai_voice_failed' };
     }
   }
 
-  await telegramBotClient.sendMessage(chatId, 'Сейчас я понимаю текстовые и голосовые сообщения. Напиши расход или доход обычной фразой.', buildOpenAppMarkup());
+  if (!storedLocale) return sendLanguageChoice(chatId);
+
+  await telegramBotClient.sendMessage(chatId, escapeHtml(botT(locale, 'unsupportedMessage')), buildOpenAppMarkup(locale));
   return { handled: true, action: 'unsupported_message_sent' };
 }
 
@@ -314,13 +352,25 @@ async function handleCallback(callback: TelegramBotCallbackQuery) {
   const user = await ensureUser(from);
   if (!user) return { handled: false, reason: 'USER_NOT_FOUND' };
 
+  if (data.startsWith(CALLBACK_LANGUAGE)) {
+    const locale = normalizeUserLocale(data.slice(CALLBACK_LANGUAGE.length)) ?? DEFAULT_BOT_LOCALE;
+    const updatedUser = await authService.updateUserLocale(user.id, locale);
+    const nextLocale = getStoredLocale(updatedUser) ?? locale;
+
+    await telegramBotClient.answerCallbackQuery(callback.id, botT(nextLocale, 'languageSaved'));
+    await sendStart(chatId, nextLocale);
+
+    return { handled: true, action: 'language_saved', locale: nextLocale };
+  }
+
+  const locale = getStoredLocale(user) ?? DEFAULT_BOT_LOCALE;
   let result: AIResult | null = null;
 
   if (data.startsWith(CALLBACK_CONFIRM)) {
     const pendingActionId = data.slice(CALLBACK_CONFIRM.length).trim();
     if (pendingActionId) {
       result = aiResponseNormalizer.normalize(await aiService.confirmCommand(user.id, pendingActionId));
-      await telegramBotClient.answerCallbackQuery(callback.id, 'Подтверждено');
+      await telegramBotClient.answerCallbackQuery(callback.id, botT(locale, 'confirmed'));
     }
   }
 
@@ -328,16 +378,16 @@ async function handleCallback(callback: TelegramBotCallbackQuery) {
     const pendingActionId = data.slice(CALLBACK_CANCEL.length).trim();
     if (pendingActionId) {
       result = aiResponseNormalizer.normalize(await aiService.cancelCommand(user.id, pendingActionId));
-      await telegramBotClient.answerCallbackQuery(callback.id, 'Отменено');
+      await telegramBotClient.answerCallbackQuery(callback.id, botT(locale, 'cancelled'));
     }
   }
 
   if (!result) {
-    await telegramBotClient.answerCallbackQuery(callback.id, 'Действие недоступно');
+    await telegramBotClient.answerCallbackQuery(callback.id, botT(locale, 'unavailable'));
     return { handled: true, action: 'callback_ignored' };
   }
 
-  await telegramBotClient.sendMessage(chatId, buildResultText(result));
+  await telegramBotClient.sendMessage(chatId, buildResultText(result, locale));
   return { handled: true, action: 'callback_handled', resultIntent: result.intent, executed: result.executed };
 }
 
