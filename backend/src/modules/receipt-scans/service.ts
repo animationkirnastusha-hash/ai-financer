@@ -3,7 +3,7 @@ import { prisma } from '../../lib/prisma';
 import { BadRequestError, ForbiddenError, NotFoundError } from '../../shared/core/errors';
 import { subscriptionService } from '../subscription/service';
 import { TransactionService } from '../transactions/service';
-import { buildReceiptTaxonomyItems, groupReceiptTaxonomyItems, type ReceiptTaxonomyGroup } from '../taxonomy/receipt-taxonomy';
+import { buildReceiptItemsDescription, buildReceiptTaxonomyItems, groupReceiptTaxonomyItems, type ReceiptTaxonomyGroup } from '../taxonomy/receipt-taxonomy';
 
 export type ReceiptScanDto = {
   id: string;
@@ -235,12 +235,14 @@ export class ReceiptScanService {
     if (!reviewed.totalAmount) throw new BadRequestError('Receipt amount is required to create expense');
 
     const receiptTitle = input.title?.trim()
-      || reviewed.merchant
-      || 'Расход по чеку';
+      || 'Покупка по чеку';
+    const sourceScan = await prisma.receiptScan.findFirst({ where: { id: receiptScanId, userId } });
+    const itemsDescription = buildReceiptItemsDescription(sourceScan?.rawText);
     const receiptDescription = input.description?.trim()
       || [
         `Расход из чека ${reviewed.fileName}`,
         reviewed.merchant ? `Место: ${reviewed.merchant}` : '',
+        itemsDescription,
       ].filter(Boolean).join(' · ');
 
     const transaction = await this.transactionService.createTransaction(userId, {
