@@ -1,0 +1,182 @@
+/* Pack 146: dashboard chart palette, legend and title safety. */
+.app-home-cashflow-card__head {
+  grid-template-columns: minmax(0, 1fr) auto !important;
+  gap: 10px !important;
+}
+
+.app-home-cashflow-card__head h2 {
+  max-width: 100%;
+  font-size: clamp(22px, 5.8vw, 30px) !important;
+  line-height: 1.04 !important;
+  letter-spacing: -.045em !important;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.app-home-period-switch,
+.app-home-mode-switch {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.app-home-period-switch button,
+.app-home-mode-switch button {
+  min-width: 0;
+  font-size: 11px !important;
+}
+
+.app-home-chart-preview {
+  grid-template-columns: clamp(72px, 22vw, 92px) minmax(0, 1fr) !important;
+  gap: 12px !important;
+  border-radius: 24px !important;
+  padding: 12px !important;
+}
+
+.app-home-chart-preview .app-home-donut {
+  width: clamp(70px, 21vw, 88px) !important;
+  height: clamp(70px, 21vw, 88px) !important;
+}
+
+.app-home-chart-preview__text b {
+  font-size: clamp(18px, 5.3vw, 23px) !important;
+  line-height: 1.05 !important;
+}
+
+.app-home-chart-preview__text small {
+  display: -webkit-box;
+  white-space: normal !important;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.app-home-chart-legend {
+  min-width: 0;
+  display: grid;
+  gap: 9px;
+}
+
+.app-home-chart-legend__title {
+  color: rgba(255,255,255,.48);
+  font-size: 11px;
+  font-weight: 850;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
+.app-home-chart-legend__items {
+  display: grid;
+  gap: 7px;
+}
+
+.app-home-chart-legend[data-compact="true"] .app-home-chart-legend__items {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.app-home-chart-legend__item {
+  min-width: 0;
+  min-height: 42px;
+  border: 1px solid rgba(255,255,255,.075);
+  border-radius: 16px;
+  background: rgba(255,255,255,.035);
+  padding: 7px 8px;
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr);
+  gap: 8px;
+  align-items: center;
+}
+
+.app-home-chart-legend__item i {
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  font-size: 12px;
+  font-style: normal;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.18);
+}
+
+.app-home-chart-legend__item span,
+.app-home-chart-legend__item b,
+.app-home-chart-legend__item small {
+  min-width: 0;
+  display: block;
+}
+
+.app-home-chart-legend__item b {
+  color: rgba(255,255,255,.88);
+  font-size: 12px;
+  line-height: 1.12;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-home-chart-legend__item small {
+  margin-top: 3px;
+  color: rgba(255,255,255,.46);
+  font-size: 10px;
+  line-height: 1.1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-home-chart-legend__more {
+  min-height: 34px;
+  border-radius: 999px;
+  border: 1px dashed rgba(255,255,255,.11);
+  color: rgba(255,255,255,.48);
+  display: grid;
+  place-items: center;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.app-home-chart-modal__legend-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.app-home-chart-modal__visual--split {
+  min-height: 210px !important;
+  align-items: center;
+}
+
+.app-home-chart-modal .app-home-donut--large {
+  width: min(46vw, 190px) !important;
+  height: min(46vw, 190px) !important;
+}
+
+.app-home-chart-modal .app-home-donut--medium {
+  width: min(32vw, 126px) !important;
+  height: min(32vw, 126px) !important;
+}
+
+@media (max-width: 430px) {
+  .app-home-cashflow-card__head {
+    grid-template-columns: 1fr !important;
+  }
+
+  .app-home-period-switch {
+    width: 100%;
+  }
+
+  .app-home-period-switch button {
+    flex: 1;
+  }
+
+  .app-home-chart-modal__legend-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 360px) {
+  .app-home-chart-legend[data-compact="true"] .app-home-chart-legend__items {
+    grid-template-columns: 1fr;
+  }
+}

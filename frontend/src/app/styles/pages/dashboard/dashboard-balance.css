@@ -1,0 +1,89 @@
+/* Pack 146: dashboard balance density and long amount safety. */
+.app-home-balance-card {
+  padding: clamp(16px, 4.4vw, 22px) !important;
+}
+
+.app-home-balance-card__top {
+  gap: 12px !important;
+}
+
+.app-home-balance-card__amount {
+  max-width: 100%;
+  font-size: clamp(34px, 9.3vw, 56px) !important;
+  line-height: .94 !important;
+  letter-spacing: -.065em !important;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-home-balance-card__amount[data-scale="medium"] {
+  font-size: clamp(30px, 8.1vw, 48px) !important;
+  letter-spacing: -.058em !important;
+}
+
+.app-home-balance-card__amount[data-scale="compact"] {
+  font-size: clamp(25px, 6.9vw, 40px) !important;
+  letter-spacing: -.045em !important;
+}
+
+.app-home-balance-card__nav {
+  min-width: 92px !important;
+  height: 40px !important;
+  grid-template-columns: 28px minmax(0, 1fr) 28px !important;
+}
+
+.app-home-balance-card__rate {
+  max-width: 100%;
+  font-size: 12px !important;
+}
+
+.app-home-balance-card__metrics {
+  margin-top: 13px !important;
+  gap: 7px !important;
+}
+
+.app-home-balance-card__metrics .app-home-metric {
+  min-height: 52px !important;
+  border-radius: 18px;
+  background: rgba(255,255,255,.035);
+  padding: 8px;
+}
+
+.app-home-metric span {
+  font-size: 10px !important;
+  letter-spacing: .02em;
+}
+
+.app-home-metric b {
+  font-size: clamp(11px, 3.2vw, 13px) !important;
+  line-height: 1.1 !important;
+}
+
+@media (max-width: 390px) {
+  .app-home-balance-card__top {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  .app-home-balance-card__nav {
+    width: fit-content;
+  }
+
+  .app-home-balance-card__amount {
+    font-size: clamp(31px, 10vw, 46px) !important;
+  }
+
+  .app-home-balance-card__amount[data-scale="medium"] {
+    font-size: clamp(27px, 8.4vw, 38px) !important;
+  }
+
+  .app-home-balance-card__amount[data-scale="compact"] {
+    font-size: clamp(23px, 7.2vw, 32px) !important;
+  }
+}
+
+@media (max-width: 350px) {
+  .app-home-balance-card__metrics {
+    grid-template-columns: 1fr !important;
+  }
+}

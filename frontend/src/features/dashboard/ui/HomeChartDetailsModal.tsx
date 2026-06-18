@@ -3,6 +3,7 @@ import type { HomeCashflowMode, HomeCashflowPeriod, HomeFinanceGroup } from '@/f
 import { buildHomeFinanceAnalytics, conicGradient } from '@/features/dashboard/lib/homeFinanceAnalytics';
 import { formatMoney } from '@/shared/lib/money';
 import { useI18n } from '@/shared/lib/i18n';
+import { HomeChartLegend } from '@/features/dashboard/ui/HomeChartLegend';
 
 const CATEGORY_LIMIT_PER_SECTION = 4;
 
@@ -54,6 +55,11 @@ export function HomeChartDetailsModal({ open, transactions, mode, period, rates,
               <span className="app-home-donut app-home-donut--medium" style={{ background: conicGradient(analytics.categories) }}><i /></span>
               <small>{t('dashboard.chart.categories')}</small>
             </div>
+          </div>
+
+          <div className="app-home-chart-modal__legend-grid">
+            <HomeChartLegend groups={analytics.sections} title={t('dashboard.chart.sectionsPalette')} />
+            <HomeChartLegend groups={analytics.categories} title={t('dashboard.chart.categoriesPalette')} />
           </div>
 
           <div className="app-home-chart-modal__actions">

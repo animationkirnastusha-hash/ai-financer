@@ -85,6 +85,8 @@ export function HomeBalanceCarousel({
 
   const safeIndex = activeIndex % Math.max(1, slides.length);
   const active = slides[safeIndex] ?? slides[0];
+  const activeAmountText = active ? formatMoney(active.amount, active.currency) : '';
+  const amountScale = activeAmountText.length > 18 ? 'compact' : activeAmountText.length > 14 ? 'medium' : 'normal';
 
   const go = (direction: 1 | -1) => {
     setActiveIndex((value) => (value + direction + Math.max(1, slides.length)) % Math.max(1, slides.length));
@@ -105,7 +107,7 @@ export function HomeBalanceCarousel({
       <div className="app-home-balance-card__top">
         <div className="min-w-0">
           <div className="app-eyebrow">{t('dashboard.balance.eyebrow')}</div>
-          <div className="app-home-balance-card__amount">{formatMoney(active.amount, active.currency)}</div>
+          <div className="app-home-balance-card__amount" data-scale={amountScale}>{activeAmountText}</div>
           <p>{active.kind === 'total' ? active.currency : active.name} · {active.caption}</p>
         </div>
         <div className="app-home-balance-card__nav">
