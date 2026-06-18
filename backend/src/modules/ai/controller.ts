@@ -128,7 +128,11 @@ export const parseCommand = asyncHandler(async (req: Request, res: Response) => 
   const idempotencyState: { cached?: boolean } = {};
   const result = await withIdempotency(userId, 'ai_parse', key, { command, execute, source, voiceSession }, async () => {
     const raw = await aiService.handleCommand(userId, command, { execute, source, voiceSession });
-    return aiResponseNormalizer.normalize(raw);
+    const normalized = aiResponseNormalizer.normalize(raw);
+    if (!execute && !normalized.executed) {
+      normalized.meta = { ...(normalized.meta ?? {}), dryRun: true };
+    }
+    return normalized;
   }, idempotencyState);
 
   let subscriptionUsage = voiceUsageBefore;

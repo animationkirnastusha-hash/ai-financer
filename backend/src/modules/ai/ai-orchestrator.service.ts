@@ -21,6 +21,7 @@ import { AIExecutionLifecycleService } from "./ai-execution-lifecycle.service";
 import { AIPlanLimitService } from "./ai-plan-limit.service";
 import { AIModelRouter, AIUserTier } from "./ai-model-router";
 import { AIDialogRoute, AIDialogRouterService } from "./ai-dialog-router.service";
+import { AILanguage, aiLanguageService } from "./ai-language.service";
 
 export class AIOrchestratorService {
   private readonly context = new AIContextService();
@@ -48,6 +49,7 @@ export class AIOrchestratorService {
 
     const plannerCommand = this.commandBuilder.build(trimmed, options);
     const dryRun = options.execute === false;
+    const commandLanguage = aiLanguageService.detectFromText(trimmed);
 
     try {
       const clarificationResult = await this.tryAnswerPendingClarification(
@@ -69,6 +71,7 @@ export class AIOrchestratorService {
       }
 
       const plan = recoveredPlan ?? await this.planner.plan(plannerCommand, context);
+      const language = aiLanguageService.normalize(plan.language, commandLanguage);
 
       if (this.planLimits.isExceeded(plan)) {
         const audit = await this.audit.create({
@@ -110,10 +113,11 @@ export class AIOrchestratorService {
       const parsed = this.preview.buildParsed(
         validated.summary,
         validated.actions,
+        language,
       );
 
       if (!validated.ok) {
-        const clarification = this.clarification.build(validated);
+        const clarification = this.clarification.build(validated, language);
         if (clarification) {
           const parsedWithClarification = { ...parsed, clarification };
 
@@ -195,9 +199,7 @@ export class AIOrchestratorService {
           };
         }
 
-        const message =
-          validated.issues.map((issue) => issue.message).join("\n") ||
-          "Не удалось безопасно подготовить действие.";
+        const message = this.buildValidationIssueMessage(validated.issues, language);
         const audit = await this.audit.create({
           userId,
           command: plannerCommand,
@@ -332,7 +334,9 @@ export class AIOrchestratorService {
         requiresConfirmation: false,
         riskLevel: "low",
         message:
-          "Не смогла подготовить действие. Напиши короче: что сделать, сумма и счёт, если он нужен.",
+          commandLanguage === "en"
+            ? "I couldn't prepare the action. Please write it shorter: what to do, the amount, and the account if needed."
+            : "Не смогла подготовить действие. Напиши короче: что сделать, сумма и счёт, если он нужен.",
         parsed: null,
         meta: { auditLogId: audit.id },
       };
@@ -493,6 +497,26 @@ export class AIOrchestratorService {
   }
 
 
+  private buildValidationIssueMessage(issues: Array<{ code: string; message: string }>, language: AILanguage) {
+    if (language !== 'en') {
+      return issues.map((issue) => issue.message).join("\n") || 'Не удалось безопасно подготовить действие.';
+    }
+
+    const first = issues[0];
+    if (!first) return 'I could not safely prepare the action.';
+    if (first.code === 'insufficient_funds') return 'Not enough money in the selected account.';
+    if (first.code === 'missing_amount') return 'The amount is missing.';
+    if (first.code === 'account_not_found' || first.code === 'needs_account_clarification') return 'Please choose the account.';
+    if (first.code === 'needs_first_account_setup') return 'First, create an account for this operation.';
+    if (first.code === 'transaction_not_found') return 'I could not find the transaction to update.';
+    if (first.code === 'goal_not_found') return 'I could not find that goal.';
+    if (first.code === 'category_not_found') return 'I could not find that category.';
+    if (first.code === 'section_not_found') return 'I could not find that section.';
+    if (first.code === 'obligation_not_found') return 'I could not find that obligation.';
+    if (first.code === 'spending_limit_not_found') return 'I could not find that spending limit.';
+    return 'I could not safely prepare the action. Please check the details.';
+  }
+
   private hasOpenClarification(parsed: AIParsedCommand | null): boolean {
     const clarification = parsed && (parsed as unknown as { clarification?: unknown }).clarification;
     return Boolean(clarification && typeof clarification === "object" && !Array.isArray(clarification));
@@ -635,9 +659,11 @@ export class AIOrchestratorService {
       };
     });
 
+    const language = parsed.language ?? aiLanguageService.detectFromText(pending.command);
     const nextPlan: AIActionPlan = {
       mode: "actions",
       summary: parsed.summary,
+      language,
       actions: nextActions,
     };
 
@@ -645,10 +671,11 @@ export class AIOrchestratorService {
     const nextParsed = this.preview.buildParsed(
       validated.summary,
       validated.actions,
+      language,
     );
 
     if (!validated.ok) {
-      const stillNeedsEntity = this.clarification.build(validated);
+      const stillNeedsEntity = this.clarification.build(validated, language);
 
       if (stillNeedsEntity) {
         const parsedWithClarification = { ...nextParsed, clarification: stillNeedsEntity };
@@ -691,8 +718,7 @@ export class AIOrchestratorService {
         };
       }
 
-      const message = validated.issues.map((issue) => issue.message).join("\n") ||
-        "Не удалось применить уточнение.";
+      const message = this.buildValidationIssueMessage(validated.issues, language);
 
       const audit = await this.audit.create({
         userId,
@@ -803,14 +829,15 @@ export class AIOrchestratorService {
       'Если для исходной просьбы всё ещё не хватает суммы или детали, оставь это поле пустым, чтобы валидатор задал короткий вопрос.',
     ].join('\n');
 
+    const language = parsed.language ?? aiLanguageService.detectFromText(pending.command);
     const context = await this.context.buildUserContext(userId);
     const plan = await this.planner.plan(plannerCommand, context);
     const validated = await this.validator.validate(userId, plan);
-    const nextParsed = this.preview.buildParsed(validated.summary, validated.actions);
+    const nextParsed = this.preview.buildParsed(validated.summary, validated.actions, language);
     const nextCommand = `${pending.command} / ${candidate}`;
 
     if (!validated.ok) {
-      const nextClarification = this.clarification.build(validated);
+      const nextClarification = this.clarification.build(validated, language);
 
       if (nextClarification) {
         const parsedWithClarification = { ...nextParsed, clarification: nextClarification };

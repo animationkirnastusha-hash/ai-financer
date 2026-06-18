@@ -1332,6 +1332,13 @@ export class AIValidatorService {
       if (compactText.includes(`${thousands}к`) || compactText.includes(`${thousands}k`) || compactText.includes(`${thousands}тыс`)) return true;
     }
 
+    if (amount >= 1000 && amount % 100 === 0) {
+      const decimalThousands = (amount / 1000).toFixed(1).replace(/\.0$/, '');
+      const compactDecimal = decimalThousands.replace('.', '').replace(',', '');
+      if (compactText.includes(`${compactDecimal}к`) || compactText.includes(`${compactDecimal}k`)) return true;
+      if (compactText.includes(`${decimalThousands.replace('.', ',')}к`) || compactText.includes(`${decimalThousands}k`)) return true;
+    }
+
     return false;
   }
 

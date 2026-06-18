@@ -1,4 +1,5 @@
 import { AIPlan, AIToolCall, AIToolName } from './types';
+import { aiLanguageService } from './ai-language.service';
 import { createAIProvider } from './providers/ai-provider.factory';
 import { AI_TOOL_REGISTRY, getPlannerToolContract } from './tools/tool-registry';
 
@@ -71,6 +72,13 @@ export class AIPlannerService {
       plan = this.normalizePlan(raw, command);
     }
 
+    if (!plan.actions.length) {
+      usedFallback = true;
+      console.warn('[AI] planner still returned no actions, retrying tool recovery planner');
+      raw = await this.runToolRecoveryPlanner(command, compactContext);
+      plan = this.normalizePlan(raw, command);
+    }
+
     if (plan.actions.length) {
       const reviewedPlan = await this.reviewPlanAgainstContract(command, compactContext, plan);
       if (reviewedPlan?.actions.length) {
@@ -107,6 +115,8 @@ export class AIPlannerService {
       'If the user describes an existing operation correction, use update_transaction. Do not create a new transaction for corrections.',
       'Savings goals are not expenses or income. Goal target amount belongs to create_goal.targetAmount.',
       'Loans, mortgages, installments, subscriptions and recurring obligations are obligations, not normal one-time transactions unless the user says they paid one payment.',
+      'Requests to show nearest/upcoming payments, loans, credits, subscriptions or required payments must use show_obligations. Requests to mark a loan/subscription payment paid must use mark_obligation_paid. Requests to change a loan/subscription payment must use update_obligation.',
+      'Requests to set, show, change or delete spending limits/budget limits must use create_spending_limit, show_spending_limits, update_spending_limit or delete_spending_limit. Limits are app data, not coaching text.',
       'If essential data is missing, leave the field missing/null. Validator will ask a short clarification. Do not invent accounts, amounts, categories, dates, or prices.',
       'If USER contains VOICE_SESSION_COMMAND, merge segments into one coherent final intent. Later correction segments override conflicting earlier details and non-conflicting details remain.',
       'For screen-opening/navigation requests, do not invent financial actions. Reply naturally; UI navigation may handle screens separately.',
@@ -134,15 +144,43 @@ export class AIPlannerService {
       'For account setup plus first operation, return the account action first and the requested financial action second where safe.',
       'When the user says they have money in a new place/account, treat it as account setup with initialBalance/top-up, not as an expense.',
       'For transfers, use transfer_money and both account names. Do not create expense/income pairs for transfers.',
-      'For analytics/show/list requests, use query_analytics or show_* tools; do not create or update data. If the user asks for expenses by a specific place, category, merchant or item, put that natural search phrase into query_analytics.filter/search/category instead of returning an unfiltered total.',
+      'For analytics/show/list requests, use query_analytics or show_* tools; do not create or update data. If the user asks for balance of a specific account, use query_analytics with metric accounts or show_accounts. If the user asks for expenses by a specific place, category, merchant or item, put that natural search phrase into query_analytics.filter/search/category instead of returning an unfiltered total.',
+      'For obligations and limits: nearest payments -> show_obligations; add credit/subscription -> create_obligation; mark paid -> mark_obligation_paid; edit payment -> update_obligation; set limit -> create_spending_limit; show limits -> show_spending_limits; edit limit -> update_spending_limit; delete limit -> delete_spending_limit.',
       'For undo/cancel last completed operation, use undo_last_action. For cancelling a pending unconfirmed action, the UI lifecycle handles it.',
       'For corrections to an operation, use update_transaction and identify target with target/transaction fields.',
       'For first account or missing account cases, provide known fields and leave missing fields empty; validator will ask the needed question.',
       'For VOICE_SESSION_COMMAND, produce exactly one final plan after applying corrections. Never execute both old and corrected meanings.',
       'For off-topic or capability questions, return reply mode with empty actions unless a show_* tool directly matches.',
+      'For English USER messages, set language to "en" in the plan. For Russian USER messages, set language to "ru".',
       'CTX:', JSON.stringify(context),
       'USER:', command,
     ].join('\n');
+  }
+
+
+  private async runToolRecoveryPlanner(command: string, context: unknown): Promise<Record<string, unknown>> {
+    return this.provider.generateJson<Record<string, unknown>>({
+      system: [
+        'Return ONLY strict JSON. No markdown. No prose.',
+        'A previous planning pass returned no actions. Re-check whether the USER is asking for an app data operation.',
+        'Do not extract by regex or hard-coded parsing. Use semantic intent and the tool contract only.',
+        'If a matching app tool exists, return an actions plan. Use reply with empty actions only for true casual/off-topic messages.',
+        'Read-only app requests are still tool requests: accounts, balances, transactions, goals, categories, analytics, limits, obligations and upcoming payments.',
+        'Spending limits are managed with create_spending_limit, update_spending_limit, delete_spending_limit, show_spending_limits.',
+        'Loans, credits, installments, subscriptions, reminders and upcoming required payments are managed with obligation tools.',
+      ].join(' '),
+      prompt: [
+        'TOOLS:',
+        getPlannerToolContract(),
+        'CTX:', JSON.stringify(context),
+        'USER:', command,
+        'Return the best tool plan JSON in this schema: {"mode":"actions","language":"ru|en","summary":"...","actions":[{"tool":"...","input":{...}}]}.',
+      ].join(''),
+      temperature: 0,
+      modelRole: 'fast',
+      timeoutMs: 12_000,
+      numPredict: 640,
+    });
   }
 
   private async runFocusedPlanner(command: string, context: unknown): Promise<Record<string, unknown>> {
@@ -173,6 +211,7 @@ export class AIPlannerService {
         'For first-account setup continuations, create the account and keep the original request moving in the same plan where safe.',
         'Edits to existing operations must use update_transaction, not create_transaction.',
         'For off-topic, return reply with empty actions.',
+        'Limits and obligations are first-class app data. Do not answer with free-tier text when a tool exists in the contract.',
         'Pass user-provided natural names through as tool input values. For amount fields, return unambiguous compact amounts as plain numeric values; if unsure, leave amount missing.',
         'For mixed purchases with one total amount, do not create several expenses. Use one create_transaction and keep named goods/services in items plus place details in merchant/place, tags or description.',
         'Keep user-provided account/category/section labels natural. Context is not a picklist and must not override the user message.',
@@ -202,6 +241,7 @@ export class AIPlannerService {
           'If USER gives one total for multiple goods/services, keep exactly one create_transaction and do not invent per-item prices.',
           'If draft uses a generic category/section such as Expense/Income/Расход/Доход only to avoid an empty field, remove that field. Validator can ask or use fallback safely.',
           'Keep title short and clean. Do not copy the full command and do not use merchant plus item list as title.',
+          'If the draft missed an obligation, payment, subscription or spending-limit tool, correct the tool family instead of returning reply/unclear.',
         ].join(' '),
         prompt: [
           'TOOLS:',
@@ -360,10 +400,12 @@ export class AIPlannerService {
       .filter((action): action is AIToolCall => action !== null);
 
 
+    const language = this.asOptionalString(raw.language) ?? aiLanguageService.detectFromText(command);
+
     return {
       mode: 'actions',
-      language: this.asOptionalString(raw.language),
-      summary: this.asOptionalString(raw.summary) ?? (actions.length ? 'Действие подготовлено.' : 'Я рядом. Могу ответить коротко и помочь с финансами.'),
+      language,
+      summary: this.asOptionalString(raw.summary) ?? (actions.length ? (language === 'en' ? 'Action prepared.' : 'Действие подготовлено.') : (language === 'en' ? 'I can answer briefly and help with finances.' : 'Я рядом. Могу ответить коротко и помочь с финансами.')),
       actions,
     };
   }

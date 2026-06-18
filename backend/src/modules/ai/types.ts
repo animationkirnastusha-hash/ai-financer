@@ -96,6 +96,7 @@ export interface AIParsedCommand {
   intent: 'batch';
   summary: string;
   actions: AIValidatedAction[];
+  language?: 'ru' | 'en';
   clarification?: AIClarificationRequest | null;
 }
 

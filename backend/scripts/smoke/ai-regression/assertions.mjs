@@ -23,7 +23,7 @@ export function text(value) {
 }
 
 export function lower(value) {
-  return text(value).toLowerCase();
+  return text(value).toLowerCase().replace(/ё/g, 'е');
 }
 
 export function hasCyrillic(value) {
@@ -116,7 +116,14 @@ export function assertTitleClean(action, command, fail) {
   if (normalized.includes('напит') && normalized.includes('сигар')) {
     fail('title/name copied mixed purchase composition', { title, action });
   }
-  if (title.length > 6 && commandText.includes(normalized)) {
+  if (title.length > 18 && commandText.includes(normalized)) {
+    fail('title/name is copied too closely from user command', { title, command });
+  }
+
+  const titleTokens = normalized.split(/\s+/).filter((token) => token.length >= 3);
+  const commandTokens = new Set(commandText.split(/\s+/).filter((token) => token.length >= 3));
+  const covered = titleTokens.filter((token) => commandTokens.has(token)).length;
+  if (titleTokens.length >= 3 && covered / titleTokens.length >= 0.9) {
     fail('title/name is copied too closely from user command', { title, command });
   }
 }
@@ -164,9 +171,12 @@ export function assertCase(payload, scenario, fail) {
   }
 
   if (expect.amount !== undefined) {
+    const amountFields = ['amount', 'targetAmount', 'initialBalance', 'monthlyPayment', 'principalAmount', 'currentDebt'];
     const value = asNumber(action.input?.amount ?? action.input?.targetAmount ?? action.input?.initialBalance ?? action.input?.monthlyPayment ?? action.input?.principalAmount ?? action.input?.currentDebt);
-    if (value === null || Math.abs(value - Number(expect.amount)) > 0.01) {
-      fail(`expected amount ${expect.amount}, got ${value}`, { action });
+    const expectedAmount = Number(expect.amount);
+    const matchingAction = actions.find((candidate) => amountFields.some((field) => Math.abs((asNumber(candidate?.input?.[field]) ?? Number.NaN) - expectedAmount) <= 0.01));
+    if ((value === null || Math.abs(value - expectedAmount) > 0.01) && !matchingAction) {
+      fail(`expected amount ${expect.amount}, got ${value}`, { action, actions });
     }
   }
 

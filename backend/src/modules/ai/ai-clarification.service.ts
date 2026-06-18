@@ -1,3 +1,4 @@
+import { AILanguage } from './ai-language.service';
 import { AIClarificationRequest, AIValidatedAction, AIValidatedPlan } from './types';
 
 const CLARIFICATION_CODES = new Set([
@@ -68,8 +69,10 @@ export class AIClarificationService {
     return 'Не смогла сопоставить уточнение с нужными данными. Напиши короче и точнее.';
   }
 
-  build(validated: AIValidatedPlan): AIClarificationRequest | null {
+  build(validated: AIValidatedPlan, language: AILanguage = 'ru'): AIClarificationRequest | null {
     const priorityCodes = [
+      'missing_amount',
+      'missing_goal_target',
       'missing_account_setup_details',
       'missing_account_name',
       'missing_account_balance',
@@ -78,8 +81,6 @@ export class AIClarificationService {
       'account_not_found',
       'from_account_not_found',
       'to_account_not_found',
-      'missing_amount',
-      'missing_goal_target',
       'goal_not_found',
       'category_not_found',
       'section_not_found',
@@ -100,8 +101,8 @@ export class AIClarificationService {
         field: 'accountSetup',
         actionIndex: issue.actionIndex,
         question: issue.code === 'needs_first_account_setup'
-          ? 'Сначала нужен счёт. Напишите название и текущий баланс, например: Наличка 5000.'
-          : 'Как назовём счёт и какой сейчас баланс? Например: Наличка 5000.',
+          ? this.phrase(language, 'Сначала нужен счёт. Напишите название и текущий баланс, например: Наличка 5000.', 'First we need an account. Send its name and current balance, for example: Cash 5000.')
+          : this.phrase(language, 'Как назовём счёт и какой сейчас баланс? Например: Наличка 5000.', 'What should we call the account, and what is the current balance? For example: Cash 5000.'),
         createdAt: new Date().toISOString(),
       };
     }
@@ -111,7 +112,7 @@ export class AIClarificationService {
         type: 'amount',
         field: 'amount',
         actionIndex: issue.actionIndex,
-        question: this.amountQuestion(action),
+        question: this.amountQuestion(action, language),
         createdAt: new Date().toISOString(),
       };
     }
@@ -121,49 +122,55 @@ export class AIClarificationService {
         type: 'amount',
         field: 'targetAmount',
         actionIndex: issue.actionIndex,
-        question: 'На какую сумму создать цель?',
+        question: this.phrase(language, 'На какую сумму создать цель?', 'What target amount should I use for the goal?'),
         createdAt: new Date().toISOString(),
       };
     }
 
     if (issue.code === 'transaction_not_found') {
-      return { type: 'transaction', field: 'transaction', actionIndex: issue.actionIndex, question: 'Какую операцию нужно изменить?', createdAt: new Date().toISOString() };
+      return { type: 'transaction', field: 'transaction', actionIndex: issue.actionIndex, question: this.phrase(language, 'Какую операцию нужно изменить?', 'Which transaction should I update?'), createdAt: new Date().toISOString() };
     }
 
     if (issue.code === 'goal_not_found') {
-      return { type: 'goal', field: 'goal', actionIndex: issue.actionIndex, question: 'Какую цель нужно изменить?', createdAt: new Date().toISOString() };
+      return { type: 'goal', field: 'goal', actionIndex: issue.actionIndex, question: this.phrase(language, 'Какую цель нужно изменить?', 'Which goal should I update?'), createdAt: new Date().toISOString() };
     }
 
     if (issue.code === 'category_not_found') {
-      return { type: 'category', field: 'category', actionIndex: issue.actionIndex, question: 'Какую категорию использовать?', createdAt: new Date().toISOString() };
+      return { type: 'category', field: 'category', actionIndex: issue.actionIndex, question: this.phrase(language, 'Какую категорию использовать?', 'Which category should I use?'), createdAt: new Date().toISOString() };
     }
 
     if (issue.code === 'section_not_found') {
-      return { type: 'section', field: 'section', actionIndex: issue.actionIndex, question: 'Какой раздел использовать?', createdAt: new Date().toISOString() };
+      return { type: 'section', field: 'section', actionIndex: issue.actionIndex, question: this.phrase(language, 'Какой раздел использовать?', 'Which section should I use?'), createdAt: new Date().toISOString() };
     }
 
     if (issue.code === 'from_account_not_found') {
-      return { type: 'account', field: 'fromAccount', actionIndex: issue.actionIndex, question: 'С какого счёта перевести?', createdAt: new Date().toISOString() };
+      return { type: 'account', field: 'fromAccount', actionIndex: issue.actionIndex, question: this.phrase(language, 'С какого счёта перевести?', 'Which account should I transfer from?'), createdAt: new Date().toISOString() };
     }
 
     if (issue.code === 'to_account_not_found') {
-      return { type: 'account', field: 'toAccount', actionIndex: issue.actionIndex, question: 'На какой счёт перевести?', createdAt: new Date().toISOString() };
+      return { type: 'account', field: 'toAccount', actionIndex: issue.actionIndex, question: this.phrase(language, 'На какой счёт перевести?', 'Which account should I transfer to?'), createdAt: new Date().toISOString() };
     }
 
-    return { type: 'account', field: 'account', actionIndex: issue.actionIndex, question: 'Какой счёт использовать?', createdAt: new Date().toISOString() };
+    return { type: 'account', field: 'account', actionIndex: issue.actionIndex, question: this.phrase(language, 'Какой счёт использовать?', 'Which account should I use?'), createdAt: new Date().toISOString() };
   }
 
-  private amountQuestion(action: AIValidatedAction | undefined) {
+  private amountQuestion(action: AIValidatedAction | undefined, language: AILanguage) {
     const tool = String(action?.tool ?? '');
     const input = action?.input ?? {};
 
-    if (tool === 'create_goal') return 'На какую сумму создать цель?';
-    if (tool === 'transfer_money') return 'Какую сумму перевести?';
+    if (tool === 'create_goal') return this.phrase(language, 'На какую сумму создать цель?', 'What target amount should I use for the goal?');
+    if (tool === 'transfer_money') return this.phrase(language, 'Какую сумму перевести?', 'How much should I transfer?');
     if (tool === 'create_transaction') {
-      return input.kind === 'income' ? 'Какая сумма дохода?' : 'Сколько потратили?';
+      return input.kind === 'income'
+        ? this.phrase(language, 'Какая сумма дохода?', 'What is the income amount?')
+        : this.phrase(language, 'Сколько потратили?', 'How much did you spend?');
     }
 
-    return 'Какая сумма?';
+    return this.phrase(language, 'Какая сумма?', 'What amount should I use?');
+  }
+
+  private phrase(language: AILanguage, ru: string, en: string) {
+    return language === 'en' ? en : ru;
   }
 
   private shortCandidateLabel(value: string) {
