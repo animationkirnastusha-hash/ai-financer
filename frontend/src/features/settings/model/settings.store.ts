@@ -10,6 +10,7 @@ import type {
 type SettingsState = AppSettings & {
   setAppLanguage: (language: AppLanguage) => void;
   applyTelegramLanguage: (languageCode?: string | null) => void;
+  applyRemoteLanguage: (languageCode?: string | null) => void;
 
   setCompanionName: (name: string) => void;
 
@@ -128,6 +129,17 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   },
 
   applyTelegramLanguage: (languageCode) => {
+    const state = get();
+    if (state.appLanguageSource === 'user') return;
+
+    const appLanguage = normalizeTelegramLanguage(languageCode);
+    if (state.appLanguage === appLanguage && state.appLanguageSource === 'telegram') return;
+
+    set({ appLanguage, appLanguageSource: 'telegram', companionName: FIXED_COMPANION_NAME });
+    saveSettings(get());
+  },
+
+  applyRemoteLanguage: (languageCode) => {
     const state = get();
     if (state.appLanguageSource === 'user') return;
 

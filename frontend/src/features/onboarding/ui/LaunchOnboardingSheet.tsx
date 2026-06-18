@@ -3,7 +3,9 @@ import { useAuthStore } from '@/features/auth/model/auth.store';
 import { useAppModalStore } from '@/features/modals/model/appModal.store';
 import { useNavigationStore } from '@/features/navigation/model/navigation.store';
 import { useOnboardingStore } from '@/features/onboarding/model/onboarding.store';
+import { useSettingsStore } from '@/features/settings/model/settings.store';
 import { useI18n } from '@/shared/lib/i18n';
+import type { AppLanguage } from '@/features/settings/model/settings.types';
 
 function getFirstName(user: ReturnType<typeof useAuthStore.getState>['user']) {
   return user?.firstName || user?.username || '';
@@ -16,10 +18,14 @@ export function LaunchOnboardingSheet() {
   const isOpen = useOnboardingStore((state) => state.isOpen);
   const complete = useOnboardingStore((state) => state.complete);
   const user = useAuthStore((state) => state.user);
+  const syncUserLocale = useAuthStore((state) => state.syncUserLocale);
+  const appLanguage = useSettingsStore((state) => state.appLanguage);
+  const setAppLanguage = useSettingsStore((state) => state.setAppLanguage);
   const navigateTo = useNavigationStore((state) => state.navigateTo);
   const openModal = useAppModalStore((state) => state.openModal);
 
   const name = useMemo(() => getFirstName(user), [user]);
+  const shouldShowLanguageChoice = !user?.locale;
 
   useEffect(() => {
     if (!isOpen) return;
@@ -36,6 +42,11 @@ export function LaunchOnboardingSheet() {
   }, [isOpen]);
 
   if (!isOpen) return null;
+
+  const chooseLanguage = (language: AppLanguage) => {
+    setAppLanguage(language);
+    void syncUserLocale(language);
+  };
 
   const continueInChat = () => {
     complete();
@@ -54,6 +65,28 @@ export function LaunchOnboardingSheet() {
         <div className="app-modal-handle" />
 
         <div className="app-modal-body onboarding-setup-body onboarding-setup-body--compact">
+
+          {shouldShowLanguageChoice ? (
+            <section className="onboarding-language-card" aria-label={t('onboarding.language.aria')}>
+              <div>
+                <strong>{t('onboarding.language.title')}</strong>
+                <span>{t('onboarding.language.caption')}</span>
+              </div>
+              <div className="onboarding-language-actions" role="group" aria-label={t('onboarding.language.aria')}>
+                {(['en', 'ru'] as AppLanguage[]).map((language) => (
+                  <button
+                    key={language}
+                    type="button"
+                    className={appLanguage === language ? 'is-active' : ''}
+                    onClick={() => chooseLanguage(language)}
+                  >
+                    {t(language === 'en' ? 'onboarding.language.en' : 'onboarding.language.ru')}
+                  </button>
+                ))}
+              </div>
+            </section>
+          ) : null}
+
           <section className="onboarding-welcome-card">
             <div className="onboarding-fina-mark" aria-hidden="true">✦</div>
             <div className="app-eyebrow">{t('onboarding.welcome.eyebrow')}</div>

@@ -10,6 +10,7 @@ export type AuthUserDto = {
   photoUrl?: string | null;
   tier?: string;
   isAdmin?: boolean;
+  locale?: 'en' | 'ru' | null;
 };
 
 export type LoginResponse = {
@@ -35,6 +36,11 @@ export const authApi = {
     apiClient.get<{
       user: AuthUserDto;
     }>('/auth/me'),
+
+  updateLocale: (locale: 'en' | 'ru') =>
+    apiClient.patch<{
+      user: AuthUserDto;
+    }>('/auth/locale', { locale }),
 
   fallbackInfo: () => apiClient.get<FallbackInfoResponse>('/auth/fallback/info'),
 

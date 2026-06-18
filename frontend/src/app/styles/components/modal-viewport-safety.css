@@ -1,0 +1,104 @@
+/* Pack 151: final modal viewport contract. Keep after older modal split files. */
+.app-modal-backdrop,
+.app-drawer-backdrop,
+.notification-backdrop,
+.trial-offer-backdrop,
+.app-home-chart-backdrop,
+.app-transaction-edit-backdrop {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  width: 100vw;
+  height: 100dvh;
+  overflow: hidden;
+  padding-top: max(6px, env(safe-area-inset-top));
+  isolation: isolate;
+}
+
+.app-modal-sheet,
+.app-drawer-sheet,
+.notification-sheet,
+.trial-offer-sheet,
+.app-transaction-edit-sheet,
+.app-home-chart-sheet {
+  display: flex;
+  flex-direction: column;
+  width: min(100%, 620px);
+  max-width: 100%;
+  max-height: calc(100dvh - max(8px, env(safe-area-inset-top)));
+  min-height: 0;
+  overflow: hidden;
+}
+
+.app-modal-header,
+.app-modal-footer {
+  flex: 0 0 auto;
+}
+
+.app-modal-body,
+.app-drawer-body,
+.notification-sheet__body,
+.trial-offer-sheet__body,
+.store-payment-sheet__body,
+.store-limits-sheet__body,
+.app-settings-modal__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: none;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.app-modal-sheet [data-modal-drag-ignore="true"],
+.app-modal-body input,
+.app-modal-body textarea,
+.app-modal-body select,
+.app-modal-body button,
+.app-modal-body a {
+  touch-action: manipulation;
+}
+
+@media (max-width: 560px) {
+  .app-modal-backdrop,
+  .app-drawer-backdrop,
+  .notification-backdrop,
+  .trial-offer-backdrop,
+  .app-home-chart-backdrop,
+  .app-transaction-edit-backdrop {
+    padding-inline: 0;
+  }
+
+  .app-modal-sheet,
+  .app-drawer-sheet,
+  .notification-sheet,
+  .trial-offer-sheet,
+  .app-transaction-edit-sheet,
+  .app-home-chart-sheet {
+    width: 100%;
+    max-height: calc(100dvh - max(6px, env(safe-area-inset-top)));
+    border-radius: 28px 28px 0 0;
+  }
+}
+
+/* Legacy sheets that still render outside AppModalManager keep the same viewport rules. */
+[data-ai-core-modal="true"].fixed,
+.app-account-details-sheet {
+  width: 100vw;
+  height: 100dvh;
+  overflow: hidden;
+  padding-top: max(6px, env(safe-area-inset-top));
+}
+
+[data-ai-core-modal="true"].fixed > div,
+.app-account-details-sheet__panel,
+.app-account-transfer-sheet,
+.premium-upgrade-sheet {
+  max-height: calc(100dvh - max(8px, env(safe-area-inset-top)));
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
+}

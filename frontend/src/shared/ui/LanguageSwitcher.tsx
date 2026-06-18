@@ -1,4 +1,5 @@
 import { useSettingsStore } from '@/features/settings/model/settings.store';
+import { useAuthStore } from '@/features/auth/model/auth.store';
 import type { AppLanguage } from '@/features/settings/model/settings.types';
 
 const labels: Record<AppLanguage, string> = {
@@ -13,9 +14,12 @@ type Props = {
 export function LanguageSwitcher({ compact = false }: Props) {
   const appLanguage = useSettingsStore((state) => state.appLanguage);
   const setAppLanguage = useSettingsStore((state) => state.setAppLanguage);
+  const syncUserLocale = useAuthStore((state) => state.syncUserLocale);
 
   const setLanguage = (language: AppLanguage) => {
-    if (language !== appLanguage) setAppLanguage(language);
+    if (language === appLanguage) return;
+    setAppLanguage(language);
+    void syncUserLocale(language);
   };
 
   return (

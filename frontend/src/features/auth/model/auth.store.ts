@@ -2,6 +2,8 @@ import { create } from 'zustand';
 import { authApi, type AuthUserDto } from '@/features/chat/api/auth.api';
 import { hasTelegramRuntime } from '@/shared/lib/telegram';
 import { clearAccessToken, setAccessToken } from '@/features/auth/lib/accessToken';
+import { useSettingsStore } from '@/features/settings/model/settings.store';
+import type { AppLanguage } from '@/features/settings/model/settings.types';
 
 type AuthState = {
   user: AuthUserDto | null;
@@ -12,6 +14,7 @@ type AuthState = {
 
   bootstrap: (initData?: string) => Promise<void>;
   loginWithFallbackCode: (code: string) => Promise<void>;
+  syncUserLocale: (locale: AppLanguage) => Promise<void>;
   logout: () => void;
 };
 
@@ -27,7 +30,13 @@ function saveAuth(response: { token: string; mode: string; user: AuthUserDto }) 
   localStorage.setItem(AUTH_MODE_KEY, response.mode);
 }
 
-export const useAuthStore = create<AuthState>((set) => ({
+function applyRemoteLocale(user: AuthUserDto | null | undefined) {
+  if (user?.locale) {
+    useSettingsStore.getState().applyRemoteLanguage(user.locale);
+  }
+}
+
+export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
   token: null,
   isReady: false,
@@ -63,6 +72,7 @@ export const useAuthStore = create<AuthState>((set) => ({
         const response = await authApi.login(initData);
 
         saveAuth(response);
+        applyRemoteLocale(response.user);
 
         set({
           user: response.user,
@@ -82,6 +92,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       const response = await authApi.login();
 
       saveAuth(response);
+      applyRemoteLocale(response.user);
 
       set({
         user: response.user,
@@ -115,6 +126,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       const response = await authApi.verifyFallbackCode(code);
 
       saveAuth(response);
+      applyRemoteLocale(response.user);
 
       set({
         user: response.user,
@@ -131,6 +143,20 @@ export const useAuthStore = create<AuthState>((set) => ({
         isLoading: false,
         error: error instanceof Error ? error.message : 'Код входа не подошёл',
       });
+    }
+  },
+
+  syncUserLocale: async (locale) => {
+    const currentUser = get().user;
+    if (!currentUser) return;
+
+    set({ user: { ...currentUser, locale } });
+
+    try {
+      const response = await authApi.updateLocale(locale);
+      set({ user: response.user });
+    } catch {
+      set({ user: currentUser });
     }
   },
 
