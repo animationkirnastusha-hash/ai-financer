@@ -9,8 +9,9 @@ export const getAdminOverview = asyncHandler(async (_req: AuthRequest, res: Resp
   res.json(await adminService.getOverview());
 });
 
-export const getAdminUsers = asyncHandler(async (_req: AuthRequest, res: Response) => {
-  res.json({ users: await adminService.getUsers() });
+export const getAdminUsers = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const query = typeof req.query.q === 'string' ? req.query.q : '';
+  res.json({ users: await adminService.getUsers({ query }) });
 });
 
 export const getAdminEvents = asyncHandler(async (_req: AuthRequest, res: Response) => {

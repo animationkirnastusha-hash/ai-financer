@@ -41,4 +41,6 @@ export const profileDictionary = {
   'profile.examples.group.questions': 'Questions',
   'profile.examples.today': 'How much did I spend today?',
   'profile.examples.balance': 'What is my total balance?',
+  'profile.publicId.label': 'Support ID',
+  'profile.publicId.copy': 'Copy',
 } as const;

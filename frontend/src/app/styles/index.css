@@ -50,6 +50,7 @@
 @import "./pages/referral.css";
 @import "./pages/analytics-layout.css";
 @import "./pages/admin/ai-training.css";
+@import "./pages/admin/admin-users.css";
 @import "./features/store/store-layout.css";
 @import "./features/store/store-layout-compact.css";
 @import "./features/store/store-foldouts.css";

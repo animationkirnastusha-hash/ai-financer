@@ -1,11 +1,15 @@
+import { FormEvent, useEffect, useState } from 'react';
 import type { AdminUser } from '@/features/admin/api/admin.api';
+import { useI18n } from '@/shared/lib/i18n';
 import { formatDate, formatSubscriptionDate } from './adminPage.formatters';
 
 type Props = {
   users: AdminUser[];
+  searchQuery: string;
   resettingUserId: string | null;
   subscriptionBusy: string | null;
   subscriptionDays: Record<string, string>;
+  onSearch: (query: string) => void;
   onSubscriptionDaysChange: (userId: string, value: string) => void;
   onResetUser: (userId: string, mode: 'finance' | 'full') => void;
   onGrantSubscription: (userId: string, product: 'premium' | 'business', lifetime?: boolean) => void;
@@ -13,95 +17,151 @@ type Props = {
   onRestartTrial: (userId: string) => void;
 };
 
+function userName(user: AdminUser) {
+  return `${user.firstName} ${user.lastName ?? ''}`.trim() || user.username || user.publicId;
+}
+
 export function AdminUsersPanel({
   users,
+  searchQuery,
   resettingUserId,
   subscriptionBusy,
   subscriptionDays,
+  onSearch,
   onSubscriptionDaysChange,
   onResetUser,
   onGrantSubscription,
   onRevokeSubscription,
   onRestartTrial,
 }: Props) {
+  const { t } = useI18n();
+  const [query, setQuery] = useState(searchQuery);
+  const [copied, setCopied] = useState<string | null>(null);
+
+  useEffect(() => {
+    setQuery(searchQuery);
+  }, [searchQuery]);
+
+  const submitSearch = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    onSearch(query.trim());
+  };
+
+  const copyValue = async (value: string) => {
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopied(value);
+      window.setTimeout(() => setCopied((current) => (current === value ? null : current)), 1300);
+    } catch {
+      setCopied(null);
+    }
+  };
+
   return (
-    <section className="space-y-3">
-      {users.map((item) => (
-        <div key={item.id} className="app-card p-4">
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <div className="truncate font-semibold">{item.firstName} {item.lastName ?? ''}</div>
-              <div className="mt-1 text-xs text-white/42">@{item.username ?? '—'} · {item.telegramId}</div>
-            </div>
-            <div className="rounded-full bg-white/8 px-3 py-1 text-xs text-white/60">{item.tier}</div>
-          </div>
+    <section className="admin-users-panel">
+      <form className="app-card admin-users-search" onSubmit={submitSearch}>
+        <div>
+          <div className="app-eyebrow">{t('admin.users.search.eyebrow')}</div>
+          <h2>{t('admin.users.search.title')}</h2>
+          <p>{t('admin.users.search.caption')}</p>
+        </div>
+        <div className="admin-users-search__controls">
+          <input
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder={t('admin.users.search.placeholder')}
+            inputMode="search"
+          />
+          <button type="submit">{t('admin.users.search.action')}</button>
+        </div>
+      </form>
 
-          <div className="mt-3 grid grid-cols-3 gap-2 text-center text-xs text-white/55">
-            <div className="rounded-[16px] bg-black/18 p-2">Счета<br /><b className="text-white">{item._count.accounts}</b></div>
-            <div className="rounded-[16px] bg-black/18 p-2">Операции<br /><b className="text-white">{item._count.transactions}</b></div>
-            <div className="rounded-[16px] bg-black/18 p-2">Рефералы<br /><b className="text-white">{item._count.referrals}</b></div>
-          </div>
+      {!searchQuery ? (
+        <div className="app-card admin-users-empty">
+          <b>{t('admin.users.empty.title')}</b>
+          <span>{t('admin.users.empty.caption')}</span>
+        </div>
+      ) : null}
 
-          <div className="mt-3 text-xs text-white/38">Создан: {formatDate(item.createdAt)} · активность: {formatDate(item.lastActiveAt)}</div>
+      {searchQuery && users.length === 0 ? (
+        <div className="app-card admin-users-empty">
+          <b>{t('admin.users.noResults.title')}</b>
+          <span>{t('admin.users.noResults.caption')}</span>
+        </div>
+      ) : null}
 
-          <div className="mt-3 rounded-[20px] border border-white/8 bg-black/18 p-3">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <div className="text-xs font-semibold text-white/80">Доступ</div>
-                <div className="mt-1 text-[11px] text-white/40">
-                  Premium: {item.subscription?.premiumLifetime ? 'навсегда' : formatSubscriptionDate(item.subscription?.premiumUntil)} · Business: {item.subscription?.businessLifetime ? 'навсегда' : formatSubscriptionDate(item.subscription?.businessUntil)}
-                </div>
+      <div className="admin-users-list">
+        {users.map((item) => (
+          <article key={item.id} className="app-card admin-user-card">
+            <div className="admin-user-card__head">
+              <div className="admin-user-card__identity">
+                <strong>{userName(item)}</strong>
+                <span>@{item.username ?? '—'} · Telegram {item.telegramId}</span>
               </div>
-              <button
-                type="button"
-                className="rounded-2xl border border-white/10 bg-white/[0.055] px-3 py-2 text-[11px] font-semibold text-white/70"
-                disabled={subscriptionBusy !== null}
-                onClick={() => onRestartTrial(item.id)}
-              >
-                {subscriptionBusy === `${item.id}:trial` ? 'Включаю…' : 'Триал'}
+              <div className="admin-user-card__badges">
+                <button type="button" onClick={() => void copyValue(item.publicId)}>
+                  ID {item.publicId}
+                  <small>{copied === item.publicId ? t('common.copied') : t('common.copy')}</small>
+                </button>
+                <em>{item.tier}</em>
+              </div>
+            </div>
+
+            <div className="admin-user-card__meta">
+              <button type="button" onClick={() => void copyValue(item.telegramId)}>{t('admin.users.copyTelegram')}</button>
+              <span>{t('admin.users.created')}: {formatDate(item.createdAt)}</span>
+              <span>{t('admin.users.activity')}: {formatDate(item.lastActiveAt)}</span>
+            </div>
+
+            <div className="admin-user-stats">
+              <div><span>{t('admin.users.accounts')}</span><b>{item._count.accounts}</b></div>
+              <div><span>{t('admin.users.transactions')}</span><b>{item._count.transactions}</b></div>
+              <div><span>{t('admin.users.referrals')}</span><b>{item._count.referrals}</b></div>
+            </div>
+
+            <div className="admin-user-access">
+              <div className="admin-user-access__head">
+                <div>
+                  <b>{t('admin.users.access')}</b>
+                  <span>
+                    Premium: {item.subscription?.premiumLifetime ? t('admin.users.forever') : formatSubscriptionDate(item.subscription?.premiumUntil)} · Business: {item.subscription?.businessLifetime ? t('admin.users.forever') : formatSubscriptionDate(item.subscription?.businessUntil)}
+                  </span>
+                </div>
+                <button type="button" disabled={subscriptionBusy !== null} onClick={() => onRestartTrial(item.id)}>
+                  {subscriptionBusy === `${item.id}:trial` ? t('admin.users.trial.loading') : t('admin.users.trial')}
+                </button>
+              </div>
+
+              <div className="admin-user-access__days">
+                <input
+                  value={subscriptionDays[item.id] ?? '30'}
+                  onChange={(event) => onSubscriptionDaysChange(item.id, event.target.value)}
+                  inputMode="numeric"
+                />
+                <span>{t('admin.users.days')}</span>
+              </div>
+
+              <div className="admin-user-actions admin-user-actions--access">
+                <button type="button" disabled={subscriptionBusy !== null} onClick={() => onGrantSubscription(item.id, 'premium')}>Premium</button>
+                <button type="button" disabled={subscriptionBusy !== null} onClick={() => onGrantSubscription(item.id, 'business')}>Business</button>
+                <button type="button" disabled={subscriptionBusy !== null} onClick={() => onGrantSubscription(item.id, 'premium', true)}>{t('admin.users.premiumForever')}</button>
+                <button type="button" disabled={subscriptionBusy !== null} onClick={() => onGrantSubscription(item.id, 'business', true)}>{t('admin.users.businessForever')}</button>
+                <button type="button" disabled={subscriptionBusy !== null} onClick={() => onRevokeSubscription(item.id, 'premium')}>{t('admin.users.revokePremium')}</button>
+                <button type="button" disabled={subscriptionBusy !== null} onClick={() => onRevokeSubscription(item.id, 'business')}>{t('admin.users.revokeBusiness')}</button>
+              </div>
+            </div>
+
+            <div className="admin-user-actions admin-user-actions--danger">
+              <button type="button" disabled={resettingUserId !== null} onClick={() => onResetUser(item.id, 'finance')}>
+                {resettingUserId === item.id + ':finance' ? t('admin.users.reset.finance.loading') : t('admin.users.reset.finance')}
+              </button>
+              <button type="button" disabled={resettingUserId !== null} onClick={() => onResetUser(item.id, 'full')}>
+                {resettingUserId === item.id + ':full' ? t('admin.users.reset.full.loading') : t('admin.users.reset.full')}
               </button>
             </div>
-
-            <div className="mt-3 flex items-center gap-2">
-              <input
-                value={subscriptionDays[item.id] ?? '30'}
-                onChange={(event) => onSubscriptionDaysChange(item.id, event.target.value)}
-                inputMode="numeric"
-                className="min-w-0 flex-1 rounded-2xl border border-white/10 bg-white/[0.055] px-3 py-2 text-xs text-white outline-none"
-              />
-              <span className="text-[11px] text-white/38">дней</span>
-            </div>
-
-            <div className="mt-2 grid grid-cols-2 gap-2">
-              <button type="button" className="rounded-2xl border border-emerald-300/20 bg-emerald-400/10 px-3 py-2 text-[11px] font-semibold text-emerald-100" disabled={subscriptionBusy !== null} onClick={() => onGrantSubscription(item.id, 'premium')}>Premium</button>
-              <button type="button" className="rounded-2xl border border-sky-300/20 bg-sky-400/10 px-3 py-2 text-[11px] font-semibold text-sky-100" disabled={subscriptionBusy !== null} onClick={() => onGrantSubscription(item.id, 'business')}>Business</button>
-              <button type="button" className="rounded-2xl border border-emerald-300/20 bg-emerald-400/10 px-3 py-2 text-[11px] font-semibold text-emerald-100" disabled={subscriptionBusy !== null} onClick={() => onGrantSubscription(item.id, 'premium', true)}>Premium навсегда</button>
-              <button type="button" className="rounded-2xl border border-sky-300/20 bg-sky-400/10 px-3 py-2 text-[11px] font-semibold text-sky-100" disabled={subscriptionBusy !== null} onClick={() => onGrantSubscription(item.id, 'business', true)}>Business навсегда</button>
-              <button type="button" className="rounded-2xl border border-white/10 bg-white/[0.055] px-3 py-2 text-[11px] font-semibold text-white/60" disabled={subscriptionBusy !== null} onClick={() => onRevokeSubscription(item.id, 'premium')}>Снять Premium</button>
-              <button type="button" className="rounded-2xl border border-white/10 bg-white/[0.055] px-3 py-2 text-[11px] font-semibold text-white/60" disabled={subscriptionBusy !== null} onClick={() => onRevokeSubscription(item.id, 'business')}>Снять Business</button>
-            </div>
-          </div>
-
-          <div className="mt-3 grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              className="block w-full rounded-2xl border border-white/10 bg-white/[0.055] px-3 py-2.5 text-center text-xs font-bold text-white/88 transition active:scale-[0.985] disabled:cursor-not-allowed disabled:opacity-55"
-              disabled={resettingUserId !== null}
-              onClick={() => onResetUser(item.id, 'finance')}
-            >
-              {resettingUserId === item.id + ':finance' ? 'Сбрасываю…' : 'Сбросить финансы'}
-            </button>
-            <button
-              type="button"
-              className="block w-full rounded-2xl border border-rose-300/25 bg-rose-500/10 px-3 py-2.5 text-center text-xs font-bold text-rose-100 transition active:scale-[0.985] disabled:cursor-not-allowed disabled:opacity-55"
-              disabled={resettingUserId !== null}
-              onClick={() => onResetUser(item.id, 'full')}
-            >
-              {resettingUserId === item.id + ':full' ? 'Обнуляю…' : 'Обнулить всё'}
-            </button>
-          </div>
-        </div>
-      ))}
+          </article>
+        ))}
+      </div>
     </section>
   );
 }

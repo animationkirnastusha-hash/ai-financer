@@ -4,6 +4,7 @@ import { monitoringService } from '../monitoring/monitoring.instance';
 import { dataResetService } from '../data-reset/service';
 import { subscriptionService } from '../subscription/service';
 import { aiTrainingExampleService } from '../ai/ai-training-example.service';
+import { createPublicUserId } from '../users/lib/public-user-id';
 
 function startOfDay(daysAgo: number) {
   const date = new Date();
@@ -51,6 +52,23 @@ function parseRevokeBody(input: unknown) {
 
 function normalizeResetMode(value: unknown) {
   return value === 'full' ? 'full' as const : 'finance' as const;
+}
+
+function normalizeAdminSearchQuery(value: unknown) {
+  return String(value ?? '').trim().slice(0, 80);
+}
+
+function digitsOnly(value: string) {
+  return value.replace(/\D/g, '');
+}
+
+function isSafeBigIntString(value: string) {
+  return /^\d{6,20}$/.test(value);
+}
+
+function userMatchesComputedPublicId(user: { id: string; telegramId: bigint }, query: string) {
+  const digits = digitsOnly(query);
+  return digits.length === 5 && createPublicUserId(user) === digits;
 }
 
 function parseAdminResetBody(input: unknown, expectedConfirm: string) {
@@ -186,10 +204,30 @@ export class AdminService {
     };
   }
 
-  async getUsers() {
+  async getUsers(options: { query?: string } = {}) {
+    const query = normalizeAdminSearchQuery(options.query);
+
+    if (!query) {
+      return [];
+    }
+
+    const digits = digitsOnly(query);
+    const searchByTelegramId = isSafeBigIntString(digits) ? BigInt(digits) : null;
+    const shouldCheckComputedPublicId = digits.length === 5;
+
     const users = await prisma.user.findMany({
+      where: {
+        OR: [
+          ...(searchByTelegramId !== null ? [{ telegramId: searchByTelegramId }] : []),
+          { id: { contains: query } },
+          { username: { contains: query } },
+          { firstName: { contains: query } },
+          { lastName: { contains: query } },
+          { referralCode: { contains: query } },
+        ],
+      },
       orderBy: { createdAt: 'desc' },
-      take: 100,
+      take: 50,
       select: {
         id: true,
         telegramId: true,
@@ -224,8 +262,54 @@ export class AdminService {
       },
     });
 
-    return users.map((user) => ({
+    const publicIdMatches = shouldCheckComputedPublicId
+      ? await prisma.user.findMany({
+          orderBy: { createdAt: 'desc' },
+          take: 5_000,
+          select: {
+            id: true,
+            telegramId: true,
+            firstName: true,
+            lastName: true,
+            username: true,
+            tier: true,
+            isAdmin: true,
+            referralCode: true,
+            referralBalance: true,
+            xp: true,
+            level: true,
+            streakDays: true,
+            lastActiveAt: true,
+            createdAt: true,
+            subscription: {
+              select: {
+                premiumUntil: true,
+                businessUntil: true,
+                trialUntil: true,
+                premiumLifetime: true,
+                businessLifetime: true,
+              },
+            },
+            _count: {
+              select: {
+                accounts: true,
+                transactions: true,
+                referrals: true,
+              },
+            },
+          },
+        })
+      : [];
+
+    const merged = new Map<string, (typeof users)[number]>();
+    for (const user of users) merged.set(user.id, user);
+    for (const user of publicIdMatches) {
+      if (userMatchesComputedPublicId(user, query)) merged.set(user.id, user);
+    }
+
+    return Array.from(merged.values()).map((user) => ({
       ...user,
+      publicId: createPublicUserId(user),
       telegramId: user.telegramId.toString(),
     }));
   }

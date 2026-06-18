@@ -4,6 +4,7 @@ import jwt, { type SignOptions } from 'jsonwebtoken';
 import { env } from '../../config/env';
 import { prisma } from '../../lib/prisma';
 import type { TelegramInitDataUser } from '../../shared/utils/telegramAuth';
+import { createPublicUserId } from '../users/lib/public-user-id';
 
 type FallbackLoginCodeRecord = {
   code: string;
@@ -165,6 +166,7 @@ export class AuthService {
 
     return {
       id: user.id,
+      publicId: createPublicUserId(user),
       telegramId,
       username: user.username,
       firstName: user.firstName,

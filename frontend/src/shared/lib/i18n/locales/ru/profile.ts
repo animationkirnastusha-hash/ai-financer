@@ -41,4 +41,6 @@ export const profileDictionary = {
   'profile.examples.group.questions': 'Вопросы',
   'profile.examples.today': 'Сколько я потратил сегодня?',
   'profile.examples.balance': 'Какой общий баланс?',
+  'profile.publicId.label': 'ID для поддержки',
+  'profile.publicId.copy': 'Скопировать',
 } as const;

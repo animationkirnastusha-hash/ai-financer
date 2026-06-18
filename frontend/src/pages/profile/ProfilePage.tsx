@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useAuthStore } from '@/features/auth/model/auth.store';
 import { useNavigationStore, type SettingsSection } from '@/features/navigation/model/navigation.store';
 import { useLearningProgressStore, type LearningProgressStep } from '@/features/onboarding/model/learning-progress.store';
@@ -43,6 +43,7 @@ export default function ProfilePage() {
   const loadSubscription = useSubscriptionStore((state) => state.load);
   const referral = useReferralStore((state) => state.info);
   const loadReferral = useReferralStore((state) => state.load);
+  const [publicIdCopied, setPublicIdCopied] = useState(false);
 
   useEffect(() => {
     void Promise.allSettled([loadSubscription(), loadReferral()]);
@@ -50,6 +51,19 @@ export default function ProfilePage() {
 
   const plan = formatPlan(subscription?.access?.status);
   const displayName = user?.firstName || user?.username || t('profile.user.fallback');
+  const publicId = user?.publicId ?? '';
+
+  const copyPublicId = async () => {
+    if (!publicId) return;
+
+    try {
+      await navigator.clipboard.writeText(publicId);
+      setPublicIdCopied(true);
+      window.setTimeout(() => setPublicIdCopied(false), 1300);
+    } catch {
+      setPublicIdCopied(false);
+    }
+  };
 
   const commandGroups = useMemo(() => [
     {
@@ -101,6 +115,13 @@ export default function ProfilePage() {
             <div className="app-eyebrow">{t('profile.hero.eyebrow')}</div>
             <h1>{displayName}</h1>
             <p>{t('profile.hero.caption')}</p>
+            {publicId ? (
+              <button type="button" className="profile-public-id" onClick={() => void copyPublicId()}>
+                <span>{t('profile.publicId.label')}</span>
+                <b>{publicId}</b>
+                <small>{publicIdCopied ? t('common.copied') : t('profile.publicId.copy')}</small>
+              </button>
+            ) : null}
           </div>
           <div className="profile-hub-hero__stats">
             <article><span>{t('profile.plan')}</span><strong>{plan}</strong></article>

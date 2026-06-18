@@ -46,6 +46,7 @@ export type AdminMonitoring = {
 
 export type AdminUser = {
   id: string;
+  publicId: string;
   telegramId: string;
   firstName: string;
   lastName: string | null;
@@ -102,7 +103,11 @@ export type AdminSubscriptionProduct = 'premium' | 'business';
 
 export const adminApi = {
   overview: () => apiClient.get<AdminOverview>('/admin/overview'),
-  users: () => apiClient.get<{ users: AdminUser[] }>('/admin/users'),
+  users: (query = '') => {
+    const search = query.trim();
+    const suffix = search ? '?q=' + encodeURIComponent(search) : '';
+    return apiClient.get<{ users: AdminUser[] }>('/admin/users' + suffix);
+  },
   events: () => apiClient.get<{ events: AdminEvent[] }>('/admin/events'),
   monitoring: () => apiClient.get<AdminMonitoring>('/admin/monitoring'),
   resetUser: (userId: string, mode: AdminResetMode, confirm: string) => apiClient.post<{ success: boolean }>('/admin/users/' + userId + '/reset', { mode, confirm }),

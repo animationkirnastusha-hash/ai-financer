@@ -19,7 +19,7 @@ export function useAdminDashboardData(isAdmin: boolean) {
 
     Promise.allSettled([
       adminApi.overview(),
-      adminApi.users(),
+      adminApi.users(''),
       adminApi.events(),
     ])
       .then(([overviewResult, usersResult, eventsResult]) => {
@@ -46,8 +46,8 @@ export function useAdminDashboardData(isAdmin: boolean) {
     };
   }, [isAdmin]);
 
-  const reloadUsers = async () => {
-    const payload = await adminApi.users();
+  const reloadUsers = async (query = '') => {
+    const payload = await adminApi.users(query);
     setUsers(payload.users);
   };
 

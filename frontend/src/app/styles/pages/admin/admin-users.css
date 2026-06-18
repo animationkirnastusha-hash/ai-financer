@@ -1,0 +1,250 @@
+.admin-users-panel,
+.admin-users-list {
+  display: grid;
+  gap: 12px;
+}
+
+.admin-users-search {
+  display: grid;
+  gap: 16px;
+}
+
+.admin-users-search h2 {
+  margin-top: 6px;
+  font-size: clamp(22px, 7vw, 30px);
+  font-weight: 760;
+  letter-spacing: -0.04em;
+}
+
+.admin-users-search p,
+.admin-users-empty span {
+  margin-top: 6px;
+  color: rgba(255, 255, 255, 0.52);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.admin-users-search__controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+}
+
+.admin-users-search__controls input,
+.admin-user-access__days input {
+  min-width: 0;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+  outline: none;
+}
+
+.admin-users-search__controls input {
+  min-height: 46px;
+  padding: 0 14px;
+  font-size: 14px;
+}
+
+.admin-users-search__controls button,
+.admin-user-card button {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.075);
+  color: rgba(255, 255, 255, 0.86);
+  font-weight: 720;
+  transition: transform 0.16s ease, background 0.16s ease;
+}
+
+.admin-users-search__controls button {
+  padding: 0 16px;
+  font-size: 13px;
+}
+
+.admin-users-search__controls button:active,
+.admin-user-card button:active {
+  transform: scale(0.985);
+}
+
+.admin-users-empty {
+  display: grid;
+  gap: 4px;
+}
+
+.admin-user-card {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+}
+
+.admin-user-card__head,
+.admin-user-access__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.admin-user-card__identity {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.admin-user-card__identity strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 15px;
+}
+
+.admin-user-card__identity span,
+.admin-user-card__meta,
+.admin-user-access span,
+.admin-user-stats span,
+.admin-user-card__badges small {
+  color: rgba(255, 255, 255, 0.48);
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.admin-user-card__badges {
+  display: grid;
+  justify-items: end;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.admin-user-card__badges button {
+  display: grid;
+  gap: 1px;
+  padding: 7px 10px;
+  text-align: right;
+  font-size: 12px;
+}
+
+.admin-user-card__badges em {
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  padding: 5px 10px;
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 700;
+}
+
+.admin-user-card__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.admin-user-card__meta button {
+  padding: 7px 10px;
+  font-size: 11px;
+}
+
+.admin-user-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  text-align: center;
+}
+
+.admin-user-stats div,
+.admin-user-access {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 18px;
+  background: rgba(0, 0, 0, 0.18);
+}
+
+.admin-user-stats div {
+  display: grid;
+  gap: 4px;
+  padding: 10px 8px;
+}
+
+.admin-user-stats b {
+  font-size: 16px;
+}
+
+.admin-user-access {
+  display: grid;
+  gap: 12px;
+  padding: 12px;
+}
+
+.admin-user-access__head > div {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.admin-user-access__head button {
+  padding: 9px 11px;
+  font-size: 11px;
+  flex-shrink: 0;
+}
+
+.admin-user-access__days {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+}
+
+.admin-user-access__days input {
+  height: 40px;
+  padding: 0 12px;
+  font-size: 13px;
+}
+
+.admin-user-actions {
+  display: grid;
+  gap: 8px;
+}
+
+.admin-user-actions--access {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.admin-user-actions button {
+  min-height: 42px;
+  padding: 8px 10px;
+  font-size: 11px;
+}
+
+.admin-user-actions--danger {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.admin-user-actions--danger button:last-child {
+  border-color: rgba(251, 113, 133, 0.26);
+  background: rgba(244, 63, 94, 0.12);
+  color: rgb(255, 228, 230);
+}
+
+.admin-user-card button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+@media (max-width: 420px) {
+  .admin-users-search__controls,
+  .admin-user-card__head,
+  .admin-user-access__head,
+  .admin-user-actions--access,
+  .admin-user-actions--danger {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-user-card__head,
+  .admin-user-access__head {
+    display: grid;
+  }
+
+  .admin-user-card__badges {
+    justify-items: stretch;
+  }
+}

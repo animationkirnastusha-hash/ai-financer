@@ -40,6 +40,8 @@ export const commonDictionary = {
   'common.edit': 'Edit',
   'common.loading': 'Loading...',
   'common.delete': 'Delete',
+  'common.copy': 'Copy',
+  'common.copied': 'Copied',
   'common.retry': 'Retry',
   'errorState.eyebrow': 'Needs attention',
   'errorState.title': 'Could not load data',

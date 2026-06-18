@@ -2,6 +2,7 @@ import { apiClient } from '@/shared/api/client';
 
 export type AuthUserDto = {
   id: string;
+  publicId?: string;
   telegramId?: string;
   username?: string | null;
   firstName?: string | null;

@@ -168,3 +168,49 @@
   letter-spacing: .14em;
   text-transform: uppercase;
 }
+
+.profile-public-id {
+  margin-top: 12px;
+  display: inline-grid;
+  grid-template-columns: auto auto auto;
+  align-items: center;
+  gap: 8px;
+  max-width: 100%;
+  border: 1px solid rgba(129, 239, 208, 0.18);
+  border-radius: 999px;
+  background: rgba(129, 239, 208, 0.09);
+  color: rgba(255, 255, 255, 0.92);
+  padding: 8px 10px;
+  text-align: left;
+}
+
+.profile-public-id span,
+.profile-public-id small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: rgba(255, 255, 255, 0.58);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.profile-public-id b {
+  color: rgba(255, 255, 255, 0.96);
+  font-size: 15px;
+  letter-spacing: 0.08em;
+}
+
+.profile-public-id:active {
+  transform: scale(0.985);
+}
+
+@media (max-width: 390px) {
+  .profile-public-id {
+    grid-template-columns: 1fr auto;
+    border-radius: 18px;
+  }
+
+  .profile-public-id small {
+    grid-column: 1 / -1;
+  }
+}
