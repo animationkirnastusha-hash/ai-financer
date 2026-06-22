@@ -73,6 +73,31 @@ export class TelegramBotClient {
     return payload.result;
   }
 
+
+  async editMessageText(chatId: number | string, messageId: number, text: string, replyMarkup?: ReplyMarkup) {
+    this.assertConfigured();
+
+    const response = await fetch(getApiUrl('editMessageText'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        chat_id: chatId,
+        message_id: messageId,
+        text,
+        parse_mode: 'HTML',
+        disable_web_page_preview: true,
+        ...(replyMarkup ? { reply_markup: replyMarkup } : {}),
+      }),
+    });
+
+    const payload = await readTelegramResponse<unknown>(response);
+    if (!response.ok || !payload.ok) {
+      throw new Error(payload.description || `Telegram editMessageText failed: ${response.status}`);
+    }
+
+    return payload.result;
+  }
+
   async answerCallbackQuery(callbackQueryId: string, text?: string) {
     this.assertConfigured();
 

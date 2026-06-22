@@ -16,7 +16,6 @@ export function StorePaymentSection() {
       <p>{t('store.payment.caption')}</p>
       <div className="store-payment-grid">
         <StorePaymentActions product="premium" title={t('store.payment.premiumTitle')} compact />
-        <StorePaymentActions product="business" title={t('store.payment.businessTitle')} compact />
       </div>
     </section>
   );

@@ -15,7 +15,7 @@ type Props = {
 const AUTO_SLIDE_MS = 6200;
 
 function getPriceKey(tone: StoreCard['tone']) {
-  if (tone === 'business') return 'store.showcase.businessPrice';
+  if (tone === 'business') return 'store.showcase.businessSoonPrice';
   if (tone === 'premium') return 'store.showcase.premiumPrice';
   return 'store.showcase.referralPrice';
 }
@@ -44,7 +44,8 @@ export function StoreProductCarousel({ cards, activeTone, hasPremium, hasBusines
 
   if (!activeCard) return null;
 
-  const isActiveAccess = activeCard.tone === 'premium' ? hasPremium : activeCard.tone === 'business' ? hasBusiness : false;
+  const isActiveAccess = activeCard.comingSoon ? false : activeCard.tone === 'premium' ? hasPremium : activeCard.tone === 'business' ? hasBusiness : false;
+  const isActiveBlocked = Boolean(activeCard.comingSoon);
   const compactItems = activeCard.items.slice(0, 3);
 
   const handlePointerDown = () => setIsAutoPaused(true);
@@ -55,14 +56,14 @@ export function StoreProductCarousel({ cards, activeTone, hasPremium, hasBusines
       <div className="store-carousel__viewport" onPointerDown={handlePointerDown} onPointerUp={handlePointerUp} onPointerCancel={handlePointerUp}>
         <div className="store-carousel__track" style={{ transform: `translateX(-${activeIndex * 100}%)` }}>
           {cards.map((card) => {
-            const hasAccess = card.tone === 'premium' ? hasPremium : card.tone === 'business' ? hasBusiness : false;
+            const hasAccess = card.comingSoon ? false : card.tone === 'premium' ? hasPremium : card.tone === 'business' ? hasBusiness : false;
 
             return (
               <article key={card.tone} className={cn('store-carousel-card', `store-carousel-card--${card.tone}`)}>
                 <div className="store-carousel-card__glow" aria-hidden="true" />
                 <div className="store-carousel-card__top">
                   <span>{t(card.eyebrow)}</span>
-                  {hasAccess ? <strong>{t('store.status.active')}</strong> : null}
+                  {card.comingSoon ? <strong>{t('store.status.soon')}</strong> : hasAccess ? <strong>{t('store.status.active')}</strong> : null}
                 </div>
                 <div className="store-carousel-card__copy">
                   <h2>{t(card.title)}</h2>
@@ -101,8 +102,8 @@ export function StoreProductCarousel({ cards, activeTone, hasPremium, hasBusines
         </div>
       </div>
 
-      <button type="button" className="store-carousel__buy app-primary-button app-animate-pop" onClick={() => onBuy(activeCard)} disabled={isActiveAccess}>
-        {isActiveAccess ? t('store.status.active') : t('store.carousel.buy')}
+      <button type="button" className="store-carousel__buy app-primary-button app-animate-pop" onClick={() => onBuy(activeCard)} disabled={isActiveAccess || isActiveBlocked}>
+        {isActiveBlocked ? t('store.action.businessSoon') : isActiveAccess ? t('store.status.active') : t('store.carousel.buy')}
       </button>
     </section>
   );

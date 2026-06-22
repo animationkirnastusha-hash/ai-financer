@@ -13,6 +13,7 @@ export type StoreCard = {
   action: I18nKey;
   price: I18nKey;
   tone: StoreCardTone;
+  comingSoon?: boolean;
 };
 
 export type StoreFeature = {
@@ -43,13 +44,14 @@ export const storeProductCards: StoreCard[] = [
     eyebrow: 'store.business.eyebrow',
     title: 'store.business.title',
     caption: 'store.business.caption',
+    comingSoon: true,
     items: [
       'store.business.item.workspace',
       'store.business.item.reports',
       'store.business.item.premiumGift',
     ],
-    action: 'store.action.businessBuy',
-    price: 'store.showcase.businessPrice',
+    action: 'store.action.businessSoon',
+    price: 'store.showcase.businessSoonPrice',
     tone: 'business',
   },
   {

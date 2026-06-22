@@ -46,8 +46,10 @@ async function telegram(method, body) {
 
 await telegram('setMyCommands', {
   commands: [
-    { command: 'start', description: 'Открыть Фину и посмотреть тарифы' },
-    { command: 'plans', description: 'Тарифы и цены' },
+    { command: 'start', description: 'Открыть меню Фины' },
+    { command: 'plans', description: 'Premium и будущая Бизнес Фина' },
+    { command: 'terms', description: 'Пользовательское соглашение' },
+    { command: 'support', description: 'Поддержка' },
     { command: 'language', description: 'Выбрать язык' },
     { command: 'login', description: 'Получить код входа' },
   ],
@@ -70,10 +72,10 @@ await telegram('setMyDescription', {
     'Фина помогает вести личные финансы в Telegram.',
     '',
     'Premium: 399 рублей в месяц.',
-    'Business: 899 рублей в месяц.',
+    'Бизнес Фина: скоро как отдельное Mini App.',
     'Разовые пакеты: 99 и 199 рублей.',
     '',
-    'Откройте приложение, чтобы выбрать тариф в магазине.',
+    'Нажмите Start, чтобы открыть меню, тарифы, поддержку и пользовательское соглашение.',
   ].join('\n'),
 });
 

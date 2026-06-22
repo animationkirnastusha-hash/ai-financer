@@ -74,6 +74,7 @@ export default function PremiumPage() {
   };
 
   const handleOpenPayment = (card: StoreCard) => {
+    if (card.comingSoon) return;
     if (card.product) setPaymentProduct(card);
   };
 

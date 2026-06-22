@@ -30,6 +30,7 @@ async function sleep(ms: number) {
 
 export function StorePaymentActions({ product, title, compact = false }: Props) {
   const { t } = useI18n();
+
   const user = useAuthStore((state) => state.user);
   const isAdmin = Boolean(user?.isAdmin);
   const setSubscription = useSubscriptionStore((state) => state.setStatus);
@@ -71,6 +72,15 @@ export function StorePaymentActions({ product, title, compact = false }: Props) 
   const discount = selected?.discountPercent ? t('store.payment.discount', { value: String(selected.discountPercent) }) : null;
   const singleProduct = !isSubscriptionProduct(product);
   const sbpAvailable = Boolean(catalog?.yookassaSbpConfigured);
+
+  if (product === 'business') {
+    return (
+      <div className={compact ? 'store-payment-actions store-payment-actions--compact' : 'store-payment-actions'}>
+        {title ? <h3>{title}</h3> : null}
+        <p className="store-payment-message">{t('store.business.soonPaymentCaption')}</p>
+      </div>
+    );
+  }
 
   const refreshOrder = async (orderId: string, attempts = 1) => {
     let latestStatus = '';

@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { useAuthStore } from '@/features/auth/model/auth.store';
 import { useNavigationStore, type AppScreen } from '@/features/navigation/model/navigation.store';
 import { useSubscriptionStore } from '@/features/subscription/model/subscription.store';
-import { canShowStoreSurface, hasFeatureAccess, hasRealBusinessAccess } from '@/features/subscription/lib/entitlements';
+import { canShowStoreSurface, hasFeatureAccess } from '@/features/subscription/lib/entitlements';
 import { useI18n, type I18nKey } from '@/shared/lib/i18n';
 
 type NavigationItem = {
@@ -34,9 +34,6 @@ const receiptLinks: NavigationItem[] = [
   { screen: 'receipt-scans', labelKey: 'screen.receipts', captionKey: 'nav.receipts.caption' },
 ];
 
-const businessLinks: NavigationItem[] = [
-  { screen: 'business-accountant', labelKey: 'screen.business', captionKey: 'nav.business.caption' },
-];
 
 const adminLinks: NavigationItem[] = [
   { screen: 'admin', labelKey: 'screen.admin', captionKey: 'nav.admin.caption' },
@@ -52,7 +49,6 @@ export function AppNavigationSheet() {
   const isAdmin = Boolean(user?.isAdmin);
   const subscription = useSubscriptionStore((state) => state.status);
   const loadSubscription = useSubscriptionStore((state) => state.load);
-  const hasBusiness = hasRealBusinessAccess(subscription);
   const canShowStore = canShowStoreSurface(subscription);
   const canShowReceipts = hasFeatureAccess(subscription, 'receiptScan');
 
@@ -69,7 +65,6 @@ export function AppNavigationSheet() {
 
   if (canShowStore) groups.push({ titleKey: 'nav.group.store', items: storeLinks });
   if (canShowReceipts) groups.push({ titleKey: 'nav.group.premium', items: receiptLinks });
-  if (hasBusiness) groups.push({ titleKey: 'nav.group.business', items: businessLinks });
   if (isAdmin) groups.push({ titleKey: 'nav.group.admin', items: adminLinks });
 
   const handleNavigate = (screen: AppScreen) => {

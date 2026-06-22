@@ -45,6 +45,7 @@ export type StorePaymentCatalogDto = {
   products: Array<{
     product: StorePaymentProduct | string;
     title: string;
+    comingSoon?: boolean;
     options: Array<{
       duration: StorePaymentDuration | string;
       amount: number;

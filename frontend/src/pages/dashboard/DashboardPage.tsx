@@ -61,7 +61,6 @@ export default function DashboardPage() {
   }, [loadAccounts, loadSubscription, loadTransactions]);
 
   const rates = useMemo(() => ({ usd: rubToUsdRate || 90, eur: rubToEurRate || 100 }), [rubToEurRate, rubToUsdRate]);
-  const hasBusiness = Boolean(subscription?.access?.hasBusiness);
   const hasReceiptAccess = Boolean(subscription?.access?.hasPremium || subscription?.access?.hasBusiness || subscription?.features?.receiptScan);
   const financeIsInitiallyLoading = (accountsLoading || transactionsLoading) && accounts.length === 0 && transactions.length === 0;
   const financeLoadError = accounts.length === 0 && transactions.length === 0 ? accountsError || transactionsError : null;
@@ -93,15 +92,6 @@ export default function DashboardPage() {
       <div className="app-page__inner app-home-layout">
         <ScreenTopBar title={t('screen.dashboard')} right={['notifications', 'analytics', 'settings']} />
 
-        {hasBusiness ? (
-          <section className="home-workspace-switch app-card">
-            <div>
-              <span>{t('dashboard.workspace.label')}</span>
-              <strong>{t('dashboard.workspace.personal')}</strong>
-            </div>
-            <button type="button" onClick={() => navigateTo('business-accountant')}>{t('dashboard.workspace.business')}</button>
-          </section>
-        ) : null}
 
         {financeLoadError ? (
           <section className="app-card app-home-load-state app-home-load-state--error">

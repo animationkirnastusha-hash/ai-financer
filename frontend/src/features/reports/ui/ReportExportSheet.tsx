@@ -119,7 +119,7 @@ export function ReportExportSheet({ open, mode = 'base', layer, onClose }: Props
     }
     if (mode === 'business') {
       onClose();
-      navigateTo('business-accountant');
+      navigateTo('store');
     }
   }
 
@@ -154,7 +154,7 @@ export function ReportExportSheet({ open, mode = 'base', layer, onClose }: Props
             <span>{copy.badge}</span>
             <h2>{copy.title}</h2>
             <p>{copy.caption}</p>
-            {isHeroClickable ? <small>{mode === 'premium' ? 'Открыть Premium' : 'Открыть ИИ-бухгалтера'}</small> : null}
+            {isHeroClickable ? <small>{mode === 'premium' ? 'Открыть Premium' : 'Скоро отдельный продукт'}</small> : null}
           </div>
           {isHeroClickable ? <i aria-hidden="true">›</i> : null}
         </section>

@@ -40,6 +40,7 @@ type TelegramUpdate = {
 };
 
 const ORDER_TTL_MS = 30 * 60 * 1000;
+const BUSINESS_PAYMENTS_ENABLED = false;
 
 function normalizeProduct(value: unknown): StoreProduct {
   if (value === 'business') return 'business';
@@ -133,7 +134,7 @@ export class PaymentService {
     return {
       products: [
         { product: 'premium', title: 'Premium', options: this.getProductOptions('premium') },
-        { product: 'business', title: 'Business', options: this.getProductOptions('business') },
+        { product: 'business', title: 'Business Fina', options: BUSINESS_PAYMENTS_ENABLED ? this.getProductOptions('business') : [], comingSoon: !BUSINESS_PAYMENTS_ENABLED },
         { product: 'bundle_try', title: 'Попробовать Фину', options: this.getProductOptions('bundle_try') },
         { product: 'bundle_week', title: 'На неделю', options: this.getProductOptions('bundle_week') },
       ],
@@ -166,6 +167,9 @@ export class PaymentService {
     if (!user) throw new NotFoundError('User not found');
 
     const product = normalizeProduct(input.product);
+    if (product === 'business' && !BUSINESS_PAYMENTS_ENABLED) {
+      throw new BadRequestError('Business Fina will be available as a separate product soon');
+    }
     const durationInput = normalizeDuration(input.duration);
     const availableDurations = getAvailableDurations(product);
     const fallbackDuration: PaymentDuration = availableDurations[0] ?? 'once';

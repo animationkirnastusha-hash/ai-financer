@@ -9,7 +9,7 @@ import { ProductTourOverlay } from '@/features/onboarding/ui/ProductTourOverlay'
 import { ProductAnalyticsTracker } from '@/features/product-analytics/ui/ProductAnalyticsTracker';
 import { useAuthStore } from '@/features/auth/model/auth.store';
 import { useSubscriptionStore } from '@/features/subscription/model/subscription.store';
-import { canShowStoreSurface, hasFeatureAccess, hasRealBusinessAccess } from '@/features/subscription/lib/entitlements';
+import { canShowStoreSurface, hasFeatureAccess } from '@/features/subscription/lib/entitlements';
 import { Spinner } from '@/shared/ui/Spinner';
 
 const AccountsPage = lazy(() => import('@/pages/accounts/AccountsPage'));
@@ -22,7 +22,6 @@ const GoalsPage = lazy(() => import('@/pages/goals/GoalsPage'));
 const ObligationsPage = lazy(() => import('@/pages/obligations/ObligationsPage'));
 const SpendingLimitsPage = lazy(() => import('@/pages/spending-limits/SpendingLimitsPage'));
 const PremiumPage = lazy(() => import('@/pages/premium/PremiumPage'));
-const BusinessAccountantPage = lazy(() => import('@/pages/business-accountant/BusinessAccountantPage'));
 const ReceiptScansPage = lazy(() => import('@/pages/receipt-scans/ReceiptScansPage'));
 const SettingsPage = lazy(() => import('@/pages/settings/SettingsPage'));
 const SectionsPage = lazy(() => import('@/pages/sections/SectionsPage'));
@@ -44,7 +43,6 @@ export function AppRouter() {
   const goBack = useNavigationStore((state) => state.goBack);
   const subscription = useSubscriptionStore((state) => state.status);
   const loadSubscription = useSubscriptionStore((state) => state.load);
-  const hasBusiness = hasRealBusinessAccess(subscription);
   const canShowStore = canShowStoreSurface(subscription);
   const canShowReceipts = hasFeatureAccess(subscription, 'receiptScan');
 
@@ -68,7 +66,7 @@ export function AppRouter() {
         {currentScreen === 'settings' && <SettingsPage />}
         {currentScreen === 'store' && (canShowStore ? <PremiumPage /> : <DashboardPage />)}
         {currentScreen === 'premium' && (canShowStore ? <PremiumPage /> : <DashboardPage />)}
-        {currentScreen === 'business-accountant' && (hasBusiness ? <BusinessAccountantPage /> : <DashboardPage />)}
+        {currentScreen === 'business-accountant' && <DashboardPage />}
         {currentScreen === 'receipt-scans' && (canShowReceipts ? <ReceiptScansPage /> : <DashboardPage />)}
         {currentScreen === 'sections' && <SectionsPage onBack={goBack} />}
         {currentScreen === 'admin' && (isAdmin ? <AdminPage /> : <DashboardPage />)}

@@ -18,7 +18,6 @@ function getScreenLabel(screen: AppScreen, t: TranslateFn) {
     settings: "screen.settings",
     store: "screen.store",
     premium: "screen.premium",
-    "business-accountant": "screen.business",
     "receipt-scans": "screen.receipts",
     sections: "screen.sections",
     admin: "screen.admin",

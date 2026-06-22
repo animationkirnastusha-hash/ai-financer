@@ -11,6 +11,7 @@ type Props = {
 };
 
 function hasAccess(card: StoreCard, hasPremium: boolean, hasBusiness: boolean) {
+  if (card.comingSoon) return false;
   if (card.product === 'business') return hasBusiness;
   if (card.product === 'premium') return hasPremium;
   return false;
@@ -37,12 +38,12 @@ export function StoreProductGrid({ cards, activeProductId, hasPremium, hasBusine
             <button
               key={card.id}
               type="button"
-              className={cn('store-product-tile', `store-product-tile--${card.tone}`, active && 'is-active')}
+              className={cn('store-product-tile', `store-product-tile--${card.tone}`, active && 'is-active', card.comingSoon && 'is-coming-soon')}
               onClick={() => onSelect(card)}
             >
               <span className="store-product-tile__eyebrow">{t(card.eyebrow)}</span>
               <strong>{t(card.title)}</strong>
-              <small>{access ? t('store.status.active') : t(card.price)}</small>
+              <small>{card.comingSoon ? t('store.status.soon') : access ? t('store.status.active') : t(card.price)}</small>
             </button>
           );
         })}

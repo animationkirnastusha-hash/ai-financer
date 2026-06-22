@@ -11,7 +11,7 @@ type Props = {
 
 export function StorePaymentSheet({ open, product, onClose }: Props) {
   const { t } = useI18n();
-  const paymentProduct = product?.product;
+  const paymentProduct = product?.comingSoon ? null : product?.product;
 
   return (
     <Drawer
@@ -28,7 +28,12 @@ export function StorePaymentSheet({ open, product, onClose }: Props) {
           <p>{t(product.caption)}</p>
         </div>
       ) : null}
-      {paymentProduct ? <StorePaymentActions product={paymentProduct} /> : null}
+      {product?.comingSoon ? (
+        <div className="store-payment-sheet__intro">
+          <span>{t('store.status.soon')}</span>
+          <p>{t('store.business.soonPaymentCaption')}</p>
+        </div>
+      ) : paymentProduct ? <StorePaymentActions product={paymentProduct} /> : null}
     </Drawer>
   );
 }

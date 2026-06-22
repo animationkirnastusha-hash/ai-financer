@@ -19,7 +19,12 @@ const CALLBACK_PREFIX = 'fina:';
 const CALLBACK_CONFIRM = `${CALLBACK_PREFIX}confirm:`;
 const CALLBACK_CANCEL = `${CALLBACK_PREFIX}cancel:`;
 const CALLBACK_LANGUAGE = `${CALLBACK_PREFIX}lang:`;
+const CALLBACK_MENU = `${CALLBACK_PREFIX}menu:`;
 const MAX_CALLBACK_ACTION_ID_LENGTH = 48;
+
+type BotMenuPage = 'home' | 'plans' | 'features' | 'support' | 'terms';
+
+const BOT_MENU_PAGES = new Set<BotMenuPage>(['home', 'plans', 'features', 'support', 'terms']);
 
 function getStoredLocale(user: unknown): UserLocale | null {
   return normalizeUserLocale((user as { locale?: unknown } | null | undefined)?.locale);
@@ -77,6 +82,24 @@ function isHelpCommand(text: string) {
   return command === '/help' || value === 'help' || value === 'помощь';
 }
 
+function isTermsCommand(text: string) {
+  const { command, value } = readCommand(text);
+  return (
+    command === '/terms'
+    || command === '/agreement'
+    || value === 'terms'
+    || value === 'agreement'
+    || value === 'условия'
+    || value === 'соглашение'
+    || value === 'пользовательское соглашение'
+  );
+}
+
+function isSupportCommand(text: string) {
+  const { command, value } = readCommand(text);
+  return command === '/support' || value === 'support' || value === 'поддержка';
+}
+
 function isPlansCommand(text: string) {
   const { command, value } = readCommand(text);
   return (
@@ -111,38 +134,131 @@ function buildOpenAppMarkup(locale: UserLocale) {
   };
 }
 
-function buildStorefrontMarkup(locale: UserLocale) {
-  const miniAppUrl = getMiniAppUrl();
-  if (!miniAppUrl) return undefined;
+function getOptionalUrl(...names: string[]) {
+  for (const name of names) {
+    const value = process.env[name]?.trim();
+    if (value) return value;
+  }
+  return '';
+}
 
-  return {
-    inline_keyboard: [
-      [{ text: botT(locale, 'openStore'), web_app: { url: miniAppUrl } }],
-      [{ text: botT(locale, 'openApp'), web_app: { url: miniAppUrl } }],
-    ],
-  };
+function normalizeMenuPage(value: unknown): BotMenuPage {
+  const page = String(value || '').trim().toLowerCase() as BotMenuPage;
+  return BOT_MENU_PAGES.has(page) ? page : 'home';
+}
+
+function buildMenuText(page: BotMenuPage, locale: UserLocale) {
+  if (page === 'plans') {
+    return [
+      botT(locale, 'storefrontTitle'),
+      '',
+      botT(locale, 'storefrontIntro'),
+      '',
+      `• ${botT(locale, 'storefrontPremiumTitle')} — ${botT(locale, 'storefrontPremiumPrice')}`,
+      botT(locale, 'storefrontPremiumDescription'),
+      '',
+      `• ${botT(locale, 'storefrontBusinessTitle')} — ${botT(locale, 'storefrontBusinessPrice')}`,
+      botT(locale, 'storefrontBusinessDescription'),
+      '',
+      botT(locale, 'storefrontOneTimeTitle'),
+      `• ${botT(locale, 'storefrontVoicePack')}`,
+      `• ${botT(locale, 'storefrontReceiptPack')}`,
+      '',
+      botT(locale, 'storefrontOrderHint'),
+    ].join('\n');
+  }
+
+  if (page === 'features') {
+    return [
+      botT(locale, 'featuresTitle'),
+      '',
+      `• ${botT(locale, 'featuresFinance')}`,
+      `• ${botT(locale, 'featuresGoals')}`,
+      `• ${botT(locale, 'featuresAnalytics')}`,
+      `• ${botT(locale, 'featuresVoice')}`,
+    ].join('\n');
+  }
+
+  if (page === 'support') {
+    return [
+      botT(locale, 'supportTitle'),
+      '',
+      botT(locale, 'supportText'),
+    ].join('\n');
+  }
+
+  if (page === 'terms') {
+    return [
+      botT(locale, 'termsTitle'),
+      '',
+      botT(locale, 'termsIntro'),
+      '',
+      `1. ${botT(locale, 'termsUse')}`,
+      `2. ${botT(locale, 'termsResponsibility')}`,
+      `3. ${botT(locale, 'termsData')}`,
+      `4. ${botT(locale, 'termsPayments')}`,
+      `5. ${botT(locale, 'termsSafety')}`,
+      '',
+      botT(locale, 'termsAccept'),
+    ].join('\n');
+  }
+
+  return [
+    botT(locale, 'homeTitle'),
+    '',
+    botT(locale, 'homeIntro'),
+    '',
+    `• ${botT(locale, 'homePremiumLine')}`,
+    `• ${botT(locale, 'homeBusinessLine')}`,
+    '',
+    botT(locale, 'homeHint'),
+    botT(locale, 'homeAgreementHint'),
+  ].join('\n');
+}
+
+function buildMenuMarkup(page: BotMenuPage, locale: UserLocale) {
+  const miniAppUrl = getMiniAppUrl();
+  const supportUrl = getOptionalUrl('TELEGRAM_SUPPORT_URL', 'SUPPORT_URL');
+  const agreementUrl = getOptionalUrl('USER_AGREEMENT_URL', 'TERMS_URL', 'PRIVACY_POLICY_URL');
+  const rows: Array<Array<{ text: string; callback_data?: string; web_app?: { url: string }; url?: string }>> = [];
+
+  if (miniAppUrl) {
+    rows.push([{ text: botT(locale, 'openApp'), web_app: { url: miniAppUrl } }]);
+  }
+
+  if (page === 'home') {
+    rows.push([
+      { text: botT(locale, 'menuPlans'), callback_data: `${CALLBACK_MENU}plans` },
+      { text: botT(locale, 'menuFeatures'), callback_data: `${CALLBACK_MENU}features` },
+    ]);
+    rows.push([
+      supportUrl
+        ? { text: botT(locale, 'menuSupport'), url: supportUrl }
+        : { text: botT(locale, 'menuSupport'), callback_data: `${CALLBACK_MENU}support` },
+      agreementUrl
+        ? { text: botT(locale, 'menuTerms'), url: agreementUrl }
+        : { text: botT(locale, 'menuTerms'), callback_data: `${CALLBACK_MENU}terms` },
+    ]);
+  } else {
+    rows.push([{ text: botT(locale, 'menuBack'), callback_data: `${CALLBACK_MENU}home` }]);
+    if (page !== 'terms') {
+      rows.push([
+        agreementUrl
+          ? { text: botT(locale, 'menuTerms'), url: agreementUrl }
+          : { text: botT(locale, 'menuTerms'), callback_data: `${CALLBACK_MENU}terms` },
+      ]);
+    }
+  }
+
+  return rows.length ? { inline_keyboard: rows } : undefined;
+}
+
+function buildStorefrontMarkup(locale: UserLocale) {
+  return buildMenuMarkup('home', locale);
 }
 
 function buildStorefrontText(locale: UserLocale) {
-  return [
-    botT(locale, 'storefrontTitle'),
-    '',
-    botT(locale, 'storefrontIntro'),
-    '',
-    botT(locale, 'storefrontPremiumTitle'),
-    botT(locale, 'storefrontPremiumPrice'),
-    botT(locale, 'storefrontPremiumDescription'),
-    '',
-    botT(locale, 'storefrontBusinessTitle'),
-    botT(locale, 'storefrontBusinessPrice'),
-    botT(locale, 'storefrontBusinessDescription'),
-    '',
-    botT(locale, 'storefrontOneTimeTitle'),
-    botT(locale, 'storefrontVoicePack'),
-    botT(locale, 'storefrontReceiptPack'),
-    '',
-    botT(locale, 'storefrontOrderHint'),
-  ].join('\n');
+  return buildMenuText('home', locale);
 }
 
 function buildLanguageMarkup() {
@@ -255,6 +371,16 @@ async function sendLoginCode(chatId: number | string, from: TelegramBotUser, loc
   return { handled: true, action: 'login_code_sent' };
 }
 
+async function sendMenuPage(chatId: number | string, page: BotMenuPage, locale: UserLocale) {
+  await telegramBotClient.sendMessage(
+    chatId,
+    escapeHtml(buildMenuText(page, locale)),
+    buildMenuMarkup(page, locale),
+  );
+
+  return { handled: true, action: `${page}_menu_sent` };
+}
+
 async function sendStart(chatId: number | string, locale: UserLocale) {
   await telegramBotClient.sendMessage(
     chatId,
@@ -338,11 +464,29 @@ async function handleFinancialMessage(message: TelegramBotMessage) {
   const messageId = Number.isFinite(Number(message.message_id)) ? Number(message.message_id) : Date.now();
 
   if (text) {
-    if (isStartCommand(text) || isHelpCommand(text) || isPlansCommand(text)) {
+    if (isStartCommand(text) || isHelpCommand(text)) {
       if (!storedLocale && normalizeUserLocale(from.language_code)) {
         await authService.updateUserLocale(user.id, locale);
       }
       return sendStart(chatId, locale);
+    }
+    if (isPlansCommand(text)) {
+      if (!storedLocale && normalizeUserLocale(from.language_code)) {
+        await authService.updateUserLocale(user.id, locale);
+      }
+      return sendMenuPage(chatId, 'plans', locale);
+    }
+    if (isTermsCommand(text)) {
+      if (!storedLocale && normalizeUserLocale(from.language_code)) {
+        await authService.updateUserLocale(user.id, locale);
+      }
+      return sendMenuPage(chatId, 'terms', locale);
+    }
+    if (isSupportCommand(text)) {
+      if (!storedLocale && normalizeUserLocale(from.language_code)) {
+        await authService.updateUserLocale(user.id, locale);
+      }
+      return sendMenuPage(chatId, 'support', locale);
     }
     if (isLanguageCommand(text)) return sendLanguageChoice(chatId);
     if (isLoginCommand(text)) return sendLoginCode(chatId, from, locale);
@@ -423,6 +567,24 @@ async function handleCallback(callback: TelegramBotCallbackQuery) {
   }
 
   const locale = getStoredLocale(user) ?? DEFAULT_BOT_LOCALE;
+
+  if (data.startsWith(CALLBACK_MENU)) {
+    const page = normalizeMenuPage(data.slice(CALLBACK_MENU.length));
+    await telegramBotClient.answerCallbackQuery(callback.id);
+
+    if (callback.message?.message_id) {
+      await telegramBotClient.editMessageText(
+        chatId,
+        callback.message.message_id,
+        escapeHtml(buildMenuText(page, locale)),
+        buildMenuMarkup(page, locale),
+      );
+    } else {
+      await telegramBotClient.sendMessage(chatId, escapeHtml(buildMenuText(page, locale)), buildMenuMarkup(page, locale));
+    }
+
+    return { handled: true, action: `${page}_menu_opened` };
+  }
   let result: AIResult | null = null;
 
   if (data.startsWith(CALLBACK_CONFIRM)) {

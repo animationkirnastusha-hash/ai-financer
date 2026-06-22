@@ -57,6 +57,19 @@
   transition: transform .16s ease, border-color .16s ease, background .16s ease;
 }
 
+
+.store-product-tile.is-coming-soon {
+  border-color: rgba(255,255,255,.14);
+  background:
+    linear-gradient(135deg, rgba(255,255,255,.08), rgba(255,255,255,.035)),
+    rgba(255,255,255,.05);
+}
+
+.store-product-tile.is-coming-soon small {
+  background: rgba(255,255,255,.12);
+  color: rgba(255,255,255,.72);
+}
+
 .store-product-tile.is-active {
   border-color: rgba(109, 241, 194, .44);
   background:
