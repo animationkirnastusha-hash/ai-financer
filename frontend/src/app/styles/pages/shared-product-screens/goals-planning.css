@@ -1,0 +1,108 @@
+/* Goal clarity and salary-cycle planning surfaces. */
+.app-goals-explainer,
+.app-financial-cycle-card {
+  display: grid;
+  gap: 14px;
+}
+
+.app-goals-explainer__head,
+.app-financial-cycle-card__head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: start;
+}
+
+.app-goals-explainer__head h2,
+.app-financial-cycle-card__head h2 {
+  margin: 4px 0 0;
+  color: rgba(255,255,255,.94);
+  font-size: 18px;
+  font-weight: 760;
+  line-height: 1.15;
+}
+
+.app-financial-cycle-card__head p {
+  margin: 6px 0 0;
+  color: rgba(255,255,255,.50);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.app-goals-explainer__grid {
+  display: grid;
+  gap: 8px;
+}
+
+.app-goals-explainer__grid article,
+.app-financial-cycle-summary,
+.app-financial-cycle-note,
+.app-financial-cycle-check {
+  min-width: 0;
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 20px;
+  background: rgba(0,0,0,.16);
+  padding: 12px;
+}
+
+.app-goals-explainer__grid strong,
+.app-financial-cycle-summary strong,
+.app-financial-cycle-note strong,
+.app-financial-cycle-check strong {
+  display: block;
+  color: rgba(255,255,255,.88);
+  font-size: 13px;
+  font-weight: 760;
+  line-height: 1.25;
+}
+
+.app-goals-explainer__grid span,
+.app-financial-cycle-summary span,
+.app-financial-cycle-note span,
+.app-financial-cycle-check small {
+  display: block;
+  margin-top: 5px;
+  color: rgba(255,255,255,.46);
+  font-size: 12px;
+  line-height: 1.42;
+}
+
+.app-financial-cycle-form {
+  display: grid;
+  gap: 12px;
+}
+
+.app-financial-cycle-form__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.app-financial-cycle-check {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+}
+
+.app-financial-cycle-check input {
+  width: 18px;
+  height: 18px;
+  margin-top: 1px;
+  accent-color: rgb(129, 239, 208);
+}
+
+.app-financial-cycle-save {
+  width: 100%;
+}
+
+@media (max-width: 420px) {
+  .app-goals-explainer__head,
+  .app-financial-cycle-card__head {
+    grid-template-columns: 1fr;
+  }
+
+  .app-financial-cycle-form__grid {
+    grid-template-columns: 1fr;
+  }
+}

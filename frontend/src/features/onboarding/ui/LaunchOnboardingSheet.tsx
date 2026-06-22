@@ -1,10 +1,11 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useAuthStore } from '@/features/auth/model/auth.store';
 import { useAppModalStore } from '@/features/modals/model/appModal.store';
 import { useNavigationStore } from '@/features/navigation/model/navigation.store';
+import { readMicrophonePermissionState, requestOnboardingMicrophonePermission } from '@/features/onboarding/model/microphonePermission';
 import { useOnboardingStore } from '@/features/onboarding/model/onboarding.store';
 import { useSettingsStore } from '@/features/settings/model/settings.store';
-import { useI18n } from '@/shared/lib/i18n';
+import { useI18n, type I18nKey } from '@/shared/lib/i18n';
 import type { AppLanguage } from '@/features/settings/model/settings.types';
 
 function getFirstName(user: ReturnType<typeof useAuthStore.getState>['user']) {
@@ -21,11 +22,15 @@ export function LaunchOnboardingSheet() {
   const syncUserLocale = useAuthStore((state) => state.syncUserLocale);
   const appLanguage = useSettingsStore((state) => state.appLanguage);
   const setAppLanguage = useSettingsStore((state) => state.setAppLanguage);
+  const voicePermissionPrompted = useSettingsStore((state) => state.voicePermissionPrompted);
+  const setVoicePermissionPrompted = useSettingsStore((state) => state.setVoicePermissionPrompted);
   const navigateTo = useNavigationStore((state) => state.navigateTo);
   const openModal = useAppModalStore((state) => state.openModal);
 
   const name = useMemo(() => getFirstName(user), [user]);
   const shouldShowLanguageChoice = !user?.locale;
+  const [isMicRequesting, setIsMicRequesting] = useState(false);
+  const [micMessageKey, setMicMessageKey] = useState<I18nKey | null>(null);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -41,11 +46,41 @@ export function LaunchOnboardingSheet() {
     };
   }, [isOpen]);
 
+  useEffect(() => {
+    if (!isOpen) return;
+
+    let alive = true;
+    void readMicrophonePermissionState().then((state) => {
+      if (!alive) return;
+      if (state === 'granted') setVoicePermissionPrompted(true);
+      if (state === 'denied') setVoicePermissionPrompted(false);
+    });
+
+    return () => {
+      alive = false;
+    };
+  }, [isOpen, setVoicePermissionPrompted]);
+
   if (!isOpen) return null;
 
   const chooseLanguage = (language: AppLanguage) => {
     setAppLanguage(language);
     void syncUserLocale(language);
+  };
+
+  const requestMicrophone = async () => {
+    if (isMicRequesting) return;
+
+    setIsMicRequesting(true);
+    setMicMessageKey(null);
+
+    const result = await requestOnboardingMicrophonePermission();
+    if (result.ok) setMicMessageKey('onboarding.microphone.message.readyShort');
+    else if (result.state === 'denied') setMicMessageKey('onboarding.microphone.message.deniedShort');
+    else if (result.state === 'unsupported') setMicMessageKey('onboarding.microphone.message.unsupported');
+    else setMicMessageKey('onboarding.microphone.message.laterShort');
+
+    setIsMicRequesting(false);
   };
 
   const continueInChat = () => {
@@ -97,6 +132,26 @@ export function LaunchOnboardingSheet() {
           <section className="onboarding-chat-start-card">
             <strong>{t('onboarding.chatStart.title')}</strong>
             <span>{t('onboarding.chatStart.caption')}</span>
+          </section>
+
+          <section className="onboarding-micro-card" aria-label={t('onboarding.microphone.quickTitle')}>
+            <div>
+              <strong>{t('onboarding.microphone.quickTitle')}</strong>
+              <span>{voicePermissionPrompted ? t('onboarding.microphone.quickReady') : t('onboarding.microphone.quickCaption')}</span>
+              {micMessageKey ? <span>{t(micMessageKey)}</span> : null}
+            </div>
+            <button
+              type="button"
+              className="app-secondary-button"
+              onClick={requestMicrophone}
+              disabled={isMicRequesting || voicePermissionPrompted}
+            >
+              {isMicRequesting
+                ? t('onboarding.microphone.action.loading')
+                : voicePermissionPrompted
+                  ? t('onboarding.microphone.action.ready')
+                  : t('onboarding.microphone.action.allow')}
+            </button>
           </section>
 
           <section className="onboarding-quick-rules" aria-label={t('onboarding.quick.aria')}>

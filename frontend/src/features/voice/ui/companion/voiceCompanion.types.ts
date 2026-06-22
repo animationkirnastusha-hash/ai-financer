@@ -33,6 +33,7 @@ export type VoiceCompanionSurfaceProps = {
   phase: VoiceSessionPhase;
   cooldownUntil: number;
   mood: VoiceCompanionMood;
+  gestureMode: GestureMode;
   ariaLabel: string;
   tapToTextEnabled?: boolean;
   onPointerDown: (event: PointerEvent<HTMLDivElement>) => void;

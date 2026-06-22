@@ -71,9 +71,8 @@ export function VoiceFirstCompanionLayer() {
   const hasPending = chat.pendingActions.length > 0;
   const isBusy = chat.isSending || isDispatching || voice.state === 'uploading';
   const microphoneBlocked = voice.permissionState === 'denied' || voice.permissionState === 'unsupported';
-  const microphoneNeedsAction = canUseVoice && (!voicePermissionPrompted || microphoneBlocked);
-  const voicePermissionReady = canUseVoice && voicePermissionPrompted && !microphoneBlocked;
-  const canStartManualRecording = voicePermissionReady && !hasPending && !chat.isSending && !isDispatching && voice.state === 'idle';
+  const microphoneNeedsAction = canUseVoice && permissionIntroOpen;
+  const canAttemptManualRecording = canUseVoice && !hasPending && !chat.isSending && !isDispatching && voice.state === 'idle';
   const tapToTextEnabled = false;
 
   useEffect(() => {
@@ -129,24 +128,35 @@ export function VoiceFirstCompanionLayer() {
 
   const explainVoiceUnavailable = useCallback(() => {
     if (!canUseVoice) showThought(t('voice.thought.unavailable'), 'warning', 2400);
-    else if (!voicePermissionReady) {
+    else if (microphoneBlocked) {
       setPermissionIntroOpen(true);
       setPermissionIntroDismissed(false);
       showThought(t('voice.thought.allowMicFirst'), 'warning', 2400);
     } else if (hasPending) showThought(t('voice.thought.closeActionFirst'), 'warning', 2400);
-  }, [canUseVoice, hasPending, showThought, t, voicePermissionReady]);
+  }, [canUseVoice, hasPending, microphoneBlocked, showThought, t]);
 
   const startHoldRecording = useCallback(async () => {
-    if (!canStartManualRecording) {
+    if (!canAttemptManualRecording) {
       explainVoiceUnavailable();
       return false;
     }
 
+    if (microphoneBlocked) {
+      setPermissionIntroOpen(true);
+      setPermissionIntroDismissed(false);
+      showThought(t('voice.thought.allowMicFirst'), 'warning', 2400);
+      return false;
+    }
+
     resetVoiceMachine();
+    setPermissionIntroOpen(false);
     showThought(t('voice.thought.listening'), 'listening', 1600);
     const result = await voice.start();
 
-    if (result === 'started') return true;
+    if (result === 'started') {
+      setVoicePermissionPrompted(true);
+      return true;
+    }
 
     if (result === 'permission-ready') {
       setPermissionIntroOpen(true);
@@ -155,10 +165,15 @@ export function VoiceFirstCompanionLayer() {
 
     explainVoiceUnavailable();
     return false;
-  }, [canStartManualRecording, explainVoiceUnavailable, resetVoiceMachine, showThought, t, voice]);
+  }, [canAttemptManualRecording, explainVoiceUnavailable, microphoneBlocked, resetVoiceMachine, setVoicePermissionPrompted, showThought, t, voice]);
 
   const handleCompanionTap = useCallback(() => {
-    if (!canUseVoice || !voicePermissionReady) {
+    if (!canUseVoice) {
+      showThought(t('voice.thought.unavailable'), 'warning', 2400);
+      return;
+    }
+
+    if (microphoneBlocked) {
       setPermissionIntroOpen(true);
       setPermissionIntroDismissed(false);
       showThought(t('voice.thought.allowMicFirst'), 'warning', 2400);
@@ -171,7 +186,7 @@ export function VoiceFirstCompanionLayer() {
     }
 
     showThought(t('voice.fina.holdVoiceOnly'), 'neutral', 1900);
-  }, [canUseVoice, hasPending, showThought, t, voicePermissionReady]);
+  }, [canUseVoice, hasPending, microphoneBlocked, showThought, t]);
 
   const primeVoicePermission = useCallback(async () => {
     setIsPriming(true);
@@ -305,7 +320,7 @@ export function VoiceFirstCompanionLayer() {
     return 'idle';
   }, [chat.isSending, chat.pendingActions.length, gestureMode, isDispatching, thought?.tone, voice.state]);
 
-  const needsIntro = microphoneNeedsAction && (!permissionIntroDismissed || permissionIntroOpen);
+  const needsIntro = microphoneNeedsAction && !permissionIntroDismissed;
   const showFloatingCompanion = !hasOpenModal;
 
   return (
@@ -328,6 +343,7 @@ export function VoiceFirstCompanionLayer() {
       phase={phase}
       cooldownUntil={cooldownUntil}
       mood={mood}
+      gestureMode={gestureMode}
       ariaLabel={t(tapToTextEnabled ? 'voice.fina.tapTextHoldVoice' : 'voice.fina.holdVoiceOnly')}
       tapToTextEnabled={tapToTextEnabled}
       onPointerDown={handlePointerDown}

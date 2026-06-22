@@ -3,6 +3,7 @@ import { goalsApi, type GoalDto } from '@/features/goals/api/goals.api';
 import { useAppModalStore } from '@/features/modals/model/appModal.store';
 import { useNavigationStore } from '@/features/navigation/model/navigation.store';
 import { FinaCommandBar } from '@/features/fina/ui/FinaCommandBar';
+import { FinancialCycleCard } from '@/features/financial-cycle/ui/FinancialCycleCard';
 import { ScreenTopBar } from '@/shared/ui/ScreenTopBar';
 import { EmptyState } from '@/shared/ui/EmptyState';
 import { formatMoney } from '@/shared/lib/money';
@@ -20,6 +21,7 @@ export default function GoalsPage() {
   const [error, setError] = useState<string | null>(null);
   const openModal = useAppModalStore((state) => state.openModal);
   const openAIWithCommand = useNavigationStore((state) => state.openAIWithCommand);
+  const navigateTo = useNavigationStore((state) => state.navigateTo);
 
   const loadGoals = async () => {
     setIsLoading(true);
@@ -65,6 +67,32 @@ export default function GoalsPage() {
             <div><strong>{formatMoney(Math.max(totals.target - totals.current, 0), 'RUB')}</strong><small>{t('goals.stats.left')}</small></div>
           </div>
         </header>
+
+        <section className="app-card app-goals-explainer">
+          <div className="app-goals-explainer__head">
+            <div>
+              <div className="app-eyebrow">{t('goals.explainer.eyebrow')}</div>
+              <h2>{t('goals.explainer.title')}</h2>
+            </div>
+            <button type="button" className="app-secondary-button" onClick={() => navigateTo('obligations')}>{t('goals.explainer.remindersAction')}</button>
+          </div>
+          <div className="app-goals-explainer__grid">
+            <article>
+              <strong>{t('goals.explainer.goal.title')}</strong>
+              <span>{t('goals.explainer.goal.caption')}</span>
+            </article>
+            <article>
+              <strong>{t('goals.explainer.reminder.title')}</strong>
+              <span>{t('goals.explainer.reminder.caption')}</span>
+            </article>
+            <article>
+              <strong>{t('goals.explainer.salary.title')}</strong>
+              <span>{t('goals.explainer.salary.caption')}</span>
+            </article>
+          </div>
+        </section>
+
+        <FinancialCycleCard />
 
         <FinaCommandBar
           titleKey="goals.command.title"

@@ -407,12 +407,12 @@ export function useVoiceRecorder({ onText, lang = 'ru-RU', chunkMs = VOICE_RECOR
   const startRecording = useCallback(async () => {
     if (startInProgressRef.current || lifecycleBusyRef.current) {
       logVoiceDebugEvent('voice_start_ignored_in_progress', { state });
-      return;
+      return false;
     }
 
     if (state === 'recording' || state === 'uploading') {
       logVoiceDebugEvent('voice_start_ignored_busy', { state });
-      return;
+      return false;
     }
 
     if (!isSupported || !recorderFormat) {
@@ -420,7 +420,7 @@ export function useVoiceRecorder({ onText, lang = 'ru-RU', chunkMs = VOICE_RECOR
       setError('unsupported');
       lifecycleBusyRef.current = false;
       setState('error');
-      return;
+      return false;
     }
 
     startInProgressRef.current = true;
@@ -521,6 +521,7 @@ export function useVoiceRecorder({ onText, lang = 'ru-RU', chunkMs = VOICE_RECOR
       mediaRecorderRef.current = recorder;
       logVoiceDebugEvent('recorder_start_call', { platform: platformConfig.platform, mimeType: recorderFormat.mimeType, extension: recorderFormat.extension, sessionMs: clampVoiceRecorderSessionMs(chunkMs) });
       recorder.start(250);
+      return true;
     } catch (err) {
       startInProgressRef.current = false;
       lifecycleBusyRef.current = false;
@@ -529,6 +530,7 @@ export function useVoiceRecorder({ onText, lang = 'ru-RU', chunkMs = VOICE_RECOR
       setError('microphone-denied');
       setState('error');
       hardCleanup();
+      return false;
     }
   }, [chunkMs, ensureStream, finalizeRecording, hardCleanup, isSupported, platformConfig, recorderFormat, startVoiceActivityWatcher, state, uploadFinalBlob, clearFinalizeTimer, stopVoiceActivityWatcher]);
 

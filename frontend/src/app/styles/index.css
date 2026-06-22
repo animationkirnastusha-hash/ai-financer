@@ -25,6 +25,7 @@
 @import "./features/chat/ai-text.css";
 @import "./features/progression/companion-progress.css";
 @import "./pages/shared-product-screens/shared-product-screens.css";
+@import "./pages/shared-product-screens/goals-planning.css";
 @import "./layout/mobile-adaptive/mobile-adaptive-base.css";
 @import "./layout/mobile-adaptive/mobile-adaptive-cards.css";
 @import "./utilities/swipe-text-guards.css";

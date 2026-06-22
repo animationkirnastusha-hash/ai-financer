@@ -31,7 +31,9 @@
     "test:ai-commands": "node scripts/smoke/check-ai-finance-commands.mjs",
     "smoke:ai-commands": "node scripts/smoke/check-ai-finance-commands.mjs",
     "test:ai-regression": "node scripts/smoke/check-ai-command-regression.mjs",
-    "smoke:ai-regression": "node scripts/smoke/check-ai-command-regression.mjs"
+    "smoke:ai-regression": "node scripts/smoke/check-ai-command-regression.mjs",
+    "bot:webhook:set": "node scripts/configure-telegram-bot-webhook.mjs",
+    "bot:webhook:check": "node scripts/check-telegram-bot-webhook.mjs"
   },
   "keywords": [],
   "author": "",

@@ -140,12 +140,29 @@ export function useVoiceInput({ onText, lang = 'ru-RU', sessionMs = 5200 }: UseV
         return 'permission-ready';
       }
 
-      if (currentPermission !== 'granted' && !permissionPrimed) {
-        logVoiceDebugEvent('manual_voice_start_blocked_permission', { permissionState: currentPermission });
+      if (currentPermission === 'unsupported') {
+        logVoiceDebugEvent('manual_voice_start_blocked_permission_unsupported', { permissionState: currentPermission });
+        setPermissionPrimed(false);
+        setPermissionError('unsupported');
         return 'permission-ready';
       }
 
-      await recorder.startRecording();
+      // Press-to-talk is the explicit user gesture. When the browser reports
+      // `prompt` or cannot report a state, startRecording is allowed to call
+      // getUserMedia directly so the system permission prompt appears from
+      // the hold action instead of opening an extra in-app modal first.
+      const started = await recorder.startRecording();
+      if (!started) {
+        const nextPermission = await refreshPermissionState();
+        if (nextPermission === 'denied') {
+          setPermissionPrimed(false);
+          setPermissionError('microphone-denied');
+          return 'permission-ready';
+        }
+        return 'error';
+      }
+
+      setPermissionPrimed(true);
       return 'started';
     } catch (error) {
       console.error(error);

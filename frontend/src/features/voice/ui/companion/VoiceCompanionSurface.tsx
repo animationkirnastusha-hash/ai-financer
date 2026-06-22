@@ -20,6 +20,7 @@ export function VoiceCompanionSurface({
   phase,
   cooldownUntil,
   mood,
+  gestureMode,
   ariaLabel,
   tapToTextEnabled = true,
   onPointerDown,
@@ -42,7 +43,12 @@ export function VoiceCompanionSurface({
       ) : null}
 
       {showFloatingCompanion ? (
-        <div className="voice-first-companion" data-no-swipe="true">
+        <div
+          className={voiceState === 'recording' || gestureMode === 'holding' ? 'voice-first-companion voice-first-companion--manual-active' : 'voice-first-companion'}
+          data-no-swipe="true"
+          data-voice-state={voiceState}
+          data-gesture-mode={gestureMode}
+        >
           <VoiceThoughtBubble thought={thought} />
 
           <div className="voice-first-companion__controls">

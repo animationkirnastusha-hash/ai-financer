@@ -240,3 +240,22 @@
   -webkit-backdrop-filter: blur(18px);
   backdrop-filter: blur(18px);
 }
+
+/* Release voice repair: press-and-hold is the only voice entry outside chat. */
+.voice-first-companion--manual-active .voice-first-companion__press-target {
+  transform: translate3d(0, -12px, 0);
+  transition: transform .18s ease, filter .18s ease;
+}
+
+.voice-first-companion[data-voice-state="recording"] .ai-companion-control,
+.voice-first-companion[data-gesture-mode="holding"] .ai-companion-control {
+  transform: scale(1.08) !important;
+  filter: saturate(1.18) brightness(1.12);
+  box-shadow: 0 0 0 10px rgba(109, 236, 190, .10), 0 18px 52px rgba(52, 211, 153, .24) !important;
+}
+
+.voice-first-companion[data-voice-state="recording"] .voice-first-status,
+.voice-first-companion[data-gesture-mode="holding"] .voice-first-status {
+  border-color: rgba(109, 236, 190, .22);
+  background: rgba(7, 18, 17, .82);
+}

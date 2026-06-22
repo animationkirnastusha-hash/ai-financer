@@ -63,6 +63,7 @@ model User {
   storePaymentOrders       StorePaymentOrder[]
   businessWorkspace        BusinessWorkspace?
   receiptScans             ReceiptScan[]
+  financialCycleSettings  FinancialCycleSettings?
 
   @@index([telegramId])
   @@index([referralCode])
@@ -326,6 +327,27 @@ model NotificationSettings {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+}
+
+model FinancialCycleSettings {
+  id                  String   @id @default(cuid())
+  userId              String   @unique
+  salaryDay           Int?
+  salaryAmount        Int      @default(0)
+  salaryCurrency      String   @default("RUB")
+  salaryAccountId     String?
+  salaryPeriod        String   @default("monthly")
+  remindBeforeDays    Int      @default(0)
+  autoCreateIncome    Boolean  @default(false)
+  autoDistributeGoals Boolean  @default(false)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([salaryDay])
+  @@index([salaryAccountId])
 }
 
 model NotificationDelivery {
