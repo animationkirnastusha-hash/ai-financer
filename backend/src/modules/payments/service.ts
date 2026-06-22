@@ -3,8 +3,16 @@ import { BadRequestError, ForbiddenError, NotFoundError } from '../../shared/cor
 import { subscriptionService, type StoreProduct, type BundleProduct } from '../subscription/service';
 import { createTelegramStarsInvoiceLink, isTelegramStarsConfigured, answerTelegramPreCheckoutQuery } from './lib/telegram-stars';
 import { getAvailableDurations, getPricePlan, type PaymentDuration } from './lib/payment-pricing';
+import {
+  createYooKassaSbpPayment,
+  getYooKassaPayment,
+  getYooKassaReturnUrl,
+  isYooKassaConfigured,
+  type YooKassaPaymentObject,
+  type YooKassaWebhookPayload,
+} from './lib/yookassa';
 
-export type PaymentProvider = 'telegramStars' | 'crypto' | 'manual' | 'mock';
+export type PaymentProvider = 'telegramStars' | 'yookassaSbp' | 'crypto' | 'manual' | 'mock';
 
 type CheckoutInput = {
   product?: unknown;
@@ -45,7 +53,6 @@ function isBundleProduct(product: StoreProduct): product is BundleProduct {
   return product === 'bundle_try' || product === 'bundle_week';
 }
 
-
 function normalizeDuration(value: unknown): PaymentDuration {
   if (value === 'year') return 'year';
   if (value === 'once') return 'once';
@@ -54,8 +61,8 @@ function normalizeDuration(value: unknown): PaymentDuration {
 }
 
 function normalizeProvider(value: unknown): PaymentProvider {
-  if (value === 'telegramStars' || value === 'crypto' || value === 'manual' || value === 'mock') return value;
-  if (value == null) return 'telegramStars';
+  if (value === 'telegramStars' || value === 'yookassaSbp' || value === 'crypto' || value === 'manual' || value === 'mock') return value;
+  if (value == null) return 'yookassaSbp';
   throw new BadRequestError('Unknown provider');
 }
 
@@ -84,6 +91,8 @@ function serializeOrder(order: Awaited<ReturnType<typeof prisma.storePaymentOrde
     payload: parseOrderPayload(order.payload),
     telegramInvoiceLink: order.telegramInvoiceLink,
     telegramPaymentChargeId: order.telegramPaymentChargeId,
+    providerPaymentChargeId: order.providerPaymentChargeId,
+    checkoutUrl: order.checkoutUrl,
     paidAt: order.paidAt?.toISOString() ?? null,
     expiresAt: order.expiresAt?.toISOString() ?? null,
     createdAt: order.createdAt.toISOString(),
@@ -98,6 +107,27 @@ function getOrderIdFromPayload(value: unknown): string {
   return orderId;
 }
 
+function kopecksFromYooKassaAmount(payment: YooKassaPaymentObject) {
+  const value = payment.amount?.value;
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric) || numeric <= 0) throw new BadRequestError('YooKassa payment amount is invalid');
+  return Math.round(numeric * 100);
+}
+
+function orderIdFromYooKassaPayment(payment: YooKassaPaymentObject) {
+  const orderId = String(payment.metadata?.orderId ?? '').trim();
+  if (!orderId) throw new BadRequestError('YooKassa payment order id is missing');
+  return orderId;
+}
+
+function safeProviderPayload(value: unknown) {
+  try {
+    return JSON.stringify(value).slice(0, 16_000);
+  } catch {
+    return null;
+  }
+}
+
 export class PaymentService {
   getCatalog() {
     return {
@@ -107,8 +137,9 @@ export class PaymentService {
         { product: 'bundle_try', title: 'Попробовать Фину', options: this.getProductOptions('bundle_try') },
         { product: 'bundle_week', title: 'На неделю', options: this.getProductOptions('bundle_week') },
       ],
-      providers: ['telegramStars', 'crypto', 'manual', 'mock'] as PaymentProvider[],
+      providers: ['yookassaSbp', 'telegramStars', 'crypto', 'manual', 'mock'] as PaymentProvider[],
       telegramStarsConfigured: isTelegramStarsConfigured(),
+      yookassaSbpConfigured: isYooKassaConfigured(),
     };
   }
 
@@ -142,6 +173,7 @@ export class PaymentService {
     const provider = normalizeProvider(input.provider);
     const basePlan = getPricePlan(product, duration);
     const amount = provider === 'telegramStars' ? basePlan.starsAmount : basePlan.amount;
+    const baseAmount = provider === 'telegramStars' ? basePlan.starsBaseAmount : basePlan.baseAmount;
     const currency = provider === 'telegramStars' ? basePlan.starsCurrency : basePlan.currency;
     const expiresAt = new Date(Date.now() + ORDER_TTL_MS);
 
@@ -163,7 +195,7 @@ export class PaymentService {
         duration,
         provider,
         amount,
-        baseAmount: provider === 'telegramStars' ? basePlan.starsBaseAmount : basePlan.baseAmount,
+        baseAmount,
         discountPercent: basePlan.discountPercent,
         currency,
         description: basePlan.title,
@@ -176,6 +208,21 @@ export class PaymentService {
       const checkout = await this.buildTelegramStarsCheckout(order.id, amount, order.description, basePlan.description);
       const updated = checkout.invoiceLink
         ? await prisma.storePaymentOrder.update({ where: { id: order.id }, data: { telegramInvoiceLink: checkout.invoiceLink } })
+        : order;
+      return { order: serializeOrder(updated), checkout };
+    }
+
+    if (provider === 'yookassaSbp') {
+      const checkout = await this.buildYooKassaSbpCheckout(order.id, userId, amount, order.description);
+      const updated = checkout.paymentId
+        ? await prisma.storePaymentOrder.update({
+          where: { id: order.id },
+          data: {
+            providerPaymentChargeId: checkout.paymentId,
+            checkoutUrl: checkout.confirmationUrl,
+            providerPayload: checkout.providerPayload,
+          },
+        })
         : order;
       return { order: serializeOrder(updated), checkout };
     }
@@ -214,6 +261,45 @@ export class PaymentService {
       currency: 'XTR',
       payload: `store_order:${orderId}`,
       invoiceLink,
+    };
+  }
+
+  private async buildYooKassaSbpCheckout(orderId: string, userId: string, amount: number, title: string) {
+    if (!isYooKassaConfigured()) {
+      return {
+        provider: 'yookassaSbp' as const,
+        status: 'not_configured',
+        title,
+        amount,
+        currency: 'RUB',
+        paymentId: null,
+        confirmationUrl: null,
+        checkoutUrl: null,
+        providerPayload: null,
+      };
+    }
+
+    const payment = await createYooKassaSbpPayment({
+      orderId,
+      userId,
+      amountKopecks: amount,
+      description: title,
+      returnUrl: getYooKassaReturnUrl(orderId),
+    });
+
+    const confirmationUrl = payment.confirmation?.confirmation_url ?? null;
+    if (!confirmationUrl) throw new BadRequestError('YooKassa did not return payment URL');
+
+    return {
+      provider: 'yookassaSbp' as const,
+      status: 'ready',
+      title,
+      amount,
+      currency: 'RUB',
+      paymentId: payment.id,
+      confirmationUrl,
+      checkoutUrl: confirmationUrl,
+      providerPayload: safeProviderPayload(payment),
     };
   }
 
@@ -265,6 +351,33 @@ export class PaymentService {
     return { ok: true, skipped: true };
   }
 
+  async handleYooKassaWebhook(payload: YooKassaWebhookPayload) {
+    const event = String(payload.event ?? '');
+    const paymentId = String(payload.object?.id ?? '').trim();
+    if (!paymentId) throw new BadRequestError('YooKassa payment id is missing');
+
+    const payment = await getYooKassaPayment(paymentId);
+    const orderId = orderIdFromYooKassaPayment(payment);
+
+    if (payment.status === 'succeeded') {
+      const result = await this.completeOrder(orderId, {
+        source: 'yookassaSbp',
+        currency: payment.amount?.currency,
+        amount: kopecksFromYooKassaAmount(payment),
+        providerPaymentChargeId: payment.id,
+        providerPayload: safeProviderPayload(payment),
+      });
+      return { ok: true, order: result.order, subscription: result.subscription };
+    }
+
+    if (payment.status === 'canceled') {
+      const order = await this.cancelYooKassaOrder(orderId, payment);
+      return { ok: true, order };
+    }
+
+    return { ok: true, skipped: true, event, status: payment.status };
+  }
+
   private async handlePreCheckout(query: NonNullable<TelegramUpdate['pre_checkout_query']>) {
     const queryId = String(query.id ?? '');
     if (!queryId) return { ok: false, reason: 'missing_pre_checkout_query_id' };
@@ -298,13 +411,32 @@ export class PaymentService {
     return { ok: true, order: result.order, subscription: result.subscription };
   }
 
+  private async cancelYooKassaOrder(orderId: string, payment: YooKassaPaymentObject) {
+    const order = await prisma.storePaymentOrder.findUnique({ where: { id: orderId } });
+    if (!order) throw new NotFoundError('Order not found');
+    if (order.status === 'paid' || order.status === 'cancelled') return serializeOrder(order);
+    if (order.provider !== 'yookassaSbp') throw new BadRequestError('Wrong payment provider');
+
+    const updated = await prisma.storePaymentOrder.update({
+      where: { id: order.id },
+      data: {
+        status: 'cancelled',
+        cancelledAt: new Date(),
+        providerPaymentChargeId: payment.id,
+        providerPayload: safeProviderPayload(payment),
+      },
+    });
+    return serializeOrder(updated);
+  }
+
   private async completeOrder(orderId: string, input: {
     requireUserId?: string;
-    source: 'mock' | 'telegramStars';
+    source: 'mock' | 'telegramStars' | 'yookassaSbp';
     currency?: string;
     amount?: number;
     telegramPaymentChargeId?: string;
     providerPaymentChargeId?: string;
+    providerPayload?: string | null;
   }) {
     const order = await prisma.storePaymentOrder.findUnique({ where: { id: orderId } });
     if (!order) throw new NotFoundError('Order not found');
@@ -314,11 +446,19 @@ export class PaymentService {
       return { order: serializeOrder(order), subscription: await subscriptionService.getStatus(order.userId) };
     }
     if (order.status !== 'pending') throw new BadRequestError('Order is not pending');
-    if (order.expiresAt && order.expiresAt.getTime() < Date.now()) throw new BadRequestError('Order expired');
+    if (input.source !== 'yookassaSbp' && order.expiresAt && order.expiresAt.getTime() < Date.now()) throw new BadRequestError('Order expired');
 
     if (input.source === 'telegramStars') {
       if (order.provider !== 'telegramStars') throw new BadRequestError('Wrong payment provider');
       if (order.currency !== input.currency || order.amount !== input.amount) throw new BadRequestError('Payment amount changed');
+    }
+
+    if (input.source === 'yookassaSbp') {
+      if (order.provider !== 'yookassaSbp') throw new BadRequestError('Wrong payment provider');
+      if (order.currency !== input.currency || order.amount !== input.amount) throw new BadRequestError('Payment amount changed');
+      if (order.providerPaymentChargeId && order.providerPaymentChargeId !== input.providerPaymentChargeId) {
+        throw new BadRequestError('Payment id changed');
+      }
     }
 
     const payload = parseOrderPayload(order.payload);
@@ -332,6 +472,7 @@ export class PaymentService {
         paidAt: new Date(),
         telegramPaymentChargeId: input.telegramPaymentChargeId ?? order.telegramPaymentChargeId,
         providerPaymentChargeId: input.providerPaymentChargeId ?? order.providerPaymentChargeId,
+        providerPayload: input.providerPayload ?? order.providerPayload,
       },
     });
 

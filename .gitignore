@@ -1,21 +1,29 @@
-node_modules
-dist
+node_modules/
+dist/
 .env
 .env.*
 !.env.example
 
-backend/prisma/dev.db
-backend/prisma/dev.db-journal
-backend/uploads
-backend/reports
-frontend/reports
-
+# local databases and generated sqlite files
 *.db
 *.sqlite
 *.sqlite3
-*.tsbuildinfo
+*.db-journal
+*.db-wal
+*.db-shm
+backend/prisma/dev.db*
+backend/prisma/prisma/dev.db*
+
+# local build/test artifacts
 desktop.ini
+*.tsbuildinfo
 .DS_Store
-.vscode
+.vscode/
 .tmp.drivedownload/
 .tmp.driveupload/
+
+# generated reports and build output
+backend/reports/
+frontend/reports/
+frontend/dist/
+backend/uploads/

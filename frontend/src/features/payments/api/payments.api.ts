@@ -3,7 +3,7 @@ import type { SubscriptionStatusDto } from '@/features/subscription/api/subscrip
 
 export type StorePaymentProduct = 'premium' | 'business' | 'bundle_try' | 'bundle_week';
 export type StorePaymentDuration = 'month' | 'year' | 'once';
-export type StorePaymentProvider = 'telegramStars' | 'crypto' | 'manual' | 'mock';
+export type StorePaymentProvider = 'telegramStars' | 'yookassaSbp' | 'crypto' | 'manual' | 'mock';
 
 export type StorePaymentOrderDto = {
   id: string;
@@ -19,6 +19,8 @@ export type StorePaymentOrderDto = {
   payload: unknown;
   telegramInvoiceLink?: string | null;
   telegramPaymentChargeId?: string | null;
+  providerPaymentChargeId?: string | null;
+  checkoutUrl?: string | null;
   paidAt: string | null;
   expiresAt: string | null;
   createdAt: string;
@@ -34,6 +36,9 @@ export type StorePaymentCheckoutDto = {
   currency: string;
   payload?: string;
   invoiceLink?: string | null;
+  checkoutUrl?: string | null;
+  confirmationUrl?: string | null;
+  paymentId?: string | null;
 };
 
 export type StorePaymentCatalogDto = {
@@ -55,6 +60,7 @@ export type StorePaymentCatalogDto = {
   }>;
   providers: string[];
   telegramStarsConfigured?: boolean;
+  yookassaSbpConfigured?: boolean;
 };
 
 export type CreatePaymentOrderPayload = {

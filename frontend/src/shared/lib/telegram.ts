@@ -15,6 +15,7 @@ type TelegramWebApp = {
   enableClosingConfirmation?: () => void;
   disableVerticalSwipes?: () => void;
   openInvoice?: (url: string, callback?: (status: 'paid' | 'cancelled' | 'failed' | 'pending' | string) => void) => void;
+  openLink?: (url: string, options?: { try_instant_view?: boolean }) => void;
   setHeaderColor?: (color: string) => void;
   setBackgroundColor?: (color: string) => void;
   HapticFeedback?: {
@@ -67,6 +68,15 @@ export function openTelegramInvoice(url: string, callback?: (status: string) => 
   const webApp = getTelegramWebApp();
   if (webApp?.openInvoice) {
     webApp.openInvoice(url, callback);
+    return true;
+  }
+  return false;
+}
+
+export function openTelegramExternalLink(url: string) {
+  const webApp = getTelegramWebApp();
+  if (webApp?.openLink) {
+    webApp.openLink(url);
     return true;
   }
   return false;

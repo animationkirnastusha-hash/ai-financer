@@ -329,6 +329,7 @@ model NotificationSettings {
   @@index([userId])
 }
 
+
 model FinancialCycleSettings {
   id                  String   @id @default(cuid())
   userId              String   @unique
@@ -514,7 +515,10 @@ model StorePaymentOrder {
   telegramInvoiceLink     String?
   telegramPaymentChargeId String?
   providerPaymentChargeId String?
+  checkoutUrl             String?
+  providerPayload         String?
   paidAt                  DateTime?
+  cancelledAt             DateTime?
   expiresAt               DateTime?
   createdAt               DateTime  @default(now())
   updatedAt               DateTime  @updatedAt

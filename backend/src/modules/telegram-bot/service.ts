@@ -77,6 +77,18 @@ function isHelpCommand(text: string) {
   return command === '/help' || value === 'help' || value === 'помощь';
 }
 
+function isPlansCommand(text: string) {
+  const { command, value } = readCommand(text);
+  return (
+    command === '/plans'
+    || command === '/tariffs'
+    || command === '/store'
+    || value === 'тарифы'
+    || value === 'магазин'
+    || value === 'цены'
+  );
+}
+
 function isBotCommand(text: string) {
   return text.trim().startsWith('/');
 }
@@ -97,6 +109,40 @@ function buildOpenAppMarkup(locale: UserLocale) {
       { text: botT(locale, 'openApp'), web_app: { url: miniAppUrl } },
     ]],
   };
+}
+
+function buildStorefrontMarkup(locale: UserLocale) {
+  const miniAppUrl = getMiniAppUrl();
+  if (!miniAppUrl) return undefined;
+
+  return {
+    inline_keyboard: [
+      [{ text: botT(locale, 'openStore'), web_app: { url: miniAppUrl } }],
+      [{ text: botT(locale, 'openApp'), web_app: { url: miniAppUrl } }],
+    ],
+  };
+}
+
+function buildStorefrontText(locale: UserLocale) {
+  return [
+    botT(locale, 'storefrontTitle'),
+    '',
+    botT(locale, 'storefrontIntro'),
+    '',
+    botT(locale, 'storefrontPremiumTitle'),
+    botT(locale, 'storefrontPremiumPrice'),
+    botT(locale, 'storefrontPremiumDescription'),
+    '',
+    botT(locale, 'storefrontBusinessTitle'),
+    botT(locale, 'storefrontBusinessPrice'),
+    botT(locale, 'storefrontBusinessDescription'),
+    '',
+    botT(locale, 'storefrontOneTimeTitle'),
+    botT(locale, 'storefrontVoicePack'),
+    botT(locale, 'storefrontReceiptPack'),
+    '',
+    botT(locale, 'storefrontOrderHint'),
+  ].join('\n');
 }
 
 function buildLanguageMarkup() {
@@ -212,11 +258,11 @@ async function sendLoginCode(chatId: number | string, from: TelegramBotUser, loc
 async function sendStart(chatId: number | string, locale: UserLocale) {
   await telegramBotClient.sendMessage(
     chatId,
-    `${escapeHtml(botT(locale, 'start'))}\n\n${escapeHtml(botT(locale, 'startExamples'))}`,
-    buildOpenAppMarkup(locale),
+    escapeHtml(buildStorefrontText(locale)),
+    buildStorefrontMarkup(locale),
   );
 
-  return { handled: true, action: 'start_sent' };
+  return { handled: true, action: 'storefront_sent' };
 }
 
 function readAudioPayload(message: TelegramBotMessage) {
@@ -292,7 +338,7 @@ async function handleFinancialMessage(message: TelegramBotMessage) {
   const messageId = Number.isFinite(Number(message.message_id)) ? Number(message.message_id) : Date.now();
 
   if (text) {
-    if (isStartCommand(text) || isHelpCommand(text)) {
+    if (isStartCommand(text) || isHelpCommand(text) || isPlansCommand(text)) {
       if (!storedLocale && normalizeUserLocale(from.language_code)) {
         await authService.updateUserLocale(user.id, locale);
       }

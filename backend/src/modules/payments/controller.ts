@@ -48,3 +48,7 @@ export const telegramPaymentsWebhook = asyncHandler(async (req: Request, res: Re
   assertTelegramWebhook(req);
   res.json(await paymentService.handleTelegramUpdate(req.body ?? {}));
 });
+
+export const yookassaPaymentsWebhook = asyncHandler(async (req: Request, res: Response) => {
+  res.json(await paymentService.handleYooKassaWebhook(req.body ?? {}));
+});

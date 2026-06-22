@@ -33,7 +33,8 @@
     "test:ai-regression": "node scripts/smoke/check-ai-command-regression.mjs",
     "smoke:ai-regression": "node scripts/smoke/check-ai-command-regression.mjs",
     "bot:webhook:set": "node scripts/configure-telegram-bot-webhook.mjs",
-    "bot:webhook:check": "node scripts/check-telegram-bot-webhook.mjs"
+    "bot:webhook:check": "node scripts/check-telegram-bot-webhook.mjs",
+    "bot:storefront": "node scripts/configure-telegram-bot-storefront.mjs"
   },
   "keywords": [],
   "author": "",

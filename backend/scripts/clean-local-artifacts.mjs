@@ -11,7 +11,13 @@ const keepReports = process.argv.includes('--keep-reports') || process.env.REPO_
 const targets = [
   '.tmp.drivedownload',
   '.tmp.driveupload',
+  'backend/.env',
+  'backend/.env.local',
+  'backend/.env.production',
+  'frontend/.env.local',
+  'frontend/.env.production',
   'frontend/tsconfig.node.tsbuildinfo',
+  'frontend/tsconfig.app.tsbuildinfo',
   'backend/tsconfig.tsbuildinfo',
   'backend/.test-auth-token',
   'backend/.test-auth-token.env',
@@ -21,6 +27,10 @@ const targets = [
   'backend/prisma/dev.db-journal',
   'backend/prisma/dev.db-wal',
   'backend/prisma/dev.db-shm',
+  'backend/prisma/prisma/dev.db',
+  'backend/prisma/prisma/dev.db-journal',
+  'backend/prisma/prisma/dev.db-wal',
+  'backend/prisma/prisma/dev.db-shm',
 ];
 
 if (!keepDist) targets.push('frontend/dist');

@@ -62,6 +62,10 @@ export const env = {
   jwtSecret,
   telegramBotToken: getRequiredInProduction('TELEGRAM_BOT_TOKEN'),
   telegramPaymentsWebhookSecret: getRequiredInProduction('TELEGRAM_PAYMENTS_WEBHOOK_SECRET'),
+  yookassaEnabled: getBooleanEnv('YOOKASSA_ENABLED', false),
+  yookassaShopId: getOptionalEnv('YOOKASSA_SHOP_ID'),
+  yookassaSecretKey: getOptionalEnv('YOOKASSA_SECRET_KEY'),
+  yookassaReturnUrl: getOptionalEnv('YOOKASSA_RETURN_URL'),
   adminTelegramId: process.env.ADMIN_TELEGRAM_ID ?? '',
   adminTelegramIds: getListEnv('ADMIN_TELEGRAM_IDS', [process.env.ADMIN_TELEGRAM_ID ?? ''].filter(Boolean)),
 

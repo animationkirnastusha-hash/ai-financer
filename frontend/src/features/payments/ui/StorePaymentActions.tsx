@@ -3,7 +3,7 @@ import { useAuthStore } from '@/features/auth/model/auth.store';
 import { paymentsApi, type StorePaymentCatalogDto, type StorePaymentDuration, type StorePaymentProduct, type StorePaymentProvider } from '@/features/payments/api/payments.api';
 import { formatPaymentPrice } from '@/features/payments/lib/paymentFormat';
 import { useSubscriptionStore } from '@/features/subscription/model/subscription.store';
-import { openTelegramInvoice } from '@/shared/lib/telegram';
+import { openTelegramExternalLink, openTelegramInvoice } from '@/shared/lib/telegram';
 import { useI18n } from '@/shared/lib/i18n';
 
 type Props = {
@@ -22,6 +22,10 @@ function getOption(catalog: StorePaymentCatalogDto | null, product: StorePayment
 
 function isSubscriptionProduct(product: StorePaymentProduct) {
   return product === 'premium' || product === 'business';
+}
+
+async function sleep(ms: number) {
+  await new Promise((resolve) => window.setTimeout(resolve, ms));
 }
 
 export function StorePaymentActions({ product, title, compact = false }: Props) {
@@ -60,25 +64,31 @@ export function StorePaymentActions({ product, title, compact = false }: Props) 
   const yearOption = getOption(catalog, product, 'year');
   const onceOption = getOption(catalog, product, 'once');
   const selectedDuration = (selected?.duration ?? duration) as StorePaymentDuration;
-  const selectedStarsPrice = selected ? formatPaymentPrice(selected.starsAmount, selected.starsCurrency) : '—';
-  const selectedStarsBasePrice = selected?.starsBaseAmount && selected.starsBaseAmount !== selected.starsAmount
-    ? formatPaymentPrice(selected.starsBaseAmount, selected.starsCurrency)
+  const selectedRubPrice = selected ? formatPaymentPrice(selected.amount, selected.currency) : '—';
+  const selectedRubBasePrice = selected?.baseAmount && selected.baseAmount !== selected.amount
+    ? formatPaymentPrice(selected.baseAmount, selected.currency)
     : null;
-  const selectedRubHint = selected ? formatPaymentPrice(selected.amount, selected.currency) : '—';
   const discount = selected?.discountPercent ? t('store.payment.discount', { value: String(selected.discountPercent) }) : null;
   const singleProduct = !isSubscriptionProduct(product);
+  const sbpAvailable = Boolean(catalog?.yookassaSbpConfigured);
 
-  const refreshOrder = async (orderId: string) => {
-    await new Promise((resolve) => window.setTimeout(resolve, 1200));
-    await paymentsApi.getOrder(orderId).catch(() => null);
-    await loadSubscription();
+  const refreshOrder = async (orderId: string, attempts = 1) => {
+    let latestStatus = '';
+    for (let index = 0; index < attempts; index += 1) {
+      await sleep(index === 0 ? 1200 : 3000);
+      const order = await paymentsApi.getOrder(orderId).catch(() => null);
+      latestStatus = String(order?.status ?? '');
+      await loadSubscription();
+      if (latestStatus === 'paid') return true;
+    }
+    return false;
   };
 
   const openStarsInvoice = async (invoiceLink: string, orderId: string) => {
     const opened = openTelegramInvoice(invoiceLink, (status) => {
       if (status === 'paid') {
         setMessage(t('store.payment.starsPaid'));
-        void refreshOrder(orderId);
+        void refreshOrder(orderId, 3);
         return;
       }
       if (status === 'cancelled') {
@@ -96,6 +106,15 @@ export function StorePaymentActions({ product, title, compact = false }: Props) 
     }
   };
 
+  const openExternalCheckout = async (url: string, orderId: string) => {
+    const opened = openTelegramExternalLink(url);
+    if (!opened) window.open(url, '_blank', 'noopener,noreferrer');
+    setMessage(t('store.payment.sbpOpened'));
+    void refreshOrder(orderId, 10).then((paid) => {
+      if (paid) setMessage(t('store.payment.sbpPaid'));
+    });
+  };
+
   const createOrder = async (provider: StorePaymentProvider) => {
     if (isBusy || !selected) return;
     setIsBusy(true);
@@ -107,6 +126,19 @@ export function StorePaymentActions({ product, title, compact = false }: Props) 
         const completed = await paymentsApi.completeMock(result.order.id);
         setSubscription(completed.subscription);
         setMessage(t('store.payment.testGranted'));
+        return;
+      }
+      if (provider === 'yookassaSbp') {
+        if (result.checkout.status === 'not_configured') {
+          setMessage(t('store.payment.sbpNotConfigured'));
+          return;
+        }
+        const checkoutUrl = result.checkout.checkoutUrl || result.checkout.confirmationUrl || result.order.checkoutUrl;
+        if (checkoutUrl) {
+          await openExternalCheckout(checkoutUrl, result.order.id);
+          return;
+        }
+        setMessage(t('store.payment.error'));
         return;
       }
       if (provider === 'telegramStars') {
@@ -139,8 +171,7 @@ export function StorePaymentActions({ product, title, compact = false }: Props) 
       {singleProduct ? (
         <div className="store-payment-one-time">
           <span>{t('store.payment.oneTime')}</span>
-          <strong>{onceOption ? formatPaymentPrice(onceOption.starsAmount, onceOption.starsCurrency) : selectedStarsPrice}</strong>
-          {onceOption ? <small>{t('store.payment.priceHint', { price: formatPaymentPrice(onceOption.amount, onceOption.currency) })}</small> : null}
+          <strong>{onceOption ? formatPaymentPrice(onceOption.amount, onceOption.currency) : selectedRubPrice}</strong>
         </div>
       ) : (
         <div className="store-payment-plan-toggle" role="group" aria-label={t('store.payment.period')}>
@@ -150,8 +181,7 @@ export function StorePaymentActions({ product, title, compact = false }: Props) 
             onClick={() => setDuration('month')}
           >
             <span>{t('store.payment.month')}</span>
-            <strong>{monthOption ? formatPaymentPrice(monthOption.starsAmount, monthOption.starsCurrency) : '—'}</strong>
-            {monthOption ? <small>{t('store.payment.priceHint', { price: formatPaymentPrice(monthOption.amount, monthOption.currency) })}</small> : null}
+            <strong>{monthOption ? formatPaymentPrice(monthOption.amount, monthOption.currency) : '—'}</strong>
           </button>
           <button
             type="button"
@@ -159,8 +189,8 @@ export function StorePaymentActions({ product, title, compact = false }: Props) 
             onClick={() => setDuration('year')}
           >
             <span>{t('store.payment.year')}</span>
-            <strong>{yearOption ? formatPaymentPrice(yearOption.starsAmount, yearOption.starsCurrency) : '—'}</strong>
-            {yearOption ? <small>{t('store.payment.yearHint', { price: formatPaymentPrice(yearOption.amount, yearOption.currency) })}</small> : null}
+            <strong>{yearOption ? formatPaymentPrice(yearOption.amount, yearOption.currency) : '—'}</strong>
+            {yearOption ? <small>{t('store.payment.yearHint')}</small> : null}
           </button>
         </div>
       )}
@@ -168,21 +198,21 @@ export function StorePaymentActions({ product, title, compact = false }: Props) 
       {selected ? (
         <div className="store-payment-selected-price">
           <span>{t('store.payment.selected')}</span>
-          <strong>{selectedStarsPrice}</strong>
-          {selectedStarsBasePrice ? <del>{selectedStarsBasePrice}</del> : null}
+          <strong>{selectedRubPrice}</strong>
+          {selectedRubBasePrice ? <del>{selectedRubBasePrice}</del> : null}
           {discount ? <em>{discount}</em> : null}
-          <small>{t('store.payment.priceHint', { price: selectedRubHint })}</small>
+          <small>{t('store.payment.selectedHint')}</small>
         </div>
       ) : null}
 
       <div className="store-payment-methods" aria-label={t('store.payment.other')}>
-        <button type="button" className="store-payment-method is-active" disabled={isBusy || !selected} onClick={() => createOrder('telegramStars')}>
-          <span>{t('store.payment.starsAvailable')}</span>
-          <strong>{isBusy && busyProvider === 'telegramStars' ? t('store.payment.preparing') : t('store.payment.stars', { price: selectedStarsPrice })}</strong>
+        <button type="button" className="store-payment-method is-active" disabled={isBusy || !selected} onClick={() => createOrder('yookassaSbp')}>
+          <span>{sbpAvailable ? t('store.payment.sbpAvailable') : t('store.payment.soon')}</span>
+          <strong>{isBusy && busyProvider === 'yookassaSbp' ? t('store.payment.preparing') : t('store.payment.sbp')}</strong>
         </button>
-        <button type="button" className="store-payment-method" disabled>
-          <span>{t('store.payment.soon')}</span>
-          <strong>{t('store.payment.cardsSoon')}</strong>
+        <button type="button" className="store-payment-method" disabled={isBusy || !selected} onClick={() => createOrder('telegramStars')}>
+          <span>{t('store.payment.starsAvailable')}</span>
+          <strong>{isBusy && busyProvider === 'telegramStars' ? t('store.payment.preparing') : t('store.payment.stars')}</strong>
         </button>
         <button type="button" className="store-payment-method" disabled>
           <span>{t('store.payment.soon')}</span>
