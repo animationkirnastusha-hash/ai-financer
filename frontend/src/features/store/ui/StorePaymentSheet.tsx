@@ -7,9 +7,10 @@ type Props = {
   open: boolean;
   product: StoreCard | null;
   onClose: () => void;
+  layer?: number;
 };
 
-export function StorePaymentSheet({ open, product, onClose }: Props) {
+export function StorePaymentSheet({ open, product, onClose, layer }: Props) {
   const { t } = useI18n();
   const paymentProduct = product?.comingSoon ? null : product?.product;
 
@@ -21,6 +22,7 @@ export function StorePaymentSheet({ open, product, onClose }: Props) {
       subtitle={t('store.payment.sheetSubtitle')}
       className="store-payment-sheet"
       bodyClassName="store-payment-sheet__body"
+      layer={layer}
     >
       {product ? (
         <div className="store-payment-sheet__intro">

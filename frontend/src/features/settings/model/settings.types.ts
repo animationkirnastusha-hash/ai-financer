@@ -15,6 +15,7 @@ export type AppSettings = {
   voiceBetaEnabled: boolean;
   voiceRepliesEnabled: boolean;
   voicePermissionPrompted: boolean;
+  finaOverlayDensity: number;
   textInputEnabled: boolean;
   aiInsightsEnabled: boolean;
   subscriptionPlan: SubscriptionPlan;

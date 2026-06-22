@@ -1,5 +1,5 @@
 import { useNavigationStore } from '@/features/navigation/model/navigation.store';
-import { usePremiumStore } from '@/features/premium/model/premium.store';
+import { useAppModalStore } from '@/features/modals/model/appModal.store';
 import type { StoreFeature } from '@/features/store/model/storeCatalog';
 import { useI18n } from '@/shared/lib/i18n';
 
@@ -10,7 +10,7 @@ type Props = {
 export function StoreFeatureSection({ features }: Props) {
   const { t } = useI18n();
   const navigateTo = useNavigationStore((state) => state.navigateTo);
-  const openPremium = usePremiumStore((state) => state.openPremium);
+  const openModal = useAppModalStore((state) => state.openModal);
 
   const handleFeatureClick = (feature: StoreFeature) => {
     if (feature.title === 'store.features.receipts.title') {
@@ -18,11 +18,14 @@ export function StoreFeatureSection({ features }: Props) {
       return;
     }
 
-    openPremium({
-      kind: 'locked_insight',
-      title: t(feature.title),
-      description: t(feature.caption),
-      cta: t('store.action.premium'),
+    openModal({
+      type: 'premium-upgrade',
+      trigger: {
+        kind: 'locked_insight',
+        title: t(feature.title),
+        description: t(feature.caption),
+        cta: t('store.action.premium'),
+      },
     });
   };
 

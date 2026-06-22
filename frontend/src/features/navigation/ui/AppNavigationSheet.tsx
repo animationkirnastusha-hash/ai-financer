@@ -4,6 +4,7 @@ import { useNavigationStore, type AppScreen } from '@/features/navigation/model/
 import { useSubscriptionStore } from '@/features/subscription/model/subscription.store';
 import { canShowStoreSurface, hasFeatureAccess } from '@/features/subscription/lib/entitlements';
 import { useI18n, type I18nKey } from '@/shared/lib/i18n';
+import { AppModalPortal } from '@/features/modals/ui/AppModalPortal';
 
 type NavigationItem = {
   screen: AppScreen;
@@ -73,10 +74,11 @@ export function AppNavigationSheet() {
   };
 
   return (
-    <div className="app-modal-backdrop app-navigation-backdrop" data-no-swipe="true" onClick={close}>
-      <div className="app-modal-sheet app-navigation-sheet app-navigation-sheet--structured app-navigation-sheet--ia" data-no-swipe="true" onClick={(event) => event.stopPropagation()}>
-        <div className="app-modal-handle" />
-        <div className="app-modal-body">
+    <AppModalPortal>
+      <div className="app-modal-backdrop app-navigation-backdrop" data-no-swipe="true" onClick={close}>
+        <div className="app-modal-sheet app-navigation-sheet app-navigation-sheet--structured app-navigation-sheet--ia" data-no-swipe="true" onClick={(event) => event.stopPropagation()}>
+          <div className="app-modal-handle" />
+          <div className="app-modal-body">
           <div className="app-navigation-head">
             <div>
               <div className="app-eyebrow">{t('nav.eyebrow')}</div>
@@ -107,8 +109,9 @@ export function AppNavigationSheet() {
               </section>
             ))}
           </div>
+          </div>
         </div>
       </div>
-    </div>
+    </AppModalPortal>
   );
 }

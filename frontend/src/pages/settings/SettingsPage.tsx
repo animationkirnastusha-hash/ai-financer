@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useState, type CSSProperties, type ReactNode } from 'react';
 import { useSettingsStore } from '@/features/settings/model/settings.store';
 import { useNavigationStore, type SettingsSection } from '@/features/navigation/model/navigation.store';
 import { LanguageSwitcher } from '@/shared/ui/LanguageSwitcher';
@@ -48,6 +48,25 @@ function ToggleLine({ title, caption, checked, onChange }: { title: string; capt
   );
 }
 
+function RangeLine({ title, caption, value, min, max, step = 1, valueLabel, onChange }: { title: string; caption: string; value: number; min: number; max: number; step?: number; valueLabel: string; onChange: (value: number) => void }) {
+  return (
+    <label className="app-settings-range">
+      <span className="app-settings-range__head">
+        <span><b>{title}</b><small>{caption}</small></span>
+        <em>{valueLabel}</em>
+      </span>
+      <input
+        type="range"
+        min={min}
+        max={max}
+        step={step}
+        value={value}
+        onChange={(event) => onChange(Number(event.target.value))}
+      />
+    </label>
+  );
+}
+
 export default function SettingsPage() {
   const { t, language } = useI18n();
   const [resetStatus, setResetStatus] = useState<string | null>(null);
@@ -59,6 +78,7 @@ export default function SettingsPage() {
   const voiceEnabled = useSettingsStore((state) => state.voiceEnabled);
   const voiceBetaEnabled = useSettingsStore((state) => state.voiceBetaEnabled);
   const voiceRepliesEnabled = useSettingsStore((state) => state.voiceRepliesEnabled);
+  const finaOverlayDensity = useSettingsStore((state) => state.finaOverlayDensity);
   const textInputEnabled = useSettingsStore((state) => state.textInputEnabled);
   const aiInsightsEnabled = useSettingsStore((state) => state.aiInsightsEnabled);
   const mainCurrency = useSettingsStore((state) => state.mainCurrency);
@@ -75,6 +95,8 @@ export default function SettingsPage() {
   const setVoiceEnabled = useSettingsStore((state) => state.setVoiceEnabled);
   const setVoiceBetaEnabled = useSettingsStore((state) => state.setVoiceBetaEnabled);
   const setVoiceRepliesEnabled = useSettingsStore((state) => state.setVoiceRepliesEnabled);
+  const setFinaOverlayDensity = useSettingsStore((state) => state.setFinaOverlayDensity);
+  const resetFinaOverlayDensity = useSettingsStore((state) => state.resetFinaOverlayDensity);
   const setTextInputEnabled = useSettingsStore((state) => state.setTextInputEnabled);
   const setAIInsightsEnabled = useSettingsStore((state) => state.setAIInsightsEnabled);
   const setMainCurrency = useSettingsStore((state) => state.setMainCurrency);
@@ -154,6 +176,7 @@ export default function SettingsPage() {
         <section className="app-settings-grid">
           <SettingsCard title={t('settings.card.voice.title')} caption={t('settings.card.voice.caption')} value={voiceEnabled ? t('settings.card.voice.on') : t('settings.card.voice.off')} onClick={() => setModal('voice')} />
           <SettingsCard title={t('settings.card.fina.title')} caption={t('settings.card.fina.caption')} value={t('settings.card.fina.value')} onClick={() => setModal('fina')} />
+          <SettingsCard title={t('settings.card.overlay.title')} caption={t('settings.card.overlay.caption')} value={`${finaOverlayDensity}%`} onClick={() => setModal('overlay')} />
           <SettingsCard title={t('settings.card.notifications.title')} caption={t('settings.card.notifications.caption')} value={notificationSettings?.inAppEnabled === false ? t('settings.card.notifications.off') : t('settings.card.notifications.on')} onClick={() => setModal('notifications')} />
           <SettingsCard title={t('settings.card.currency.title')} caption={t('settings.card.currency.caption')} value={`${mainCurrency}${secondaryCurrencyEnabled ? ` + ${secondaryCurrency}` : ''}`} onClick={() => setModal('currency')} />
           <SettingsCard title={t('settings.card.ai.title')} caption={t('settings.card.ai.caption')} value={textInputEnabled ? t('settings.card.ai.on') : t('settings.card.ai.off')} onClick={() => setModal('ai')} />
@@ -188,6 +211,31 @@ export default function SettingsPage() {
             <div><b>3</b><span>{t('settings.fina.step.release')}</span></div>
           </div>
           <p className="app-settings-note">{t('settings.fina.note')}</p>
+        </ModalShell>
+      ) : null}
+
+      {modal === 'overlay' ? (
+        <ModalShell title={t('settings.overlay.modal.title')} caption={t('settings.overlay.modal.caption')} onClose={() => setModal(null)}>
+          <div className="app-overlay-settings">
+            <RangeLine
+              title={t('settings.overlay.density.title')}
+              caption={t('settings.overlay.density.caption')}
+              value={finaOverlayDensity}
+              min={40}
+              max={90}
+              step={1}
+              valueLabel={`${finaOverlayDensity}%`}
+              onChange={setFinaOverlayDensity}
+            />
+            <div className="app-overlay-preview" style={{ '--app-overlay-preview-density': finaOverlayDensity / 100 } as CSSProperties}>
+              <span>{t('settings.overlay.preview.page')}</span>
+              <strong>{t('settings.overlay.preview.overlay')}</strong>
+            </div>
+            <button type="button" className="app-overlay-reset" onClick={resetFinaOverlayDensity}>
+              {t('settings.overlay.reset')}
+            </button>
+          </div>
+          <p className="app-settings-note">{t('settings.overlay.note')}</p>
         </ModalShell>
       ) : null}
 

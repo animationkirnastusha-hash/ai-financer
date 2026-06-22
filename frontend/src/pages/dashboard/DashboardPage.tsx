@@ -48,7 +48,6 @@ export default function DashboardPage() {
 
   const [cashflowMode, setCashflowMode] = useState<HomeCashflowMode>('expense');
   const [cashflowPeriod, setCashflowPeriod] = useState<HomeCashflowPeriod>('month');
-  const [receiptSheetOpen, setReceiptSheetOpen] = useState(false);
 
   const mainCurrency = useSettingsStore((state) => state.mainCurrency);
   const secondaryCurrencyEnabled = useSettingsStore((state) => state.secondaryCurrencyEnabled);
@@ -75,7 +74,7 @@ export default function DashboardPage() {
       return;
     }
 
-    setReceiptSheetOpen(true);
+    openModal({ type: 'receipt-premium-lock' });
   };
 
   const month = useMemo(() => {
@@ -183,33 +182,6 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {receiptSheetOpen ? (
-        <div className="app-modal-backdrop dashboard-receipt-lock" data-no-swipe="true" onClick={() => setReceiptSheetOpen(false)}>
-          <div className="app-modal-sheet dashboard-receipt-lock__sheet" data-no-swipe="true" onClick={(event) => event.stopPropagation()}>
-            <div className="app-modal-handle" />
-            <div className="app-modal-body dashboard-receipt-lock__body">
-              <div>
-                <div className="app-eyebrow">{t('dashboard.receipt.lock.eyebrow')}</div>
-                <h2>{t('dashboard.receipt.lock.title')}</h2>
-                <p>{t('dashboard.receipt.lock.caption')}</p>
-              </div>
-            </div>
-            <footer className="app-modal-footer dashboard-receipt-lock__actions">
-              <button type="button" className="app-secondary-button" onClick={() => setReceiptSheetOpen(false)}>{t('common.close')}</button>
-              <button
-                type="button"
-                className="app-primary-button"
-                onClick={() => {
-                  setReceiptSheetOpen(false);
-                  navigateTo('store');
-                }}
-              >
-                {t('dashboard.receipt.lock.store')}
-              </button>
-            </footer>
-          </div>
-        </div>
-      ) : null}
     </div>
   );
 }

@@ -1,0 +1,128 @@
+/* Unified modal manager viewport contract. Keep this file last among modal/layout safety imports. */
+html.ai-any-modal-open,
+body.ai-any-modal-open,
+body.ai-modal-open,
+body.ai-core-modal-open {
+  overflow: hidden;
+  overscroll-behavior: none;
+  touch-action: none;
+}
+
+.app-modal-backdrop,
+.app-drawer-backdrop,
+.notification-backdrop,
+.trial-offer-backdrop,
+.app-home-chart-backdrop,
+.app-transaction-edit-backdrop,
+.dashboard-receipt-lock {
+  position: fixed !important;
+  inset: 0 !important;
+  display: flex !important;
+  align-items: flex-end !important;
+  justify-content: center !important;
+  width: 100vw !important;
+  height: 100dvh !important;
+  min-height: 100svh !important;
+  max-height: 100dvh !important;
+  overflow: hidden !important;
+  padding: max(6px, env(safe-area-inset-top)) 0 0 !important;
+  background: linear-gradient(180deg, rgba(0, 0, 0, .42), rgba(0, 0, 0, .82)) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
+  backdrop-filter: blur(16px) !important;
+  isolation: isolate !important;
+  box-sizing: border-box !important;
+}
+
+.app-modal-sheet,
+.app-drawer-sheet,
+.notification-sheet,
+.trial-offer-sheet,
+.app-home-chart-sheet,
+.app-transaction-edit-sheet,
+.dashboard-receipt-lock__sheet,
+.premium-upgrade-sheet,
+.store-payment-sheet,
+.store-limits-sheet {
+  position: relative !important;
+  display: flex !important;
+  flex-direction: column !important;
+  width: min(100%, 620px) !important;
+  max-width: 100vw !important;
+  max-height: calc(100dvh - max(8px, env(safe-area-inset-top))) !important;
+  min-height: 0 !important;
+  margin: 0 auto !important;
+  overflow: hidden !important;
+  overscroll-behavior: contain !important;
+  border-radius: 28px 28px 0 0 !important;
+  box-sizing: border-box !important;
+  transform: translate3d(0, var(--app-modal-drag-y, 0px), 0);
+}
+
+.app-modal-header,
+.app-modal-footer,
+.app-modal-handle {
+  flex: 0 0 auto !important;
+}
+
+.app-modal-body,
+.app-drawer-body,
+.notification-sheet__body,
+.trial-offer-sheet__body,
+.store-payment-sheet__body,
+.store-limits-sheet__body,
+.premium-upgrade-sheet__body,
+.dashboard-receipt-lock__body,
+.app-settings-modal__body {
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  overscroll-behavior-y: contain !important;
+  -webkit-overflow-scrolling: touch !important;
+  box-sizing: border-box !important;
+}
+
+.app-modal-body > *,
+.app-drawer-body > *,
+.notification-sheet__body > *,
+.trial-offer-sheet__body > *,
+.store-payment-sheet__body > *,
+.store-limits-sheet__body > *,
+.premium-upgrade-sheet__body > *,
+.dashboard-receipt-lock__body > * {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.premium-upgrade-sheet__body,
+.store-payment-sheet__body,
+.store-limits-sheet__body {
+  display: grid;
+  gap: 14px;
+  padding-bottom: max(22px, calc(22px + env(safe-area-inset-bottom))) !important;
+}
+
+.dashboard-receipt-lock__actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 10px;
+  width: 100%;
+}
+
+@media (max-width: 560px) {
+  .app-modal-sheet,
+  .app-drawer-sheet,
+  .notification-sheet,
+  .trial-offer-sheet,
+  .app-home-chart-sheet,
+  .app-transaction-edit-sheet,
+  .dashboard-receipt-lock__sheet,
+  .premium-upgrade-sheet,
+  .store-payment-sheet,
+  .store-limits-sheet {
+    width: 100% !important;
+    max-height: calc(100dvh - max(6px, env(safe-area-inset-top))) !important;
+    border-radius: 26px 26px 0 0 !important;
+  }
+}

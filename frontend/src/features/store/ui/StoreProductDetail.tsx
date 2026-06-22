@@ -33,6 +33,7 @@ export function StoreProductDetail({ card, hasPremium, hasBusiness, onBuy }: Pro
       <ul>
         {card.items.map((item) => <li key={item}>{t(item)}</li>)}
       </ul>
+      {blocked ? <div className="store-product-detail-card__notice">{t('store.business.separateHint')}</div> : null}
       <button type="button" className="app-primary-button" disabled={access || blocked} onClick={() => onBuy(card)}>
         {blocked ? t('store.action.businessSoon') : access ? t('store.status.active') : t(card.action)}
       </button>

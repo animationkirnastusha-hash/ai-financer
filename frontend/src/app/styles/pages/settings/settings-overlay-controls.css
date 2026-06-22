@@ -1,0 +1,110 @@
+.app-overlay-settings {
+  display: grid;
+  gap: 14px;
+}
+
+.app-settings-range {
+  display: grid;
+  gap: 13px;
+  border: 1px solid rgba(255,255,255,.08);
+  background: rgba(255,255,255,.045);
+  border-radius: 22px;
+  padding: 14px;
+}
+
+.app-settings-range__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.app-settings-range__head b,
+.app-settings-range__head small {
+  display: block;
+}
+
+.app-settings-range__head b {
+  color: #fff;
+  font-size: 14px;
+  line-height: 1.18;
+}
+
+.app-settings-range__head small {
+  margin-top: 5px;
+  color: rgba(255,255,255,.45);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.app-settings-range__head em {
+  flex: 0 0 auto;
+  border: 1px solid rgba(129,239,208,.20);
+  background: rgba(129,239,208,.08);
+  color: rgba(220,255,244,.92);
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-style: normal;
+  font-size: 11px;
+  font-weight: 760;
+}
+
+.app-settings-range input[type='range'] {
+  width: 100%;
+  accent-color: rgb(129, 239, 208);
+}
+
+.app-overlay-preview {
+  min-height: 132px;
+  position: relative;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 24px;
+  background:
+    radial-gradient(circle at 20% 18%, rgba(129,239,208,.16), transparent 28%),
+    radial-gradient(circle at 80% 12%, rgba(148,199,255,.15), transparent 26%),
+    linear-gradient(135deg, rgba(19,27,39,.88), rgba(7,10,16,.90));
+}
+
+.app-overlay-preview span {
+  position: absolute;
+  left: 14px;
+  top: 12px;
+  color: rgba(255,255,255,.38);
+  font-size: 11px;
+  font-weight: 720;
+}
+
+.app-overlay-preview strong {
+  display: grid;
+  place-items: center;
+  width: min(230px, calc(100% - 34px));
+  min-height: 82px;
+  border: 1px solid rgba(255,255,255,.10);
+  border-radius: 22px;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(129,239,208,.13), transparent 38%),
+    rgba(2,6,12,var(--app-overlay-preview-density, .68));
+  box-shadow: 0 24px 70px rgba(0,0,0,.38);
+  color: rgba(255,255,255,.88);
+  font-size: 14px;
+  font-weight: 800;
+  -webkit-backdrop-filter: blur(16px) saturate(1.1);
+  backdrop-filter: blur(16px) saturate(1.1);
+}
+
+.app-overlay-reset {
+  min-height: 46px;
+  border: 1px solid rgba(255,255,255,.09);
+  border-radius: 18px;
+  background: rgba(255,255,255,.055);
+  color: rgba(255,255,255,.82);
+  font-size: 13px;
+  font-weight: 760;
+}
+
+.app-overlay-reset:active {
+  transform: scale(.985);
+}

@@ -33,8 +33,6 @@ export function VoiceFirstCompanionLayer() {
   const setVoicePermissionPrompted = useSettingsStore((state) => state.setVoicePermissionPrompted);
 
   const [isPriming, setIsPriming] = useState(false);
-  const [permissionIntroOpen, setPermissionIntroOpen] = useState(false);
-  const [permissionIntroDismissed, setPermissionIntroDismissed] = useState(false);
 
   const lastAssistantMessageKeyRef = useRef('');
   const handleTextRef = useRef<(text: string) => Promise<void> | void>(() => undefined);
@@ -70,8 +68,7 @@ export function VoiceFirstCompanionLayer() {
   const canUseVoice = voiceEnabled && voiceBetaEnabled && voice.isSupported;
   const hasPending = chat.pendingActions.length > 0;
   const isBusy = chat.isSending || isDispatching || voice.state === 'uploading';
-  const microphoneBlocked = voice.permissionState === 'denied' || voice.permissionState === 'unsupported';
-  const microphoneNeedsAction = canUseVoice && permissionIntroOpen;
+  const microphoneUnsupported = voice.permissionState === 'unsupported';
   const canAttemptManualRecording = canUseVoice && !hasPending && !chat.isSending && !isDispatching && voice.state === 'idle';
   const tapToTextEnabled = false;
 
@@ -84,13 +81,11 @@ export function VoiceFirstCompanionLayer() {
 
     if (voice.permissionState === 'granted' && !voicePermissionPrompted) {
       setVoicePermissionPrompted(true);
-      setPermissionIntroOpen(false);
-      setPermissionIntroDismissed(false);
       return;
     }
 
-    if (voice.permissionState === 'denied') {
-      if (voicePermissionPrompted) setVoicePermissionPrompted(false);
+    if (voice.permissionState === 'denied' && voicePermissionPrompted) {
+      setVoicePermissionPrompted(false);
     }
   }, [canUseVoice, setVoicePermissionPrompted, voice.permissionState, voicePermissionPrompted]);
 
@@ -127,13 +122,10 @@ export function VoiceFirstCompanionLayer() {
   }, [openModal]);
 
   const explainVoiceUnavailable = useCallback(() => {
-    if (!canUseVoice) showThought(t('voice.thought.unavailable'), 'warning', 2400);
-    else if (microphoneBlocked) {
-      setPermissionIntroOpen(true);
-      setPermissionIntroDismissed(false);
-      showThought(t('voice.thought.allowMicFirst'), 'warning', 2400);
-    } else if (hasPending) showThought(t('voice.thought.closeActionFirst'), 'warning', 2400);
-  }, [canUseVoice, hasPending, microphoneBlocked, showThought, t]);
+    if (!canUseVoice || microphoneUnsupported) showThought(t('voice.thought.unavailable'), 'warning', 2400);
+    else if (voice.permissionState === 'denied') showThought(t('voice.thought.micNeeded'), 'warning', 2800);
+    else if (hasPending) showThought(t('voice.thought.closeActionFirst'), 'warning', 2400);
+  }, [canUseVoice, hasPending, microphoneUnsupported, showThought, t, voice.permissionState]);
 
   const startHoldRecording = useCallback(async () => {
     if (!canAttemptManualRecording) {
@@ -141,31 +133,33 @@ export function VoiceFirstCompanionLayer() {
       return false;
     }
 
-    if (microphoneBlocked) {
-      setPermissionIntroOpen(true);
-      setPermissionIntroDismissed(false);
-      showThought(t('voice.thought.allowMicFirst'), 'warning', 2400);
+    if (microphoneUnsupported) {
+      showThought(t('voice.thought.unavailable'), 'warning', 2400);
       return false;
     }
 
     resetVoiceMachine();
-    setPermissionIntroOpen(false);
-    showThought(t('voice.thought.listening'), 'listening', 1600);
     const result = await voice.start();
 
     if (result === 'started') {
       setVoicePermissionPrompted(true);
+      showThought(t('voice.thought.listening'), 'listening', 1600);
       return true;
     }
 
-    if (result === 'permission-ready') {
-      setPermissionIntroOpen(true);
-      setPermissionIntroDismissed(false);
+    if (result === 'permission-consumed') {
+      const nextPermission = await voice.refreshPermissionState?.();
+      const allowed = nextPermission === 'granted';
+      setVoicePermissionPrompted(allowed);
+      showThought(allowed ? t('voice.thought.micReady') : t('voice.thought.micNeeded'), allowed ? 'success' : 'warning', allowed ? 2800 : 3200);
+      resetVoiceMachine();
+      voice.reset?.();
+      return false;
     }
 
     explainVoiceUnavailable();
     return false;
-  }, [canAttemptManualRecording, explainVoiceUnavailable, microphoneBlocked, resetVoiceMachine, setVoicePermissionPrompted, showThought, t, voice]);
+  }, [canAttemptManualRecording, explainVoiceUnavailable, microphoneUnsupported, resetVoiceMachine, setVoicePermissionPrompted, showThought, t, voice]);
 
   const handleCompanionTap = useCallback(() => {
     if (!canUseVoice) {
@@ -173,10 +167,13 @@ export function VoiceFirstCompanionLayer() {
       return;
     }
 
-    if (microphoneBlocked) {
-      setPermissionIntroOpen(true);
-      setPermissionIntroDismissed(false);
-      showThought(t('voice.thought.allowMicFirst'), 'warning', 2400);
+    if (microphoneUnsupported) {
+      showThought(t('voice.thought.unavailable'), 'warning', 2400);
+      return;
+    }
+
+    if (voice.permissionState === 'denied') {
+      showThought(t('voice.thought.micNeeded'), 'warning', 2800);
       return;
     }
 
@@ -186,7 +183,7 @@ export function VoiceFirstCompanionLayer() {
     }
 
     showThought(t('voice.fina.holdVoiceOnly'), 'neutral', 1900);
-  }, [canUseVoice, hasPending, microphoneBlocked, showThought, t]);
+  }, [canUseVoice, hasPending, microphoneUnsupported, showThought, t, voice.permissionState]);
 
   const primeVoicePermission = useCallback(async () => {
     setIsPriming(true);
@@ -194,18 +191,13 @@ export function VoiceFirstCompanionLayer() {
       const ready = await voice.primePermission();
       if (ready) {
         setVoicePermissionPrompted(true);
-        setPermissionIntroOpen(false);
-        setPermissionIntroDismissed(false);
         showThought(t('voice.thought.micReady'), 'success', 3200);
       } else {
         setVoicePermissionPrompted(false);
-        setPermissionIntroOpen(true);
         showThought(t('voice.thought.micAfterPermission'), 'neutral', 3200);
       }
     } catch {
       setVoicePermissionPrompted(false);
-      setPermissionIntroOpen(true);
-      setPermissionIntroDismissed(false);
       showThought(t('voice.thought.micNeeded'), 'warning', 3600);
     } finally {
       setIsPriming(false);
@@ -253,8 +245,6 @@ export function VoiceFirstCompanionLayer() {
 
     if (voice.error === 'microphone-denied' || voice.error === 'not-allowed' || voice.error === 'service-not-allowed') {
       setVoicePermissionPrompted(false);
-      setPermissionIntroOpen(true);
-      setPermissionIntroDismissed(false);
       showThought(t('voice.thought.micNeeded'), 'warning', 3600);
       resetGesture();
       resetVoiceMachine();
@@ -320,7 +310,7 @@ export function VoiceFirstCompanionLayer() {
     return 'idle';
   }, [chat.isSending, chat.pendingActions.length, gestureMode, isDispatching, thought?.tone, voice.state]);
 
-  const needsIntro = microphoneNeedsAction && !permissionIntroDismissed;
+  const needsIntro = false;
   const showFloatingCompanion = !hasOpenModal;
 
   return (
@@ -331,10 +321,7 @@ export function VoiceFirstCompanionLayer() {
       isPriming={isPriming}
       permissionState={voice.permissionState}
       onPrimePermission={primeVoicePermission}
-      onSkipPermissionIntro={() => {
-        setPermissionIntroOpen(false);
-        setPermissionIntroDismissed(true);
-      }}
+      onSkipPermissionIntro={() => undefined}
       thought={thought}
       canUseVoice={canUseVoice}
       isBusy={isBusy}

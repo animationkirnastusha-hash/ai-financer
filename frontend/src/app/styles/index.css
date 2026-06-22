@@ -17,10 +17,12 @@
 @import "./components/modal-viewport-safety.css";
 @import "./layout/navigation-swipe.css";
 @import "./features/voice/fina.css";
+@import "./features/voice/overlay-appearance.css";
 @import "./pages/dashboard/dashboard.css";
 @import "./pages/accounts/accounts.css";
 @import "./pages/taxonomy/taxonomy.css";
 @import "./pages/settings/settings.css";
+@import "./pages/settings/settings-overlay-controls.css";
 @import "./features/ai-settings/ai-settings-panel.css";
 @import "./features/chat/ai-text.css";
 @import "./features/progression/companion-progress.css";

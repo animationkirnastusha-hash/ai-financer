@@ -6,6 +6,7 @@ type Props = {
   open: boolean;
   subscription: SubscriptionStatusDto | null;
   onClose: () => void;
+  layer?: number;
 };
 
 function formatDate(value: string | null | undefined) {
@@ -15,7 +16,7 @@ function formatDate(value: string | null | undefined) {
   return new Intl.DateTimeFormat('ru-RU', { day: '2-digit', month: 'short' }).format(date);
 }
 
-export function StoreLimitsSheet({ open, subscription, onClose }: Props) {
+export function StoreLimitsSheet({ open, subscription, onClose, layer }: Props) {
   const { t } = useI18n();
   const usage = subscription?.usage;
   const packageCredits = subscription?.packageCredits;
@@ -28,6 +29,7 @@ export function StoreLimitsSheet({ open, subscription, onClose }: Props) {
       subtitle={t('store.limits.sheetCaption')}
       className="store-limits-sheet"
       bodyClassName="store-limits-sheet__body"
+      layer={layer}
     >
       <div className="store-limits-list">
         <article>

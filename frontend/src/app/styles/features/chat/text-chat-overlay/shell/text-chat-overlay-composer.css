@@ -8,7 +8,7 @@
   align-items: flex-end;
   gap: 8px;
   padding: 10px 14px calc(env(safe-area-inset-bottom) + 14px);
-  background: linear-gradient(180deg, transparent, rgba(3, 7, 12, 0.92) 30%);
+  background: linear-gradient(180deg, transparent, rgba(3, 7, 12, var(--fina-overlay-composer-alpha, 0.86)) 30%);
 }
 
 .text-chat-overlay__composer textarea {

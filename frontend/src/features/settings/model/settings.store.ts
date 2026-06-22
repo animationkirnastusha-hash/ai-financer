@@ -18,6 +18,8 @@ type SettingsState = AppSettings & {
   setVoiceBetaEnabled: (value: boolean) => void;
   setVoiceRepliesEnabled: (value: boolean) => void;
   setVoicePermissionPrompted: (value: boolean) => void;
+  setFinaOverlayDensity: (value: number) => void;
+  resetFinaOverlayDensity: () => void;
   setTextInputEnabled: (value: boolean) => void;
   setAIInsightsEnabled: (value: boolean) => void;
   setSubscriptionPlan: (plan: SubscriptionPlan) => void;
@@ -48,6 +50,20 @@ function normalizeLanguageSource(value: unknown): AppLanguageSource {
   return value === 'user' ? 'user' : 'telegram';
 }
 
+function clampNumber(value: unknown, min: number, max: number, fallback: number): number {
+  const numberValue = Number(value);
+  if (!Number.isFinite(numberValue)) return fallback;
+  return Math.min(max, Math.max(min, Math.round(numberValue)));
+}
+
+function detectDefaultFinaOverlayDensity(): number {
+  if (typeof navigator === 'undefined') return 72;
+  const userAgent = navigator.userAgent.toLowerCase();
+  if (userAgent.includes('android')) return 76;
+  if (userAgent.includes('iphone') || userAgent.includes('ipad') || userAgent.includes('ipod')) return 62;
+  return 68;
+}
+
 const defaultSettings: AppSettings = {
   appLanguage: 'en',
   appLanguageSource: 'telegram',
@@ -58,6 +74,7 @@ const defaultSettings: AppSettings = {
   voiceBetaEnabled: true,
   voiceRepliesEnabled: true,
   voicePermissionPrompted: false,
+  finaOverlayDensity: detectDefaultFinaOverlayDensity(),
   textInputEnabled: true,
   aiInsightsEnabled: true,
   subscriptionPlan: 'free',
@@ -87,6 +104,7 @@ function loadSettings(): AppSettings {
       companionName: FIXED_COMPANION_NAME,
       voiceRepliesEnabled: parsed.voiceRepliesEnabled === false ? false : true,
       voicePermissionPrompted: Boolean(parsed.voicePermissionPrompted),
+      finaOverlayDensity: clampNumber(parsed.finaOverlayDensity, 40, 90, defaultSettings.finaOverlayDensity),
       textInputEnabled: parsed.textInputEnabled === false ? false : true,
     };
   } catch {
@@ -105,6 +123,7 @@ function saveSettings(state: AppSettings) {
       voiceBetaEnabled: state.voiceBetaEnabled,
       voiceRepliesEnabled: state.voiceRepliesEnabled,
       voicePermissionPrompted: state.voicePermissionPrompted,
+      finaOverlayDensity: clampNumber(state.finaOverlayDensity, 40, 90, defaultSettings.finaOverlayDensity),
       textInputEnabled: state.textInputEnabled,
       aiInsightsEnabled: state.aiInsightsEnabled,
       subscriptionPlan: state.subscriptionPlan,
@@ -172,6 +191,16 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
 
   setVoicePermissionPrompted: (value) => {
     set({ voicePermissionPrompted: value });
+    saveSettings(get());
+  },
+
+  setFinaOverlayDensity: (value) => {
+    set({ finaOverlayDensity: clampNumber(value, 40, 90, defaultSettings.finaOverlayDensity) });
+    saveSettings(get());
+  },
+
+  resetFinaOverlayDensity: () => {
+    set({ finaOverlayDensity: detectDefaultFinaOverlayDensity() });
     saveSettings(get());
   },
 

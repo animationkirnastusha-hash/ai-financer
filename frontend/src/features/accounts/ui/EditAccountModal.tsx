@@ -4,6 +4,7 @@ import type {
   UpdateAccountPayload,
 } from "@/features/accounts/api/accounts.api";
 import { useI18n } from "@/shared/lib/i18n";
+import { Drawer } from "@/shared/ui/Drawer";
 
 const ACCOUNT_TYPES = ["card", "cash", "savings", "investment"];
 const ACCOUNT_TYPE_KEYS: Record<string, string> = {
@@ -58,10 +59,6 @@ export function EditAccountModal({
     setLockVisibility(Boolean(account.lockVisibility));
   }, [account]);
 
-  useEffect(() => {
-    document.body.classList.toggle("ai-modal-open", open);
-    return () => document.body.classList.remove("ai-modal-open");
-  }, [open]);
 
   if (!open || !account) return null;
 
@@ -85,14 +82,8 @@ export function EditAccountModal({
   };
 
   return (
-    <div
-      data-no-swipe="true"
-      data-ai-core-modal="true"
-      className="fixed inset-0 z-[120] flex items-end bg-black/70 backdrop-blur-sm"
-    >
-      <div className="max-h-[92dvh] w-full overflow-y-auto rounded-t-[30px] border border-white/10 bg-[#0b1016] px-4 pb-6 pt-4 text-white shadow-2xl">
-        <div className="mx-auto mb-4 h-1.5 w-14 rounded-full bg-white/15" />
-        <div className="mx-auto max-w-[560px] space-y-4">
+    <Drawer open={open} onClose={onClose} className="app-account-edit-sheet" bodyClassName="app-account-edit-sheet__body" showFloatingClose={false}>
+      <div className="mx-auto max-w-[560px] space-y-4">
           <div className="flex items-center justify-between gap-3">
             <div>
               <div className="text-[11px] uppercase tracking-[0.16em] text-white/35">
@@ -201,9 +192,8 @@ export function EditAccountModal({
           >
             {isSaving ? t("common.saving") : t("common.save")}
           </button>
-        </div>
       </div>
-    </div>
+    </Drawer>
   );
 }
 

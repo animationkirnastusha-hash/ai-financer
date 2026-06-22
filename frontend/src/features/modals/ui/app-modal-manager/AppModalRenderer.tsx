@@ -7,6 +7,10 @@ import { UtilityModals } from '@/features/modals/ui/UtilityModals';
 import { ReportExportSheet } from '@/features/reports/ui/ReportExportSheet';
 import { TextChatOverlay } from '@/features/chat/ui/TextChatOverlay';
 import { TrialOfferSheet } from '@/features/subscription/ui/TrialOfferSheet';
+import { StoreLimitsSheet } from '@/features/store/ui/StoreLimitsSheet';
+import { StorePaymentSheet } from '@/features/store/ui/StorePaymentSheet';
+import { PremiumUpgradeSheet } from '@/features/premium/ui/PremiumUpgradeSheet';
+import { ReceiptPremiumLockSheet } from '@/features/modals/ui/ReceiptPremiumLockSheet';
 import type { AppModalDescriptor } from '@/features/modals/model/appModal.store';
 import { layerByIndex } from '@/features/modals/lib/modalLayers';
 import type { AppModalDependencies } from './useAppModalDependencies';
@@ -20,6 +24,9 @@ import {
   isTextChatModal,
   isTrialOfferModal,
   isUtilityModal,
+  isStoreModal,
+  isPremiumModal,
+  isReceiptLockModal,
 } from './modalTypeGuards';
 
 type CloseModal = (type?: AppModalDescriptor['type']) => void;
@@ -138,6 +145,24 @@ export function AppModalRenderer({ closeAllModals, closeModal, deps, index, moda
   if (isTrialOfferModal(modal)) {
     return <TrialOfferSheet open layer={layer} source={modal.source ?? 'manual'} onClose={() => closeModal('trial-offer')} />;
   }
+
+
+  if (isStoreModal(modal)) {
+    if (modal.type === 'store-limits') {
+      return <StoreLimitsSheet open subscription={deps.subscription} onClose={() => closeModal('store-limits')} layer={layer} />;
+    }
+
+    return <StorePaymentSheet open product={modal.product} onClose={() => closeModal('store-payment')} layer={layer} />;
+  }
+
+  if (isPremiumModal(modal)) {
+    return <PremiumUpgradeSheet open trigger={modal.trigger} layer={layer} onClose={() => closeModal('premium-upgrade')} />;
+  }
+
+  if (isReceiptLockModal(modal)) {
+    return <ReceiptPremiumLockSheet open layer={layer} onClose={() => closeModal('receipt-premium-lock')} />;
+  }
+
 
   if (isTextChatModal(modal)) {
     return (

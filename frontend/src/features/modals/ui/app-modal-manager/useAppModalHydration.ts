@@ -30,6 +30,12 @@ export function useAppModalHydration(stack: AppModalDescriptor[], deps: AppModal
   }, [deps.loadTransactions, stack]);
 
   useEffect(() => {
+    if (stack.some((modal) => ['store-limits', 'premium-upgrade', 'trial-offer'].includes(modal.type))) {
+      void deps.loadSubscription();
+    }
+  }, [deps.loadSubscription, stack]);
+
+  useEffect(() => {
     if (stack.some((modal) => modal.type === 'obligation-edit')) {
       void Promise.allSettled([deps.loadAccounts(), deps.loadObligations(true)]);
     }

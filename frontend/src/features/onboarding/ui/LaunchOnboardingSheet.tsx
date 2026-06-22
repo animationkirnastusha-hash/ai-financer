@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useAuthStore } from '@/features/auth/model/auth.store';
 import { useAppModalStore } from '@/features/modals/model/appModal.store';
+import { AppModalPortal } from '@/features/modals/ui/AppModalPortal';
 import { useNavigationStore } from '@/features/navigation/model/navigation.store';
 import { readMicrophonePermissionState, requestOnboardingMicrophonePermission } from '@/features/onboarding/model/microphonePermission';
 import { useOnboardingStore } from '@/features/onboarding/model/onboarding.store';
@@ -95,7 +96,8 @@ export function LaunchOnboardingSheet() {
   };
 
   return (
-    <div className="app-modal-backdrop px-3" data-no-swipe="true">
+    <AppModalPortal>
+      <div className="app-modal-backdrop px-3" data-no-swipe="true">
       <div className="app-modal-sheet onboarding-setup-sheet onboarding-setup-sheet--compact" data-no-swipe="true">
         <div className="app-modal-handle" />
 
@@ -176,6 +178,7 @@ export function LaunchOnboardingSheet() {
           </button>
         </footer>
       </div>
-    </div>
+      </div>
+    </AppModalPortal>
   );
 }

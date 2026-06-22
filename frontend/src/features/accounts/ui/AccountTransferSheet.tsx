@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 
 import type { AccountDto } from '@/features/accounts/api/accounts.api';
 import { formatMoney } from '@/shared/lib/money';
 import { useI18n } from '@/shared/lib/i18n';
+import { Drawer } from '@/shared/ui/Drawer';
 
 type Props = {
   open: boolean;
@@ -28,10 +29,6 @@ export function AccountTransferSheet({
 }: Props) {
   const { t } = useI18n();
 
-  useEffect(() => {
-    document.body.classList.toggle('ai-modal-open', open);
-    return () => document.body.classList.remove('ai-modal-open');
-  }, [open]);
 
   const [toAccountId, setToAccountId] = useState('');
   const [amount, setAmount] = useState('');
@@ -78,11 +75,8 @@ export function AccountTransferSheet({
   };
 
   return (
-    <div data-no-swipe="true" data-ai-core-modal="true" className="fixed inset-0 z-[120] flex items-end bg-black/70 backdrop-blur-sm">
-      <div className="max-h-[92dvh] w-full overflow-y-auto rounded-t-[30px] border border-white/10 bg-[#0b1016] px-4 pb-6 pt-4 text-white shadow-2xl">
-        <div className="mx-auto mb-4 h-1.5 w-14 rounded-full bg-white/15" />
-
-        <div className="mx-auto max-w-[560px] space-y-4">
+    <Drawer open={open} onClose={onClose} className="app-account-transfer-sheet" bodyClassName="app-account-transfer-sheet__body" showFloatingClose={false}>
+      <div className="mx-auto max-w-[560px] space-y-4">
           <div className="flex items-start justify-between gap-3">
             <div>
               <div className="text-[11px] uppercase tracking-[0.16em] text-white/35">{t('accounts.transfer.eyebrow')}</div>
@@ -164,8 +158,7 @@ export function AccountTransferSheet({
           >
             {isSaving ? t('accounts.transfer.saving') : t('accounts.transfer.submit')}
           </button>
-        </div>
       </div>
-    </div>
+    </Drawer>
   );
 }

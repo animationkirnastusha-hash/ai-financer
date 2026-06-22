@@ -1,6 +1,7 @@
 import { Fragment } from 'react';
 import { useAppModalStore } from '@/features/modals/model/appModal.store';
 import { AppModalBodyLock } from '@/features/modals/ui/AppModalBodyLock';
+import { AppModalPortal } from '@/features/modals/ui/AppModalPortal';
 import { AppModalRenderer } from '@/features/modals/ui/app-modal-manager/AppModalRenderer';
 import { useAppModalDependencies } from '@/features/modals/ui/app-modal-manager/useAppModalDependencies';
 import { useAppModalHydration } from '@/features/modals/ui/app-modal-manager/useAppModalHydration';
@@ -19,19 +20,23 @@ export function AppModalManager() {
   return (
     <>
       <AppModalBodyLock active={stack.length > 0} />
-      {stack.map((modal, index) => (
-        <Fragment key={`${modal.type}-${index}`}>
-          <AppModalRenderer
-            modal={modal}
-            index={index}
-            stack={stack}
-            deps={deps}
-            openModal={openModal}
-            closeModal={closeModal}
-            closeAllModals={closeAllModals}
-          />
-        </Fragment>
-      ))}
+      {stack.length > 0 ? (
+        <AppModalPortal>
+          {stack.map((modal, index) => (
+            <Fragment key={`${modal.type}-${index}`}>
+              <AppModalRenderer
+                modal={modal}
+                index={index}
+                stack={stack}
+                deps={deps}
+                openModal={openModal}
+                closeModal={closeModal}
+                closeAllModals={closeAllModals}
+              />
+            </Fragment>
+          ))}
+        </AppModalPortal>
+      ) : null}
     </>
   );
 }

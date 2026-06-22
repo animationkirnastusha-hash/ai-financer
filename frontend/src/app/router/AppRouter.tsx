@@ -3,7 +3,6 @@ import { AppShell } from '@/shared/ui/AppShell';
 import { useNavigationStore } from '@/features/navigation/model/navigation.store';
 import { AppNavigationSheet } from '@/features/navigation/ui/AppNavigationSheet';
 import { AppModalManager } from '@/features/modals/ui/AppModalManager';
-import { PremiumUpgradeSheet } from '@/features/premium/ui/PremiumUpgradeSheet';
 import { LaunchOnboardingSheet } from '@/features/onboarding/ui/LaunchOnboardingSheet';
 import { ProductTourOverlay } from '@/features/onboarding/ui/ProductTourOverlay';
 import { ProductAnalyticsTracker } from '@/features/product-analytics/ui/ProductAnalyticsTracker';
@@ -75,7 +74,6 @@ export function AppRouter() {
 
       <AppNavigationSheet />
       <AppModalManager />
-      {canShowStore ? <PremiumUpgradeSheet /> : null}
       <LaunchOnboardingSheet />
       <ProductTourOverlay />
     </AppShell>

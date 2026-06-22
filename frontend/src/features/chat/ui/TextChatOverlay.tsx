@@ -33,7 +33,6 @@ import { TextChatOverlayHeader } from "@/features/chat/ui/text-chat-overlay/Text
 import { TextChatMessages } from "@/features/chat/ui/text-chat-overlay/TextChatMessages";
 import { TextChatEmptyState } from "@/features/chat/ui/text-chat-overlay/TextChatEmptyState";
 import { TextChatComposer } from "@/features/chat/ui/text-chat-overlay/TextChatComposer";
-import { VoicePermissionIntro } from "@/features/voice/ui/VoicePermissionIntro";
 
 type TextChatOverlayProps = {
   open: boolean;
@@ -77,10 +76,7 @@ export function TextChatOverlay({
   const voiceCancelledBySwipeRef = useRef(false);
   const lastAutoClosedMessageKeyRef = useRef("");
   const autoCloseTimerRef = useRef<number | null>(null);
-  const voicePermissionRequestRef = useRef(false);
   const initialAssistantMessageKeyRef = useRef<string | null>(null);
-  const [permissionIntroOpen, setPermissionIntroOpen] = useState(false);
-  const [isPrimingPermission, setIsPrimingPermission] = useState(false);
   const dragStartYRef = useRef<number | null>(null);
   const [dragOffset, setDragOffset] = useState(0);
   const [shouldRender, setShouldRender] = useState(open);
@@ -161,8 +157,7 @@ export function TextChatOverlay({
     const timer = window.setTimeout(() => {
       setShouldRender(false);
       setIsClosing(false);
-      setPermissionIntroOpen(false);
-      setIsVoicePressed(false);
+        setIsVoicePressed(false);
     }, 220);
 
     return () => window.clearTimeout(timer);
@@ -250,21 +245,10 @@ export function TextChatOverlay({
     )
       return false;
 
-    const sessionKey = "ai-financer-microphone-intro-shown:session";
-
-    if (voice.permissionState !== "granted" && !voice.permissionPrimed) {
-      sessionStorage.setItem(sessionKey, "true");
-      setIsVoicePressed(false);
-      setPermissionIntroOpen(true);
-      setVoiceHint(t("textChat.voice.needPermission"));
-      voice.reset?.();
-      return false;
-    }
-
-    setVoiceHint(t("textChat.voice.listening"));
-
     const result = await voice.start();
     if (result === "started") {
+      setVoicePermissionPrompted(true);
+      setVoiceHint(t("textChat.voice.listening"));
       setIsVoicePressed(true);
       if (voicePointerIdRef.current === null) {
         window.setTimeout(() => {
@@ -278,43 +262,21 @@ export function TextChatOverlay({
     setIsVoicePressed(false);
     voice.reset?.();
 
-    if (result === "permission-ready") {
-      sessionStorage.setItem(sessionKey, "true");
-      setPermissionIntroOpen(true);
-      setVoiceHint(t("textChat.voice.needPermission"));
+    if (result === "permission-consumed") {
+      const nextPermission = await voice.refreshPermissionState?.();
+      const allowed = nextPermission === "granted";
+      setVoicePermissionPrompted(allowed);
+      setVoiceHint(allowed ? t("textChat.voice.permissionReady") : t("textChat.voice.needPermission"));
     } else if (result === "busy") {
       setVoiceHint(t("textChat.voice.busy"));
+    } else if (result === "permission-ready") {
+      setVoiceHint(t("textChat.voice.needPermission"));
     } else {
       setVoiceHint(t("textChat.voice.startFailed"));
     }
 
     return false;
-  }, [chat.isSending, t, voice]);
-
-  const primeVoicePermission = useCallback(async () => {
-    if (voicePermissionRequestRef.current || isPrimingPermission) return;
-
-    voicePermissionRequestRef.current = true;
-    setIsPrimingPermission(true);
-    setIsVoicePressed(false);
-    setVoiceHint(t("textChat.voice.needPermission"));
-    voice.cancel();
-
-    try {
-      const allowed = await voice.primePermission();
-      setVoicePermissionPrompted(allowed);
-      setVoiceHint(allowed ? t("textChat.voice.permissionReady") : t("textChat.voice.startFailed"));
-      if (allowed) setPermissionIntroOpen(false);
-    } catch {
-      setVoicePermissionPrompted(false);
-      setVoiceHint(t("textChat.voice.startFailed"));
-    } finally {
-      setIsPrimingPermission(false);
-      voicePermissionRequestRef.current = false;
-      setIsVoicePressed(false);
-      voice.reset?.();
-    }
-  }, [isPrimingPermission, setVoicePermissionPrompted, t, voice]);
+  }, [chat.isSending, setVoicePermissionPrompted, t, voice]);
 
   const handleVoicePointerDown = useCallback(
     (event: PointerEvent<HTMLButtonElement>) => {
@@ -531,9 +493,7 @@ export function TextChatOverlay({
   const closeOverlay = useCallback(() => {
     if (voice.state === "recording" || voice.state === "uploading") voice.cancel();
     setIsVoicePressed(false);
-    setPermissionIntroOpen(false);
     setVoiceHint(null);
-    sessionStorage.removeItem("ai-financer-microphone-intro-shown:session");
     onClose();
   }, [onClose, voice]);
 
@@ -591,7 +551,6 @@ export function TextChatOverlay({
       voice.error === 'service-not-allowed'
     ) {
       setVoicePermissionPrompted(false);
-      setPermissionIntroOpen(true);
       setVoiceHint(t('textChat.voice.needPermission'));
       voice.reset?.();
       return;
@@ -725,20 +684,6 @@ export function TextChatOverlay({
           onVoicePointerCancel={handleVoicePointerCancel}
         />
       </div>
-
-      {permissionIntroOpen ? (
-        <VoicePermissionIntro
-          wakeName={companionName}
-          isPriming={isPrimingPermission}
-          permissionState={voice.permissionState}
-          onPrime={() => void primeVoicePermission()}
-          onSkip={() => {
-            setPermissionIntroOpen(false);
-            setIsVoicePressed(false);
-            voice.reset?.();
-          }}
-        />
-      ) : null}
 
       <AuditLogDrawer
         open={chat.isAuditOpen}

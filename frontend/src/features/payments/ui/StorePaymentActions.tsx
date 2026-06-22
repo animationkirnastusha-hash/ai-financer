@@ -217,7 +217,7 @@ export function StorePaymentActions({ product, title, compact = false }: Props) 
 
       <div className="store-payment-methods" aria-label={t('store.payment.other')}>
         <button type="button" className="store-payment-method is-active" disabled={isBusy || !selected} onClick={() => createOrder('yookassaSbp')}>
-          <span>{sbpAvailable ? t('store.payment.sbpAvailable') : t('store.payment.soon')}</span>
+          <span>{sbpAvailable ? t('store.payment.sbpAvailable') : t('store.payment.sbpSetupPending')}</span>
           <strong>{isBusy && busyProvider === 'yookassaSbp' ? t('store.payment.preparing') : t('store.payment.sbp')}</strong>
         </button>
         <button type="button" className="store-payment-method" disabled={isBusy || !selected} onClick={() => createOrder('telegramStars')}>

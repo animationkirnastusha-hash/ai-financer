@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { AppModalPortal } from '@/features/modals/ui/AppModalPortal';
 import type React from 'react';
 import type { PropsWithChildren, ReactNode } from 'react';
 import { cn } from '@/shared/lib/cn';
@@ -13,6 +14,7 @@ type DrawerProps = PropsWithChildren<{
   className?: string;
   bodyClassName?: string;
   layer?: number;
+  showFloatingClose?: boolean;
 }>;
 
 const DISMISS_DRAG_PX = 76;
@@ -35,6 +37,7 @@ export function Drawer({
   className,
   bodyClassName,
   layer,
+  showFloatingClose = true,
   children,
 }: DrawerProps) {
   const { t } = useI18n();
@@ -162,55 +165,57 @@ export function Drawer({
   const hasHeaderText = Boolean(title || subtitle);
 
   return (
-    <div
-      className="app-modal-backdrop app-drawer-backdrop"
-      style={layer ? { zIndex: layer } : undefined}
-      data-no-swipe="true"
-      data-ai-core-modal="true"
-      data-drawer-backdrop="true"
-      onPointerDown={handleBackdropPointerDown}
-      onTouchMove={(event) => event.stopPropagation()}
-    >
+    <AppModalPortal>
       <div
-        ref={sheetRef}
-        className={cn('app-modal-sheet app-drawer-sheet', className)}
-        style={{ transform: dragOffset ? `translateY(${dragOffset}px)` : undefined }}
+        className="app-modal-backdrop app-drawer-backdrop"
+        style={layer ? { zIndex: layer } : undefined}
         data-no-swipe="true"
         data-ai-core-modal="true"
-        onPointerDown={handleSheetPointerDown}
-        onPointerMove={handleSheetPointerMove}
-        onPointerUp={handleSheetPointerEnd}
-        onPointerCancel={handleSheetPointerEnd}
+        data-drawer-backdrop="true"
+        onPointerDown={handleBackdropPointerDown}
+        onTouchMove={(event) => event.stopPropagation()}
       >
-        <button
-          type="button"
-          className="app-modal-handle"
-          aria-label={t('common.close')}
-          onPointerDown={handleDragPointerDown}
-          onPointerMove={handleDragPointerMove}
-          onPointerUp={handleDragPointerEnd}
-          onPointerCancel={handleDragPointerEnd}
+        <div
+          ref={sheetRef}
+          className={cn('app-modal-sheet app-drawer-sheet', className)}
+          style={{ transform: dragOffset ? `translateY(${dragOffset}px)` : undefined }}
+          data-no-swipe="true"
+          data-ai-core-modal="true"
+          onPointerDown={handleSheetPointerDown}
+          onPointerMove={handleSheetPointerMove}
+          onPointerUp={handleSheetPointerEnd}
+          onPointerCancel={handleSheetPointerEnd}
         >
-          <span />
-        </button>
-        {hasHeaderText ? (
-          <header className="app-modal-header">
-            <div className="min-w-0">
-              {title ? <h2 className="app-modal-title">{title}</h2> : null}
-              {subtitle ? <p className="app-modal-subtitle">{subtitle}</p> : null}
-            </div>
-            <button type="button" onClick={onClose} className="app-icon-button" aria-label={t('common.close')}>
+          <button
+            type="button"
+            className="app-modal-handle"
+            aria-label={t('common.close')}
+            onPointerDown={handleDragPointerDown}
+            onPointerMove={handleDragPointerMove}
+            onPointerUp={handleDragPointerEnd}
+            onPointerCancel={handleDragPointerEnd}
+          >
+            <span />
+          </button>
+          {hasHeaderText ? (
+            <header className="app-modal-header">
+              <div className="min-w-0">
+                {title ? <h2 className="app-modal-title">{title}</h2> : null}
+                {subtitle ? <p className="app-modal-subtitle">{subtitle}</p> : null}
+              </div>
+              <button type="button" onClick={onClose} className="app-icon-button" aria-label={t('common.close')}>
+                ×
+              </button>
+            </header>
+          ) : showFloatingClose ? (
+            <button type="button" onClick={onClose} className="app-modal-close-floating app-icon-button" aria-label={t('common.close')}>
               ×
             </button>
-          </header>
-        ) : (
-          <button type="button" onClick={onClose} className="app-modal-close-floating app-icon-button" aria-label={t('common.close')}>
-            ×
-          </button>
-        )}
-        <div ref={bodyRef} className={cn('app-modal-body app-drawer-body', bodyClassName)}>{children}</div>
-        {footer ? <footer className="app-modal-footer">{footer}</footer> : null}
+          ) : null}
+          <div ref={bodyRef} className={cn('app-modal-body app-drawer-body', bodyClassName)}>{children}</div>
+          {footer ? <footer className="app-modal-footer">{footer}</footer> : null}
+        </div>
       </div>
-    </div>
+    </AppModalPortal>
   );
 }

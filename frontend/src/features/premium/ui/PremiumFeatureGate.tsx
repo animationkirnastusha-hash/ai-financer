@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { usePremiumStore } from '@/features/premium/model/premium.store';
+import { useAppModalStore } from '@/features/modals/model/appModal.store';
 import { useSubscriptionStore } from '@/features/subscription/model/subscription.store';
 import { hasFeatureAccess, hasPaidAccess } from '@/features/subscription/lib/entitlements';
 import { useI18n, type I18nKey } from '@/shared/lib/i18n';
@@ -15,7 +15,7 @@ type Props = {
 export function PremiumFeatureGate({ feature, title, caption, children, className }: Props) {
   const { t } = useI18n();
   const subscription = useSubscriptionStore((state) => state.status);
-  const openPremium = usePremiumStore((state) => state.openPremium);
+  const openModal = useAppModalStore((state) => state.openModal);
   const hasAnyPaidAccess = hasPaidAccess(subscription);
   const isAllowed = hasFeatureAccess(subscription, feature);
 
@@ -26,11 +26,14 @@ export function PremiumFeatureGate({ feature, title, caption, children, classNam
     <button
       type="button"
       className={`premium-feature-gate ${className ?? ''}`.trim()}
-      onClick={() => openPremium({
-        kind: 'locked_insight',
-        title: t(title),
-        description: t(caption),
-        cta: t('premium.gate.action'),
+      onClick={() => openModal({
+        type: 'premium-upgrade',
+        trigger: {
+          kind: 'locked_insight',
+          title: t(title),
+          description: t(caption),
+          cta: t('premium.gate.action'),
+        },
       })}
     >
       <span className="premium-feature-gate__badge">{t('premium.gate.badge')}</span>

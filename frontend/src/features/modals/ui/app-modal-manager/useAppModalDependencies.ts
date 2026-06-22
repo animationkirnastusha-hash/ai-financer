@@ -5,6 +5,7 @@ import { useNavigationStore } from '@/features/navigation/model/navigation.store
 import { useObligationsStore } from '@/features/obligations/model/obligations.store';
 import { useSectionsStore } from '@/features/sections/model/sections.store';
 import { useSettingsStore } from '@/features/settings/model/settings.store';
+import { useSubscriptionStore } from '@/features/subscription/model/subscription.store';
 import { useTransactionsStore } from '@/features/transactions/model/transactions.store';
 
 export function useAppModalDependencies() {
@@ -53,6 +54,9 @@ export function useAppModalDependencies() {
   const deleteLoan = useObligationsStore((state) => state.deleteLoan);
   const isObligationSaving = useObligationsStore((state) => state.isMutating);
 
+  const subscription = useSubscriptionStore((state) => state.status);
+  const loadSubscription = useSubscriptionStore((state) => state.load);
+
   const updateAccountDraft = useAccountFlowStore((state) => state.updateDraft);
   const resetAccountDraft = useAccountFlowStore((state) => state.resetDraft);
 
@@ -97,6 +101,8 @@ export function useAppModalDependencies() {
     setIncomeAccountId,
     setMainCurrency,
     setPrimaryAccountId,
+    subscription,
+    loadSubscription,
     transactions,
     updateAccount,
     updateAccountDraft,

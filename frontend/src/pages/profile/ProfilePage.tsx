@@ -26,7 +26,7 @@ function formatBonus(value: number) {
 }
 
 function formatPlan(status?: string | null) {
-  if (status === 'business') return 'Business';
+  if (status === 'business') return 'Premium';
   if (status === 'premium') return 'Premium';
   if (status === 'trial') return 'Trial';
   return 'Free';

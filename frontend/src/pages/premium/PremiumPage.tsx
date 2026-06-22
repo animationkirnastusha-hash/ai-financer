@@ -1,10 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigationStore } from '@/features/navigation/model/navigation.store';
-import { usePremiumStore } from '@/features/premium/model/premium.store';
 import { useAppModalStore } from '@/features/modals/model/appModal.store';
 import { storeFeatures, storeProductCards, type StoreCard } from '@/features/store/model/storeCatalog';
-import { StoreLimitsSheet } from '@/features/store/ui/StoreLimitsSheet';
-import { StorePaymentSheet } from '@/features/store/ui/StorePaymentSheet';
 import { StoreProductDetail } from '@/features/store/ui/StoreProductDetail';
 import { StoreFoldoutSection } from '@/features/store/ui/StoreFoldoutSection';
 import { StoreProductGrid } from '@/features/store/ui/StoreProductGrid';
@@ -46,17 +43,55 @@ function StoreCompactExtras({ onOpenReferral, onOpenPremium }: {
   );
 }
 
+
+function StoreLaunchHero({ hasPremium, onBuyPremium, onOpenLimits }: {
+  hasPremium: boolean;
+  onBuyPremium: () => void;
+  onOpenLimits: () => void;
+}) {
+  const { t } = useI18n();
+
+  return (
+    <section className="app-card store-launch-hero">
+      <div className="store-launch-hero__content">
+        <div className="app-eyebrow">{t('store.launch.eyebrow')}</div>
+        <h1>{t(hasPremium ? 'store.launch.activeTitle' : 'store.launch.title')}</h1>
+        <p>{t(hasPremium ? 'store.launch.activeCaption' : 'store.launch.caption')}</p>
+      </div>
+      <div className="store-launch-hero__facts" aria-label={t('store.launch.factsAria')}>
+        <article>
+          <span>{t('store.launch.priceLabel')}</span>
+          <strong>{t('store.showcase.premiumPrice')}</strong>
+        </article>
+        <article>
+          <span>{t('store.launch.payLabel')}</span>
+          <strong>{t('store.payment.sbp')}</strong>
+        </article>
+        <article>
+          <span>{t('store.launch.businessLabel')}</span>
+          <strong>{t('store.status.soon')}</strong>
+        </article>
+      </div>
+      <div className="store-launch-hero__actions">
+        <button type="button" className="app-primary-button" disabled={hasPremium} onClick={onBuyPremium}>
+          {hasPremium ? t('store.status.active') : t('store.launch.cta')}
+        </button>
+        <button type="button" className="app-secondary-button" onClick={onOpenLimits}>
+          {t('store.launch.secondary')}
+        </button>
+      </div>
+    </section>
+  );
+}
+
 export default function PremiumPage() {
   const { t } = useI18n();
   const navigateTo = useNavigationStore((state) => state.navigateTo);
-  const openPremium = usePremiumStore((state) => state.openPremium);
   const subscription = useSubscriptionStore((state) => state.status);
   const isLoading = useSubscriptionStore((state) => state.isLoading);
   const loadSubscription = useSubscriptionStore((state) => state.load);
   const openModal = useAppModalStore((state) => state.openModal);
   const [selectedProductId, setSelectedProductId] = useState<string>('premium');
-  const [paymentProduct, setPaymentProduct] = useState<StoreCard | null>(null);
-  const [limitsOpen, setLimitsOpen] = useState(false);
   const hasPremium = hasRealPremiumAccess(subscription);
   const hasBusiness = hasRealBusinessAccess(subscription);
 
@@ -68,6 +103,7 @@ export default function PremiumPage() {
     () => storeProductCards.find((card) => card.id === selectedProductId) ?? storeProductCards[0],
     [selectedProductId],
   );
+  const premiumCard = useMemo(() => storeProductCards.find((card) => card.id === 'premium') ?? storeProductCards[0], []);
 
   const handleStartTrial = async () => {
     openModal({ type: 'trial-offer', source: 'store' });
@@ -75,7 +111,12 @@ export default function PremiumPage() {
 
   const handleOpenPayment = (card: StoreCard) => {
     if (card.comingSoon) return;
-    if (card.product) setPaymentProduct(card);
+    if (card.product) openModal({ type: 'store-payment', product: card });
+  };
+
+  const handleOpenPremiumPayment = () => {
+    setSelectedProductId('premium');
+    if (premiumCard?.product && !premiumCard.comingSoon) openModal({ type: 'store-payment', product: premiumCard });
   };
 
   const handleOpenReferral = () => {
@@ -84,11 +125,14 @@ export default function PremiumPage() {
 
   const handleOpenPremiumSheet = () => {
     const card = selectedCard;
-    openPremium({
-      kind: 'deep_analysis',
+    openModal({
+      type: 'premium-upgrade',
+      trigger: {
+        kind: 'deep_analysis',
       title: t(card.title),
       description: t(card.caption),
       cta: t('store.carousel.buy'),
+      },
     });
   };
 
@@ -96,6 +140,8 @@ export default function PremiumPage() {
     <div className="app-page monetization-page text-white">
       <div className="app-page__inner space-y-4">
         <ScreenTopBar title={t('screen.store')} left="back" right={['home', 'settings']} />
+
+        <StoreLaunchHero hasPremium={hasPremium} onBuyPremium={handleOpenPremiumPayment} onOpenLimits={() => openModal({ type: 'store-limits' })} />
 
         <StoreProductGrid
           cards={storeProductCards}
@@ -118,7 +164,7 @@ export default function PremiumPage() {
           >
             <div className="store-minimal-grid store-minimal-grid--status">
               <StoreStatusCard subscription={subscription} isLoading={isLoading} />
-              <button type="button" className="app-card monetization-section store-limits-button" onClick={() => setLimitsOpen(true)}>
+              <button type="button" className="app-card monetization-section store-limits-button" onClick={() => openModal({ type: 'store-limits' })}>
                 <span className="app-eyebrow">{t('store.limits.eyebrow')}</span>
                 <strong>{t('store.limits.title')}</strong>
                 <small>{t('store.limits.caption')}</small>
@@ -143,9 +189,6 @@ export default function PremiumPage() {
           </StoreFoldoutSection>
         </section>
       </div>
-
-      <StoreLimitsSheet open={limitsOpen} subscription={subscription} onClose={() => setLimitsOpen(false)} />
-      <StorePaymentSheet open={Boolean(paymentProduct)} product={paymentProduct} onClose={() => setPaymentProduct(null)} />
     </div>
   );
 }

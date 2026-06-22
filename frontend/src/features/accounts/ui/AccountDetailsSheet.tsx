@@ -1,8 +1,8 @@
-import { useEffect } from "react";
 import type { AccountDto } from "@/features/accounts/api/accounts.api";
 import { formatMoney } from "@/shared/lib/money";
 import { useI18n } from "@/shared/lib/i18n";
 import { useNavigationStore } from "@/features/navigation/model/navigation.store";
+import { Drawer } from "@/shared/ui/Drawer";
 
 const ACCOUNT_TYPE_KEYS: Record<string, string> = {
   cash: "accounts.type.cash",
@@ -45,10 +45,6 @@ export function AccountDetailsSheet({
   const { t } = useI18n();
   const openJournal = useNavigationStore((state) => state.openJournal);
 
-  useEffect(() => {
-    document.body.classList.toggle("ai-modal-open", open);
-    return () => document.body.classList.remove("ai-modal-open");
-  }, [open]);
 
   if (!open || !account) return null;
 
@@ -66,15 +62,13 @@ export function AccountDetailsSheet({
   };
 
   return (
-    <div
-      data-no-swipe="true"
-      data-ai-core-modal="true"
-      className="app-account-details-sheet"
+    <Drawer
+      open={open}
+      onClose={onClose}
+      className="app-account-details-sheet__panel"
+      bodyClassName="app-account-details-sheet__content"
+      showFloatingClose={false}
     >
-      <div className="app-account-details-sheet__panel">
-        <div className="app-sheet-handle" />
-
-        <div className="app-account-details-sheet__content">
           <header className="app-account-details-sheet__head">
             <div className="min-w-0">
               <div className="app-eyebrow">{t("accounts.details.eyebrow")}</div>
@@ -242,9 +236,7 @@ export function AccountDetailsSheet({
               </b>
             </button>
           </section>
-        </div>
-      </div>
-    </div>
+    </Drawer>
   );
 }
 

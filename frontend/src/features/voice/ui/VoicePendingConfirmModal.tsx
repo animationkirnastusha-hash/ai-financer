@@ -1,5 +1,6 @@
 import { PendingActionCard } from '@/features/pending-actions/ui/PendingActionCard';
 import { useI18n } from '@/shared/lib/i18n';
+import { AppModalPortal } from '@/features/modals/ui/AppModalPortal';
 
 type VoicePendingConfirmModalProps = {
   pendingActions: any[];
@@ -34,7 +35,8 @@ export function VoicePendingConfirmModal({ pendingActions, onConfirm, onCancel, 
   const clarification = getClarification(item);
 
   return (
-    <div className="app-modal-backdrop app-pending-confirm-backdrop" data-no-swipe="true">
+    <AppModalPortal>
+      <div className="app-modal-backdrop app-pending-confirm-backdrop" data-no-swipe="true">
       <div className="app-modal-sheet app-pending-confirm-sheet" data-no-swipe="true">
         <div className="app-modal-handle" />
         <div className="app-modal-body">
@@ -75,6 +77,7 @@ export function VoicePendingConfirmModal({ pendingActions, onConfirm, onCancel, 
           )}
         </div>
       </div>
-    </div>
+      </div>
+    </AppModalPortal>
   );
 }

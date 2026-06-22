@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-export type SettingsSection = 'voice' | 'fina' | 'ai' | 'currency' | 'data' | 'notifications';
+export type SettingsSection = 'voice' | 'fina' | 'overlay' | 'ai' | 'currency' | 'data' | 'notifications';
 
 export type JournalFilters = Partial<{
   query: string;

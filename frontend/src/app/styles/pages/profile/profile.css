@@ -250,3 +250,40 @@
     min-height: 0;
   }
 }
+
+/* Pack 174: profile launch polish. */
+.profile-hub {
+  min-width: 0;
+  overflow-x: clip;
+}
+
+.profile-hub-hero__stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.profile-hub-hero__stats strong,
+.profile-hub-tile b,
+.profile-hub-tile small {
+  overflow-wrap: anywhere;
+}
+
+.profile-public-id b {
+  max-width: min(180px, 46vw);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.profile-command-examples__groups {
+  display: grid;
+  gap: 14px;
+}
+
+.profile-command-examples__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 9px;
+}

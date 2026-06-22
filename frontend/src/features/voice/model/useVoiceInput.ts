@@ -10,7 +10,7 @@ type UseVoiceInputParams = {
   permissionWasPrompted?: boolean;
 };
 
-type VoiceStartResult = 'started' | 'permission-ready' | 'busy' | 'error';
+type VoiceStartResult = 'started' | 'permission-consumed' | 'permission-ready' | 'busy' | 'error';
 type MicrophonePermissionState = PermissionState | 'unsupported' | 'unknown';
 
 async function queryMicrophonePermissionState(): Promise<PermissionState | null> {
@@ -133,13 +133,6 @@ export function useVoiceInput({ onText, lang = 'ru-RU', sessionMs = 5200 }: UseV
     try {
       const currentPermission = await refreshPermissionState();
 
-      if (currentPermission === 'denied') {
-        logVoiceDebugEvent('manual_voice_start_blocked_permission_denied', { permissionState: currentPermission });
-        setPermissionPrimed(false);
-        setPermissionError('microphone-denied');
-        return 'permission-ready';
-      }
-
       if (currentPermission === 'unsupported') {
         logVoiceDebugEvent('manual_voice_start_blocked_permission_unsupported', { permissionState: currentPermission });
         setPermissionPrimed(false);
@@ -147,10 +140,22 @@ export function useVoiceInput({ onText, lang = 'ru-RU', sessionMs = 5200 }: UseV
         return 'permission-ready';
       }
 
-      // Press-to-talk is the explicit user gesture. When the browser reports
-      // `prompt` or cannot report a state, startRecording is allowed to call
-      // getUserMedia directly so the system permission prompt appears from
-      // the hold action instead of opening an extra in-app modal first.
+      if (currentPermission !== 'granted' && !permissionPrimed) {
+        logVoiceDebugEvent('manual_voice_permission_gesture_consumed', { permissionState: currentPermission });
+        try {
+          const allowed = await primePermission();
+          setPermissionPrimed(allowed);
+        } catch (error) {
+          logVoiceDebugEvent('manual_voice_permission_gesture_failed', {
+            error: error instanceof Error ? error.name || error.message : 'unknown',
+            permissionState: currentPermission,
+          });
+        } finally {
+          void refreshPermissionState();
+        }
+        return 'permission-consumed';
+      }
+
       const started = await recorder.startRecording();
       if (!started) {
         const nextPermission = await refreshPermissionState();
@@ -168,7 +173,7 @@ export function useVoiceInput({ onText, lang = 'ru-RU', sessionMs = 5200 }: UseV
       console.error(error);
       return 'error';
     }
-  }, [permissionPrimed, recorder, refreshPermissionState]);
+  }, [permissionPrimed, primePermission, recorder, refreshPermissionState]);
 
   const stop = useCallback(() => {
     recorder.stopRecording();

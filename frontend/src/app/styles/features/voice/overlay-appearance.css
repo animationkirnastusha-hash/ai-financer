@@ -1,0 +1,7 @@
+:root {
+  --fina-overlay-density-percent: 68;
+  --fina-overlay-scrim-alpha: 0.68;
+  --fina-overlay-stage-top-alpha: 0.78;
+  --fina-overlay-stage-bottom-alpha: 0.84;
+  --fina-overlay-composer-alpha: 0.86;
+}
