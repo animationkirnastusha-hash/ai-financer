@@ -67,7 +67,7 @@ export const storeDictionary = {
   'store.payment.sbpSetupPending': 'Ждёт ключи ЮKassa',
   'store.payment.sbpOpened': 'Открыта оплата через СБП. После оплаты доступ обновится автоматически.',
   'store.payment.sbpPaid': 'Оплата через СБП прошла. Доступ обновлён.',
-  'store.payment.sbpNotConfigured': 'СБП готов в приложении. Осталось добавить ключи ЮKassa на сервере и перезапустить backend.',
+  'store.payment.sbpNotConfigured': 'СБП готов в приложении. Осталось добавить ключи ЮKassa на сервере и перезапустить приложение.',
   'store.payment.selectedHint': 'Это единая цена товара. СБП, Stars и будущая крипта — только способы оплаты.',
   'store.payment.manualPrepared': 'Заявка сохранена.',
   'store.payment.testGranted': 'Доступ выдан.',

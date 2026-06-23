@@ -67,7 +67,7 @@ export const storeDictionary = {
   'store.payment.sbpSetupPending': 'Waiting for YooKassa keys',
   'store.payment.sbpOpened': 'SBP payment opened. Access will refresh automatically after payment.',
   'store.payment.sbpPaid': 'SBP payment received. Access has been updated.',
-  'store.payment.sbpNotConfigured': 'SBP is ready in the app. Add YooKassa keys on the server and restart backend.',
+  'store.payment.sbpNotConfigured': 'SBP is ready in the app. Add YooKassa keys on the server, then restart the app service.',
   'store.payment.selectedHint': 'This is the single product price. SBP, Stars and future crypto are only payment methods.',
   'store.payment.manualPrepared': 'Request saved.',
   'store.payment.testGranted': 'Access granted.',
