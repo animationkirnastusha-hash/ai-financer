@@ -43,20 +43,25 @@ await runSmoke('store-subscription', async (context) => {
 
   const catalog = await requestJson(context, '/payments/catalog');
   const products = catalog.payload?.products ?? [];
-  if (!Array.isArray(products) || !products.some((item) => item.product === 'premium') || !products.some((item) => item.product === 'business')) {
-    throw new Error('Payment catalog does not contain premium and business products');
+  if (!Array.isArray(products)) throw new Error('Payment catalog products list is invalid');
+
+  const premiumProduct = products.find((item) => item.product === 'premium');
+  const businessProduct = products.find((item) => item.product === 'business');
+  if (!premiumProduct) throw new Error('Payment catalog does not contain premium product');
+  if (!businessProduct) throw new Error('Payment catalog does not contain business product placeholder');
+
+  const premiumPlan = premiumProduct.options?.find((option) => option.duration === 'month');
+  const premiumYear = premiumProduct.options?.find((option) => option.duration === 'year');
+  if (premiumPlan?.amount !== 39900 || premiumPlan?.baseAmount !== 49900) throw new Error('Premium month RUB price mismatch');
+  if (premiumYear?.amount !== 359000 || premiumYear?.baseAmount !== 478800) throw new Error('Premium year RUB price mismatch');
+  if (typeof premiumPlan?.starsAmount !== 'number' || premiumPlan.starsAmount <= 0) throw new Error('Premium month Stars price is missing');
+  if (typeof premiumPlan?.starsBaseAmount !== 'number' || premiumPlan.starsBaseAmount <= 0) throw new Error('Premium month Stars base price is missing');
+  if (typeof premiumYear?.starsAmount !== 'number' || premiumYear.starsAmount <= 0) throw new Error('Premium year Stars price is missing');
+
+  if (businessProduct.comingSoon !== true) throw new Error('Business product must be marked as coming soon');
+  if (Array.isArray(businessProduct.options) && businessProduct.options.length > 0) {
+    throw new Error('Business product must not expose purchasable options in personal Fina');
   }
-
-
-  const premiumPlan = products.find((item) => item.product === 'premium')?.options?.find((option) => option.duration === 'month');
-  const premiumYear = products.find((item) => item.product === 'premium')?.options?.find((option) => option.duration === 'year');
-  const businessPlan = products.find((item) => item.product === 'business')?.options?.find((option) => option.duration === 'month');
-  const businessYear = products.find((item) => item.product === 'business')?.options?.find((option) => option.duration === 'year');
-  if (premiumPlan?.amount !== 39900 || premiumPlan?.baseAmount !== 49900 || premiumPlan?.starsAmount !== 399) throw new Error('Premium month price mismatch');
-  if (businessPlan?.amount !== 89900 || businessPlan?.baseAmount !== 119900 || businessPlan?.starsAmount !== 899) throw new Error('Business month price mismatch');
-  if (premiumYear?.amount !== 359000 || premiumYear?.baseAmount !== 478800 || premiumYear?.starsAmount !== 3590) throw new Error('Premium year price mismatch');
-  if (businessYear?.amount !== 809000 || businessYear?.baseAmount !== 1078800 || businessYear?.starsAmount !== 8090) throw new Error('Business year price mismatch');
-  if (!premiumPlan?.starsBaseAmount || !businessPlan?.starsBaseAmount) throw new Error('Stars base price is missing');
 
   const starsOrder = await requestJson(context, '/payments/orders', {
     method: 'POST',
@@ -64,7 +69,15 @@ await runSmoke('store-subscription', async (context) => {
   });
   if (starsOrder.payload?.order?.provider !== 'telegramStars') throw new Error('Telegram Stars order provider mismatch');
   if (starsOrder.payload?.order?.currency !== 'XTR') throw new Error('Telegram Stars order currency mismatch');
+  if (starsOrder.payload?.order?.amount !== premiumPlan.starsAmount) throw new Error('Telegram Stars order amount mismatch');
   if (!['ready', 'not_configured'].includes(starsOrder.payload?.checkout?.status)) throw new Error('Telegram Stars checkout status mismatch');
+
+  const blockedBusinessOrder = await requestJson(context, '/payments/orders', {
+    method: 'POST',
+    expected: [400],
+    body: { product: 'business', duration: 'month', provider: 'mock' },
+  });
+  if (blockedBusinessOrder.payload?.error?.code !== 'BAD_REQUEST') throw new Error('Business purchase block response is invalid');
 
   for (const feature of ['store', 'receiptScan', 'advancedReports', 'businessWorkspace']) {
     const featureAccess = await requestJson(context, `/subscription/features/${feature}`);
@@ -74,10 +87,7 @@ await runSmoke('store-subscription', async (context) => {
 
   const premium = await createAndCompleteMockOrder(context, 'premium');
   if (!premium.access?.hasPremium) throw new Error('Premium mock payment did not grant premium access');
-
-  const business = await createAndCompleteMockOrder(context, 'business');
-  if (!business.access?.hasBusiness) throw new Error('Business mock payment did not grant business access');
-  if (!business.access?.hasPremium) throw new Error('Business access must include premium');
+  if (premium.access?.hasBusiness) throw new Error('Premium payment must not grant business access');
 
   const referral = await requestJson(context, '/referral');
   const referralData = referral.payload?.referral ?? referral.payload ?? {};
@@ -87,9 +97,10 @@ await runSmoke('store-subscription', async (context) => {
   }
 
   context.log('store and subscription flow passed', {
-    status: business.access.status,
-    hasPremium: business.access.hasPremium,
-    hasBusiness: business.access.hasBusiness,
+    status: premium.access.status,
+    hasPremium: premium.access.hasPremium,
+    hasBusiness: premium.access.hasBusiness,
+    businessComingSoon: businessProduct.comingSoon === true,
     referralCode,
   });
 });

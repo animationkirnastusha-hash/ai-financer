@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useAppModalStore } from '@/features/modals/model/appModal.store';
 import { useReceiptScansStore } from '@/features/receipt-scans/model/receiptScans.store';
 import { useSubscriptionStore } from '@/features/subscription/model/subscription.store';
 import { useI18n } from '@/shared/lib/i18n';
 
-const RECEIPT_MAX_FILE_BYTES = 8 * 1024 * 1024;
+const RECEIPT_MAX_FILE_BYTES = 20 * 1024 * 1024;
+const RECEIPT_CAMERA_TYPES = 'image/*';
 const RECEIPT_ACCEPTED_TYPES = 'image/jpeg,image/png,image/webp,image/heic,image/heif,application/pdf';
 
 type Props = {
@@ -20,6 +22,7 @@ export function ReceiptQuickAction({ variant = 'card', className = '' }: Props) 
   const loadSubscription = useSubscriptionStore((state) => state.load);
   const upload = useReceiptScansStore((state) => state.upload);
   const isUploading = useReceiptScansStore((state) => state.isUploading);
+  const openModal = useAppModalStore((state) => state.openModal);
 
   useEffect(() => {
     if (!subscription) void loadSubscription();
@@ -38,9 +41,10 @@ export function ReceiptQuickAction({ variant = 'card', className = '' }: Props) 
     setHint(t('textChat.receipt.uploading'));
     const scan = await upload(file);
     setHint(scan ? t('textChat.receipt.success') : t('textChat.receipt.error'));
+    if (scan) openModal({ type: 'receipt-review', scanId: scan.id, initialScan: scan });
     if (cameraInputRef.current) cameraInputRef.current.value = '';
     if (fileInputRef.current) fileInputRef.current.value = '';
-  }, [hasAccess, isUploading, t, upload]);
+  }, [hasAccess, isUploading, openModal, t, upload]);
 
   if (!hasAccess) return null;
 
@@ -61,7 +65,7 @@ export function ReceiptQuickAction({ variant = 'card', className = '' }: Props) 
         <button type="button" className="receipt-quick-action__mini" disabled={isUploading} onClick={() => cameraInputRef.current?.click()} aria-label={t('textChat.receipt.camera')}>
           ◉
         </button>
-        <input ref={cameraInputRef} type="file" accept={RECEIPT_ACCEPTED_TYPES} capture="environment" className="sr-only" onChange={(event) => void handleReceiptFile(event.target.files?.[0] ?? null)} />
+        <input ref={cameraInputRef} type="file" accept={RECEIPT_CAMERA_TYPES} capture="environment" className="sr-only" onChange={(event) => void handleReceiptFile(event.target.files?.[0] ?? null)} />
         <input ref={fileInputRef} type="file" accept={RECEIPT_ACCEPTED_TYPES} className="sr-only" onChange={(event) => void handleReceiptFile(event.target.files?.[0] ?? null)} />
       </div>
 

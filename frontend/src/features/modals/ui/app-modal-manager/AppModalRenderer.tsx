@@ -11,6 +11,7 @@ import { StoreLimitsSheet } from '@/features/store/ui/StoreLimitsSheet';
 import { StorePaymentSheet } from '@/features/store/ui/StorePaymentSheet';
 import { PremiumUpgradeSheet } from '@/features/premium/ui/PremiumUpgradeSheet';
 import { ReceiptPremiumLockSheet } from '@/features/modals/ui/ReceiptPremiumLockSheet';
+import { ReceiptReviewSheet } from '@/features/receipt-scans/ui/ReceiptReviewSheet';
 import type { AppModalDescriptor } from '@/features/modals/model/appModal.store';
 import { layerByIndex } from '@/features/modals/lib/modalLayers';
 import type { AppModalDependencies } from './useAppModalDependencies';
@@ -27,6 +28,7 @@ import {
   isStoreModal,
   isPremiumModal,
   isReceiptLockModal,
+  isReceiptReviewModal,
 } from './modalTypeGuards';
 
 type CloseModal = (type?: AppModalDescriptor['type']) => void;
@@ -163,6 +165,17 @@ export function AppModalRenderer({ closeAllModals, closeModal, deps, index, moda
     return <ReceiptPremiumLockSheet open layer={layer} onClose={() => closeModal('receipt-premium-lock')} />;
   }
 
+  if (isReceiptReviewModal(modal)) {
+    return (
+      <ReceiptReviewSheet
+        open
+        layer={layer}
+        scanId={modal.scanId}
+        initialScan={modal.initialScan}
+        onClose={() => closeModal('receipt-review')}
+      />
+    );
+  }
 
   if (isTextChatModal(modal)) {
     return (

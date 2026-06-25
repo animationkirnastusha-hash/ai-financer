@@ -73,6 +73,17 @@ export type CreateReceiptExpensePayload = {
   merchant?: string | null;
 };
 
+export function getReceiptUploadErrorMessage(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error ?? '');
+  const lower = message.toLowerCase();
+  if (lower.includes('too large') || lower.includes('file_size') || lower.includes('payload')) return 'Файл слишком большой. Выберите чек до 20 МБ.';
+  if (lower.includes('unsupported') || lower.includes('type')) return 'Формат файла не поддерживается. Лучше загрузить JPG, PNG, WEBP или PDF.';
+  if (lower.includes('empty')) return 'Файл пустой. Выберите другой чек.';
+  if (lower.includes('limit reached') || lower.includes('forbidden')) return 'Лимит чеков закончился.';
+  if (lower.includes('failed to fetch') || lower.includes('network') || lower.includes('load fail')) return 'Не удалось загрузить чек. Проверьте соединение и попробуйте ещё раз.';
+  return message || 'Не удалось загрузить чек.';
+}
+
 async function parseResponse<T>(response: Response): Promise<T> {
   const contentType = response.headers.get('content-type') || '';
   const payload = contentType.includes('application/json') ? await response.json() : await response.text();

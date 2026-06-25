@@ -9,6 +9,7 @@ import type { HomeCashflowMode, HomeCashflowPeriod, HomeFinanceGroup } from '@/f
 import type { ReportMode } from '@/features/reports/api/reports.api';
 import type { StoreCard } from '@/features/store/model/storeCatalog';
 import type { PremiumTrigger } from '@/features/premium/model/premium.types';
+import type { ReceiptScanDto } from '@/features/receipt-scans/api/receiptScans.api';
 
 export type AppModalDescriptor =
   | { type: 'account-create'; prefill?: Partial<{ name: string; type: AccountType; currency: 'RUB' | 'USD' | 'EUR'; initialBalance: string }> }
@@ -27,6 +28,7 @@ export type AppModalDescriptor =
   | { type: 'store-payment'; product: StoreCard }
   | { type: 'premium-upgrade'; trigger: PremiumTrigger }
   | { type: 'receipt-premium-lock' }
+  | { type: 'receipt-review'; scanId: string; initialScan?: ReceiptScanDto }
   | { type: 'report-export'; mode?: ReportMode }
   | { type: 'ai-text-overlay'; initialCommand?: string | null; initialAssistantMessage?: string | null; mode?: 'text' | 'voice'; autoStartVoice?: boolean; autoCloseOnVoiceResult?: boolean; autoSubmitInitialCommand?: boolean }
   | { type: 'home-chart-details'; mode: HomeCashflowMode; period: HomeCashflowPeriod }
@@ -41,6 +43,7 @@ const SINGLETON_MODAL_TYPES = new Set<AppModalDescriptor['type']>([
   'store-payment',
   'premium-upgrade',
   'receipt-premium-lock',
+  'receipt-review',
   'notifications',
   'trial-offer',
 ]);

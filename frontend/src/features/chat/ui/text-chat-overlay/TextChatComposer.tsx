@@ -1,6 +1,9 @@
 import type { ChangeEvent, FormEvent, KeyboardEvent, PointerEvent, RefObject } from 'react';
 
-import { RECEIPT_ACCEPTED_TYPES } from '@/features/chat/ui/text-chat-overlay/constants';
+import {
+  RECEIPT_CAMERA_ACCEPT_TYPES,
+  RECEIPT_FILE_ACCEPT_TYPES,
+} from '@/features/chat/ui/text-chat-overlay/constants';
 import type { VoiceInputState } from '@/features/voice/model/voice.types';
 
 type Props = {
@@ -95,7 +98,7 @@ export function TextChatComposer({
           <input
             ref={receiptCameraInputRef}
             type="file"
-            accept={RECEIPT_ACCEPTED_TYPES}
+            accept={RECEIPT_CAMERA_ACCEPT_TYPES}
             capture="environment"
             className="sr-only"
             onChange={handleFileChange}
@@ -103,7 +106,7 @@ export function TextChatComposer({
           <input
             ref={receiptFileInputRef}
             type="file"
-            accept={RECEIPT_ACCEPTED_TYPES}
+            accept={RECEIPT_FILE_ACCEPT_TYPES}
             className="sr-only"
             onChange={handleFileChange}
           />

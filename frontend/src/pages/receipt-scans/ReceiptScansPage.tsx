@@ -1,5 +1,4 @@
 import { useEffect } from 'react';
-import { useAccountsStore } from '@/features/accounts/model/accounts.store';
 import { PremiumFeatureGate } from '@/features/premium/ui/PremiumFeatureGate';
 import { useReceiptScansStore } from '@/features/receipt-scans/model/receiptScans.store';
 import { ReceiptScanList } from '@/features/receipt-scans/ui/ReceiptScanList';
@@ -12,20 +11,14 @@ export default function ReceiptScansPage() {
   const { t } = useI18n();
   const items = useReceiptScansStore((state) => state.items);
   const isLoading = useReceiptScansStore((state) => state.isLoading);
-  const isSaving = useReceiptScansStore((state) => state.isSaving);
   const error = useReceiptScansStore((state) => state.error);
   const load = useReceiptScansStore((state) => state.load);
-  const review = useReceiptScansStore((state) => state.review);
-  const createExpense = useReceiptScansStore((state) => state.createExpense);
-  const accounts = useAccountsStore((state) => state.items);
-  const loadAccounts = useAccountsStore((state) => state.loadAccounts);
   const loadSubscription = useSubscriptionStore((state) => state.load);
 
   useEffect(() => {
     void loadSubscription();
     void load();
-    void loadAccounts();
-  }, [load, loadAccounts, loadSubscription]);
+  }, [load, loadSubscription]);
 
   return (
     <div className="app-page receipt-scans-page text-white">
@@ -58,11 +51,7 @@ export default function ReceiptScansPage() {
           </div>
           <ReceiptScanList
             items={items}
-            accounts={accounts}
             isLoading={isLoading}
-            isSaving={isSaving}
-            onReview={review}
-            onCreateExpense={createExpense}
           />
         </section>
       </div>

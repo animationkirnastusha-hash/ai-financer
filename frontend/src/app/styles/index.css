@@ -77,6 +77,7 @@
 @import "./features/taxonomy/taxonomy-picker.css";
 @import "./pages/dashboard/dashboard-taxonomy.css";
 @import "./pages/receipts/receipt-taxonomy.css";
+@import "./features/receipt-scans/receipt-review-sheet.css";
 @import "./animations/motion-safety.css";
 @import "./animations/chat-motion.css";
 @import "./layout/device-adaptive/cross-device-layout.css";
@@ -111,4 +112,3 @@
 @import "./pages/dashboard/dashboard-device-safety.css";
 
 @import "./features/subscription/trial-offer.css";
-@import "./components/modal-unified-manager.css";

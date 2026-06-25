@@ -4,6 +4,7 @@ import { BadRequestError, ForbiddenError, NotFoundError } from '../../shared/cor
 import { subscriptionService } from '../subscription/service';
 import { TransactionService } from '../transactions/service';
 import { buildReceiptItemsDescription, buildReceiptTaxonomyItems, groupReceiptTaxonomyItems, type ReceiptTaxonomyGroup } from '../taxonomy/receipt-taxonomy';
+import { receiptAiService, type ReceiptAiResult } from './receipt-ai.service';
 
 export type ReceiptScanDto = {
   id: string;
@@ -34,6 +35,7 @@ type CreateReceiptInput = {
   fileName: string;
   mimeType: string;
   sizeBytes: number;
+  buffer?: Buffer;
 };
 
 export type ReviewReceiptInput = {
@@ -51,7 +53,7 @@ export type CreateExpenseFromReceiptInput = ReviewReceiptInput & {
   description?: string | null;
 };
 
-const MAX_RECEIPT_FILE_BYTES = 8 * 1024 * 1024;
+const MAX_RECEIPT_FILE_BYTES = 20 * 1024 * 1024;
 const ALLOWED_MIME_TYPES = new Set([
   'image/jpeg',
   'image/jpg',
@@ -109,16 +111,42 @@ function toDto(scan: ReceiptScan): ReceiptScanDto {
   };
 }
 
-function buildPreview(input: CreateReceiptInput): ReceiptScanPreview {
+function formatReceiptDate(value: Date | null) {
+  return value ? value.toISOString().slice(0, 10) : 'Не найдена';
+}
+
+function buildUploadPreview(input: CreateReceiptInput): ReceiptScanPreview {
   const kb = Math.max(1, Math.round(input.sizeBytes / 1024));
   return {
     title: 'Чек загружен',
-    caption: 'Проверь сумму, счёт и категорию перед созданием расхода.',
+    caption: receiptAiService.canAnalyze(input.mimeType)
+      ? 'Фина не смогла уверенно прочитать чек. Проверь данные вручную.'
+      : 'Формат сохранён в истории. Проверь данные вручную перед созданием расхода.',
     fields: [
       { label: 'Файл', value: input.fileName },
       { label: 'Размер', value: `${kb} КБ` },
-      { label: 'Статус', value: 'Ожидает проверки' },
+      { label: 'Статус', value: 'Нужна ручная проверка' },
     ],
+  };
+}
+
+function buildAnalyzedPreview(analysis: ReceiptAiResult): ReceiptScanPreview {
+  const groups = groupReceiptTaxonomyItems(buildReceiptTaxonomyItems(analysis.rawText));
+  const fields = [
+    { label: 'Магазин', value: analysis.merchant || 'Не найден' },
+    { label: 'Сумма', value: analysis.totalAmount ? `${analysis.totalAmount} ${analysis.currency}` : 'Не найдена' },
+    { label: 'Дата', value: formatReceiptDate(analysis.purchasedAt) },
+    { label: 'Позиции', value: analysis.items.length ? `${analysis.items.length}` : 'Не найдены' },
+    { label: 'Уверенность', value: `${Math.round(analysis.confidence * 100)}%` },
+  ];
+
+  return {
+    title: analysis.merchant || 'Чек разобран',
+    caption: groups.length > 0
+      ? 'Фина прочитала чек и разложила позиции по смыслу. Проверь итог, счёт и категории.'
+      : 'Фина прочитала основные данные. Проверь сумму, счёт и категорию.',
+    fields,
+    ...(groups.length > 0 ? { groups } : {}),
   };
 }
 
@@ -127,9 +155,11 @@ function buildReviewedPreview(scan: ReceiptScan): ReceiptScanPreview {
   const groups = groupReceiptTaxonomyItems(items);
   return {
     title: scan.merchant || 'Чек проверен',
-    caption: groups.length > 0
-      ? 'Проверь сумму, счёт и данные чека перед созданием расхода.'
-      : scan.transactionId ? 'Расход уже создан.' : 'Можно создать расход из этого чека.',
+    caption: scan.transactionId
+      ? 'Расход уже создан.'
+      : groups.length > 0
+        ? 'Проверь сумму, счёт и данные чека перед созданием расхода.'
+        : 'Можно создать расход из этого чека.',
     fields: [
       { label: 'Сумма', value: scan.totalAmount ? `${scan.totalAmount} ${scan.currency}` : 'Не указана' },
       { label: 'Дата', value: scan.purchasedAt ? scan.purchasedAt.toISOString().slice(0, 10) : 'Не указана' },
@@ -176,14 +206,26 @@ export class ReceiptScanService {
     }
 
     const fileName = normalizeFileName(input.fileName);
-    const preview = buildPreview({ ...input, fileName, mimeType });
+    const normalizedInput = { ...input, fileName, mimeType };
+    const analysis = input.buffer
+      ? await receiptAiService.analyze({ buffer: input.buffer, mimeType, fileName })
+      : null;
+    const preview = analysis
+      ? buildAnalyzedPreview(analysis)
+      : buildUploadPreview(normalizedInput);
+
     const scan = await prisma.receiptScan.create({
       data: {
         userId,
         fileName,
         mimeType,
         sizeBytes: input.sizeBytes,
-        status: 'uploaded',
+        status: analysis ? 'reviewed' : 'uploaded',
+        merchant: analysis?.merchant ?? undefined,
+        totalAmount: analysis?.totalAmount ?? undefined,
+        currency: analysis?.currency ?? 'RUB',
+        purchasedAt: analysis?.purchasedAt ?? undefined,
+        rawText: analysis?.rawText ?? undefined,
         preview: JSON.stringify(preview),
       },
     });

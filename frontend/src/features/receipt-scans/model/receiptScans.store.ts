@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import {
+  getReceiptUploadErrorMessage,
   receiptScansApi,
   type CreateReceiptExpensePayload,
   type ReceiptScanDto,
@@ -51,7 +52,7 @@ export const useReceiptScansStore = create<ReceiptScansState>((set) => ({
       set((state) => ({ items: [response.scan, ...state.items], isUploading: false }));
       return response.scan;
     } catch (error) {
-      set({ error: error instanceof Error ? error.message : 'receipt_scan_upload_failed', isUploading: false });
+      set({ error: getReceiptUploadErrorMessage(error), isUploading: false });
       return null;
     }
   },

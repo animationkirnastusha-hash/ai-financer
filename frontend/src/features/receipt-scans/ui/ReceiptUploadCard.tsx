@@ -8,7 +8,7 @@ type Props = {
   onUpload: (file: File) => Promise<void>;
 };
 
-const MAX_FILE_BYTES = 8 * 1024 * 1024;
+const MAX_FILE_BYTES = 20 * 1024 * 1024;
 const ACCEPTED_TYPES = 'image/jpeg,image/png,image/webp,image/heic,image/heif,application/pdf';
 
 export function ReceiptUploadCard({ disabled = false, isUploading = false, remaining, onUpload }: Props) {
@@ -16,15 +16,27 @@ export function ReceiptUploadCard({ disabled = false, isUploading = false, remai
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [localError, setLocalError] = useState<string | null>(null);
 
+  const resetInput = () => {
+    if (inputRef.current) inputRef.current.value = '';
+  };
+
   const handleFile = async (file: File | null) => {
     setLocalError(null);
-    if (!file) return;
-    if (file.size > MAX_FILE_BYTES) {
-      setLocalError(t('receipts.upload.tooLarge'));
+    if (!file) {
+      resetInput();
       return;
     }
-    await onUpload(file);
-    if (inputRef.current) inputRef.current.value = '';
+    if (file.size > MAX_FILE_BYTES) {
+      setLocalError(t('receipts.upload.tooLarge'));
+      resetInput();
+      return;
+    }
+
+    try {
+      await onUpload(file);
+    } finally {
+      resetInput();
+    }
   };
 
   return (

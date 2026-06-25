@@ -13,6 +13,7 @@ import { useChatController } from "@/features/chat/model/useChatController";
 import { useChatStore } from "@/features/chat/model/chat.store";
 import { useSettingsStore } from "@/features/settings/model/settings.store";
 import { useReceiptScansStore } from "@/features/receipt-scans/model/receiptScans.store";
+import { getReceiptUploadIssueKey } from "@/features/receipt-scans/lib/receiptUploadGuards";
 import { useSubscriptionStore } from "@/features/subscription/model/subscription.store";
 import { useTransactionsStore } from "@/features/transactions/model/transactions.store";
 import { useVoiceInput } from "@/features/voice/model/useVoiceInput";
@@ -21,7 +22,6 @@ import { shouldIgnoreVoiceCommand } from "@/features/voice/model/voiceText";
 import { useI18n } from "@/shared/lib/i18n";
 import {
   OVERLAY_DISMISS_DRAG_PX,
-  RECEIPT_MAX_FILE_BYTES,
   SCROLL_BOTTOM_THRESHOLD_PX,
 } from "@/features/chat/ui/text-chat-overlay/constants";
 import {
@@ -523,18 +523,21 @@ export function TextChatOverlay({
 
   const handleReceiptFile = useCallback(
     async (file: File | null) => {
-      if (!file || !hasReceiptAccess || isReceiptUploading) return;
-      if (file.size > RECEIPT_MAX_FILE_BYTES) {
-        setReceiptHint(t("receipts.upload.tooLarge"));
+      if (!hasReceiptAccess || isReceiptUploading) return;
+
+      const issueKey = getReceiptUploadIssueKey(file);
+      if (issueKey) {
+        setReceiptHint(t(issueKey));
+        if (receiptCameraInputRef.current) receiptCameraInputRef.current.value = "";
+        if (receiptFileInputRef.current) receiptFileInputRef.current.value = "";
         return;
       }
+
       setReceiptHint(t("textChat.receipt.uploading"));
-      const scan = await uploadReceipt(file);
-      setReceiptHint(
-        scan ? t("textChat.receipt.success") : t("textChat.receipt.error"),
-      );
-      if (receiptCameraInputRef.current)
-        receiptCameraInputRef.current.value = "";
+      const scan = await uploadReceipt(file as File);
+      const uploadError = useReceiptScansStore.getState().error;
+      setReceiptHint(scan ? t("textChat.receipt.success") : t(uploadError || "receipts.upload.failed"));
+      if (receiptCameraInputRef.current) receiptCameraInputRef.current.value = "";
       if (receiptFileInputRef.current) receiptFileInputRef.current.value = "";
     },
     [hasReceiptAccess, isReceiptUploading, t, uploadReceipt],

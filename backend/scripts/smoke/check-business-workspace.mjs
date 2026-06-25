@@ -2,14 +2,17 @@ import { runSmoke } from './lib/test-context.mjs';
 import { requestJson } from './lib/http-client.mjs';
 
 async function ensureBusinessAccess(context) {
-  const order = await requestJson(context, '/payments/orders', {
+  const me = await requestJson(context, '/auth/me');
+  const userId = me.payload?.user?.id;
+  if (!userId) throw new Error('Cannot resolve current test user id');
+  if (me.payload?.user?.isAdmin !== true) throw new Error('Business workspace smoke requires admin test token');
+
+  const granted = await requestJson(context, `/admin/users/${userId}/subscription/grant`, {
     method: 'POST',
-    body: { product: 'business', duration: 'month', provider: 'mock' },
+    body: { product: 'business', lifetime: true },
   });
-  const orderId = order.payload?.order?.id;
-  if (!orderId) throw new Error('Business mock order was not created');
-  const completed = await requestJson(context, `/payments/orders/${orderId}/mock-complete`, { method: 'POST' });
-  if (!completed.payload?.subscription?.access?.hasBusiness) throw new Error('Business access was not granted');
+
+  if (!granted.payload?.result?.access?.hasBusiness) throw new Error('Business access was not granted by admin endpoint');
 }
 
 await runSmoke('business-workspace', async (context) => {

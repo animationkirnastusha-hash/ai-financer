@@ -1,13 +1,35 @@
 import multer from 'multer';
-import { Request, Response } from 'express';
+import { NextFunction, Request, Response } from 'express';
 import { asyncHandler } from '../../shared/utils/asyncHandler';
 import { BadRequestError } from '../../shared/core/errors';
 import { receiptScanService } from './service';
 
+const MAX_RECEIPT_UPLOAD_BYTES = 20 * 1024 * 1024;
+
 export const receiptUpload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 8 * 1024 * 1024, files: 1 },
+  limits: { fileSize: MAX_RECEIPT_UPLOAD_BYTES, files: 1 },
 });
+
+export function receiptUploadMiddleware(req: Request, res: Response, next: NextFunction) {
+  receiptUpload.single('receipt')(req, res, (error: unknown) => {
+    if (!error) {
+      next();
+      return;
+    }
+
+    if (error instanceof multer.MulterError) {
+      if (error.code === 'LIMIT_FILE_SIZE') {
+        next(new BadRequestError('Receipt file is too large', { maxBytes: MAX_RECEIPT_UPLOAD_BYTES }));
+        return;
+      }
+      next(new BadRequestError('Receipt upload failed', { code: error.code }));
+      return;
+    }
+
+    next(error);
+  });
+}
 
 type ReceiptUploadRequest = Request & { file?: Express.Multer.File };
 
@@ -58,6 +80,7 @@ export const uploadReceiptScan = asyncHandler(async (req: ReceiptUploadRequest, 
     fileName: file.originalname,
     mimeType: file.mimetype,
     sizeBytes: file.size,
+    buffer: file.buffer,
   });
 
   res.status(201).json(result);
