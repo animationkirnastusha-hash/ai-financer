@@ -2,6 +2,7 @@ import { prisma } from '../../lib/prisma';
 import { BadRequestError, NotFoundError } from '../../shared/core/errors';
 import { progressionActivityBridge } from '../progression/activity-bridge.service';
 import { resolveCategoryAppearance, shouldReplaceGenericIcon } from '../taxonomy/taxonomy-icons';
+import { normalizeTransactionCategoryName } from '../taxonomy/transaction-taxonomy';
 
 export type CategoryType = 'income' | 'expense' | 'both';
 
@@ -43,7 +44,7 @@ export class CategoryService {
     const name = this.normalizeName(input.name);
     const type = normalizeCategoryType(input.type);
     const appearance = resolveCategoryAppearance(name, taxonomyKind(type));
-    const sectionId = input.sectionId !== undefined ? input.sectionId : null;
+    const sectionId = null;
 
     const existing = await prisma.category.findFirst({ where: { userId, name } });
     if (existing) {
@@ -82,9 +83,7 @@ export class CategoryService {
     const nextName = input.name !== undefined ? this.normalizeName(input.name) : existing.name;
     const nextType = input.type !== undefined ? normalizeCategoryType(input.type) : normalizeCategoryType(existing.type);
     const appearance = resolveCategoryAppearance(nextName, taxonomyKind(nextType));
-    const nextSectionId = input.sectionId !== undefined
-      ? input.sectionId
-      : existing.sectionId;
+    const nextSectionId = null;
 
     return prisma.category.update({
       where: { id: categoryId },
@@ -114,6 +113,6 @@ export class CategoryService {
   private normalizeName(value: string) {
     const name = value?.trim().replace(/[«»"]/g, '').replace(/\s+/g, ' ');
     if (!name) throw new BadRequestError('Category name is required');
-    return name.charAt(0).toUpperCase() + name.slice(1);
+    return normalizeTransactionCategoryName(name) || name.charAt(0).toUpperCase() + name.slice(1);
   }
 }

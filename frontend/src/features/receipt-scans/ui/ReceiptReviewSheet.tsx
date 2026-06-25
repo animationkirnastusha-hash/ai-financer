@@ -183,23 +183,16 @@ export function ReceiptReviewSheet({ initialScan, layer, onClose, open, scanId }
                     <strong>{group.sectionName}</strong>
                     {group.amount > 0 ? <em>{formatMoney(group.amount, scan.currency || 'RUB')}</em> : null}
                   </div>
-                  {group.categories.map((category) => (
-                    <div key={`${group.sectionName}-${category.categoryName}`} className="receipt-review-sheet__category">
-                      <div className="receipt-review-sheet__category-head">
-                        <span>{category.categoryIcon}</span>
-                        <b>{category.categoryName}</b>
-                        {category.amount > 0 ? <em>{formatMoney(category.amount, scan.currency || 'RUB')}</em> : null}
-                      </div>
-                      <ul>
-                        {category.items.slice(0, 8).map((item) => (
-                          <li key={`${category.categoryName}-${item.title}-${item.amount ?? 'x'}`}>
-                            <span>{item.title}</span>
-                            <strong>{item.amount ? formatMoney(item.amount, scan.currency || 'RUB') : '—'}</strong>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  ))}
+                  <div className="receipt-review-sheet__category">
+                    <ul>
+                      {group.categories.flatMap((category) => category.items).slice(0, 8).map((item) => (
+                        <li key={`${group.sectionName}-${item.title}-${item.amount ?? 'x'}`}>
+                          <span>{item.title}</span>
+                          <strong>{item.amount ? formatMoney(item.amount, scan.currency || 'RUB') : '—'}</strong>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
                 </article>
               ))}
             </section>

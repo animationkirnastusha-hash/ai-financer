@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigationStore } from '@/features/navigation/model/navigation.store';
 import { useSubscriptionStore } from '@/features/subscription/model/subscription.store';
 import { useI18n } from '@/shared/lib/i18n';
+import { cn } from '@/shared/lib/cn';
 
 type TrialOfferSource = 'tour_complete' | 'tour_skip' | 'store' | 'premium' | 'manual';
 
@@ -70,13 +71,14 @@ export function TrialOfferSheet({ open, layer = 120, source = 'manual', onClose 
   };
 
   const trialUntilText = formatTrialDate(startedUntil ?? subscription?.access.trialUntil);
+  const isStatusOnly = alreadyUsed || alreadyActive || Boolean(startedUntil);
 
   return (
     <div className="app-modal-backdrop trial-offer-backdrop" data-no-swipe="true" style={{ zIndex: layer }} onClick={onClose}>
-      <section className="app-modal-sheet trial-offer-sheet" data-no-swipe="true" onClick={(event) => event.stopPropagation()}>
+      <section className={cn('app-modal-sheet trial-offer-sheet', isStatusOnly && 'trial-offer-sheet--status')} data-no-swipe="true" onClick={(event) => event.stopPropagation()}>
         <div className="app-modal-handle" />
         <div className="app-modal-body trial-offer-sheet__body">
-          <div className="trial-offer-hero">
+          <div className={cn('trial-offer-hero', isStatusOnly && 'trial-offer-hero--status')}>
             <div className="trial-offer-hero__icon" aria-hidden="true">✦</div>
             <div className="app-eyebrow">{t('trialOffer.eyebrow')}</div>
             <h2>{t(titleKey)}</h2>

@@ -43,7 +43,7 @@
 @media (max-width: 390px) { .app-settings-grid { grid-template-columns:1fr; } .app-settings-language { align-items:flex-start; flex-direction:column; } }
 
 
-/* Pack 174: settings launch polish. */
+/* Settings profile card. */
 .app-settings-profile-card {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -121,4 +121,64 @@
     max-width: 100%;
     width: 100%;
   }
+}
+
+/* Data reset drawer. */
+.app-data-reset-actions {
+  display: grid;
+  gap: 12px;
+}
+
+.app-data-reset-card {
+  position: relative;
+  min-height: 132px;
+  overflow: hidden;
+  border-radius: 28px;
+  padding: 18px;
+}
+
+.app-data-reset-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(circle at 0% 0%, rgba(129, 239, 208, .10), transparent 34%);
+}
+
+.app-data-reset-card--hard::before {
+  background: radial-gradient(circle at 0% 0%, rgba(244, 63, 94, .14), transparent 38%);
+}
+
+.app-data-reset-card__icon {
+  position: relative;
+  display: grid;
+  width: 42px;
+  height: 42px;
+  margin-bottom: 24px;
+  place-items: center;
+  border-radius: 17px;
+  background: rgba(255, 255, 255, .075);
+  color: rgba(224, 255, 246, .95);
+  font-size: 18px;
+  font-weight: 850;
+}
+
+.app-data-reset-card b,
+.app-data-reset-card small {
+  position: relative;
+}
+
+.app-data-reset-card b {
+  font-size: 17px;
+  letter-spacing: -.025em;
+}
+
+.app-data-reset-card small {
+  max-width: 32rem;
+  color: rgba(255, 255, 255, .54);
+  font-size: 13px;
+}
+
+.app-data-reset-card:disabled {
+  opacity: .62;
 }

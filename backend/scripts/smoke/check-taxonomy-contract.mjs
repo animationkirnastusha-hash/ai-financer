@@ -41,19 +41,14 @@ await runSmoke('taxonomy-contract', async (context) => {
   const transaction = txResponse.payload?.transaction;
   if (!transaction?.id) throw new Error('Transaction was not created');
   assertAppearance(transaction.category, 'transaction fallback category');
-  assertAppearance(transaction.section ?? transaction.category?.section, 'transaction fallback section');
 
-  if (transaction.category.name !== 'Расход') {
-    throw new Error(`Manual transaction must not be semantically categorized by title: ${transaction.category.name}`);
+  if (transaction.sectionId || transaction.section) {
+    throw new Error('Category-only transaction must not keep a section link');
   }
 
-  const manualSectionResponse = await requestJson(context, '/sections', {
-    method: 'POST',
-    expected: [201],
-    body: { name: `Семья ${context.suffix}` },
-  });
-  const manualSection = manualSectionResponse.payload?.section;
-  assertAppearance(manualSection, 'manual section');
+  if (transaction.category.name !== 'Прочие расходы') {
+    throw new Error(`Manual transaction must use category-only fallback: ${transaction.category.name}`);
+  }
 
   const manualCategoryResponse = await requestJson(context, '/categories', {
     method: 'POST',
@@ -61,20 +56,19 @@ await runSmoke('taxonomy-contract', async (context) => {
     body: {
       name: `Детский сад ${context.suffix}`,
       type: 'expense',
-      sectionId: manualSection.id,
+      sectionId: 'legacy-section-must-be-ignored',
     },
   });
   const manualCategory = manualCategoryResponse.payload?.category;
   assertAppearance(manualCategory, 'manual category');
-  if (manualCategory.sectionId !== manualSection.id) {
-    throw new Error('Manual category lost explicit section link');
+  if (manualCategory.sectionId) {
+    throw new Error('Manual category must ignore sectionId in category-only mode');
   }
 
   context.log('taxonomy contract flow passed', {
     transactionId: transaction.id,
     fallbackCategory: transaction.category.name,
-    fallbackSection: (transaction.section ?? transaction.category.section)?.name,
     manualCategory: manualCategory.name,
-    manualSection: manualSection.name,
+    sectionId: manualCategory.sectionId ?? null,
   });
 });

@@ -131,3 +131,126 @@
   padding: 0 10px;
   font-size: 11px;
 }
+
+@media (max-width: 520px) {
+  .telegram-app-shell {
+    font-size: 15px;
+  }
+
+  .app-page__inner {
+    gap: 12px;
+    padding-inline: 14px;
+  }
+
+  .app-card,
+  .app-card--hero,
+  .app-goal-card,
+  .app-limit-card,
+  .journal-card,
+  .profile-hub-card {
+    border-radius: 22px;
+  }
+
+  .app-card,
+  .app-card--hero {
+    padding: 16px;
+  }
+
+  .app-hero-title,
+  .app-page-title,
+  .app-goal-card__money {
+    font-size: clamp(23px, 7vw, 30px);
+    line-height: 1.08;
+  }
+
+  .app-hero-caption,
+  .app-card p,
+  .app-field span,
+  .fina-command-bar__caption,
+  .journal-filter__label {
+    font-size: 12px;
+    line-height: 1.35;
+  }
+
+  .app-primary-button,
+  .app-secondary-button,
+  .fina-command-bar__action button,
+  .journal-chip,
+  .app-filter-chip {
+    min-height: 40px;
+    padding: 10px 13px;
+    border-radius: 16px;
+    font-size: 13px;
+  }
+
+  .app-field input,
+  .app-field select,
+  .app-field textarea,
+  .text-chat-overlay__input {
+    min-height: 44px;
+    border-radius: 18px;
+    font-size: 15px;
+  }
+
+  .app-drawer__panel,
+  .app-modal-sheet,
+  .text-chat-overlay__panel {
+    border-radius: 26px 26px 0 0;
+  }
+
+  .app-drawer__body,
+  .app-modal-sheet__body {
+    padding: 14px;
+  }
+
+  .text-chat-message,
+  .text-chat-overlay__bubble {
+    font-size: 15px;
+    line-height: 1.38;
+  }
+
+  .app-goal-card__account {
+    margin-top: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding-top: 10px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 12px;
+  }
+
+  .app-goal-card__account span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .app-goal-card__account strong {
+    flex: 0 0 auto;
+    color: rgba(167, 243, 208, 0.92);
+    font-size: 12px;
+  }
+
+  .goal-linked-account-note {
+    display: grid;
+    gap: 4px;
+    padding: 12px;
+    border: 1px solid rgba(34, 197, 94, 0.2);
+    border-radius: 18px;
+    background: rgba(16, 185, 129, 0.08);
+  }
+
+  .goal-linked-account-note strong {
+    color: rgba(236, 253, 245, 0.94);
+    font-size: 13px;
+  }
+
+  .goal-linked-account-note span {
+    color: rgba(209, 250, 229, 0.58);
+    font-size: 12px;
+    line-height: 1.35;
+  }
+}

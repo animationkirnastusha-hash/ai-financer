@@ -72,9 +72,9 @@ export function buildReceiptTaxonomyItems(rawText?: string | null): ReceiptTaxon
     return {
       title,
       amount: parsed.amount,
-      sectionName: taxonomy.sectionName,
-      sectionIcon: taxonomy.sectionIcon,
-      sectionColor: taxonomy.sectionColor,
+      sectionName: taxonomy.categoryName,
+      sectionIcon: taxonomy.categoryIcon,
+      sectionColor: taxonomy.categoryColor,
       categoryName: taxonomy.categoryName,
       categoryIcon: taxonomy.categoryIcon,
       categoryColor: taxonomy.categoryColor,
@@ -83,45 +83,39 @@ export function buildReceiptTaxonomyItems(rawText?: string | null): ReceiptTaxon
 }
 
 export function groupReceiptTaxonomyItems(items: ReceiptTaxonomyItem[]): ReceiptTaxonomyGroup[] {
-  const sectionMap = new Map<string, ReceiptTaxonomyGroup>();
+  const categoryMap = new Map<string, ReceiptTaxonomyGroup>();
 
   for (const item of items) {
-    const sectionKey = item.sectionName.toLowerCase();
-    let section = sectionMap.get(sectionKey);
-    if (!section) {
-      section = {
-        sectionName: item.sectionName,
-        sectionIcon: item.sectionIcon,
-        sectionColor: item.sectionColor,
-        amount: 0,
-        categories: [],
-      };
-      sectionMap.set(sectionKey, section);
-    }
-
-    section.amount += item.amount ?? 0;
     const categoryKey = item.categoryName.toLowerCase();
-    let category = section.categories.find((entry) => entry.categoryName.toLowerCase() === categoryKey);
-    if (!category) {
-      category = {
-        categoryName: item.categoryName,
-        categoryIcon: item.categoryIcon,
-        categoryColor: item.categoryColor,
+    let group = categoryMap.get(categoryKey);
+    if (!group) {
+      group = {
+        sectionName: item.categoryName,
+        sectionIcon: item.categoryIcon,
+        sectionColor: item.categoryColor,
         amount: 0,
-        items: [],
+        categories: [{
+          categoryName: item.categoryName,
+          categoryIcon: item.categoryIcon,
+          categoryColor: item.categoryColor,
+          amount: 0,
+          items: [],
+        }],
       };
-      section.categories.push(category);
+      categoryMap.set(categoryKey, group);
     }
 
+    group.amount += item.amount ?? 0;
+    const category = group.categories[0];
     category.amount += item.amount ?? 0;
     category.items.push(item);
   }
 
-  return Array.from(sectionMap.values())
-    .map((section) => ({
-      ...section,
-      amount: Math.round(section.amount),
-      categories: section.categories.map((category) => ({
+  return Array.from(categoryMap.values())
+    .map((group) => ({
+      ...group,
+      amount: Math.round(group.amount),
+      categories: group.categories.map((category) => ({
         ...category,
         amount: Math.round(category.amount),
       })),

@@ -29,7 +29,7 @@ export function LaunchOnboardingSheet() {
   const openModal = useAppModalStore((state) => state.openModal);
 
   const name = useMemo(() => getFirstName(user), [user]);
-  const shouldShowLanguageChoice = !user?.locale;
+  const shouldShowLanguageChoice = true;
   const [isMicRequesting, setIsMicRequesting] = useState(false);
   const [micMessageKey, setMicMessageKey] = useState<I18nKey | null>(null);
 

@@ -58,8 +58,8 @@ const fieldLabels: Record<string, string> = {
   fromAccountName: 'Откуда',
   toAccount: 'Куда',
   toAccountName: 'Куда',
-  section: 'Раздел',
-  sectionName: 'Раздел',
+  section: 'Категория',
+  sectionName: 'Категория',
 };
 
 const editableFieldsByIntent: Record<string, string[]> = {

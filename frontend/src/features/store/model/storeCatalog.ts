@@ -54,36 +54,6 @@ export const storeProductCards: StoreCard[] = [
     price: 'store.showcase.businessSoonPrice',
     tone: 'business',
   },
-  {
-    id: 'bundle_try',
-    product: 'bundle_try',
-    eyebrow: 'store.bundle.try.eyebrow',
-    title: 'store.bundle.try.title',
-    caption: 'store.bundle.try.caption',
-    items: [
-      'store.bundle.try.item.voice',
-      'store.bundle.try.item.receipts',
-      'store.bundle.try.item.analysis',
-    ],
-    action: 'store.action.buyPack',
-    price: 'store.showcase.tryPrice',
-    tone: 'bundle',
-  },
-  {
-    id: 'bundle_week',
-    product: 'bundle_week',
-    eyebrow: 'store.bundle.week.eyebrow',
-    title: 'store.bundle.week.title',
-    caption: 'store.bundle.week.caption',
-    items: [
-      'store.bundle.week.item.voice',
-      'store.bundle.week.item.receipts',
-      'store.bundle.week.item.analysis',
-    ],
-    action: 'store.action.buyPack',
-    price: 'store.showcase.weekPrice',
-    tone: 'bundle',
-  },
 ];
 
 export const storeCards = storeProductCards;

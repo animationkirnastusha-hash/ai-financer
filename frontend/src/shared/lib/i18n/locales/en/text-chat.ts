@@ -83,7 +83,7 @@ export const textChatDictionary = {
   'voice.status.ready': 'Ready',
   'voice.status.tapTextHoldVoice': 'Text by button · voice by holding',
   'voice.status.holdVoiceOnly': 'Voice by holding',
-  'voice.thought.pullForText': 'Pull the screen down to open the dialog',
+  'voice.thought.pullForText': 'Swipe from right to left to open the dialog',
   'textChat.clarification.amount': 'How much did you spend?',
   'textChat.clarification.account': 'Which account should I use?',
   'textChat.clarification.generic': 'Please add the missing details.',

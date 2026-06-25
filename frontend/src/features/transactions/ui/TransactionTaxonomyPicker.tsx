@@ -21,7 +21,6 @@ export function TransactionTaxonomyPicker({ type, categoryId, onCategoryIdChange
   const { t } = useI18n();
   const openModal = useAppModalStore((state) => state.openModal);
   const categories = useSectionsStore((state) => state.categories);
-  const sections = useSectionsStore((state) => state.sections);
   const loadAll = useSectionsStore((state) => state.loadAll);
 
   useEffect(() => {
@@ -34,13 +33,6 @@ export function TransactionTaxonomyPicker({ type, categoryId, onCategoryIdChange
   );
 
   const selectedCategory = availableCategories.find((category) => category.id === categoryId) ?? null;
-  const selectedSection = selectedCategory?.sectionId
-    ? sections.find((section) => section.id === selectedCategory.sectionId) ?? selectedCategory.section ?? null
-    : null;
-
-  const sectionLabel = selectedSection
-    ? `${selectedSection.icon ? `${selectedSection.icon} ` : ''}${selectedSection.name}`
-    : t('transaction.category.auto');
 
   const categoryLabel = selectedCategory
     ? `${selectedCategory.icon ? `${selectedCategory.icon} ` : ''}${selectedCategory.name}`
@@ -67,7 +59,6 @@ export function TransactionTaxonomyPicker({ type, categoryId, onCategoryIdChange
       </div>
 
       <div className="app-taxonomy-picker__meta">
-        <span>{t('transaction.category.section')}: {sectionLabel}</span>
         <span>{selectedCategory ? t('transaction.category.selected') : t('transaction.category.prediction')}</span>
       </div>
 

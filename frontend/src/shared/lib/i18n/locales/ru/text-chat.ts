@@ -83,7 +83,7 @@ export const textChatDictionary = {
   'voice.status.ready': 'Готова',
   'voice.status.tapTextHoldVoice': 'Текст — кнопкой · голос — удержанием',
   'voice.status.holdVoiceOnly': 'Голос — удержанием',
-  'voice.thought.pullForText': 'Потяни экран вниз, чтобы открыть диалог',
+  'voice.thought.pullForText': 'Проведи справа налево, чтобы открыть диалог',
   'textChat.clarification.amount': 'Сколько потратили?',
   'textChat.clarification.account': 'С какого счёта?',
   'textChat.clarification.generic': 'Уточни недостающие данные.',

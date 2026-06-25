@@ -7,7 +7,7 @@ import { aiPremiumService } from './ai-premium.service';
 import { aiCompanionService } from './ai-companion.service';
 import { aiAnalyticsService } from './ai-analytics.service';
 import { resolveCategoryAppearance, resolveSectionAppearance, shouldReplaceGenericIcon } from '../taxonomy/taxonomy-icons';
-import { resolveTransactionSemanticTaxonomy, shouldUseTaxonomyTitleFallback } from '../taxonomy/transaction-taxonomy';
+import { normalizeTransactionCategoryName, resolveTransactionSemanticTaxonomy, shouldUseTaxonomyTitleFallback } from '../taxonomy/transaction-taxonomy';
 import { goalAutoSaveService } from '../goals/goal-autosave.service';
 
 const transactionInclude = {
@@ -263,11 +263,8 @@ export class AIExecutorService {
         categoryName: rawCategory,
       });
 
-      const sectionName = rawSection ?? taxonomy.sectionName;
-      const categoryName = rawCategory ?? taxonomy.categoryName;
-      const sectionId = typeof resolved.sectionId === 'string'
-        ? resolved.sectionId
-        : await this.findOrCreateSectionId(tx, userId, sectionName);
+      const categoryName = normalizeTransactionCategoryName(taxonomy.categoryName, kind) || taxonomy.categoryName;
+      const sectionId = null;
 
       const categoryId = await this.findOrCreateCategoryId(tx, userId, {
         name: categoryName,
@@ -435,22 +432,22 @@ export class AIExecutorService {
     }
 
     if (tool === 'create_category') {
-      const name = this.cleanString(input.name);
+      const kind = input.type === 'income' ? 'income' : 'expense';
+      const name = normalizeTransactionCategoryName(this.cleanString(input.name), kind);
       if (!name) throw new BadRequestError('Category name is required');
       const existing = await tx.category.findFirst({ where: { userId, name } });
-      if (existing) return { tool, category: existing, skipped: true, reason: 'category_already_exists' };
-      const sectionName = typeof input.section === 'string' ? input.section : '';
-      const sectionId = typeof resolved.sectionId === 'string'
-        ? resolved.sectionId
-        : sectionName
-          ? await this.findOrCreateSectionId(tx, userId, sectionName)
-          : null;
+      if (existing) {
+        const category = existing.sectionId
+          ? await tx.category.update({ where: { id: existing.id }, data: { sectionId: null } })
+          : existing;
+        return { tool, category, skipped: true, reason: 'category_already_exists' };
+      }
       const category = await tx.category.create({
         data: {
           userId,
           name,
-          type: input.type === 'income' ? 'income' : 'expense',
-          sectionId,
+          type: kind,
+          sectionId: null,
         },
       });
       return { tool, category };
@@ -459,14 +456,11 @@ export class AIExecutorService {
     if (tool === 'update_category') {
       const categoryId = this.requireString(resolved.categoryId, 'categoryId');
       const data: Record<string, unknown> = {};
-      const name = this.cleanString(input.name);
+      const nextKind = input.type === 'income' ? 'income' : 'expense';
+      const name = normalizeTransactionCategoryName(this.cleanString(input.name), nextKind);
       if (name) data.name = name;
       if (input.type === 'income' || input.type === 'expense') data.type = input.type;
-      if (typeof input.section === 'string' && input.section.trim()) {
-        data.sectionId = typeof resolved.sectionId === 'string'
-          ? resolved.sectionId
-          : await this.findOrCreateSectionId(tx, userId, input.section);
-      }
+      data.sectionId = null;
       const category = await tx.category.update({ where: { id: categoryId }, data });
       return { tool, category };
     }
@@ -509,15 +503,8 @@ export class AIExecutorService {
 
     if (tool === 'assign_category_to_section') {
       const categoryId = this.requireString(resolved.categoryId, 'categoryId');
-      const sectionName = this.cleanString(input.section);
-      if (!sectionName) throw new BadRequestError('Section name is required');
-      const sectionId = typeof resolved.sectionId === 'string'
-        ? resolved.sectionId
-        : await this.findOrCreateSectionId(tx, userId, sectionName);
-      if (!sectionId) throw new BadRequestError('Section name is required');
-      const category = await tx.category.update({ where: { id: categoryId }, data: { sectionId } });
-      const section = await tx.section.findFirst({ where: { id: sectionId, userId } });
-      return { tool, category, section };
+      const category = await tx.category.update({ where: { id: categoryId }, data: { sectionId: null } });
+      return { tool, category, section: null, skipped: true, reason: 'sections_hidden' };
     }
 
     if (tool === 'show_taxonomy') {
@@ -1093,13 +1080,13 @@ export class AIExecutorService {
     const existing = await tx.category.findFirst({ where: { userId, name } });
     const appearance = resolveCategoryAppearance(name, params.type);
     if (existing) {
-      if (shouldReplaceGenericIcon(existing.icon) || !existing.color || !existing.sectionId) {
+      if (shouldReplaceGenericIcon(existing.icon) || !existing.color || existing.sectionId) {
         const updated = await tx.category.update({
           where: { id: existing.id },
           data: {
             icon: shouldReplaceGenericIcon(existing.icon) ? appearance.categoryIcon : existing.icon,
             color: existing.color ?? appearance.categoryColor,
-            sectionId: existing.sectionId ?? params.sectionId ?? null,
+            sectionId: null,
           },
         });
         return updated.id;
@@ -1114,7 +1101,7 @@ export class AIExecutorService {
         type: params.type,
         icon: appearance.categoryIcon,
         color: appearance.categoryColor,
-        sectionId: params.sectionId ?? null,
+        sectionId: null,
       },
     });
 

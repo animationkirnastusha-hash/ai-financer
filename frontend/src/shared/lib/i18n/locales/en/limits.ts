@@ -36,6 +36,7 @@ export const limitsDictionary = {
   'limits.guide.category.caption': 'Control coffee, taxi, subscriptions and other spending.',
   'limits.guide.total.title': 'All spending',
   'limits.guide.total.caption': 'A total period limit without account binding.',
+  'limits.command.eyebrow': 'Quick limit',
   'limits.command.title': 'Quick limit',
   'limits.command.placeholder': 'Ask Fina to set control',
   'limits.command.caption': 'Commands help set a limit and check what is left.',

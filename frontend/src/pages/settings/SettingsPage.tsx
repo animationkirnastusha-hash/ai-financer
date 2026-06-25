@@ -322,12 +322,14 @@ export default function SettingsPage() {
 
       {modal === 'data' ? (
         <ModalShell title={t('settings.data.modal.title')} caption={t('settings.data.modal.caption')} onClose={() => setModal(null)}>
-          <div className="grid gap-3">
-            <button type="button" className="app-danger-card" disabled={resetMode !== null} onClick={() => handleReset('finance')}>
+          <div className="app-data-reset-actions">
+            <button type="button" className="app-danger-card app-data-reset-card" disabled={resetMode !== null} onClick={() => handleReset('finance')}>
+              <span className="app-data-reset-card__icon" aria-hidden="true">↺</span>
               <b>{t('settings.data.clearFinance.title')}</b>
               <small>{t('settings.data.clearFinance.caption')}</small>
             </button>
-            <button type="button" className="app-danger-card app-danger-card--hard" disabled={resetMode !== null} onClick={() => handleReset('full')}>
+            <button type="button" className="app-danger-card app-danger-card--hard app-data-reset-card app-data-reset-card--hard" disabled={resetMode !== null} onClick={() => handleReset('full')}>
+              <span className="app-data-reset-card__icon" aria-hidden="true">!</span>
               <b>{t('settings.data.resetAll.title')}</b>
               <small>{t('settings.data.resetAll.caption')}</small>
             </button>

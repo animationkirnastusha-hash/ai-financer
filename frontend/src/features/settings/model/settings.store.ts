@@ -38,12 +38,11 @@ const STORAGE_KEY = 'ai-financer-settings';
 const FIXED_COMPANION_NAME = 'Fina';
 
 function normalizeLanguage(value: unknown): AppLanguage {
-  return value === 'ru' ? 'ru' : 'en';
+  return value === 'en' ? 'en' : 'ru';
 }
 
-function normalizeTelegramLanguage(languageCode?: string | null): AppLanguage {
-  const value = String(languageCode ?? '').trim().toLowerCase();
-  return value === 'ru' || value.startsWith('ru-') || value.startsWith('ru_') ? 'ru' : 'en';
+function normalizeTelegramLanguage(_languageCode?: string | null): AppLanguage {
+  return 'ru';
 }
 
 function normalizeLanguageSource(value: unknown): AppLanguageSource {
@@ -65,7 +64,7 @@ function detectDefaultFinaOverlayDensity(): number {
 }
 
 const defaultSettings: AppSettings = {
-  appLanguage: 'en',
+  appLanguage: 'ru',
   appLanguageSource: 'telegram',
 
   companionName: FIXED_COMPANION_NAME,
@@ -96,11 +95,13 @@ function loadSettings(): AppSettings {
 
     const parsed = JSON.parse(raw) as Partial<AppSettings>;
 
+    const appLanguageSource = normalizeLanguageSource(parsed.appLanguageSource);
+
     return {
       ...defaultSettings,
       ...parsed,
-      appLanguage: normalizeLanguage(parsed.appLanguage),
-      appLanguageSource: normalizeLanguageSource(parsed.appLanguageSource),
+      appLanguage: appLanguageSource === 'user' ? normalizeLanguage(parsed.appLanguage) : 'ru',
+      appLanguageSource,
       companionName: FIXED_COMPANION_NAME,
       voiceRepliesEnabled: parsed.voiceRepliesEnabled === false ? false : true,
       voicePermissionPrompted: Boolean(parsed.voicePermissionPrompted),

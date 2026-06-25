@@ -14,7 +14,7 @@ import { AIEntityResolverService } from './semantic/semantic-entity-resolver.ser
 import { normalizeSemanticText } from './semantic/semantic-normalizer';
 import { semanticSimilarityScore, semanticThreshold } from './semantic/semantic-scorer';
 import { aiRiskPolicyService } from './ai-risk-policy.service';
-import { buildStructuredTransactionDescription } from '../taxonomy/transaction-taxonomy';
+import { buildStructuredTransactionDescription, normalizeTransactionCategoryName, resolveTransactionSemanticTaxonomy } from '../taxonomy/transaction-taxonomy';
 
 interface AccountLite {
   id: string;
@@ -74,30 +74,39 @@ const SPENDING_LIMIT_PERIODS = ['daily', 'weekly', 'monthly'];
 const SPENDING_LIMIT_TARGET_TYPES = ['account', 'category', 'total'];
 
 const CURATED_CATEGORY_REPLACEMENTS: Record<string, string> = {
+  'еда': 'Продукты',
+  'еда дома': 'Продукты',
+  'супермаркет': 'Продукты',
+  'продуктовый': 'Продукты',
+  'продуктовый магазин': 'Продукты',
+  'магазин продуктов': 'Продукты',
   'мясо и колбасы': 'Продукты',
   'молочные продукты': 'Продукты',
+  'молочка': 'Продукты',
   'хлеб и выпечка': 'Продукты',
   'овощи': 'Продукты',
   'фрукты': 'Продукты',
   'рыба и морепродукты': 'Продукты',
   'напитки': 'Продукты',
+  'кофе': 'Кафе и рестораны',
+  'кафе': 'Кафе и рестораны',
+  'фастфуд': 'Кафе и рестораны',
+  'хотдог': 'Кафе и рестораны',
+  'энергетик': 'Кафе и рестораны',
+  'азс': 'Авто',
+  'заправка': 'Авто',
+  'покупки на азс': 'Авто',
+  'бензин': 'Авто',
+  'топливо': 'Авто',
+  'такси': 'Транспорт',
+  'аптека': 'Здоровье',
+  'сигареты': 'Прочие расходы',
+  'табак': 'Прочие расходы',
 };
 
-const CURATED_SECTION_REPLACEMENTS: Record<string, string> = {
-  'продуктовый магазин': 'Дом',
-  'магазин': 'Дом',
-  'повседневные расходы': 'Дом',
-};
+const CURATED_SECTION_REPLACEMENTS: Record<string, string> = {};
 
-const CURATED_CATEGORY_SECTIONS: Record<string, string> = {
-  'продукты': 'Дом',
-  'развлечения': 'Отдых',
-  'отдых': 'Отдых',
-  'транспорт': 'Транспорт',
-  'покупки на азс': 'Транспорт',
-  'бензин': 'Транспорт',
-  'зарплата': 'Доходы',
-};
+const CURATED_CATEGORY_SECTIONS: Record<string, string> = {};
 
 export class AIValidatorService {
   private readonly entityResolver = new AIEntityResolverService();
@@ -270,6 +279,9 @@ export class AIValidatorService {
         const kind = input.kind === 'income' || input.kind === 'expense' ? input.kind : null;
         let amount = normalizeMoneyAmount(input.amount);
         if (amount !== null && !this.isContractAmountGroundedInUserText(amount, sourceText)) amount = null;
+        const recoveredLooseAmount = this.recoverLooseTransactionAmount(sourceText, input);
+        if (amount === null) amount = recoveredLooseAmount;
+        else if (recoveredLooseAmount !== null && recoveredLooseAmount !== amount && this.looksLikeTerseItemPriceList(sourceText, input)) amount = recoveredLooseAmount;
         const explicitAccountRef = this.cleanString(input.account);
         const plannedAccountRef = this.lastPlannedAccountName(plannedAccounts);
         const defaultAccount = this.resolveDefaultTransactionAccount(accounts, kind, aiSettings);
@@ -308,15 +320,28 @@ export class AIValidatorService {
           }
         }
 
-        let rawCategory = this.cleanGenericTaxonomyName(input.category, kind, 'category');
-        let rawSection = this.cleanGenericTaxonomyName(input.section, kind, 'section');
-        const curatedTaxonomy = this.curateTransactionTaxonomy(rawCategory, rawSection, kind);
-        rawCategory = curatedTaxonomy.category;
-        rawSection = curatedTaxonomy.section;
+        const initialCategory = this.cleanGenericTaxonomyName(input.category, kind, 'category');
+        let rawSection = '';
         const rawDescription = this.cleanEntityName(input.description);
         const merchant = this.cleanEntityName(input.merchant || input.place || input.store || input.shop);
         const items = this.cleanStringList(input.items);
         const tags = this.cleanStringList(input.tags);
+        const semanticTaxonomy = kind
+          ? resolveTransactionSemanticTaxonomy({
+              kind,
+              title: this.cleanEntityName(input.title),
+              description: rawDescription,
+              categoryName: initialCategory,
+              merchant,
+              place: this.cleanEntityName(input.place),
+              items,
+              tags,
+            })
+          : null;
+        let rawCategory = semanticTaxonomy?.categoryName ?? initialCategory;
+        const curatedTaxonomy = this.curateTransactionTaxonomy(rawCategory, rawSection, kind);
+        rawCategory = curatedTaxonomy.category;
+        rawSection = '';
         const rawTitle = this.cleanTransactionTitle(input.title, kind, rawCategory, rawDescription, { merchant, items, tags, section: rawSection });
         const description = this.cleanTransactionDescription(rawDescription, rawTitle, rawCategory, kind);
         const structuredDescription = buildStructuredTransactionDescription({
@@ -332,7 +357,7 @@ export class AIValidatorService {
         input.currency = moneyCurrency;
         input.title = rawTitle || null;
         input.category = rawCategory || null;
-        input.section = rawSection || null;
+        input.section = null;
         input.description = structuredDescription ?? description;
         input.merchant = merchant || null;
         input.place = null;
@@ -363,12 +388,9 @@ export class AIValidatorService {
         }
 
         const existingCategory = rawCategory ? this.findByName(categories, rawCategory) : null;
-        const existingSection = rawSection ? this.findByName(sections, rawSection) : null;
         if (existingCategory) {
           resolved.categoryId = existingCategory.id;
-          if (typeof existingCategory.sectionId === 'string') resolved.sectionId = existingCategory.sectionId;
         }
-        if (existingSection) resolved.sectionId = existingSection.id;
       }
 
       if (action.tool === 'update_transaction') {
@@ -425,20 +447,12 @@ export class AIValidatorService {
           const category = this.findByName(categories, categoryName);
           if (category) {
             resolved.categoryId = category.id;
-            if (typeof category.sectionId === 'string') resolved.sectionId = category.sectionId;
           }
         } else {
           delete input.category;
         }
 
-        const sectionName = this.cleanEntityName(input.section);
-        if (sectionName) {
-          input.section = sectionName;
-          const section = this.findByName(sections, sectionName);
-          if (section) resolved.sectionId = section.id;
-        } else {
-          delete input.section;
-        }
+        delete input.section;
 
         if (input.description !== null && input.description !== undefined) input.description = this.cleanEntityName(input.description);
         else delete input.description;
@@ -873,13 +887,12 @@ export class AIValidatorService {
       }
 
       if (action.tool === 'create_category') {
-        const name = this.cleanEntityName(input.name);
+        const kind = input.type === 'income' ? 'income' : 'expense';
+        const name = normalizeTransactionCategoryName(this.cleanEntityName(input.name), kind);
         if (!name) issues.push({ code: 'missing_category_name', message: 'Не хватает названия категории.', actionIndex: index, field: 'name' });
         input.name = name;
-        input.type = input.type === 'income' ? 'income' : 'expense';
-        input.section = this.cleanEntityName(input.section);
-        const section = input.section ? this.findByName(sections, String(input.section)) : null;
-        if (section) resolved.sectionId = section.id;
+        input.type = kind;
+        delete input.section;
       }
 
       if (action.tool === 'create_section') {
@@ -903,26 +916,16 @@ export class AIValidatorService {
         }
 
         if (action.tool === 'update_category') {
-          const nextName = this.cleanEntityName(input.name);
           const type = this.cleanString(input.type);
-          const sectionName = this.cleanEntityName(input.section);
+          const kind = type === 'income' ? 'income' : 'expense';
+          const nextName = normalizeTransactionCategoryName(this.cleanEntityName(input.name), kind);
           if (nextName) input.name = nextName; else delete input.name;
           if (type === 'income' || type === 'expense') input.type = type; else delete input.type;
-          if (sectionName) {
-            input.section = sectionName;
-            const section = this.findByName(sections, sectionName);
-            if (section) resolved.sectionId = section.id;
-          } else {
-            delete input.section;
-          }
+          delete input.section;
         }
 
         if (action.tool === 'assign_category_to_section') {
-          const sectionName = this.cleanEntityName(input.section);
-          if (!sectionName) issues.push({ code: 'missing_section_name', message: 'Не хватает раздела.', actionIndex: index, field: 'section' });
-          input.section = sectionName;
-          const section = this.findByName(sections, sectionName);
-          if (section) resolved.sectionId = section.id;
+          delete input.section;
         }
       }
 
@@ -1264,7 +1267,7 @@ export class AIValidatorService {
 
   private replaceCuratedCategory(value: string) {
     if (!value) return '';
-    return CURATED_CATEGORY_REPLACEMENTS[this.key(value)] ?? value;
+    return normalizeTransactionCategoryName(CURATED_CATEGORY_REPLACEMENTS[this.key(value)] ?? value, 'expense') || value;
   }
 
   private replaceCuratedSection(value: string) {
@@ -1312,6 +1315,49 @@ export class AIValidatorService {
     }
 
     return covered >= Math.max(2, Math.ceil(titleTokens.size * 0.75));
+  }
+
+
+  private looksLikeTerseItemPriceList(sourceText: string, input: Record<string, unknown>) {
+    const text = this.cleanString(sourceText).toLowerCase().replace(/ё/g, 'е');
+    if (!/(расход|потрат|купил|купила|купили)/.test(text)) return false;
+    if (/(итого|всего|общая сумма|на сумму|за все|за всё)/.test(text)) return false;
+    const numbers = Array.from(text.matchAll(/\b\d{1,7}\b/g))
+      .map((match) => Number(match[0]))
+      .filter((value) => Number.isFinite(value) && value > 0);
+    if (numbers.length < 2) return false;
+    const items = this.cleanStringList(input.items);
+    if (items.length >= 2) return true;
+    return /налик|налич|карт|счет|счёт/.test(text) && /[а-яa-z]+\s+\d{1,7}/i.test(text);
+  }
+
+  private recoverLooseTransactionAmount(sourceText: string, input: Record<string, unknown>) {
+    const text = this.cleanString(sourceText).toLowerCase().replace(/ё/g, 'е');
+    if (!text) return null;
+    if (!/(расход|потрат|купил|купила|купили|доход|получил|получила)/i.test(text)) return null;
+
+    const matches = Array.from(text.matchAll(/\b\d{1,7}\b/g))
+      .map((match) => ({ value: Number(match[0]), index: match.index ?? 0 }))
+      .filter((item) => Number.isFinite(item.value) && item.value > 0);
+    if (!matches.length) return null;
+
+    if (matches.length === 1) return matches[0].value;
+
+    const accountWords = ['налик', 'налич', 'карт', 'карта', 'счет', 'счёт'];
+    const nonAccountNumbers = matches.filter((match) => {
+      const before = text.slice(Math.max(0, match.index - 14), match.index);
+      const looksLikeAccountTail = accountWords.some((word) => before.includes(word)) && match.value >= 1000;
+      return !looksLikeAccountTail;
+    });
+
+    const values = nonAccountNumbers.length ? nonAccountNumbers.map((item) => item.value) : matches.map((item) => item.value);
+    const compactItems = this.cleanStringList(input.items);
+    if (values.length >= 2 || compactItems.length >= 2) {
+      const sum = values.reduce((total, value) => total + value, 0);
+      return sum > 0 ? sum : null;
+    }
+
+    return values[values.length - 1] ?? null;
   }
 
   private isContractAmountGroundedInUserText(amount: number, sourceText: string) {

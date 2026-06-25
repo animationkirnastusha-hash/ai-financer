@@ -85,6 +85,12 @@ export default function SpendingLimitsPage() {
   }, []);
 
   const activeLimits = limits.filter((limit) => limit.isActive).length;
+  const categoryLimits = limits.filter((limit) => limit.targetType === 'category').length;
+  const totalLimits = limits.filter((limit) => limit.targetType === 'total').length;
+
+  const scrollToManualForm = () => {
+    document.getElementById('limits-form-card')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
 
   const resetForm = () => {
     setEditingId(null);
@@ -162,17 +168,44 @@ export default function SpendingLimitsPage() {
       <div className="app-page__inner space-y-4">
         <ScreenTopBar title={t('screen.limits')} left="back" right={['home', 'settings']} />
 
-        <header className="limits-hero app-card app-card--hero">
+        <header className="limits-hero limits-hero--aligned app-card app-card--hero">
           <div className="app-eyebrow">{t('limits.hero.eyebrow')}</div>
-          <h1>{t('limits.hero.title')}</h1>
-          <p>{t('limits.hero.caption')}</p>
-          <div className="limits-hero__stats">
-            <article>
-              <strong>{t('limits.hero.active', { count: activeLimits })}</strong>
-              <span>{t('limits.hero.mode')}</span>
-            </article>
+          <div className="limits-hero__top">
+            <div className="min-w-0">
+              <h1>{t('limits.hero.title')}</h1>
+              <p>{t('limits.hero.caption')}</p>
+            </div>
+            <button type="button" className="app-primary-button shrink-0" onClick={scrollToManualForm}>{t('limits.form.create')}</button>
+          </div>
+          <div className="limits-hero__summary app-goals-summary">
+            <div><strong>{activeLimits}</strong><small>{t('common.active')}</small></div>
+            <div><strong>{categoryLimits}</strong><small>{t('limits.target.category')}</small></div>
+            <div><strong>{totalLimits}</strong><small>{t('limits.target.total')}</small></div>
           </div>
         </header>
+
+        <section className="app-card limits-explainer">
+          <div className="limits-explainer__head">
+            <div>
+              <div className="app-eyebrow">{t('limits.command.eyebrow')}</div>
+              <h2>{t('limits.command.title')}</h2>
+            </div>
+          </div>
+          <div className="limits-guide-grid">
+            <article className="limits-guide-card">
+              <b>{t('limits.guide.account.title')}</b>
+              <span>{t('limits.guide.account.caption')}</span>
+            </article>
+            <article className="limits-guide-card">
+              <b>{t('limits.guide.category.title')}</b>
+              <span>{t('limits.guide.category.caption')}</span>
+            </article>
+            <article className="limits-guide-card">
+              <b>{t('limits.guide.total.title')}</b>
+              <span>{t('limits.guide.total.caption')}</span>
+            </article>
+          </div>
+        </section>
 
         <FinaCommandBar
           titleKey="limits.command.title"
@@ -185,22 +218,7 @@ export default function SpendingLimitsPage() {
           ]}
         />
 
-        <section className="limits-guide-grid">
-          <article className="app-card limits-guide-card">
-            <b>{t('limits.guide.account.title')}</b>
-            <span>{t('limits.guide.account.caption')}</span>
-          </article>
-          <article className="app-card limits-guide-card">
-            <b>{t('limits.guide.category.title')}</b>
-            <span>{t('limits.guide.category.caption')}</span>
-          </article>
-          <article className="app-card limits-guide-card">
-            <b>{t('limits.guide.total.title')}</b>
-            <span>{t('limits.guide.total.caption')}</span>
-          </article>
-        </section>
-
-        <section className="app-card limits-form-card">
+        <section id="limits-form-card" className="app-card limits-form-card">
           <div className="limits-section-head">
             <div>
               <div className="app-eyebrow">{editingId ? t('limits.form.editEyebrow') : t('limits.form.eyebrow')}</div>

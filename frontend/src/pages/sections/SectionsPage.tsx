@@ -1,39 +1,36 @@
 import { useEffect, useMemo } from 'react';
 import { useAppModalStore } from '@/features/modals/model/appModal.store';
 import { useSectionsStore } from '@/features/sections/model/sections.store';
-import type { CategoryDto, SectionDto } from '@/features/sections/api/sections.api';
+import type { CategoryDto } from '@/features/sections/api/sections.api';
 import { FinaCommandBar } from '@/features/fina/ui/FinaCommandBar';
 import { ScreenTopBar } from '@/shared/ui/ScreenTopBar';
 import { EmptyState } from '@/shared/ui/EmptyState';
 import { SettingsGearIcon } from '@/shared/ui/AppIcons';
 import { useI18n } from '@/shared/lib/i18n';
 
+
 type Props = { onBack: () => void };
 
-function countType(categories: CategoryDto[], type: 'expense' | 'income' | 'both') {
+type CategoryKind = 'expense' | 'income' | 'both';
+
+function countType(categories: CategoryDto[], type: CategoryKind) {
   return categories.filter((category) => (category.type ?? 'expense') === type).length;
 }
 
-function mergeVisibleSections(sections: SectionDto[], categories: CategoryDto[]) {
-  const map = new Map<string, SectionDto>();
-  for (const section of sections) map.set(section.id, section);
+function supportsType(category: CategoryDto, type: CategoryKind) {
+  return (category.type ?? 'expense') === type;
+}
 
-  for (const category of categories) {
-    if (!category.sectionId || !category.section || map.has(category.sectionId)) continue;
-    map.set(category.sectionId, category.section);
-  }
-
-  return [...map.values()].sort((a, b) => {
-    const aDate = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-    const bDate = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-    return aDate - bDate;
-  });
+function typeLabel(category: CategoryDto, t: (key: string, params?: Record<string, string | number>) => string) {
+  const type = category.type === 'income' || category.type === 'both' ? category.type : 'expense';
+  if (type === 'income') return t('sections.category.type.income');
+  if (type === 'both') return t('sections.category.type.both');
+  return t('sections.category.type.expense');
 }
 
 export default function SectionsPage({ onBack }: Props) {
   const { t } = useI18n();
   const openModal = useAppModalStore((state) => state.openModal);
-  const sections = useSectionsStore((state) => state.sections);
   const categories = useSectionsStore((state) => state.categories);
   const isLoading = useSectionsStore((state) => state.isLoading);
   const error = useSectionsStore((state) => state.error);
@@ -41,18 +38,17 @@ export default function SectionsPage({ onBack }: Props) {
 
   useEffect(() => { void loadAll(); }, [loadAll]);
 
-  const visibleSections = useMemo(() => mergeVisibleSections(sections, categories), [sections, categories]);
-
-  const categoriesBySection = useMemo(() => {
-    const map = new Map<string, CategoryDto[]>();
-    for (const category of categories) {
-      const key = category.sectionId ?? 'none';
-      map.set(key, [...(map.get(key) ?? []), category]);
-    }
-    return map;
+  const sortedCategories = useMemo(() => {
+    return [...categories].sort((left, right) => {
+      const leftType = left.type === 'income' ? 1 : left.type === 'both' ? 2 : 0;
+      const rightType = right.type === 'income' ? 1 : right.type === 'both' ? 2 : 0;
+      return leftType - rightType || left.name.localeCompare(right.name, 'ru');
+    });
   }, [categories]);
 
-  const ungrouped = categoriesBySection.get('none') ?? [];
+  const expenseCategories = useMemo(() => sortedCategories.filter((category) => supportsType(category, 'expense')), [sortedCategories]);
+  const incomeCategories = useMemo(() => sortedCategories.filter((category) => supportsType(category, 'income')), [sortedCategories]);
+  const universalCategories = useMemo(() => sortedCategories.filter((category) => supportsType(category, 'both')), [sortedCategories]);
 
   return (
     <div className="app-page app-taxonomy-page text-white">
@@ -69,10 +65,10 @@ export default function SectionsPage({ onBack }: Props) {
             <button type="button" onClick={() => openModal({ type: 'taxonomy-tools' })} className="app-icon-button app-icon-button--lg" aria-label={t('sections.manage.open')}><SettingsGearIcon className="app-icon-button__svg" /></button>
           </div>
 
-          <div className="app-taxonomy-stats">
-            <div><span>{visibleSections.length}</span><small>{t('sections.stats.sections')}</small></div>
+          <div className="app-taxonomy-stats app-taxonomy-stats--category-only">
             <div><span>{categories.length}</span><small>{t('sections.stats.categories')}</small></div>
-            <div><span>{ungrouped.length}</span><small>{t('sections.stats.ungrouped')}</small></div>
+            <div><span>{countType(categories, 'expense')}</span><small>{t('sections.types.expense')}</small></div>
+            <div><span>{countType(categories, 'income')}</span><small>{t('sections.types.income')}</small></div>
           </div>
         </header>
 
@@ -81,17 +77,13 @@ export default function SectionsPage({ onBack }: Props) {
           captionKey="sections.command.caption"
           placeholderKey="sections.command.placeholder"
           suggestions={[
-            { key: 'sections.command.category', command: 'создай категорию Такси в разделе Транспорт' },
-            { key: 'sections.command.merge', command: 'объедини кафе и кофейни' },
+            { key: 'sections.command.category', command: 'создай категорию Такси' },
+            { key: 'sections.command.merge', command: 'объедини кафе и кофейни в категорию Кафе и рестораны' },
             { key: 'sections.command.rename', command: 'переименуй категорию еда в продукты' },
           ]}
         />
 
         <section className="app-card app-taxonomy-actions">
-          <button type="button" onClick={() => openModal({ type: 'section-edit', section: null })} className="app-action-card app-action-card--wide">
-            <span className="app-action-card__icon">▣</span>
-            <span><b>{t('sections.action.section.title')}</b><small>{t('sections.action.section.caption')}</small></span>
-          </button>
           <button type="button" onClick={() => openModal({ type: 'category-edit' })} className="app-action-card app-action-card--wide">
             <span className="app-action-card__icon">＋</span>
             <span><b>{t('sections.action.category.title')}</b><small>{t('sections.action.category.caption')}</small></span>
@@ -99,17 +91,16 @@ export default function SectionsPage({ onBack }: Props) {
         </section>
 
         <section className="app-card app-taxonomy-summary-grid">
-          <div className="app-taxonomy-summary-tile"><small>{t('sections.types.expense')}</small><b>{t('sections.types.count', { count: countType(categories, 'expense') })}</b></div>
-          <div className="app-taxonomy-summary-tile"><small>{t('sections.types.income')}</small><b>{t('sections.types.count', { count: countType(categories, 'income') })}</b></div>
-          <div className="app-taxonomy-summary-tile"><small>{t('sections.types.both')}</small><b>{t('sections.types.count', { count: countType(categories, 'both') })}</b></div>
-          <div className="app-taxonomy-summary-tile"><small>{t('sections.types.ungrouped')}</small><b>{ungrouped.length}</b></div>
+          <div className="app-taxonomy-summary-tile"><small>{t('sections.types.expense')}</small><b>{t('sections.types.count', { count: expenseCategories.length })}</b></div>
+          <div className="app-taxonomy-summary-tile"><small>{t('sections.types.income')}</small><b>{t('sections.types.count', { count: incomeCategories.length })}</b></div>
+          <div className="app-taxonomy-summary-tile"><small>{t('sections.types.both')}</small><b>{t('sections.types.count', { count: universalCategories.length })}</b></div>
         </section>
 
         {error ? <div className="app-error-box">{error}</div> : null}
 
         {isLoading ? (
           <div className="app-card p-5 text-sm text-white/55">{t('sections.loading')}</div>
-        ) : visibleSections.length === 0 && categories.length === 0 ? (
+        ) : categories.length === 0 ? (
           <EmptyState
             eyebrow={t('screen.sections')}
             title={t('sections.empty.title')}
@@ -118,45 +109,19 @@ export default function SectionsPage({ onBack }: Props) {
             onAction={() => openModal({ type: 'category-edit' })}
           />
         ) : (
-          <section className="app-taxonomy-grid">
-            {visibleSections.map((section) => {
-              const sectionCategories = categoriesBySection.get(section.id) ?? [];
-              const preview = sectionCategories.slice(0, 4);
-              return (
-                <article key={section.id} className="app-card app-taxonomy-section-card">
-                  <div className="app-taxonomy-section-card__head">
-                    <button type="button" onClick={() => openModal({ type: 'taxonomy-section', section })} className="app-taxonomy-section-card__title">
-                      <span className="app-taxonomy-icon">{section.icon || '◌'}</span>
-                      <span><b>{section.name}</b><small>{section.description || t('sections.section.defaultCaption')}</small></span>
-                    </button>
-                    <button type="button" onClick={() => openModal({ type: 'category-edit', sectionId: section.id })} className="app-icon-button" aria-label={t('sections.section.addCategory')}>+</button>
-                  </div>
-
-                  <div className="app-taxonomy-preview">
-                    {preview.length === 0 ? <span className="app-chip app-chip--muted">{t('sections.section.noCategories')}</span> : null}
-                    {preview.map((category) => <span key={category.id} className="app-chip">{category.icon ? `${category.icon} ` : ''}{category.name}</span>)}
-                    {sectionCategories.length > preview.length ? <span className="app-chip app-chip--muted">+{sectionCategories.length - preview.length}</span> : null}
-                  </div>
-
-                  <button type="button" onClick={() => openModal({ type: 'taxonomy-section', section })} className="app-secondary-button">{t('sections.section.open')}</button>
-                </article>
-              );
-            })}
-
-            {ungrouped.length > 0 ? (
-              <article className="app-card app-taxonomy-section-card app-taxonomy-section-card--muted">
-                <div className="app-taxonomy-section-card__head">
-                  <button type="button" onClick={() => openModal({ type: 'taxonomy-section', section: 'ungrouped' })} className="app-taxonomy-section-card__title">
-                    <span className="app-taxonomy-icon">⋯</span>
-                    <span><b>{t('sections.ungrouped.title')}</b><small>{t('sections.ungrouped.caption')}</small></span>
-                  </button>
-                </div>
-                <div className="app-taxonomy-preview">
-                  {ungrouped.slice(0, 5).map((category) => <span key={category.id} className="app-chip">{category.icon ? `${category.icon} ` : ''}{category.name}</span>)}
-                </div>
-                <button type="button" onClick={() => openModal({ type: 'taxonomy-section', section: 'ungrouped' })} className="app-secondary-button">{t('sections.ungrouped.action')}</button>
+          <section className="app-taxonomy-grid app-taxonomy-grid--categories">
+            {sortedCategories.map((category) => (
+              <article key={category.id} className="app-card app-taxonomy-category-card">
+                <button type="button" className="app-taxonomy-category-card__main" onClick={() => openModal({ type: 'category-edit', category })}>
+                  <span className="app-taxonomy-icon app-taxonomy-icon--category" style={category.color ? { background: category.color } : undefined}>{category.icon || '◌'}</span>
+                  <span>
+                    <b>{category.name}</b>
+                    <small>{typeLabel(category, t)}</small>
+                  </span>
+                </button>
+                <button type="button" onClick={() => openModal({ type: 'category-edit', category })} className="app-secondary-button">{t('sections.category.editTitle')}</button>
               </article>
-            ) : null}
+            ))}
           </section>
         )}
       </div>

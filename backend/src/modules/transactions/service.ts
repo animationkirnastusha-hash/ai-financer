@@ -2,8 +2,7 @@ import { Prisma } from '@prisma/client';
 import { prisma } from '../../lib/prisma';
 import { BadRequestError, NotFoundError } from '../../shared/core/errors';
 import { progressionActivityBridge } from '../progression/activity-bridge.service';
-import { shouldReplaceGenericIcon } from '../taxonomy/taxonomy-icons';
-import { resolveTransactionSemanticTaxonomy, shouldUseTaxonomyTitleFallback } from '../taxonomy/transaction-taxonomy';
+import { normalizeTransactionCategoryName, resolveTransactionSemanticTaxonomy, shouldUseTaxonomyTitleFallback } from '../taxonomy/transaction-taxonomy';
 import { goalAutoSaveService } from '../goals/goal-autosave.service';
 
 export type TransactionType = 'income' | 'expense' | 'transfer';
@@ -536,7 +535,7 @@ export class TransactionService {
       const category = await this.ensureOwnedCategory(userId, params.categoryId, params.nextType);
       return {
         categoryId: category.id,
-        sectionId: params.sectionId !== undefined ? params.sectionId : (category.sectionId ?? null),
+        sectionId: null,
       };
     }
 
@@ -552,7 +551,7 @@ export class TransactionService {
 
     return {
       categoryId: params.existingCategoryId ?? null,
-      sectionId: params.sectionId !== undefined ? params.sectionId : (params.existingSectionId ?? null),
+      sectionId: null,
     };
   }
 
@@ -598,7 +597,7 @@ export class TransactionService {
       const category = await this.ensureOwnedCategory(userId, params.categoryId, params.type);
       return {
         categoryId: category.id,
-        sectionId: params.sectionId ?? category.sectionId ?? null,
+        sectionId: null,
         titleFallback: null as string | null,
         descriptionFallback: null as string | null,
       };
@@ -610,33 +609,12 @@ export class TransactionService {
       description: params.description,
     });
 
-    let section = await prisma.section.findFirst({
-      where: { userId, name: resolved.sectionName },
-    });
-
-    if (!section) {
-      section = await prisma.section.create({
-        data: {
-          userId,
-          name: resolved.sectionName,
-          icon: resolved.sectionIcon,
-          color: resolved.sectionColor,
-        },
-      });
-    } else if (shouldReplaceGenericIcon(section.icon) || !section.color) {
-      section = await prisma.section.update({
-        where: { id: section.id },
-        data: {
-          icon: shouldReplaceGenericIcon(section.icon) ? resolved.sectionIcon : section.icon,
-          color: section.color ?? resolved.sectionColor,
-        },
-      });
-    }
+    const categoryName = normalizeTransactionCategoryName(resolved.categoryName, params.type) || resolved.categoryName;
 
     let category = await prisma.category.findFirst({
       where: {
         userId,
-        name: resolved.categoryName,
+        name: categoryName,
         type: params.type,
       },
     });
@@ -645,34 +623,28 @@ export class TransactionService {
       category = await prisma.category.create({
         data: {
           userId,
-          name: resolved.categoryName,
+          name: categoryName,
           type: params.type,
           icon: resolved.categoryIcon,
           color: resolved.categoryColor,
-          sectionId: section.id,
+          sectionId: null,
         },
       });
-    } else {
-      const shouldUpdateIcon = shouldReplaceGenericIcon(category.icon);
-      const shouldUpdateColor = !category.color;
-      const shouldAttachSection = !category.sectionId;
-
-      if (shouldUpdateIcon || shouldUpdateColor || shouldAttachSection) {
-        category = await prisma.category.update({
-          where: { id: category.id },
-          data: {
-            icon: shouldUpdateIcon ? resolved.categoryIcon : category.icon,
-            color: shouldUpdateColor ? resolved.categoryColor : category.color,
-            sectionId: shouldAttachSection ? section.id : category.sectionId,
-          },
-        });
-      }
+    } else if (!category.icon || !category.color || category.sectionId) {
+      category = await prisma.category.update({
+        where: { id: category.id },
+        data: {
+          icon: category.icon || resolved.categoryIcon,
+          color: category.color || resolved.categoryColor,
+          sectionId: null,
+        },
+      });
     }
 
     return {
       categoryId: category.id,
-      sectionId: category.sectionId ?? section.id,
-      titleFallback: resolved.titleFallback ?? null,
+      sectionId: null,
+      titleFallback: categoryName,
       descriptionFallback: resolved.descriptionFallback ?? null,
     };
   }

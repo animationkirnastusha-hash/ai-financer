@@ -76,21 +76,26 @@ export function UtilityModals({
                 <h2 className="mt-2 text-2xl font-semibold tracking-[-0.045em] text-white">{t('utility.taxonomy.title')}</h2>
                 <p className="mt-2 text-sm leading-6 text-white/50">{t('utility.taxonomy.caption')}</p>
               </div>
+              <div className="grid gap-2">
+                {categories.length === 0 ? <div className="app-empty-inline">{t('utility.taxonomy.empty')}</div> : null}
+                {categories.slice(0, 8).map((category) => (
+                  <button key={category.id} type="button" onClick={() => openModal({ type: 'category-edit', category })} className="app-list-button">
+                    <span>{category.icon ? `${category.icon} ` : ''}{category.name}</span>
+                    <small>{category.type === 'income' ? t('utility.taxonomy.type.income') : category.type === 'both' ? t('utility.taxonomy.type.both') : t('utility.taxonomy.type.expense')}</small>
+                  </button>
+                ))}
+              </div>
             </div>
             <footer className="app-modal-footer">
               <div className="grid grid-cols-2 gap-2">
                 <button type="button" onClick={() => closeModal('taxonomy-tools')} className="app-secondary-button">{t('utility.common.close')}</button>
-                <button type="button" onClick={() => openModal({ type: 'section-edit', section: null })} className="app-primary-button">{t('utility.taxonomy.newSection')}</button>
+                <button type="button" onClick={() => openModal({ type: 'category-edit' })} className="app-primary-button">{t('utility.taxonomy.category')}</button>
               </div>
             </footer>
           </div>
         </div>
       );
     case 'taxonomy-section': {
-      const section = modal.section;
-      const modalCategories = section === 'ungrouped'
-        ? categories.filter((category) => !category.sectionId)
-        : categories.filter((category) => category.sectionId === section.id);
       return (
         <div className="app-modal-backdrop" style={{ zIndex: layer }} data-no-swipe="true" onClick={() => closeModal('taxonomy-section')}>
           <div className="app-modal-sheet app-taxonomy-modal" data-no-swipe="true" onClick={(event) => event.stopPropagation()}>
@@ -99,13 +104,12 @@ export function UtilityModals({
               <div className="app-taxonomy-modal__head">
                 <div>
                   <div className="app-eyebrow">{t('utility.taxonomy.eyebrow')}</div>
-                  <h2 className="mt-2 text-2xl font-semibold tracking-[-0.045em] text-white">{section === 'ungrouped' ? t('utility.taxonomy.ungrouped') : section.name}</h2>
+                  <h2 className="mt-2 text-2xl font-semibold tracking-[-0.045em] text-white">{t('utility.taxonomy.title')}</h2>
                 </div>
-                {section === 'ungrouped' ? null : <button type="button" onClick={() => openModal({ type: 'section-edit', section })} className="app-secondary-button">{t('utility.taxonomy.edit')}</button>}
               </div>
               <div className="grid gap-2">
-                {modalCategories.length === 0 ? <div className="app-empty-inline">{t('utility.taxonomy.empty')}</div> : null}
-                {modalCategories.map((category) => (
+                {categories.length === 0 ? <div className="app-empty-inline">{t('utility.taxonomy.empty')}</div> : null}
+                {categories.map((category) => (
                   <button key={category.id} type="button" onClick={() => openModal({ type: 'category-edit', category })} className="app-list-button">
                     <span>{category.icon ? `${category.icon} ` : ''}{category.name}</span>
                     <small>{category.type === 'income' ? t('utility.taxonomy.type.income') : category.type === 'both' ? t('utility.taxonomy.type.both') : t('utility.taxonomy.type.expense')}</small>
@@ -116,7 +120,7 @@ export function UtilityModals({
             <footer className="app-modal-footer">
               <div className="grid grid-cols-2 gap-2">
                 <button type="button" onClick={() => closeModal('taxonomy-section')} className="app-secondary-button">{t('utility.common.close')}</button>
-                <button type="button" onClick={() => openModal({ type: 'category-edit', sectionId: section === 'ungrouped' ? null : section.id })} className="app-primary-button">{t('utility.taxonomy.category')}</button>
+                <button type="button" onClick={() => openModal({ type: 'category-edit' })} className="app-primary-button">{t('utility.taxonomy.category')}</button>
               </div>
             </footer>
           </div>

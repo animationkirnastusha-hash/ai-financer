@@ -1,8 +1,4 @@
-/* Predeploy shared page/card/filer foundation. */
-/* Predeploy polish: operations, goals, analytics and shared cards. */
-/* from final-polish55.css */
-
-/* Patch 55: pre-premium UI cleanup for Operations, Goals, Analytics and shared cards. */
+/* Shared product screen foundations. */
 .app-prepremium-page .app-card,
 .app-operations-page .app-card,
 .app-goals-page .app-card,

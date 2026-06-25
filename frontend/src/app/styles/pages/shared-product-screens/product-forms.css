@@ -1,4 +1,3 @@
-
 .app-xp-hero__title {
   max-width: 100%;
   overflow-wrap: normal !important;
@@ -27,7 +26,7 @@
   .app-xp-hero__head { grid-template-columns: 1fr !important; }
 }
 
-/* Patch 99: compact taxonomy controls and stable finance forms */
+/* Taxonomy actions and finance form controls. */
 .app-taxonomy-actions {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;

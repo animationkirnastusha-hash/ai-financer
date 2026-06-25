@@ -15,7 +15,7 @@ export const navigationDictionary = {
   'nav.accounts.caption': 'Карты, наличные и накопления',
   'nav.goals.caption': 'Накопления и планы',
   'nav.obligations.caption': 'Кредиты, подписки и напоминания',
-  'nav.sections.caption': 'Категории, разделы и настройка учёта',
+  'nav.sections.caption': 'Категории без дублей и лишних разделов',
   'nav.premium.caption': 'Тарифы и возможности',
   'nav.business.caption': 'Для ИП, самозанятых и бизнеса',
   'nav.referral.caption': 'Приглашения и бонусы',

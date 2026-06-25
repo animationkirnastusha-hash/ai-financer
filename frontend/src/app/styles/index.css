@@ -32,8 +32,8 @@
 @import "./layout/mobile-adaptive/mobile-adaptive-cards.css";
 @import "./utilities/swipe-text-guards.css";
 @import "./features/voice/voice-compatibility.css";
-@import "./layout/release-safety/chat-modal-composer-safety.css";
-@import "./layout/release-safety/progression-taxonomy-form-safety.css";
+@import "./components/chat-modal-composer.css";
+@import "./pages/shared-product-screens/product-forms.css";
 @import "./features/voice/voice-session.css";
 @import "./features/chat/chat-input-modal.css";
 @import "./features/premium/premium-access.css";
@@ -69,11 +69,11 @@
 @import "./features/store/store-foldouts.css";
 @import "./animations/app-motion.css";
 @import "./animations/store-motion.css";
-@import "./layout/release-safety/shared-surfaces-safety.css";
+@import "./components/shared-surfaces.css";
 @import "./features/store/product-carousel.css";
 @import "./features/store/payment-sheet.css";
 @import "./layout/device-adaptive.css";
-@import "./layout/release-safety/page-grid-safety.css";
+@import "./layout/page-grid.css";
 @import "./features/taxonomy/taxonomy-picker.css";
 @import "./pages/dashboard/dashboard-taxonomy.css";
 @import "./pages/receipts/receipt-taxonomy.css";
@@ -81,7 +81,7 @@
 @import "./animations/motion-safety.css";
 @import "./animations/chat-motion.css";
 @import "./layout/device-adaptive/cross-device-layout.css";
-@import "./layout/release-safety/page-content-safety.css";
+@import "./layout/page-content.css";
 @import "./features/taxonomy/taxonomy-layout-safety.css";
 
 @import "./features/chat/fina-pull-gesture.css";
@@ -96,9 +96,8 @@
 @import "./pages/dashboard/dashboard-balance.css";
 @import "./pages/dashboard/dashboard-charts.css";
 @import "./layout/offline-status.css";
-@import "./layout/release-compact-scale.css";
+@import "./layout/compact-density.css";
 
-@import "./layout/release-density/compact-base-density.css";
 @import "./pages/dashboard/dashboard-compact-density.css";
 @import "./pages/analytics/analytics-profile-density.css";
 @import "./pages/analytics/analytics-shell.css";
@@ -112,3 +111,5 @@
 @import "./pages/dashboard/dashboard-device-safety.css";
 
 @import "./features/subscription/trial-offer.css";
+
+@import "./pages/onboarding-setup/onboarding-setup-launch.css";

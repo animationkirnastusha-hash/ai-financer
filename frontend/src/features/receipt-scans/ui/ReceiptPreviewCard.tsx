@@ -58,13 +58,13 @@ export function ReceiptPreviewCard({ scan }: Props) {
                 <i style={{ background: group.sectionColor }}>{group.sectionIcon}</i>
                 <span>
                   <b>{group.sectionName}</b>
-                  <small>{group.categories.length} кат.</small>
+                  <small>{t('receipts.preview.itemsShort', { count: group.categories[0]?.items.length ?? 0 })}</small>
                 </span>
                 {group.amount > 0 ? <strong>{formatMoney(group.amount, scan.currency || 'RUB')}</strong> : null}
               </div>
               <div className="receipt-taxonomy-group__categories">
-                {group.categories.slice(0, 3).map((category) => (
-                  <span key={category.categoryName}>{category.categoryIcon} {category.categoryName}</span>
+                {group.categories[0]?.items.slice(0, 4).map((item) => (
+                  <span key={`${group.sectionName}-${item.title}`}>{item.title}</span>
                 ))}
               </div>
             </section>

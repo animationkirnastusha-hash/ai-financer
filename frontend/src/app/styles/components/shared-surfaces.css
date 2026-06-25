@@ -1,4 +1,4 @@
-/* Small shared safety layer only. Page-specific fixes live in pages/* or features/*. */
+/* Shared surfaces and core interactive sizing. */
 .app-page__inner {
   width: min(100%, 760px);
 }

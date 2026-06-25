@@ -128,17 +128,16 @@ function normalizeItems(items: OpenAIReceiptPayload['items']): ReceiptAiItem[] {
   const normalized: ReceiptAiItem[] = [];
 
   for (const item of items) {
-    if (normalized.length >= 60) break;
-
     const title = cleanText(item.title ?? item.name, 120);
     if (!title) continue;
-
+    const amount = normalizeAmount(item.totalAmount ?? item.total_amount ?? item.amount ?? item.price);
     normalized.push({
       title,
-      amount: normalizeAmount(item.totalAmount ?? item.total_amount ?? item.amount ?? item.price),
+      amount,
       quantity: cleanText(item.quantity, 40),
       categoryHint: cleanText(item.categoryHint ?? item.category_hint ?? item.category, 80),
     });
+    if (normalized.length >= 60) break;
   }
 
   return normalized;

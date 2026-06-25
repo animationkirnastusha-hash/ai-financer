@@ -4,8 +4,6 @@ import { buildHomeFinanceAnalytics, conicGradient } from '@/features/dashboard/l
 import { formatMoney } from '@/shared/lib/money';
 import { useI18n } from '@/shared/lib/i18n';
 
-const CATEGORY_LIMIT_PER_SECTION = 4;
-
 type Props = {
   open: boolean;
   transactions: TransactionDto[];
@@ -58,32 +56,17 @@ export function HomeChartDetailsModal({ open, transactions, mode, period, rates,
           </div>
 
           <div className="app-home-chart-groups">
-            {analytics.sections.length === 0 ? (
+            {analytics.categories.length === 0 ? (
               <div className="app-empty-button">{t('dashboard.chart.emptyHint')}</div>
-            ) : analytics.sections.map((section) => (
-              <section key={section.key} className="app-home-section-breakdown">
-                <div className="app-home-section-breakdown__head">
-                  <i className="app-home-section-breakdown__section-icon">{section.icon || ''}</i>
-                  <span>
-                    <b>{rt(section.name)}</b>
-                    <small>{t('dashboard.chart.operationsCount', { count: section.count })} · {section.percent}%</small>
-                  </span>
-                  <strong>{formatMoney(section.amount, 'RUB')}</strong>
-                </div>
-
-                <div className="app-home-section-breakdown__categories">
-                  {section.categories.slice(0, CATEGORY_LIMIT_PER_SECTION).map((group) => (
-                    <button key={group.key} type="button" className="app-home-chart-group app-home-chart-group--nested" onClick={(event) => { event.stopPropagation(); onOpenGroup(group); }}>
-                      <i style={{ background: group.color }}>{group.icon || ''}</i>
-                      <span className="min-w-0">
-                        <b>{rt(group.name)}</b>
-                        <small>{t('dashboard.chart.operationsCount', { count: group.count })} · {group.percent}%</small>
-                      </span>
-                      <strong>{formatMoney(group.amount, 'RUB')}</strong>
-                    </button>
-                  ))}
-                </div>
-              </section>
+            ) : analytics.categories.map((group) => (
+              <button key={group.key} type="button" className="app-home-chart-group" onClick={(event) => { event.stopPropagation(); onOpenGroup(group); }}>
+                <i style={{ background: group.color }}>{group.icon || ''}</i>
+                <span className="min-w-0">
+                  <b>{rt(group.name)}</b>
+                  <small>{t('dashboard.chart.operationsCount', { count: group.count })} · {group.percent}%</small>
+                </span>
+                <strong>{formatMoney(group.amount, 'RUB')}</strong>
+              </button>
             ))}
           </div>
         </div>

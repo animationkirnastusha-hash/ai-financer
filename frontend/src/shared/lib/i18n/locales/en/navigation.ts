@@ -15,7 +15,7 @@ export const navigationDictionary = {
   'nav.accounts.caption': 'Cards, cash and savings',
   'nav.goals.caption': 'Savings and plans',
   'nav.obligations.caption': 'Loans, subscriptions and reminders',
-  'nav.sections.caption': 'Categories, sections and setup',
+  'nav.sections.caption': 'Categories without duplicate groups',
   'nav.premium.caption': 'Plans and features',
   'nav.business.caption': 'For freelancers and small business',
   'nav.referral.caption': 'Invites and bonuses',

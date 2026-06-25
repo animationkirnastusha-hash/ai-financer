@@ -206,6 +206,23 @@ const tests = [
     },
   },
   {
+    label: 'terse-cash-snack-expense',
+    command: () => 'Расход налик 100 энергетик хотдог 222',
+    assert(payload) {
+      const action = requireSingleAction(payload, this.label);
+      requireTool(action, 'create_transaction', this.label);
+      requireKind(action, 'expense', this.label);
+      requireAmount(action, 322, this.label);
+      requireAccount(action, 'налич', this.label);
+      requireTitleIsClean(action, this.label);
+
+      const input = action.input ?? {};
+      const itemsText = [input.title, input.description, ...(Array.isArray(input.items) ? input.items : [])].join(' ');
+      if (!includesAny(itemsText, ['энергет', 'хотдог', 'хот-дог'])) fail(`${this.label}: snack items are missing`, action);
+      if (lower(input.category) === 'продукты') fail(`${this.label}: snack purchase was put into Продукты`, action);
+    },
+  },
+  {
     label: 'groceries-expense',
     command: () => 'Потратил 1200 на продукты',
     assert(payload) {

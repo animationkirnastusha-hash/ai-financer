@@ -34,7 +34,7 @@ export function HomeCashflowChart({
     incomeSection: t('dashboard.analytics.incomeSection'),
     incomeCategory: t('dashboard.analytics.incomeCategory'),
   });
-  const primary = analytics.sections[0];
+  const primary = analytics.categories[0];
   const hasData = analytics.total > 0;
   const modeTitle = mode === 'expense' ? t('transaction.type.expense') : t('transaction.type.income');
   const periodTitle = (value: HomeCashflowPeriod) => value === 'day' ? t('analytics.period.day') : value === 'week' ? t('analytics.period.week') : t('analytics.period.month');
@@ -59,7 +59,7 @@ export function HomeCashflowChart({
       </div>
 
       <button type="button" className="app-home-chart-preview" onClick={onOpenDetails} aria-label={t('dashboard.cashflow.openChart')}>
-        <span className="app-home-donut" style={{ background: conicGradient(analytics.sections) }}>
+        <span className="app-home-donut" style={{ background: conicGradient(analytics.categories) }}>
           <i />
         </span>
         <span className="app-home-chart-preview__text">
@@ -68,7 +68,7 @@ export function HomeCashflowChart({
         </span>
       </button>
 
-      <HomeChartLegend groups={analytics.sections} title={t('dashboard.chart.palette')} compact />
+      <HomeChartLegend groups={analytics.categories} title={t('dashboard.chart.categories')} compact />
 
       <button type="button" className="app-primary-button app-home-cashflow-card__action" onClick={() => onCreate(mode)}>
         {mode === 'expense' ? t('dashboard.cashflow.addExpense') : t('dashboard.cashflow.addIncome')}

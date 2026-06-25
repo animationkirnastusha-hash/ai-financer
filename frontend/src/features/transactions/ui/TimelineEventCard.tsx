@@ -28,7 +28,6 @@ function getAmountSign(transaction: TransactionDto): 'plus' | 'minus' | 'none' {
 
 export function TimelineEventCard({ transaction, onClick }: Props) {
   const currency = transaction.account?.currency || 'RUB';
-  const sectionName = transaction.section?.name;
   const categoryName = transaction.category?.name || 'Без категории';
   const accountName = transaction.account?.name || 'Счёт';
   const toAccountName = transaction.toAccount?.name;
@@ -50,15 +49,9 @@ export function TimelineEventCard({ transaction, onClick }: Props) {
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            {sectionName ? (
-              <span className="rounded-full border border-white/10 bg-white/8 px-2.5 py-1 text-[11px] font-medium text-white/72">
-                {sectionName}
-              </span>
-            ) : (
-              <span className="rounded-full border border-white/8 bg-white/[0.04] px-2.5 py-1 text-[11px] text-white/38">
-                Без раздела
-              </span>
-            )}
+            <span className="rounded-full border border-white/10 bg-white/8 px-2.5 py-1 text-[11px] font-medium text-white/72">
+              {categoryName}
+            </span>
 
             {isAiGenerated ? (
               <span className="rounded-full border border-violet-300/15 bg-violet-300/10 px-2.5 py-1 text-[11px] font-medium text-violet-100/80">

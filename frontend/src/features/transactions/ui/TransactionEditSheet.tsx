@@ -76,7 +76,6 @@ export function TransactionEditSheet({
   const accounts = useAccountsStore((state) => state.items);
   const loadAccounts = useAccountsStore((state) => state.loadAccounts);
   const categories = useSectionsStore((state) => state.categories);
-  const sections = useSectionsStore((state) => state.sections);
   const loadTaxonomy = useSectionsStore((state) => state.loadAll);
 
   const [type, setType] = useState<TransactionType>('expense');
@@ -117,9 +116,6 @@ export function TransactionEditSheet({
     if (!categoryId) return null;
     return categories.find((category) => category.id === categoryId) ?? transaction?.category ?? null;
   }, [categories, categoryId, transaction]);
-  const selectedSection = selectedCategory?.sectionId
-    ? sections.find((section) => section.id === selectedCategory.sectionId) ?? selectedCategory.section ?? transaction?.section ?? null
-    : transaction?.section ?? null;
   const parsedAmount = Number(amount.replace(',', '.'));
   const canSave = Number.isFinite(parsedAmount) && parsedAmount > 0 && Boolean(accountId) && !isSaving;
 
@@ -253,7 +249,6 @@ export function TransactionEditSheet({
               })}
             </div>
             <div className="mt-3 flex flex-wrap gap-2">
-              {selectedSection ? <Badge>{selectedSection.icon ? `${selectedSection.icon} ` : ''}{selectedSection.name}</Badge> : <Badge muted>Раздел появится автоматически</Badge>}
               {selectedCategory ? <Badge>{selectedCategory.icon ? `${selectedCategory.icon} ` : ''}{selectedCategory.name}</Badge> : <Badge muted>Категория появится автоматически</Badge>}
               {transaction.isAIGenerated ? <Badge tone="violet">Фина</Badge> : null}
             </div>

@@ -104,10 +104,6 @@ export function toRub(amount: number, currency: string | undefined, rates: Rates
   return convertCurrency(amount, (currency || 'RUB') as AppCurrency, 'RUB', { USD: rates.usd, EUR: rates.eur });
 }
 
-function sectionNameFor(transaction: ExtendedTransaction, mode: HomeCashflowMode, labels: HomeFinanceAnalyticsLabels) {
-  return transaction.category?.section?.name?.trim() || transaction.section?.name?.trim() || (mode === 'expense' ? labels.otherExpense : labels.incomeSection);
-}
-
 function categoryNameFor(transaction: ExtendedTransaction, mode: HomeCashflowMode, labels: HomeFinanceAnalyticsLabels) {
   return transaction.category?.name?.trim() || (mode === 'expense' ? labels.otherExpense : labels.incomeCategory);
 }
@@ -115,7 +111,7 @@ function categoryNameFor(transaction: ExtendedTransaction, mode: HomeCashflowMod
 export function getHomeFinanceGroupKey(transaction: TransactionDto, mode: HomeCashflowMode, labels?: Partial<HomeFinanceAnalyticsLabels>) {
   const item = transaction as ExtendedTransaction;
   const resolvedLabels = resolveLabels(labels);
-  return `${sectionNameFor(item, mode, resolvedLabels)}::${categoryNameFor(item, mode, resolvedLabels)}`;
+  return categoryNameFor(item, mode, resolvedLabels);
 }
 
 export function buildHomeFinanceAnalytics(
@@ -129,14 +125,11 @@ export function buildHomeFinanceAnalytics(
   const filtered = transactions.filter((transaction) => transaction.type === mode && isInPeriod(transaction.date, period));
   const total = filtered.reduce((sum, transaction) => sum + toRub(Number(transaction.amount) || 0, transaction.account?.currency, rates), 0);
   const categoryMap = new Map<string, HomeFinanceGroup>();
-  const sectionMap = new Map<string, Omit<HomeSectionGroup, 'categories'>>();
-
   filtered.forEach((transaction) => {
     const item = transaction as ExtendedTransaction;
     const categoryName = categoryNameFor(item, mode, resolvedLabels);
-    const sectionName = sectionNameFor(item, mode, resolvedLabels);
+    const sectionName = categoryName;
     const categoryIcon = item.category?.icon || (mode === 'expense' ? '🧾' : '💵');
-    const sectionIcon = item.category?.section?.icon || item.section?.icon || (mode === 'expense' ? '📌' : '💰');
     const key = getHomeFinanceGroupKey(transaction, mode, resolvedLabels);
     const amount = toRub(Number(transaction.amount) || 0, transaction.account?.currency, rates);
 
@@ -159,29 +152,22 @@ export function buildHomeFinanceAnalytics(
         transactions: [transaction],
       });
     }
-
-    const sectionKey = sectionName;
-    const existingSection = sectionMap.get(sectionKey);
-    if (existingSection) {
-      existingSection.amount += amount;
-      existingSection.count += 1;
-    } else {
-      const color = item.category?.section?.color || item.section?.color || stableColorFromKey(`section:${sectionKey}`);
-      sectionMap.set(sectionKey, { key: sectionKey, name: sectionName, amount, color, icon: sectionIcon, percent: 0, count: 1 });
-    }
   });
 
   const categories = [...categoryMap.values()]
     .sort((a, b) => b.amount - a.amount)
     .map((item) => ({ ...item, percent: total > 0 ? Math.round((item.amount / total) * 100) : 0 }));
 
-  const sections = [...sectionMap.values()]
-    .sort((a, b) => b.amount - a.amount)
-    .map((item) => ({
-      ...item,
-      percent: total > 0 ? Math.round((item.amount / total) * 100) : 0,
-      categories: categories.filter((category) => category.sectionName === item.name),
-    }));
+  const sections = categories.map((item) => ({
+    key: item.key,
+    name: item.name,
+    amount: item.amount,
+    color: item.color,
+    icon: item.icon,
+    percent: item.percent,
+    count: item.count,
+    categories: [item],
+  }));
 
   return { total, categories, sections, transactions: filtered };
 }

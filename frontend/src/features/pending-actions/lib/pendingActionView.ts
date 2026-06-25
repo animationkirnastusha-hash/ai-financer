@@ -13,9 +13,9 @@ type Labels = {
 
 const LABELS: Record<PendingActionLanguage, Labels> = {
   ru: {
-    intent: { expense: 'Расход', income: 'Доход', transaction: 'Операция', transfer: 'Перевод', goal: 'Цель', primary: 'Основной счёт', account: 'Счёт', section: 'Раздел', category: 'Категория', delete: 'Удаление', batch: 'Действие', action: 'Действие' },
+    intent: { expense: 'Расход', income: 'Доход', transaction: 'Операция', transfer: 'Перевод', goal: 'Цель', primary: 'Основной счёт', account: 'Счёт', section: 'Категория', category: 'Категория', delete: 'Удаление', batch: 'Действие', action: 'Действие' },
     risk: { safe: 'Безопасно', medium: 'Нужна проверка', high: 'Высокий риск' },
-    rows: { type: 'Тип', amount: 'Сумма', account: 'Счёт', to: 'Куда', category: 'Категория', section: 'Раздел', goal: 'Цель', description: 'Описание' },
+    rows: { type: 'Тип', amount: 'Сумма', account: 'Счёт', to: 'Куда', category: 'Категория', section: 'Категория', goal: 'Цель', description: 'Описание' },
     fallback: { action: 'Действие', details: 'Проверь детали', checkCount: 'Проверь {count} действия', explanation: 'Проверь сумму, счёт и категорию.' },
   },
   en: {

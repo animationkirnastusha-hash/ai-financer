@@ -29,8 +29,8 @@ export type CuratedTransactionTaxonomy = {
 };
 
 const EXPENSE_FALLBACK = {
-  categoryName: 'Расход',
-  sectionName: 'Расходы',
+  categoryName: 'Прочие расходы',
+  sectionName: '',
   categoryIcon: '🧾',
   sectionIcon: '🧾',
   categoryColor: '#60A5FA',
@@ -38,40 +38,49 @@ const EXPENSE_FALLBACK = {
 };
 
 const INCOME_FALLBACK = {
-  categoryName: 'Доход',
-  sectionName: 'Доходы',
+  categoryName: 'Прочие доходы',
+  sectionName: '',
   categoryIcon: '💰',
   sectionIcon: '💰',
   categoryColor: '#34D399',
   sectionColor: '#34D399',
 };
 
-const APPEARANCE: Record<string, { icon: string; color: string }> = {
+const CATEGORY_APPEARANCE: Record<string, { icon: string; color: string }> = {
   'доход': { icon: '💰', color: '#34D399' },
-  'доходы': { icon: '💰', color: '#34D399' },
+  'прочие доходы': { icon: '💰', color: '#34D399' },
   'зарплата': { icon: '💼', color: '#34D399' },
+  'переводы': { icon: '↔️', color: '#60A5FA' },
+  'возвраты': { icon: '↩️', color: '#2DD4BF' },
   'расход': { icon: '🧾', color: '#60A5FA' },
-  'расходы': { icon: '🧾', color: '#60A5FA' },
-  'дом': { icon: '🏠', color: '#FBBF24' },
+  'прочие расходы': { icon: '🧾', color: '#60A5FA' },
   'продукты': { icon: '🛒', color: '#34D399' },
-  'еда вне дома': { icon: '☕', color: '#F59E0B' },
-  'кофе': { icon: '☕', color: '#F59E0B' },
-  'азс': { icon: '⛽', color: '#60A5FA' },
-  'покупки на азс': { icon: '⛽', color: '#60A5FA' },
-  'бензин': { icon: '⛽', color: '#60A5FA' },
+  'кафе и рестораны': { icon: '☕', color: '#F59E0B' },
   'транспорт': { icon: '🚕', color: '#60A5FA' },
-  'такси': { icon: '🚕', color: '#60A5FA' },
+  'авто': { icon: '⛽', color: '#60A5FA' },
   'здоровье': { icon: '💊', color: '#2DD4BF' },
-  'аптека': { icon: '💊', color: '#2DD4BF' },
-  'отдых': { icon: '🎮', color: '#C4B5FD' },
+  'дом': { icon: '🏠', color: '#FBBF24' },
+  'жкх': { icon: '🏠', color: '#FBBF24' },
+  'связь и интернет': { icon: '📱', color: '#38BDF8' },
+  'одежда': { icon: '👕', color: '#F472B6' },
   'развлечения': { icon: '🎮', color: '#C4B5FD' },
-  'покупки': { icon: '🛍️', color: '#F472B6' },
-  'табак': { icon: '🚬', color: '#64748B' },
-  'чек': { icon: '🧾', color: '#60A5FA' },
-  'покупка по чеку': { icon: '🧾', color: '#60A5FA' },
+  'отдых': { icon: '🌴', color: '#C4B5FD' },
+  'подписки': { icon: '🔁', color: '#A78BFA' },
+  'кредиты': { icon: '🏦', color: '#FB7185' },
+  'подарки': { icon: '🎁', color: '#F472B6' },
+  'дети и семья': { icon: '👨‍👩‍👧', color: '#FBBF24' },
+  'образование': { icon: '📚', color: '#38BDF8' },
+  'путешествия': { icon: '✈️', color: '#60A5FA' },
+  'работа': { icon: '💼', color: '#94A3B8' },
 };
 
-const CURATED_CATEGORY_REPLACEMENTS: Record<string, string> = {
+const CATEGORY_REPLACEMENTS: Record<string, string> = {
+  'еда': 'Продукты',
+  'еда дома': 'Продукты',
+  'супермаркет': 'Продукты',
+  'продуктовый': 'Продукты',
+  'продуктовый магазин': 'Продукты',
+  'магазин продуктов': 'Продукты',
   'мясо и колбасы': 'Продукты',
   'молочные продукты': 'Продукты',
   'молочка': 'Продукты',
@@ -80,34 +89,41 @@ const CURATED_CATEGORY_REPLACEMENTS: Record<string, string> = {
   'фрукты': 'Продукты',
   'рыба и морепродукты': 'Продукты',
   'напитки': 'Продукты',
-  'продуктовый магазин': 'Продукты',
-  'магазин продуктов': 'Продукты',
-};
-
-const CURATED_SECTION_REPLACEMENTS: Record<string, string> = {
-  'продуктовый магазин': 'Дом',
-  'магазин': 'Дом',
-  'повседневные расходы': 'Дом',
-  'продукты': 'Дом',
-  'расходы': '',
-  'расход': '',
-  'траты': '',
-  'прочее': '',
-  'разное': '',
-};
-
-const CURATED_CATEGORY_SECTIONS: Record<string, string> = {
-  'продукты': 'Дом',
-  'кофе': 'Еда вне дома',
-  'покупки на азс': 'АЗС',
-  'бензин': 'Транспорт',
+  'кофе': 'Кафе и рестораны',
+  'кафе': 'Кафе и рестораны',
+  'рестораны': 'Кафе и рестораны',
+  'фастфуд': 'Кафе и рестораны',
+  'хотдог': 'Кафе и рестораны',
+  'энергетик': 'Кафе и рестораны',
   'такси': 'Транспорт',
+  'метро': 'Транспорт',
+  'автобус': 'Транспорт',
+  'маршрутка': 'Транспорт',
+  'трамвай': 'Транспорт',
+  'азс': 'Авто',
+  'заправка': 'Авто',
+  'покупки на азс': 'Авто',
+  'бензин': 'Авто',
+  'топливо': 'Авто',
+  'мойка': 'Авто',
+  'шиномонтаж': 'Авто',
   'аптека': 'Здоровье',
-  'табак': 'Покупки',
-  'отдых': 'Отдых',
-  'развлечения': 'Отдых',
-  'зарплата': 'Доходы',
-  'покупка по чеку': 'Чек',
+  'лекарства': 'Здоровье',
+  'врачи': 'Здоровье',
+  'интернет': 'Связь и интернет',
+  'телефон': 'Связь и интернет',
+  'мобильная связь': 'Связь и интернет',
+  'коммуналка': 'ЖКХ',
+  'коммунальные услуги': 'ЖКХ',
+  'квартплата': 'ЖКХ',
+  'табак': 'Прочие расходы',
+  'сигареты': 'Прочие расходы',
+  'прочее': 'Прочие расходы',
+  'разное': 'Прочие расходы',
+  'зарплата': 'Зарплата',
+  'аванс': 'Зарплата',
+  'income': 'Прочие доходы',
+  'expense': 'Прочие расходы',
 };
 
 function clean(value?: string | null) {
@@ -139,7 +155,6 @@ function buildSearchText(input: SemanticTransactionTaxonomyInput) {
   return [
     input.title,
     input.description,
-    input.sectionName,
     input.categoryName,
     input.merchant,
     input.place,
@@ -148,147 +163,104 @@ function buildSearchText(input: SemanticTransactionTaxonomyInput) {
   ].map((item) => key(item ?? '')).filter(Boolean).join(' ');
 }
 
-function appearance(name: string, fallback: typeof EXPENSE_FALLBACK, scope: 'category' | 'section') {
-  const exact = APPEARANCE[key(name)];
-  return {
-    icon: exact?.icon ?? (scope === 'category' ? fallback.categoryIcon : fallback.sectionIcon),
-    color: exact?.color ?? (scope === 'category' ? fallback.categoryColor : fallback.sectionColor),
-  };
-}
-
-function buildGenericFallback(kind: 'income' | 'expense') {
+function fallbackFor(kind: 'income' | 'expense') {
   return kind === 'income' ? INCOME_FALLBACK : EXPENSE_FALLBACK;
 }
 
-function buildTaxonomy(params: {
-  kind: 'income' | 'expense';
-  categoryName: string;
-  sectionName: string;
-  source: SemanticTransactionTaxonomy['source'];
-}) {
-  const fallback = buildGenericFallback(params.kind);
-  const categoryAppearance = appearance(params.categoryName, fallback, 'category');
-  const sectionAppearance = appearance(params.sectionName, fallback, 'section');
-
+function appearance(name: string, kind: 'income' | 'expense') {
+  const fallback = fallbackFor(kind);
+  const exact = CATEGORY_APPEARANCE[key(name)];
   return {
-    categoryName: params.categoryName,
-    sectionName: params.sectionName,
-    categoryIcon: categoryAppearance.icon,
-    sectionIcon: sectionAppearance.icon,
-    categoryColor: categoryAppearance.color,
-    sectionColor: sectionAppearance.color,
-    source: params.source,
+    icon: exact?.icon ?? fallback.categoryIcon,
+    color: exact?.color ?? fallback.categoryColor,
   };
 }
 
-function replaceCuratedCategory(value: string) {
-  if (!value) return '';
-  return CURATED_CATEGORY_REPLACEMENTS[key(value)] ?? value;
+export function normalizeTransactionCategoryName(value: string, kind: 'income' | 'expense' = 'expense') {
+  const cleaned = clean(value);
+  if (!cleaned) return '';
+  const normalized = key(cleaned);
+  if (kind === 'income') {
+    if (['доход', 'доходы', 'поступление', 'поступления', 'прочее', 'разное'].includes(normalized)) return 'Прочие доходы';
+    return CATEGORY_REPLACEMENTS[normalized] ?? cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
+  }
+  if (['расход', 'расходы', 'трата', 'траты', 'операция', 'операции', 'прочее', 'разное'].includes(normalized)) return 'Прочие расходы';
+  return CATEGORY_REPLACEMENTS[normalized] ?? cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
 }
 
-function replaceCuratedSection(value: string) {
-  if (!value) return '';
-  return CURATED_SECTION_REPLACEMENTS[key(value)] ?? value;
-}
-
-function isGenericCategory(value: string, kind: 'income' | 'expense') {
-  const normalized = key(value);
-  if (!normalized) return true;
-  if (kind === 'expense') return ['расход', 'трата', 'операция', 'прочее', 'разное', 'other', 'misc', 'expense', 'spending'].includes(normalized);
-  return ['доход', 'поступление', 'операция', 'прочее', 'разное', 'other', 'misc', 'income', 'earning'].includes(normalized);
-}
-
-function isGenericSection(value: string, kind: 'income' | 'expense') {
-  const normalized = key(value);
-  if (!normalized) return true;
-  if (kind === 'expense') return ['расходы', 'расход', 'траты', 'операции', 'прочее', 'разное', 'other', 'misc', 'expenses', 'spending'].includes(normalized);
-  return ['доходы', 'доход', 'поступления', 'операции', 'прочее', 'разное', 'other', 'misc', 'income', 'earnings'].includes(normalized);
-}
-
-function inferSemanticTaxonomy(input: SemanticTransactionTaxonomyInput): CuratedTransactionTaxonomy | null {
+function inferSemanticCategory(input: SemanticTransactionTaxonomyInput): CuratedTransactionTaxonomy | null {
   const text = buildSearchText(input);
   if (!text) return null;
 
   if (input.kind === 'income') {
     if (textIncludesAny(text, ['зарплат', 'salary', 'аванс'])) {
-      return { categoryName: 'Зарплата', sectionName: 'Доходы', source: 'curated' };
+      return { categoryName: 'Зарплата', sectionName: '', source: 'curated' };
+    }
+    if (textIncludesAny(text, ['возврат', 'кешбек', 'cashback'])) {
+      return { categoryName: 'Возвраты', sectionName: '', source: 'curated' };
     }
     return null;
   }
 
   const hasAzs = textIncludesAny(text, ['азс', 'заправк', 'заправоч', 'бензоколон']);
   const hasFuel = textIncludesAny(text, ['бензин', 'топлив', 'аи 92', 'аи-92', 'аи 95', 'аи-95', 'дизел']);
-  const hasDrink = textIncludesAny(text, ['напит', 'кофе', 'чай', 'вода', 'сок']);
   const hasTobacco = textIncludesAny(text, ['сигар', 'табак', 'вейп']);
+  const hasCafeFood = textIncludesAny(text, ['кофе', 'капучино', 'латте', 'эспрессо', 'хотдог', 'шаурм', 'бургер', 'кафе', 'ресторан', 'фастфуд', 'энергетик']);
 
-  if (hasAzs) {
-    if (hasFuel && !hasDrink && !hasTobacco) {
-      return { categoryName: 'Бензин', sectionName: 'Транспорт', source: 'curated' };
-    }
-    return { categoryName: 'Покупки на АЗС', sectionName: 'АЗС', source: 'curated' };
-  }
-
-  if (hasFuel) return { categoryName: 'Бензин', sectionName: 'Транспорт', source: 'curated' };
-  if (textIncludesAny(text, ['такси', 'яндекс такси', 'taxi'])) return { categoryName: 'Такси', sectionName: 'Транспорт', source: 'curated' };
-  if (textIncludesAny(text, ['аптек', 'лекарств', 'витамин', 'здоров'])) return { categoryName: 'Аптека', sectionName: 'Здоровье', source: 'curated' };
-  if (textIncludesAny(text, ['кофе', 'капучино', 'латте', 'эспрессо'])) return { categoryName: 'Кофе', sectionName: 'Еда вне дома', source: 'curated' };
-  if (hasTobacco) return { categoryName: 'Табак', sectionName: 'Покупки', source: 'curated' };
-  if (textIncludesAny(text, ['продукт', 'молоко', 'молоч', 'хлеб', 'овощ', 'фрукт', 'сыр', 'магазин продуктов'])) {
-    return { categoryName: 'Продукты', sectionName: 'Дом', source: 'curated' };
-  }
-  if (textIncludesAny(text, ['развлеч', 'кино', 'игр', 'театр'])) return { categoryName: 'Развлечения', sectionName: 'Отдых', source: 'curated' };
-  if (textIncludesAny(text, ['отдых', 'отпуск'])) return { categoryName: 'Отдых', sectionName: 'Отдых', source: 'curated' };
+  if (hasAzs || hasFuel) return { categoryName: 'Авто', sectionName: '', source: 'curated' };
+  if (textIncludesAny(text, ['такси', 'яндекс такси', 'taxi', 'метро', 'автобус', 'маршрут', 'трамвай'])) return { categoryName: 'Транспорт', sectionName: '', source: 'curated' };
+  if (textIncludesAny(text, ['аптек', 'лекарств', 'витамин', 'здоров', 'врач', 'клиник'])) return { categoryName: 'Здоровье', sectionName: '', source: 'curated' };
+  if (hasCafeFood) return { categoryName: 'Кафе и рестораны', sectionName: '', source: 'curated' };
+  if (textIncludesAny(text, ['продукт', 'молоко', 'молоч', 'хлеб', 'овощ', 'фрукт', 'сыр', 'супермаркет', 'магазин продуктов'])) return { categoryName: 'Продукты', sectionName: '', source: 'curated' };
+  if (textIncludesAny(text, ['коммунал', 'квартплат', 'жкх', 'электрич', 'вода', 'газ'])) return { categoryName: 'ЖКХ', sectionName: '', source: 'curated' };
+  if (textIncludesAny(text, ['интернет', 'телефон', 'мобильн', 'связь'])) return { categoryName: 'Связь и интернет', sectionName: '', source: 'curated' };
+  if (textIncludesAny(text, ['одежд', 'обув', 'куртк', 'футболк'])) return { categoryName: 'Одежда', sectionName: '', source: 'curated' };
+  if (textIncludesAny(text, ['подписк', 'netflix', 'spotify', 'яндекс плюс', 'сервис'])) return { categoryName: 'Подписки', sectionName: '', source: 'curated' };
+  if (textIncludesAny(text, ['кредит', 'ипотек', 'рассроч'])) return { categoryName: 'Кредиты', sectionName: '', source: 'curated' };
+  if (textIncludesAny(text, ['развлеч', 'кино', 'игр', 'театр'])) return { categoryName: 'Развлечения', sectionName: '', source: 'curated' };
+  if (textIncludesAny(text, ['отдых', 'отпуск', 'путешеств', 'билет', 'отель'])) return { categoryName: 'Отдых', sectionName: '', source: 'curated' };
+  if (hasTobacco) return { categoryName: 'Прочие расходы', sectionName: '', source: 'curated' };
 
   return null;
 }
 
 export function curateStructuredTransactionTaxonomy(input: SemanticTransactionTaxonomyInput): CuratedTransactionTaxonomy {
-  const fallback = buildGenericFallback(input.kind);
-  const aiCategory = replaceCuratedCategory(clean(input.categoryName));
-  const aiSection = replaceCuratedSection(clean(input.sectionName));
-  const inferred = inferSemanticTaxonomy(input);
+  const fallback = fallbackFor(input.kind);
+  const aiCategory = normalizeTransactionCategoryName(clean(input.categoryName), input.kind);
+  const inferred = inferSemanticCategory(input);
 
   if (inferred) {
-    const categoryWasGeneric = isGenericCategory(aiCategory, input.kind);
-    const sectionWasGeneric = isGenericSection(aiSection, input.kind);
-    const categoryLooksLikeGroceriesFromMixedAzs = inferred.categoryName === 'Покупки на АЗС' && key(aiCategory) === 'продукты';
-
-    if (!aiCategory || categoryWasGeneric || categoryLooksLikeGroceriesFromMixedAzs) {
-      return inferred;
-    }
-
-    const categorySection = CURATED_CATEGORY_SECTIONS[key(aiCategory)];
-    return {
-      categoryName: aiCategory,
-      sectionName: !aiSection || sectionWasGeneric ? categorySection || inferred.sectionName : aiSection,
-      source: inferred.source,
-    };
+    const generic = !aiCategory || key(aiCategory) === key(fallback.categoryName);
+    const groceriesFromMixedAzs = inferred.categoryName === 'Авто' && key(aiCategory) === 'продукты';
+    const groceriesFromSnack = inferred.categoryName === 'Кафе и рестораны' && key(aiCategory) === 'продукты' && textIncludesAny(buildSearchText(input), ['хотдог', 'хот-дог', 'кофе', 'бургер', 'фастфуд', 'энергетик']);
+    if (generic || groceriesFromMixedAzs || groceriesFromSnack) return inferred;
+    return { categoryName: normalizeTransactionCategoryName(aiCategory, input.kind), sectionName: '', source: inferred.source };
   }
 
-  const categoryName = aiCategory || fallback.categoryName;
-  const sectionName = aiSection
-    || CURATED_CATEGORY_SECTIONS[key(categoryName)]
-    || fallback.sectionName;
-
   return {
-    categoryName,
-    sectionName,
-    source: aiCategory || aiSection ? 'input' : 'curated',
+    categoryName: aiCategory || fallback.categoryName,
+    sectionName: '',
+    source: aiCategory ? 'input' : 'curated',
   };
 }
 
 export function resolveTransactionSemanticTaxonomy(input: SemanticTransactionTaxonomyInput): SemanticTransactionTaxonomy {
   const curated = curateStructuredTransactionTaxonomy(input);
-  const fallback = buildGenericFallback(input.kind);
-
+  const fallback = fallbackFor(input.kind);
   const categoryName = curated.categoryName || fallback.categoryName;
-  const sectionName = curated.sectionName || fallback.sectionName;
+  const categoryAppearance = appearance(categoryName, input.kind);
   const source: SemanticTransactionTaxonomy['source'] = curated.source === 'curated'
     ? 'curated'
-    : clean(input.categoryName) || clean(input.sectionName) ? 'ai' : 'fallback';
+    : clean(input.categoryName) ? 'ai' : 'fallback';
 
   return {
-    ...buildTaxonomy({ kind: input.kind, categoryName, sectionName, source }),
+    categoryName,
+    sectionName: '',
+    categoryIcon: categoryAppearance.icon,
+    sectionIcon: categoryAppearance.icon,
+    categoryColor: categoryAppearance.color,
+    sectionColor: categoryAppearance.color,
+    source,
     titleFallback: categoryName,
     descriptionFallback: buildCuratedDescriptionFallback(input, categoryName),
   };
@@ -310,8 +282,9 @@ function normalizeComposition(value?: string | null) {
 function buildCuratedDescriptionFallback(input: SemanticTransactionTaxonomyInput, categoryName: string) {
   const description = clean(input.description);
   const normalizedDescription = key(description);
+  const search = buildSearchText(input);
 
-  if (key(categoryName) === 'покупки на азс' && !normalizedDescription.includes('место:') && !normalizedDescription.includes('place:')) {
+  if (key(categoryName) === 'авто' && textIncludesAny(search, ['азс', 'заправк']) && !normalizedDescription.includes('место:') && !normalizedDescription.includes('place:')) {
     const composition = normalizeComposition(description);
     return [
       'Место: АЗС',

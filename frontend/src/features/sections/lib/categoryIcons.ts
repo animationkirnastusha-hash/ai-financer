@@ -108,7 +108,7 @@ export function resolveTaxonomyIcon(rawText: string, type: 'income' | 'expense')
 }
 
 export function resolveSectionIcon(rawName: string) {
-  const name = rawName.trim() || 'Раздел';
+  const name = rawName.trim() || 'Категория';
   const normalized = normalizeName(name);
   const isIncome = normalized === 'доход' || normalized === 'доходы' || normalized === 'income';
   const appearance = sectionAppearance(name, isIncome ? 'income' : 'expense');

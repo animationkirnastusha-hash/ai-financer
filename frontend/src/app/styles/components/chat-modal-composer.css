@@ -1,19 +1,4 @@
-/* Stability fixes: confirmation modal, chat composer, XP text stability. */
-.app-ai-text-page .app-page__inner {
-  padding-bottom: calc(env(safe-area-inset-bottom) + 138px) !important;
-}
-
-.app-ai-text-input-card {
-  position: sticky;
-  bottom: calc(env(safe-area-inset-bottom) + 12px);
-  z-index: 35;
-  margin-top: 8px;
-  padding: 10px !important;
-  background: rgba(8, 12, 18, .86) !important;
-  -webkit-backdrop-filter: blur(18px);
-  backdrop-filter: blur(18px);
-}
-
+/* Chat composer, confirmation stack and XP text layout. */
 .app-ai-inline-composer {
   position: relative;
   width: 100%;
@@ -75,7 +60,7 @@
   }
 }
 
-/* Patch 74: stable chat composer, confirmation sheet, XP text. */
+/* Chat page composer and modal stack. */
 .app-ai-text-page .app-page__inner {
   padding-bottom: calc(env(safe-area-inset-bottom) + 190px) !important;
 }

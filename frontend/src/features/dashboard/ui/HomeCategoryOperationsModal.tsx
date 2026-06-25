@@ -37,7 +37,7 @@ export function HomeCategoryOperationsModal({ group, transactions = [], mode = '
         <div className="app-modal-body">
           <div className="app-home-chart-modal__head">
             <div>
-              <div className="app-eyebrow">{group.sectionName}</div>
+              <div className="app-eyebrow">{t('dashboard.chart.categories')}</div>
               <h2>{group.name}</h2>
               <p>{t('dashboard.categoryModal.summary', { count: sorted.length, amount: formatMoney(total || group.amount, 'RUB') })}</p>
             </div>
