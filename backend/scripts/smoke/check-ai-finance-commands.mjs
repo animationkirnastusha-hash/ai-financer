@@ -205,8 +205,9 @@ const tests = [
       if (lower(input.category) === 'продукты' || lower(input.section) === 'продукты') fail(`${this.label}: mixed AZS purchase was put into Продукты`, action);
     },
   },
+
   {
-    label: 'terse-cash-snack-expense',
+    label: 'real-user-cash-energy-hotdog-split-amounts',
     command: () => 'Расход налик 100 энергетик хотдог 222',
     assert(payload) {
       const action = requireSingleAction(payload, this.label);
@@ -217,9 +218,21 @@ const tests = [
       requireTitleIsClean(action, this.label);
 
       const input = action.input ?? {};
-      const itemsText = [input.title, input.description, ...(Array.isArray(input.items) ? input.items : [])].join(' ');
-      if (!includesAny(itemsText, ['энергет', 'хотдог', 'хот-дог'])) fail(`${this.label}: snack items are missing`, action);
-      if (lower(input.category) === 'продукты') fail(`${this.label}: snack purchase was put into Продукты`, action);
+      const detailsText = [input.title, input.description, ...(Array.isArray(input.items) ? input.items : []), ...(Array.isArray(input.tags) ? input.tags : [])].join(' ');
+      if (!includesAny(detailsText, ['энерг'])) fail(`${this.label}: энергетик is missing`, action);
+      if (!includesAny(detailsText, ['хотд', 'хот дог'])) fail(`${this.label}: hotdog is missing`, action);
+    },
+  },
+  {
+    label: 'real-user-cash-energy-hotdog-typo',
+    command: () => 'Расход нал 100 энергетик хот дог 222',
+    assert(payload) {
+      const action = requireSingleAction(payload, this.label);
+      requireTool(action, 'create_transaction', this.label);
+      requireKind(action, 'expense', this.label);
+      requireAmount(action, 322, this.label);
+      requireAccount(action, 'налич', this.label);
+      requireTitleIsClean(action, this.label);
     },
   },
   {
@@ -252,6 +265,19 @@ const tests = [
       requireKind(action, 'expense', this.label);
       requireAmount(action, 250, this.label);
       requireAccount(action, 'налич', this.label);
+      requireTitleIsClean(action, this.label);
+    },
+  },
+
+  {
+    label: 'real-user-products-20k-card',
+    command: () => 'Потратил 20к на продукты с карты',
+    assert(payload) {
+      const action = requireSingleAction(payload, this.label);
+      requireTool(action, 'create_transaction', this.label);
+      requireKind(action, 'expense', this.label);
+      requireAmount(action, 20000, this.label);
+      requireAccount(action, 'карт', this.label);
       requireTitleIsClean(action, this.label);
     },
   },

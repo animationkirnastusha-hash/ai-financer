@@ -113,6 +113,84 @@ const mixedMerchantCases = [
   }),
 ];
 
+
+
+const realUserLaunchCases = [
+  expense('real-cash-energy-hotdog-split-amounts', 'Расход налик 100 энергетик хотдог 222', 322, {
+    group: 'real-user',
+    expect: {
+      actionCount: 1,
+      includes: { account: ['налич'] },
+      textIncludes: [['энерг'], ['хотд']],
+      textNotIncludes: ['Расход налик 100 энергетик хотдог 222'],
+      cleanTitle: true,
+    },
+  }),
+  expense('real-cash-energy-hotdog-typo', 'Расход нал 100 энергетик хот дог 222', 322, {
+    group: 'real-user',
+    expect: {
+      actionCount: 1,
+      includes: { account: ['налич'] },
+      textIncludes: [['энерг'], ['хот']],
+      cleanTitle: true,
+    },
+  }),
+  expense('real-short-coffee-cash-no-wake-word', 'кофе 100 с налички', 100, {
+    group: 'real-user',
+    expect: { includes: { account: ['налич'] }, textIncludes: [['коф']], cleanTitle: true },
+  }),
+  income('real-short-income-cash-no-wake-word', 'доход 1000 на наличку', 1000, {
+    group: 'real-user',
+    expect: { includes: { account: ['налич'] }, cleanTitle: true },
+  }),
+  query('real-goal-vacation-no-wake-word', 'создай цель отпуск 120000', ['create_goal'], {
+    group: 'real-user',
+    expect: { amount: 120000, includes: { title: ['отпуск'] } },
+  }),
+  query('real-show-taxonomy-no-wake-word', 'покажи категории', ['show_taxonomy'], {
+    group: 'real-user',
+  }),
+  expense('real-products-20k-card', 'Потратил 20к на продукты с карты', 20000, {
+    group: 'real-user',
+    expect: { includes: { account: ['карт'] }, textIncludes: [['продукт']], cleanTitle: true },
+  }),
+  expense('real-products-short-20k-card', '20к продукты карта', 20000, {
+    group: 'real-user',
+    expect: { includes: { account: ['карт'] }, textIncludes: [['продукт']], cleanTitle: true },
+  }),
+  income('real-salary-short-85k-card', 'зп 85к карта', 85000, {
+    group: 'real-user',
+    expect: { includes: { account: ['карт'] }, textIncludes: [['зарп', 'зп']], cleanTitle: true },
+  }),
+  expense('real-azs-without-amount-asks-amount', 'Заправка напиток сигареты', undefined, {
+    group: 'real-user',
+    expect: { amount: undefined, clarificationField: ['amount'] },
+  }),
+  expense('real-snack-without-amount-asks-amount', 'налик энергетик хотдог', undefined, {
+    group: 'real-user',
+    expect: { amount: undefined, clarificationField: ['amount'] },
+  }),
+  query('real-search-cafe-week', 'найди траты на кафе за неделю', ['query_analytics', 'show_transactions'], {
+    group: 'real-user',
+  }),
+  query('real-no-general-expense-for-cafe-search', 'Есть траты на кафе за неделю?', ['query_analytics', 'show_transactions'], {
+    group: 'real-user',
+  }),
+  expense('real-mixed-azs-cash', 'на заправке 387 наличкой напиток сигареты', 387, {
+    group: 'real-user',
+    expect: {
+      includes: { account: ['налич'] },
+      textIncludes: [['заправ', 'азс'], ['напит'], ['сигар']],
+      noProductForMixedMerchant: true,
+      cleanTitle: true,
+    },
+  }),
+  expense('real-card-cafe-colloquial', 'карта кофе булка 430', 430, {
+    group: 'real-user',
+    expect: { includes: { account: ['карт'] }, textIncludes: [['коф'], ['бул']], cleanTitle: true },
+  }),
+];
+
 const accountCases = [
   query('create-cash-account-35k-en', 'Create a cash account and deposit 35k rubles', ['create_account'], {
     group: 'accounts',
@@ -226,6 +304,7 @@ export const AI_REGRESSION_CASES = [
   ...amountNotationCases,
   ...noAccountClarificationCases,
   ...mixedMerchantCases,
+  ...realUserLaunchCases,
   ...accountCases,
   ...transferCases,
   ...goalCases,
