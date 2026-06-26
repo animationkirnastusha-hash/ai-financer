@@ -10,6 +10,7 @@ type TextChatEventDetail = {
   autoStartVoice?: boolean;
   autoCloseOnVoiceResult?: boolean;
   autoSubmitInitialCommand?: boolean;
+  firstRunSetup?: boolean;
 };
 
 export function useTextChatModalEvent(openModal: OpenModal) {
@@ -24,6 +25,7 @@ export function useTextChatModalEvent(openModal: OpenModal) {
         autoStartVoice: Boolean(detail?.autoStartVoice),
         autoCloseOnVoiceResult: Boolean(detail?.autoCloseOnVoiceResult),
         autoSubmitInitialCommand: Boolean(detail?.autoSubmitInitialCommand),
+        firstRunSetup: Boolean(detail?.firstRunSetup),
       });
     };
 

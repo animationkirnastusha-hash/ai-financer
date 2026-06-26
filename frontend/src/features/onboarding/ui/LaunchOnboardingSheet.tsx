@@ -13,7 +13,7 @@ export function LaunchOnboardingSheet() {
   const syncUserLocale = useAuthStore((state) => state.syncUserLocale);
   const appLanguage = useSettingsStore((state) => state.appLanguage);
   const setAppLanguage = useSettingsStore((state) => state.setAppLanguage);
-  const openAIWithCommand = useNavigationStore((state) => state.openAIWithCommand);
+  const openFirstRunChatSetup = useNavigationStore((state) => state.openFirstRunChatSetup);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -36,7 +36,7 @@ export function LaunchOnboardingSheet() {
 
   const start = () => {
     complete();
-    window.setTimeout(() => openAIWithCommand(), 0);
+    window.setTimeout(() => openFirstRunChatSetup(), 0);
   };
 
   return (

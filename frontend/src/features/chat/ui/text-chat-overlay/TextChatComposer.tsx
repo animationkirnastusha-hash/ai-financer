@@ -1,32 +1,22 @@
-import type { ChangeEvent, FormEvent, KeyboardEvent, PointerEvent, RefObject } from 'react';
+import type { FormEvent, KeyboardEvent, PointerEvent, RefObject } from 'react';
 
-import {
-  RECEIPT_CAMERA_ACCEPT_TYPES,
-  RECEIPT_FILE_ACCEPT_TYPES,
-} from '@/features/chat/ui/text-chat-overlay/constants';
 import type { VoiceInputState } from '@/features/voice/model/voice.types';
 
 type Props = {
   value: string;
   inputRef: RefObject<HTMLTextAreaElement | null>;
-  receiptCameraInputRef: RefObject<HTMLInputElement | null>;
-  receiptFileInputRef: RefObject<HTMLInputElement | null>;
-  hasReceiptAccess: boolean;
-  isReceiptUploading: boolean;
   isSending: boolean;
+  inputDisabled?: boolean;
   voiceState: VoiceInputState;
   isVoicePressed: boolean;
   isVoiceCancelledBySwipe: boolean;
   placeholder: string;
   sendLabel: string;
   voiceLabel: string;
-  receiptActionLabel: string;
-  receiptCameraLabel: string;
   voiceCancelHint: string;
   voiceCancelledLabel: string;
   onValueChange: (value: string) => void;
   onSubmit: () => void | Promise<void>;
-  onReceiptFile: (file: File | null) => void | Promise<void>;
   onVoicePointerDown: (event: PointerEvent<HTMLButtonElement>) => void;
   onVoicePointerMove: (event: PointerEvent<HTMLButtonElement>) => void;
   onVoicePointerEnd: (event: PointerEvent<HTMLButtonElement>) => void;
@@ -36,24 +26,18 @@ type Props = {
 export function TextChatComposer({
   value,
   inputRef,
-  receiptCameraInputRef,
-  receiptFileInputRef,
-  hasReceiptAccess,
-  isReceiptUploading,
   isSending,
+  inputDisabled = false,
   voiceState,
   isVoicePressed,
   isVoiceCancelledBySwipe,
   placeholder,
   sendLabel,
   voiceLabel,
-  receiptActionLabel,
-  receiptCameraLabel,
   voiceCancelHint,
   voiceCancelledLabel,
   onValueChange,
   onSubmit,
-  onReceiptFile,
   onVoicePointerDown,
   onVoicePointerMove,
   onVoicePointerEnd,
@@ -70,48 +54,8 @@ export function TextChatComposer({
     void onSubmit();
   };
 
-  const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
-    void onReceiptFile(event.target.files?.[0] ?? null);
-  };
-
   return (
     <form className="text-chat-overlay__composer" onSubmit={handleSubmit}>
-      {hasReceiptAccess ? (
-        <div className="text-chat-overlay__receipt-actions">
-          <button
-            type="button"
-            className="text-chat-overlay__receipt-main"
-            disabled={isReceiptUploading}
-            onClick={() => receiptFileInputRef.current?.click()}
-          >
-            {receiptActionLabel}
-          </button>
-          <button
-            type="button"
-            className="text-chat-overlay__receipt-mini"
-            disabled={isReceiptUploading}
-            onClick={() => receiptCameraInputRef.current?.click()}
-            aria-label={receiptCameraLabel}
-          >
-            ◉
-          </button>
-          <input
-            ref={receiptCameraInputRef}
-            type="file"
-            accept={RECEIPT_CAMERA_ACCEPT_TYPES}
-            capture="environment"
-            className="sr-only"
-            onChange={handleFileChange}
-          />
-          <input
-            ref={receiptFileInputRef}
-            type="file"
-            accept={RECEIPT_FILE_ACCEPT_TYPES}
-            className="sr-only"
-            onChange={handleFileChange}
-          />
-        </div>
-      ) : null}
       <textarea
         ref={inputRef}
         value={value}
@@ -119,7 +63,7 @@ export function TextChatComposer({
         onKeyDown={handleKeyDown}
         rows={1}
         placeholder={placeholder}
-        disabled={isSending}
+        disabled={isSending || inputDisabled}
       />
       {isVoicePressed || voiceState === 'recording' ? (
         <div className="text-chat-overlay__voice-cancel-hint" data-cancelled={isVoiceCancelledBySwipe ? 'true' : 'false'}>
@@ -127,7 +71,7 @@ export function TextChatComposer({
         </div>
       ) : null}
       {value.trim() ? (
-        <button type="submit" disabled={isSending} aria-label={sendLabel}>
+        <button type="submit" disabled={isSending || inputDisabled} aria-label={sendLabel}>
           ↑
         </button>
       ) : (
@@ -135,7 +79,7 @@ export function TextChatComposer({
           type="button"
           className="text-chat-overlay__voice-send"
           data-recording={isVoicePressed || voiceState === 'recording' ? 'true' : 'false'}
-          disabled={isSending || voiceState === 'uploading'}
+          disabled={isSending || inputDisabled || voiceState === 'uploading'}
           aria-label={voiceLabel}
           onPointerDown={onVoicePointerDown}
           onPointerMove={onVoicePointerMove}

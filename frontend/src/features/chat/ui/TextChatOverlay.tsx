@@ -7,14 +7,22 @@ import {
   type PointerEvent,
 } from "react";
 
+import { createAccount } from "@/features/accounts/api/accounts.api";
 import { useAccountsStore } from "@/features/accounts/model/accounts.store";
 import { AuditLogDrawer } from "@/features/audit-log/ui/AuditLogDrawer";
 import { useChatController } from "@/features/chat/model/useChatController";
 import { useChatStore } from "@/features/chat/model/chat.store";
+import {
+  useFirstRunChatSetupStore,
+  type FirstRunAccountDraft,
+} from "@/features/chat/model/firstRunChatSetup.store";
 import { useSettingsStore } from "@/features/settings/model/settings.store";
+import { useAppModalStore } from "@/features/modals/model/appModal.store";
+import { markProductTourPending } from "@/features/product-tour/model/productTourPending.store";
 import { useReceiptScansStore } from "@/features/receipt-scans/model/receiptScans.store";
 import { getReceiptUploadIssueKey } from "@/features/receipt-scans/lib/receiptUploadGuards";
 import { useSubscriptionStore } from "@/features/subscription/model/subscription.store";
+import { createTransaction } from "@/features/transactions/api/transactions.api";
 import { useTransactionsStore } from "@/features/transactions/model/transactions.store";
 import { useVoiceInput } from "@/features/voice/model/useVoiceInput";
 import { VOICE_MANUAL_SESSION_MS } from "@/features/voice/model/voiceConstants";
@@ -22,17 +30,55 @@ import { shouldIgnoreVoiceCommand } from "@/features/voice/model/voiceText";
 import { useI18n } from "@/shared/lib/i18n";
 import {
   OVERLAY_DISMISS_DRAG_PX,
+  RECEIPT_CAMERA_ACCEPT_TYPES,
+  RECEIPT_FILE_ACCEPT_TYPES,
   SCROLL_BOTTOM_THRESHOLD_PX,
 } from "@/features/chat/ui/text-chat-overlay/constants";
 import {
   pickRotatingStatus,
   stripOptionalCompanionName,
 } from "@/features/chat/ui/text-chat-overlay/helpers";
-import { useTextChatContextualPrompts } from "@/features/chat/ui/text-chat-overlay/useTextChatContextualPrompts";
 import { TextChatOverlayHeader } from "@/features/chat/ui/text-chat-overlay/TextChatOverlayHeader";
 import { TextChatMessages } from "@/features/chat/ui/text-chat-overlay/TextChatMessages";
 import { TextChatEmptyState } from "@/features/chat/ui/text-chat-overlay/TextChatEmptyState";
 import { TextChatComposer } from "@/features/chat/ui/text-chat-overlay/TextChatComposer";
+import { TextChatFirstRunActions } from "@/features/chat/ui/text-chat-overlay/TextChatFirstRunActions";
+
+function createSetupMessage(id: string, text: string, kind: "text" | "success" | "error" = "text") {
+  return {
+    id,
+    role: "assistant" as const,
+    kind,
+    text,
+    createdAt: new Date().toISOString(),
+  };
+}
+
+function inferFirstRunAccountType(name: string): FirstRunAccountDraft["type"] {
+  const normalized = name.toLowerCase();
+  return normalized.includes("нал") || normalized.includes("cash") ? "cash" : "card";
+}
+
+function parseFirstRunBalance(value: string): number | null {
+  const normalized = value
+    .trim()
+    .toLowerCase()
+    .replaceAll(" ", "")
+    .replaceAll("₽", "")
+    .replaceAll("руб", "")
+    .replaceAll("р", "")
+    .replace(",", ".");
+
+  if (!normalized) return null;
+
+  const hasThousandsSuffix = normalized.endsWith("к") || normalized.endsWith("k");
+  const rawNumber = hasThousandsSuffix ? normalized.slice(0, -1) : normalized;
+  const amount = Number(rawNumber);
+
+  if (!Number.isFinite(amount) || amount < 0) return null;
+
+  return Math.round(amount * (hasThousandsSuffix ? 1000 : 1) * 100) / 100;
+}
 
 type TextChatOverlayProps = {
   open: boolean;
@@ -42,6 +88,7 @@ type TextChatOverlayProps = {
   autoStartVoice?: boolean;
   autoCloseOnVoiceResult?: boolean;
   autoSubmitInitialCommand?: boolean;
+  firstRunSetup?: boolean;
   layer?: number;
   onClose: () => void;
 };
@@ -54,6 +101,7 @@ export function TextChatOverlay({
   autoStartVoice = false,
   autoCloseOnVoiceResult = false,
   autoSubmitInitialCommand = false,
+  firstRunSetup = false,
   layer = 130,
   onClose,
 }: TextChatOverlayProps) {
@@ -86,15 +134,34 @@ export function TextChatOverlay({
   const receiptCameraInputRef = useRef<HTMLInputElement | null>(null);
   const receiptFileInputRef = useRef<HTMLInputElement | null>(null);
   const [receiptHint, setReceiptHint] = useState<string | null>(null);
+  const [isSetupBusy, setIsSetupBusy] = useState(false);
 
   const chat = useChatController();
   const appendChatMessage = useChatStore((state) => state.appendMessage);
-  const accounts = useAccountsStore((state) => state.items);
-  const transactions = useTransactionsStore((state) => state.items);
+  const setChatMessages = useChatStore((state) => state.setMessages);
+  const openModal = useAppModalStore((state) => state.openModal);
+  const loadAccounts = useAccountsStore((state) => state.loadAccounts);
+  const refreshTransactions = useTransactionsStore((state) => state.refreshDashboard);
   const subscription = useSubscriptionStore((state) => state.status);
   const loadSubscription = useSubscriptionStore((state) => state.load);
   const uploadReceipt = useReceiptScansStore((state) => state.upload);
   const isReceiptUploading = useReceiptScansStore((state) => state.isUploading);
+  const setupStage = useFirstRunChatSetupStore((state) => state.stage);
+  const setupAccountDraft = useFirstRunChatSetupStore((state) => state.accountDraft);
+  const setupIsActive = useFirstRunChatSetupStore((state) => state.isActive);
+  const setupCloseLocked = useFirstRunChatSetupStore((state) => state.closeLocked);
+  const startFirstRunSetup = useFirstRunChatSetupStore((state) => state.start);
+  const skipSetupMicrophone = useFirstRunChatSetupStore((state) => state.skipMicrophone);
+  const finishSetupMicrophone = useFirstRunChatSetupStore((state) => state.finishMicrophone);
+  const requestCustomSetupAccount = useFirstRunChatSetupStore((state) => state.requestCustomAccount);
+  const selectSetupAccount = useFirstRunChatSetupStore((state) => state.selectAccount);
+  const requestCustomSetupBalance = useFirstRunChatSetupStore((state) => state.requestCustomBalance);
+  const completeSetupWithAccount = useFirstRunChatSetupStore((state) => state.completeWithAccount);
+  const dismissFirstRunSetup = useFirstRunChatSetupStore((state) => state.dismiss);
+  const primaryAccountId = useSettingsStore((state) => state.primaryAccountId);
+  const incomeAccountId = useSettingsStore((state) => state.incomeAccountId);
+  const setPrimaryAccountId = useSettingsStore((state) => state.setPrimaryAccountId);
+  const setIncomeAccountId = useSettingsStore((state) => state.setIncomeAccountId);
   const companionName = useSettingsStore(
     (state) => state.companionName || "Фина",
   );
@@ -190,12 +257,14 @@ export function TextChatOverlay({
     if (chat.isSending) return pickRotatingStatus(t, "thinking", seed + 2);
     if (hasBlockingConfirmation)
       return pickRotatingStatus(t, "confirm", seed);
+    if (setupCloseLocked) return t("textChat.status.locked");
     return voiceHint || pickRotatingStatus(t, "ready", seed);
   }, [
     chat.isSending,
     chat.messages.length,
     hasBlockingConfirmation,
     inlinePendingActions.length,
+    setupCloseLocked,
     t,
     voice.state,
     voiceHint,
@@ -208,9 +277,11 @@ export function TextChatOverlay({
         ? "thinking"
         : hasBlockingConfirmation
           ? "confirm"
-          : "ready";
+          : setupCloseLocked
+            ? "locked"
+            : "ready";
 
-  const contextualPrompts = useTextChatContextualPrompts(accounts, transactions);
+  const contextualPrompts: string[] = [];
 
   const scrollToBottom = useCallback((behavior: ScrollBehavior = "smooth") => {
     const list = listRef.current;
@@ -512,6 +583,11 @@ export function TextChatOverlay({
   ]);
 
   const closeOverlay = useCallback(() => {
+    if (setupCloseLocked) {
+      setReceiptHint(t("textChat.setup.closeLocked"));
+      return;
+    }
+
     voicePointerIdRef.current = null;
     voicePressActiveRef.current = false;
     voiceStopAfterStartRef.current = false;
@@ -522,8 +598,9 @@ export function TextChatOverlay({
     setVoiceHint(null);
     setDragOffset(0);
     dragStartYRef.current = null;
+    if (setupStage === 'done') dismissFirstRunSetup();
     onClose();
-  }, [onClose, voice]);
+  }, [dismissFirstRunSetup, onClose, setupCloseLocked, setupStage, t, voice]);
 
   const handleDragPointerDown = useCallback(
     (event: PointerEvent<HTMLButtonElement>) => {
@@ -544,10 +621,10 @@ export function TextChatOverlay({
   );
 
   const handleDragPointerEnd = useCallback(() => {
-    if (dragOffset >= OVERLAY_DISMISS_DRAG_PX) closeOverlay();
+    if (!setupCloseLocked && dragOffset >= OVERLAY_DISMISS_DRAG_PX) closeOverlay();
     dragStartYRef.current = null;
     setDragOffset(0);
-  }, [closeOverlay, dragOffset]);
+  }, [closeOverlay, dragOffset, setupCloseLocked]);
 
   const handleReceiptFile = useCallback(
     async (file: File | null) => {
@@ -569,6 +646,200 @@ export function TextChatOverlay({
       if (receiptFileInputRef.current) receiptFileInputRef.current.value = "";
     },
     [hasReceiptAccess, isReceiptUploading, t, uploadReceipt],
+  );
+
+
+  const appendSetupAssistantMessage = useCallback(
+    (id: string, text: string, kind: "text" | "success" | "error" = "text") => {
+      shouldStickToBottomRef.current = true;
+      setChatMessages((messages) => {
+        if (messages.some((message) => message.id === id)) return messages;
+        return [...messages, createSetupMessage(id, text, kind)];
+      });
+    },
+    [setChatMessages],
+  );
+
+  useEffect(() => {
+    if (!open || !firstRunSetup || setupStage !== 'idle') return;
+    startFirstRunSetup();
+  }, [firstRunSetup, open, setupStage, startFirstRunSetup]);
+
+  useEffect(() => {
+    if (!open || !setupIsActive) return;
+
+    const messages = (() => {
+      if (setupStage === 'microphone') {
+        return [
+          createSetupMessage('first-run-setup-welcome', t('textChat.setup.welcome')),
+          createSetupMessage('first-run-setup-microphone', t('textChat.setup.microphone')),
+        ];
+      }
+
+      if (setupStage === 'account') {
+        return [
+          createSetupMessage('first-run-setup-about', t('textChat.setup.about')),
+          createSetupMessage('first-run-setup-account', t('textChat.setup.account')),
+        ];
+      }
+
+      if (setupStage === 'account_custom') {
+        return [createSetupMessage('first-run-setup-account-custom', t('textChat.setup.accountCustom'))];
+      }
+
+      if (setupStage === 'balance' && setupAccountDraft) {
+        return [
+          createSetupMessage(
+            'first-run-setup-balance',
+            t('textChat.setup.balance', { account: setupAccountDraft.name }),
+          ),
+        ];
+      }
+
+      if (setupStage === 'balance_custom') {
+        return [createSetupMessage('first-run-setup-balance-custom', t('textChat.setup.balanceCustom'))];
+      }
+
+      if (setupStage === 'done') {
+        return [
+          createSetupMessage('first-run-setup-created', t('textChat.setup.created'), 'success'),
+          createSetupMessage('first-run-setup-tour', t('textChat.setup.tour')),
+        ];
+      }
+
+      return [];
+    })();
+
+    if (!messages.length) return;
+    shouldStickToBottomRef.current = true;
+    setChatMessages((currentMessages) => {
+      const existingIds = new Set(currentMessages.map((message) => message.id));
+      const nextMessages = messages.filter((message) => !existingIds.has(message.id));
+      return nextMessages.length ? [...currentMessages, ...nextMessages] : currentMessages;
+    });
+  }, [open, setChatMessages, setupAccountDraft, setupIsActive, setupStage, t]);
+
+  const handleReceiptClick = useCallback(() => {
+    if (isReceiptUploading) return;
+
+    if (!hasReceiptAccess) {
+      openModal({ type: 'receipt-premium-lock' });
+      return;
+    }
+
+    receiptCameraInputRef.current?.click();
+  }, [hasReceiptAccess, isReceiptUploading, openModal]);
+
+  const handleSetupEnableMicrophone = useCallback(async () => {
+    if (setupStage !== 'microphone' || isSetupBusy) return;
+
+    setIsSetupBusy(true);
+    try {
+      const allowed = await voice.primePermission();
+      setVoicePermissionPrompted(allowed);
+      appendSetupAssistantMessage(
+        allowed ? 'first-run-setup-microphone-ready' : 'first-run-setup-microphone-failed',
+        allowed ? t('textChat.setup.microphoneReady') : t('textChat.setup.microphoneFailed'),
+        allowed ? 'success' : 'error',
+      );
+      finishSetupMicrophone();
+    } catch {
+      setVoicePermissionPrompted(false);
+      appendSetupAssistantMessage('first-run-setup-microphone-failed', t('textChat.setup.microphoneFailed'), 'error');
+      finishSetupMicrophone();
+    } finally {
+      setIsSetupBusy(false);
+    }
+  }, [appendSetupAssistantMessage, finishSetupMicrophone, isSetupBusy, setVoicePermissionPrompted, setupStage, t, voice]);
+
+  const handleSetupSkipMicrophone = useCallback(() => {
+    if (setupStage !== 'microphone') return;
+    appendSetupAssistantMessage('first-run-setup-microphone-skipped', t('textChat.setup.microphoneSkipped'));
+    skipSetupMicrophone();
+  }, [appendSetupAssistantMessage, setupStage, skipSetupMicrophone, t]);
+
+  const handleSetupSelectAccount = useCallback(
+    (draft: FirstRunAccountDraft) => {
+      if (setupStage !== 'account' && setupStage !== 'account_custom') return;
+      setValue('');
+      selectSetupAccount(draft);
+    },
+    [selectSetupAccount, setupStage],
+  );
+
+  const createSetupAccountWithBalance = useCallback(
+    async (balance: number) => {
+      if (!setupAccountDraft || isSetupBusy) return;
+
+      setIsSetupBusy(true);
+      try {
+        const account = await createAccount({
+          name: setupAccountDraft.name,
+          type: setupAccountDraft.type,
+          currency: 'RUB',
+          initialBalance: 0,
+          showInTotalBalance: true,
+        });
+
+        if (!primaryAccountId) setPrimaryAccountId(account.id);
+        if (!incomeAccountId) setIncomeAccountId(account.id);
+
+        if (balance > 0) {
+          await createTransaction({
+            accountId: account.id,
+            amount: balance,
+            type: 'income',
+            title: t('textChat.setup.initialBalanceTitle'),
+            description: t('textChat.setup.initialBalanceDescription'),
+            date: new Date().toISOString(),
+            isAIGenerated: false,
+          });
+        }
+
+        await Promise.all([loadAccounts(true), refreshTransactions()]);
+        markProductTourPending();
+        completeSetupWithAccount(account);
+      } catch {
+        appendSetupAssistantMessage('first-run-setup-create-failed', t('textChat.setup.createFailed'), 'error');
+      } finally {
+        setIsSetupBusy(false);
+      }
+    },
+    [
+      appendSetupAssistantMessage,
+      completeSetupWithAccount,
+      incomeAccountId,
+      isSetupBusy,
+      loadAccounts,
+      primaryAccountId,
+      refreshTransactions,
+      setIncomeAccountId,
+      setPrimaryAccountId,
+      setupAccountDraft,
+      t,
+    ],
+  );
+
+  const handleSetupCustomSubmit = useCallback(
+    async (text: string) => {
+      if (setupStage === 'account_custom') {
+        const name = text.trim();
+        if (!name) return;
+        handleSetupSelectAccount({ name, type: inferFirstRunAccountType(name) });
+        return;
+      }
+
+      if (setupStage === 'balance_custom') {
+        const balance = parseFirstRunBalance(text);
+        if (balance === null) {
+          appendSetupAssistantMessage('first-run-setup-balance-invalid', t('textChat.setup.balanceInvalid'), 'error');
+          return;
+        }
+
+        await createSetupAccountWithBalance(balance);
+      }
+    },
+    [appendSetupAssistantMessage, createSetupAccountWithBalance, handleSetupSelectAccount, setupStage, t],
   );
 
   useEffect(() => {
@@ -608,7 +879,20 @@ export function TextChatOverlay({
 
   const submit = async () => {
     const text = value.trim();
-    if (!text || chat.isSending) return;
+    if (!text || chat.isSending || isSetupBusy) return;
+
+    if (setupIsActive && (setupStage === 'account_custom' || setupStage === 'balance_custom')) {
+      setValue("");
+      await handleSetupCustomSubmit(text);
+      window.setTimeout(() => inputRef.current?.blur(), 40);
+      return;
+    }
+
+    if (setupCloseLocked) {
+      setReceiptHint(t("textChat.setup.chooseButton"));
+      return;
+    }
+
     setValue("");
     await sendText(text, "text");
     window.setTimeout(() => inputRef.current?.blur(), 40);
@@ -626,7 +910,7 @@ export function TextChatOverlay({
 
   return (
     <div
-      className={`text-chat-overlay${isClosing ? ' text-chat-overlay--closing' : ''}`}
+      className={`text-chat-overlay${isClosing ? ' text-chat-overlay--closing' : ''}${setupIsActive ? ' text-chat-overlay--setup' : ''}`}
       aria-hidden={isClosing ? 'true' : undefined}
       data-no-swipe="true"
       data-ai-core-modal="true"
@@ -643,6 +927,10 @@ export function TextChatOverlay({
           statusState={statusState}
           statusText={statusText}
           closeLabel={t("common.close")}
+          receiptLabel={t("textChat.receipt.action")}
+          receiptDisabled={isReceiptUploading}
+          closeDisabled={setupCloseLocked}
+          onReceiptClick={handleReceiptClick}
           onClose={closeOverlay}
           onDragPointerDown={handleDragPointerDown}
           onDragPointerMove={handleDragPointerMove}
@@ -677,6 +965,48 @@ export function TextChatOverlay({
           }
         />
 
+        {setupIsActive ? (
+          <TextChatFirstRunActions
+            stage={setupStage}
+            isBusy={isSetupBusy}
+            enableMicLabel={t("textChat.setup.action.enableMic")}
+            skipLabel={t("textChat.setup.action.skip")}
+            cardLabel={t("textChat.setup.action.card")}
+            cashLabel={t("textChat.setup.action.cash")}
+            customLabel={t("textChat.setup.action.custom")}
+            zeroBalanceLabel={t("textChat.setup.action.zero")}
+            quickBalanceLabel={t("textChat.setup.action.quickBalance")}
+            closeChatLabel={t("textChat.setup.action.closeChat")}
+            customAccountHint={t("textChat.setup.accountCustomHint")}
+            customBalanceHint={t("textChat.setup.balanceCustomHint")}
+            onEnableMic={handleSetupEnableMicrophone}
+            onSkipMic={handleSetupSkipMicrophone}
+            onCard={() => handleSetupSelectAccount({ name: t("textChat.setup.account.cardName"), type: 'card' })}
+            onCash={() => handleSetupSelectAccount({ name: t("textChat.setup.account.cashName"), type: 'cash' })}
+            onCustomAccount={requestCustomSetupAccount}
+            onZeroBalance={() => createSetupAccountWithBalance(0)}
+            onQuickBalance={() => createSetupAccountWithBalance(10000)}
+            onCustomBalance={requestCustomSetupBalance}
+            onCloseChat={closeOverlay}
+          />
+        ) : null}
+
+        <input
+          ref={receiptCameraInputRef}
+          type="file"
+          accept={RECEIPT_CAMERA_ACCEPT_TYPES}
+          capture="environment"
+          className="sr-only"
+          onChange={(event) => void handleReceiptFile(event.target.files?.[0] ?? null)}
+        />
+        <input
+          ref={receiptFileInputRef}
+          type="file"
+          accept={RECEIPT_FILE_ACCEPT_TYPES}
+          className="sr-only"
+          onChange={(event) => void handleReceiptFile(event.target.files?.[0] ?? null)}
+        />
+
         {receiptHint ? (
           <div className="text-chat-overlay__receipt-hint">{receiptHint}</div>
         ) : null}
@@ -695,24 +1025,18 @@ export function TextChatOverlay({
         <TextChatComposer
           value={value}
           inputRef={inputRef}
-          receiptCameraInputRef={receiptCameraInputRef}
-          receiptFileInputRef={receiptFileInputRef}
-          hasReceiptAccess={hasReceiptAccess}
-          isReceiptUploading={isReceiptUploading}
-          isSending={chat.isSending}
+          isSending={chat.isSending || isSetupBusy}
+          inputDisabled={setupIsActive && setupStage !== 'account_custom' && setupStage !== 'balance_custom'}
           voiceState={voice.state}
           isVoicePressed={isVoicePressed}
           isVoiceCancelledBySwipe={voiceCancelledBySwipeRef.current}
-          placeholder={t("textChat.placeholder")}
+          placeholder={setupStage === 'account_custom' ? t('textChat.setup.accountCustomPlaceholder') : setupStage === 'balance_custom' ? t('textChat.setup.balanceCustomPlaceholder') : t("textChat.placeholder")}
           sendLabel={t("textChat.send")}
           voiceLabel={t("textChat.voice.hold")}
-          receiptActionLabel={t("textChat.receipt.action")}
-          receiptCameraLabel={t("textChat.receipt.camera")}
           voiceCancelHint={t("textChat.voice.swipeCancel")}
           voiceCancelledLabel={t("textChat.voice.cancelled")}
           onValueChange={setValue}
           onSubmit={submit}
-          onReceiptFile={handleReceiptFile}
           onVoicePointerDown={handleVoicePointerDown}
           onVoicePointerMove={handleVoicePointerMove}
           onVoicePointerEnd={handleVoicePointerEnd}

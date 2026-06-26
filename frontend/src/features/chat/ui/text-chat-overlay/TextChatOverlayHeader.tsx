@@ -4,6 +4,10 @@ type Props = {
   statusState: string;
   statusText: string;
   closeLabel: string;
+  receiptLabel: string;
+  receiptDisabled?: boolean;
+  closeDisabled?: boolean;
+  onReceiptClick: () => void;
   onClose: () => void;
   onDragPointerDown: (event: PointerEvent<HTMLButtonElement>) => void;
   onDragPointerMove: (event: PointerEvent<HTMLButtonElement>) => void;
@@ -14,6 +18,10 @@ export function TextChatOverlayHeader({
   statusState,
   statusText,
   closeLabel,
+  receiptLabel,
+  receiptDisabled = false,
+  closeDisabled = false,
+  onReceiptClick,
   onClose,
   onDragPointerDown,
   onDragPointerMove,
@@ -25,10 +33,11 @@ export function TextChatOverlayHeader({
         type="button"
         className="text-chat-overlay__handle"
         aria-label={closeLabel}
-        onPointerDown={onDragPointerDown}
-        onPointerMove={onDragPointerMove}
-        onPointerUp={onDragPointerEnd}
-        onPointerCancel={onDragPointerEnd}
+        disabled={closeDisabled}
+        onPointerDown={closeDisabled ? undefined : onDragPointerDown}
+        onPointerMove={closeDisabled ? undefined : onDragPointerMove}
+        onPointerUp={closeDisabled ? undefined : onDragPointerEnd}
+        onPointerCancel={closeDisabled ? undefined : onDragPointerEnd}
       >
         <span />
       </button>
@@ -40,8 +49,18 @@ export function TextChatOverlayHeader({
         <div className="text-chat-overlay__head-actions">
           <button
             type="button"
+            className="app-icon-button text-chat-overlay__head-receipt"
+            onClick={onReceiptClick}
+            disabled={receiptDisabled}
+            aria-label={receiptLabel}
+          >
+            <span aria-hidden="true">▧</span>
+          </button>
+          <button
+            type="button"
             className="app-icon-button"
             onClick={onClose}
+            disabled={closeDisabled}
             aria-label={closeLabel}
           >
             ×

@@ -30,7 +30,7 @@ export function TextChatEmptyState({
   onVoicePointerCancel,
 }: Props) {
   return (
-    <div className="text-chat-overlay__empty">
+    <div className="text-chat-overlay__empty text-chat-overlay__empty--reminder">
       <button
         type="button"
         className={
@@ -48,13 +48,15 @@ export function TextChatEmptyState({
       </button>
       <h3>{title}</h3>
       <p>{caption}</p>
-      <div className="text-chat-overlay__chips">
-        {prompts.map((prompt) => (
-          <button key={prompt} type="button" onClick={() => onPrompt(prompt)}>
-            {prompt}
-          </button>
-        ))}
-      </div>
+      {prompts.length ? (
+        <div className="text-chat-overlay__chips">
+          {prompts.map((prompt) => (
+            <button key={prompt} type="button" onClick={() => onPrompt(prompt)}>
+              {prompt}
+            </button>
+          ))}
+        </div>
+      ) : null}
     </div>
   );
 }
