@@ -179,6 +179,55 @@ export function useVoiceHoldGesture({
     cancelManualRecording('pointer_cancel');
   }, [cancelManualRecording, clearHoldTimer]);
 
+
+  useEffect(() => {
+    const finishFromWindow = () => {
+      const gesture = gestureRef.current;
+      if (gesture.pointerId === null) return;
+      clearHoldTimer();
+
+      if (gesture.cancelled) {
+        resetGesture();
+        return;
+      }
+
+      if (!gesture.started) {
+        resetGesture();
+        if (onTap) onTap();
+        else if (labels.pullForText) showThought(labels.pullForText, 'neutral', 1800);
+        return;
+      }
+
+      if (voiceState === 'recording') {
+        showThought(labels.recognizing, 'neutral', 1800);
+        stopVoice();
+        resetGesture();
+        return;
+      }
+
+      gesture.releaseAfterStart = true;
+    };
+
+    const cancelFromWindow = () => {
+      const gesture = gestureRef.current;
+      if (gesture.pointerId === null && voiceState !== 'recording') return;
+      clearHoldTimer();
+      cancelManualRecording('window_cancel');
+    };
+
+    window.addEventListener('pointerup', finishFromWindow, true);
+    window.addEventListener('pointercancel', cancelFromWindow, true);
+    window.addEventListener('blur', cancelFromWindow);
+    document.addEventListener('visibilitychange', cancelFromWindow);
+
+    return () => {
+      window.removeEventListener('pointerup', finishFromWindow, true);
+      window.removeEventListener('pointercancel', cancelFromWindow, true);
+      window.removeEventListener('blur', cancelFromWindow);
+      document.removeEventListener('visibilitychange', cancelFromWindow);
+    };
+  }, [cancelManualRecording, clearHoldTimer, labels.pullForText, labels.recognizing, onTap, resetGesture, showThought, stopVoice, voiceState]);
+
   useEffect(() => () => {
     clearHoldTimer();
   }, [clearHoldTimer]);

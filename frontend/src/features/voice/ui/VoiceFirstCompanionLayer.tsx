@@ -197,15 +197,19 @@ export function VoiceFirstCompanionLayer() {
         showThought(t('voice.thought.micReady'), 'success', 3200);
       } else {
         setVoicePermissionPrompted(false);
-        showThought(t('voice.thought.micAfterPermission'), 'neutral', 3200);
+        voice.reset?.();
+        resetVoiceMachine();
+        showThought(t('voice.thought.micNeeded'), 'warning', 3600);
       }
     } catch {
       setVoicePermissionPrompted(false);
+      voice.reset?.();
+      resetVoiceMachine();
       showThought(t('voice.thought.micNeeded'), 'warning', 3600);
     } finally {
       setIsPriming(false);
     }
-  }, [setVoicePermissionPrompted, showThought, t, voice]);
+  }, [resetVoiceMachine, setVoicePermissionPrompted, showThought, t, voice]);
 
   const onCancelRecording = useCallback((reason: string, mode: string) => {
     logVoiceDebugEvent('manual_voice_cancelled', { reason, mode, voiceState: voice.state });

@@ -36,6 +36,7 @@ export function useVoiceRecorder({ onText, lang = 'ru-RU', chunkMs = VOICE_RECOR
   const recordingStartedAtRef = useRef(0);
   const startInProgressRef = useRef(false);
   const finalizeTimerRef = useRef<number | null>(null);
+  const startGuardTimerRef = useRef<number | null>(null);
   const cancelledRef = useRef(false);
   const lifecycleBusyRef = useRef(false);
   const manualStopOnlyRef = useRef(false);
@@ -61,6 +62,13 @@ export function useVoiceRecorder({ onText, lang = 'ru-RU', chunkMs = VOICE_RECOR
     if (finalizeTimerRef.current !== null) {
       window.clearTimeout(finalizeTimerRef.current);
       finalizeTimerRef.current = null;
+    }
+  }, []);
+
+  const clearStartGuardTimer = useCallback(() => {
+    if (startGuardTimerRef.current !== null) {
+      window.clearTimeout(startGuardTimerRef.current);
+      startGuardTimerRef.current = null;
     }
   }, []);
 
@@ -187,6 +195,7 @@ export function useVoiceRecorder({ onText, lang = 'ru-RU', chunkMs = VOICE_RECOR
 
   const hardCleanup = useCallback(() => {
     clearFinalizeTimer();
+    clearStartGuardTimer();
     stopVoiceActivityWatcher();
     stopAllStreams();
     mediaRecorderRef.current = null;
@@ -201,7 +210,7 @@ export function useVoiceRecorder({ onText, lang = 'ru-RU', chunkMs = VOICE_RECOR
     cancelAfterStartRef.current = false;
     finalHadVoiceRef.current = false;
     finalPeakRmsRef.current = 0;
-  }, [clearFinalizeTimer, stopAllStreams, stopVoiceActivityWatcher]);
+  }, [clearFinalizeTimer, clearStartGuardTimer, stopAllStreams, stopVoiceActivityWatcher]);
 
   const uploadFinalBlob = useCallback(async (blob: Blob, format: RecorderFormat, hadVoice: boolean, peakRms: number) => {
     if (cancelledRef.current) {
@@ -317,11 +326,7 @@ export function useVoiceRecorder({ onText, lang = 'ru-RU', chunkMs = VOICE_RECOR
     }
 
     try {
-      try {
-        recorder.requestData();
-      } catch {
-        // Some WebViews do not support requestData during stop.
-      }
+      recorder.requestData?.();
       recorder.stop();
     } catch {
       hardCleanup();
@@ -458,6 +463,7 @@ export function useVoiceRecorder({ onText, lang = 'ru-RU', chunkMs = VOICE_RECOR
       };
 
       recorder.onstart = () => {
+        clearStartGuardTimer();
         startInProgressRef.current = false;
         recordingStartedAtRef.current = Date.now();
         logVoiceDebugEvent('recorder_started', {
@@ -544,6 +550,14 @@ export function useVoiceRecorder({ onText, lang = 'ru-RU', chunkMs = VOICE_RECOR
       mediaRecorderRef.current = recorder;
       logVoiceDebugEvent('recorder_start_call', { platform: platformConfig.platform, mimeType: recorderFormat.mimeType, extension: recorderFormat.extension, sessionMs: clampVoiceRecorderSessionMs(chunkMs) });
       recorder.start(250);
+      clearStartGuardTimer();
+      startGuardTimerRef.current = window.setTimeout(() => {
+        if (!startInProgressRef.current || mediaRecorderRef.current !== recorder) return;
+        logVoiceDebugEvent('recorder_start_timeout', { platform: platformConfig.platform, mimeType: recorderFormat.mimeType, extension: recorderFormat.extension });
+        hardCleanup();
+        setError('recording-error');
+        setState('idle');
+      }, 2400);
       return true;
     } catch (err) {
       startInProgressRef.current = false;
@@ -555,7 +569,7 @@ export function useVoiceRecorder({ onText, lang = 'ru-RU', chunkMs = VOICE_RECOR
       hardCleanup();
       return false;
     }
-  }, [chunkMs, ensureStream, finalizeRecording, hardCleanup, isSupported, platformConfig, recorderFormat, startVoiceActivityWatcher, state, uploadFinalBlob, clearFinalizeTimer, stopVoiceActivityWatcher]);
+  }, [chunkMs, ensureStream, finalizeRecording, hardCleanup, isSupported, platformConfig, recorderFormat, startVoiceActivityWatcher, state, uploadFinalBlob, clearFinalizeTimer, clearStartGuardTimer, stopVoiceActivityWatcher]);
 
   const stopRecording = useCallback(() => {
     logVoiceDebugEvent('voice_session_stop_and_send', { state, startInProgress: startInProgressRef.current });
