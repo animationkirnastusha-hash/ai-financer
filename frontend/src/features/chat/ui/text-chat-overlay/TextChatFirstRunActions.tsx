@@ -6,6 +6,7 @@ type Props = {
   enableMicLabel: string;
   skipLabel: string;
   closeChatLabel: string;
+  accountHint: string;
   onEnableMic: () => void | Promise<void>;
   onSkipMic: () => void;
   onCloseChat: () => void;
@@ -17,23 +18,50 @@ export function TextChatFirstRunActions({
   enableMicLabel,
   skipLabel,
   closeChatLabel,
+  accountHint,
   onEnableMic,
   onSkipMic,
   onCloseChat,
 }: Props) {
   if (stage === 'microphone') {
     return (
-      <div className="text-chat-setup-actions" role="group">
-        <button type="button" disabled={isBusy} onClick={() => void onEnableMic()}>{enableMicLabel}</button>
-        <button type="button" disabled={isBusy} className="is-secondary" onClick={onSkipMic}>{skipLabel}</button>
+      <div className="text-chat-setup-panel" role="group" aria-label={enableMicLabel}>
+        <button
+          type="button"
+          className="text-chat-setup-panel__primary"
+          disabled={isBusy}
+          onClick={() => void onEnableMic()}
+        >
+          <span className="text-chat-setup-panel__icon" aria-hidden="true">🎙</span>
+          <span>{enableMicLabel}</span>
+        </button>
+        <button
+          type="button"
+          disabled={isBusy}
+          className="text-chat-setup-panel__secondary"
+          onClick={onSkipMic}
+        >
+          {skipLabel}
+        </button>
       </div>
     );
   }
 
+  if (stage === 'account') {
+    return <div className="text-chat-setup-hint">{accountHint}</div>;
+  }
+
   if (stage === 'done') {
     return (
-      <div className="text-chat-setup-actions" role="group">
-        <button type="button" disabled={isBusy} onClick={onCloseChat}>{closeChatLabel}</button>
+      <div className="text-chat-setup-panel" role="group">
+        <button
+          type="button"
+          className="text-chat-setup-panel__primary"
+          disabled={isBusy}
+          onClick={onCloseChat}
+        >
+          {closeChatLabel}
+        </button>
       </div>
     );
   }

@@ -45,62 +45,64 @@ function createSetupMessage(id: string, text: string, kind: "text" | "success" |
   };
 }
 
-type FirstRunParsedAccount = {
+type ParsedFirstRunAccountCommand = {
   name: string;
   type: "card" | "cash";
   balance: number;
 };
 
-function inferFirstRunAccountType(name: string): FirstRunParsedAccount["type"] {
-  const normalized = name.toLowerCase();
-  return normalized.includes("нал") || normalized.includes("cash") ? "cash" : "card";
+function normalizeFirstRunText(value: string) {
+  return value
+    .trim()
+    .replace(/[«»]/g, '"')
+    .replace(/\s+/g, ' ');
 }
 
-function parseFirstRunAmount(rawValue: string): { amount: number; token: string } | null {
-  const match = rawValue.match(/(?:^|[\s,.:;])(?<amount>\d+(?:[\s,.]\d{3})*(?:[,.]\d+)?|\d+)(?:\s*)(?<suffix>к|k|тыс\.?|тысяч)?(?=$|[\s,.:;!?₽рr])/i);
-  const amountText = match?.groups?.amount;
-  if (!match || !amountText) return null;
+function parseFirstRunAmount(value: string): number | null {
+  const compact = value
+    .trim()
+    .toLowerCase()
+    .replace(/[₽$€]/g, '')
+    .replace(/руб(?:лей|ля|ль|\b)?/g, '')
+    .replace(/rub/g, '')
+    .replace(/,/g, '.')
+    .replace(/\s+/g, '');
 
-  const compact = amountText.replace(/\s/g, "");
-  const decimalText = /[,.]\d{1,2}$/.test(compact)
-    ? compact.replace(",", ".")
-    : compact.replace(/[,.]/g, "");
-  const base = Number(decimalText);
-  if (!Number.isFinite(base) || base < 0) return null;
+  const match = compact.match(/(\d+(?:\.\d+)?)(к|k)?/i);
+  if (!match) return null;
 
-  const suffix = match.groups?.suffix?.toLowerCase() ?? "";
-  const multiplier = suffix ? 1000 : 1;
-  return {
-    amount: Math.round(base * multiplier * 100) / 100,
-    token: match[0],
-  };
+  const amount = Number(match[1]);
+  if (!Number.isFinite(amount) || amount < 0) return null;
+
+  return Math.round(amount * (match[2] ? 1000 : 1) * 100) / 100;
 }
 
-function parseFirstRunAccountCommand(value: string): FirstRunParsedAccount | "missing-account" | "missing-balance" {
-  const source = value.trim();
-  if (!source) return "missing-account";
-
-  const amount = parseFirstRunAmount(source);
-  if (!amount) return "missing-balance";
-
-  const withoutAmount = source.replace(amount.token, " " );
-  const cleaned = withoutAmount
-    .replace(/[«»"']/g, " " )
-    .replace(/[,.!?;:()]/g, " " )
-    .replace(/\b(создай|создать|добавь|добавить|открой|сделай|первый|первую|сч[её]т|аккаунт|баланс|остаток|сейчас|сумма|положи|пополнить|пополнение|доход|туда|на|в|и|рубл(?:ь|я|ей)?|руб|р|₽)\b/gi, " " )
-    .replace(/\b(create|add|open|make|first|account|balance|current|amount|put|top\s*up|income|money|to|on|in|and|rub|rubles|rur)\b/gi, " " )
-    .replace(/\s+/g, " " )
+function cleanFirstRunAccountName(value: string) {
+  return value
+    .replace(/^(создай|добавь|сделай|открой|create|add|make)\s+/i, '')
+    .replace(/^(сч[её]т|account)\s+/i, '')
+    .replace(/\s+(и|and|с|with|положи|пополн[ьи]|баланс|balance|there|туда)\b.*$/i, '')
+    .replace(/\b(на|for)\s*$/i, '')
+    .replace(/[.,;:]+$/g, '')
     .trim();
+}
 
-  let name = cleaned;
-  const lower = source.toLowerCase();
-  if (!name) {
-    if (lower.includes("нал") || lower.includes("cash")) name = lower.includes("cash") ? "Cash" : "Наличные";
-    else if (lower.includes("карт") || lower.includes("card")) name = lower.includes("card") ? "Card" : "Карта";
-  }
+function parseFirstRunAccountCommand(rawText: string): ParsedFirstRunAccountCommand | null {
+  const text = normalizeFirstRunText(rawText);
+  if (!text) return null;
 
-  if (!name) return "missing-account";
-  return { name: name.slice(0, 48), type: inferFirstRunAccountType(name), balance: amount.amount };
+  const quotedName = text.match(/["“”]([^"“”]{2,40})["“”]/)?.[1];
+  const accountMatch = text.match(/(?:сч[её]т|account)\s+([^.,;]+?)(?=\s+(?:и|and|с|with|положи|пополн[ьи]|баланс|balance|туда|there)\b|$)/i);
+  const quickName = text.match(/^(карта|наличные|кэш|cash|card)(?:\b|\s)/i)?.[1];
+  const name = cleanFirstRunAccountName(quotedName ?? accountMatch?.[1] ?? quickName ?? text);
+  const lowerName = name.toLowerCase();
+
+  if (!name || name.length > 40) return null;
+
+  const balance = parseFirstRunAmount(text) ?? 0;
+  const type = lowerName.includes('нал') || lowerName.includes('cash') || lowerName.includes('кэш') ? 'cash' : 'card';
+
+  return { name, type, balance };
 }
 
 type TextChatOverlayProps = {
@@ -155,7 +157,9 @@ export function TextChatOverlay({
   const [shouldRender, setShouldRender] = useState(open);
   const [isClosing, setIsClosing] = useState(false);
   const [isSetupBusy, setIsSetupBusy] = useState(false);
-  const setupVoiceTextHandlerRef = useRef<(text: string) => Promise<boolean>>(async () => false);
+  const [overlayHint, setOverlayHint] = useState<string | null>(null);
+  const firstRunAccountCommandHandlerRef = useRef<((text: string, source: "text" | "voice") => Promise<void>) | null>(null);
+  const setupMessageTimersRef = useRef<number[]>([]);
 
   const chat = useChatController();
   const appendChatMessage = useChatStore((state) => state.appendMessage);
@@ -205,6 +209,7 @@ export function TextChatOverlay({
 
   const hasBlockingConfirmation = inlinePendingActions.length > 0;
 
+
   const sendText = useCallback(
     async (text: string, source: "text" | "voice" = "text") => {
       const clean = text.trim();
@@ -238,6 +243,43 @@ export function TextChatOverlay({
     return () => window.clearTimeout(timer);
   }, [open, shouldRender]);
 
+  useEffect(() => {
+    if (!shouldRender) return;
+
+    const body = document.body;
+    const html = document.documentElement;
+    const scrollY = window.scrollY;
+    const previousBodyPosition = body.style.position;
+    const previousBodyTop = body.style.top;
+    const previousBodyLeft = body.style.left;
+    const previousBodyRight = body.style.right;
+    const previousBodyWidth = body.style.width;
+    const previousBodyOverflow = body.style.overflow;
+    const previousHtmlOverflow = html.style.overflow;
+    const previousHtmlOverscroll = html.style.overscrollBehavior;
+
+    body.style.position = 'fixed';
+    body.style.top = `-${scrollY}px`;
+    body.style.left = '0';
+    body.style.right = '0';
+    body.style.width = '100%';
+    body.style.overflow = 'hidden';
+    html.style.overflow = 'hidden';
+    html.style.overscrollBehavior = 'none';
+
+    return () => {
+      body.style.position = previousBodyPosition;
+      body.style.top = previousBodyTop;
+      body.style.left = previousBodyLeft;
+      body.style.right = previousBodyRight;
+      body.style.width = previousBodyWidth;
+      body.style.overflow = previousBodyOverflow;
+      html.style.overflow = previousHtmlOverflow;
+      html.style.overscrollBehavior = previousHtmlOverscroll;
+      window.scrollTo(0, scrollY);
+    };
+  }, [shouldRender]);
+
   const voice = useVoiceInput({
     lang: appLanguage === "en" ? "en-US" : "ru-RU",
     sessionMs: VOICE_MANUAL_SESSION_MS,
@@ -248,8 +290,9 @@ export function TextChatOverlay({
         setVoiceHint(t("textChat.voice.notHeard"));
         return;
       }
-      const handledBySetup = await setupVoiceTextHandlerRef.current(text);
-      if (handledBySetup) {
+      if (setupIsActive && setupStage === 'account') {
+        setVoiceHint(t("textChat.voice.thinking"));
+        await firstRunAccountCommandHandlerRef.current?.(text, "voice");
         setVoiceHint(null);
         return;
       }
@@ -423,7 +466,7 @@ export function TextChatOverlay({
       voiceStopAfterStartRef.current = true;
       stopVoiceAndSend();
     },
-    [stopVoiceAndSend, voice.state],
+    [stopVoiceAndSend],
   );
 
   const handleVoicePointerCancel = useCallback(
@@ -438,46 +481,37 @@ export function TextChatOverlay({
   );
 
   useEffect(() => {
-    if (voice.state === "recording") return;
-    if (!voicePressActiveRef.current && !isVoicePressed) return;
-    voicePointerIdRef.current = null;
-    voicePressActiveRef.current = false;
-    voiceStopAfterStartRef.current = false;
-    voiceCancelledBySwipeRef.current = false;
-    setIsVoicePressed(false);
-  }, [isVoicePressed, voice.state]);
+    if (!isVoicePressed) return;
 
-  useEffect(() => {
-    if (!open) return;
-
-    const finishLostVoicePointer = () => {
-      if (!voicePressActiveRef.current) return;
+    const stopFromWindow = (event: globalThis.PointerEvent) => {
+      if (voicePointerIdRef.current !== null && event.pointerId !== voicePointerIdRef.current) return;
       voicePointerIdRef.current = null;
       voicePressActiveRef.current = false;
       if (voiceCancelledBySwipeRef.current) {
         voiceCancelledBySwipeRef.current = false;
+        cancelVoice(t("textChat.voice.cancelled"));
         return;
       }
       stopVoiceAndSend();
     };
 
-    const cancelLostVoicePointer = () => {
-      if (!voicePressActiveRef.current) return;
+    const cancelFromWindow = () => {
       voicePointerIdRef.current = null;
       voicePressActiveRef.current = false;
       voiceCancelledBySwipeRef.current = false;
       cancelVoice(t("textChat.voice.cancelled"));
     };
 
-    window.addEventListener('pointerup', finishLostVoicePointer);
-    window.addEventListener('pointercancel', cancelLostVoicePointer);
-    window.addEventListener('blur', cancelLostVoicePointer);
+    window.addEventListener('pointerup', stopFromWindow, true);
+    window.addEventListener('pointercancel', cancelFromWindow, true);
+    window.addEventListener('blur', cancelFromWindow);
+
     return () => {
-      window.removeEventListener('pointerup', finishLostVoicePointer);
-      window.removeEventListener('pointercancel', cancelLostVoicePointer);
-      window.removeEventListener('blur', cancelLostVoicePointer);
+      window.removeEventListener('pointerup', stopFromWindow, true);
+      window.removeEventListener('pointercancel', cancelFromWindow, true);
+      window.removeEventListener('blur', cancelFromWindow);
     };
-  }, [cancelVoice, open, stopVoiceAndSend, t]);
+  }, [cancelVoice, isVoicePressed, stopVoiceAndSend, t]);
 
   useEffect(() => {
     if (!open) return;
@@ -494,6 +528,7 @@ export function TextChatOverlay({
     window.addEventListener('ai-financer:navigation-completed', handleNavigationCompleted);
     return () => window.removeEventListener('ai-financer:navigation-completed', handleNavigationCompleted);
   }, [onClose, open]);
+
 
   useEffect(() => {
     if (!open) return;
@@ -633,7 +668,7 @@ export function TextChatOverlay({
 
   const closeOverlay = useCallback(() => {
     if (setupCloseLocked) {
-      setVoiceHint(t("textChat.setup.closeLocked"));
+      setOverlayHint(t("textChat.setup.closeLocked"));
       return;
     }
 
@@ -692,51 +727,37 @@ export function TextChatOverlay({
   }, [firstRunSetup, open, setupStage, startFirstRunSetup]);
 
   useEffect(() => {
+    setupMessageTimersRef.current.forEach((timer) => window.clearTimeout(timer));
+    setupMessageTimersRef.current = [];
+
     if (!open || !setupIsActive) return;
 
-    const timers: number[] = [];
-    const schedule = (
-      delay: number,
-      id: string,
-      text: string,
-      kind: "text" | "success" | "error" = "text",
-    ) => {
-      timers.push(window.setTimeout(() => appendSetupAssistantMessage(id, text, kind), delay));
+    const scheduleMessage = (delayMs: number, id: string, text: string, kind: "text" | "success" | "error" = "text") => {
+      const timer = window.setTimeout(() => appendSetupAssistantMessage(id, text, kind), delayMs);
+      setupMessageTimersRef.current.push(timer);
     };
 
     if (setupStage === 'microphone') {
-      schedule(0, 'first-run-setup-welcome', t('textChat.setup.welcome'));
-      schedule(1300, 'first-run-setup-about', t('textChat.setup.about'));
-      schedule(2800, 'first-run-setup-microphone', t('textChat.setup.microphone'));
-      return () => timers.forEach((timer) => window.clearTimeout(timer));
+      scheduleMessage(180, 'first-run-setup-welcome', t('textChat.setup.welcome'));
+      scheduleMessage(1250, 'first-run-setup-about', t('textChat.setup.about'));
+      scheduleMessage(2350, 'first-run-setup-microphone', t('textChat.setup.microphone'));
     }
 
     if (setupStage === 'account') {
-      const messages = useChatStore.getState().messages;
-      const hasSetupContext = messages.some((message) =>
-        message.id === 'first-run-setup-welcome' ||
-        message.id === 'first-run-setup-about' ||
-        message.id === 'first-run-setup-microphone' ||
-        message.id === 'first-run-setup-microphone-ready' ||
-        message.id === 'first-run-setup-microphone-skipped' ||
-        message.id === 'first-run-setup-account',
-      );
-
-      if (!hasSetupContext) {
-        schedule(0, 'first-run-setup-welcome', t('textChat.setup.welcome'));
-        schedule(1300, 'first-run-setup-about', t('textChat.setup.about'));
-        schedule(2800, 'first-run-setup-account', t('textChat.setup.account'));
-      }
-      return () => timers.forEach((timer) => window.clearTimeout(timer));
+      scheduleMessage(700, 'first-run-setup-account', t('textChat.setup.account'));
     }
 
     if (setupStage === 'done') {
-      schedule(0, 'first-run-setup-created', t('textChat.setup.created'), 'success');
-      schedule(900, 'first-run-setup-tour', t('textChat.setup.tour'));
+      scheduleMessage(220, 'first-run-setup-created', t('textChat.setup.created'), 'success');
+      scheduleMessage(1050, 'first-run-setup-tour', t('textChat.setup.tour'));
     }
 
-    return () => timers.forEach((timer) => window.clearTimeout(timer));
+    return () => {
+      setupMessageTimersRef.current.forEach((timer) => window.clearTimeout(timer));
+      setupMessageTimersRef.current = [];
+    };
   }, [appendSetupAssistantMessage, open, setupIsActive, setupStage, t]);
+
 
   const handleSetupEnableMicrophone = useCallback(async () => {
     if (setupStage !== 'microphone' || isSetupBusy) return;
@@ -750,11 +771,11 @@ export function TextChatOverlay({
         allowed ? t('textChat.setup.microphoneReady') : t('textChat.setup.microphoneFailed'),
         allowed ? 'success' : 'error',
       );
-      window.setTimeout(finishSetupMicrophone, 800);
+      finishSetupMicrophone();
     } catch {
       setVoicePermissionPrompted(false);
       appendSetupAssistantMessage('first-run-setup-microphone-failed', t('textChat.setup.microphoneFailed'), 'error');
-      window.setTimeout(finishSetupMicrophone, 800);
+      finishSetupMicrophone();
     } finally {
       setIsSetupBusy(false);
     }
@@ -763,25 +784,26 @@ export function TextChatOverlay({
   const handleSetupSkipMicrophone = useCallback(() => {
     if (setupStage !== 'microphone') return;
     appendSetupAssistantMessage('first-run-setup-microphone-skipped', t('textChat.setup.microphoneSkipped'));
-    window.setTimeout(skipSetupMicrophone, 800);
+    skipSetupMicrophone();
   }, [appendSetupAssistantMessage, setupStage, skipSetupMicrophone, t]);
 
-  const createSetupAccountFromText = useCallback(
-    async (text: string) => {
-      if (setupStage !== 'account' || isSetupBusy) return false;
+  const createFirstRunAccountFromCommand = useCallback(
+    async (rawText: string, source: "text" | "voice") => {
+      if (setupStage !== 'account' || isSetupBusy) return;
 
-      const parsed = parseFirstRunAccountCommand(text);
-      if (parsed === 'missing-account') {
-        appendSetupAssistantMessage(`first-run-setup-account-missing-${Date.now()}`, t('textChat.setup.accountNeedName'), 'error');
-        return true;
-      }
-      if (parsed === 'missing-balance') {
-        appendSetupAssistantMessage(`first-run-setup-balance-missing-${Date.now()}`, t('textChat.setup.accountNeedBalance'), 'error');
-        return true;
+      const parsed = parseFirstRunAccountCommand(rawText);
+      if (!parsed) {
+        appendSetupAssistantMessage(
+          `first-run-setup-account-invalid-${Date.now()}`,
+          t('textChat.setup.accountInvalid'),
+          'error',
+        );
+        return;
       }
 
       setIsSetupBusy(true);
       try {
+        if (source === 'voice') lastVoiceSendAtRef.current = Date.now();
         const account = await createAccount({
           name: parsed.name,
           type: parsed.type,
@@ -813,8 +835,6 @@ export function TextChatOverlay({
       } finally {
         setIsSetupBusy(false);
       }
-
-      return true;
     },
     [
       appendSetupAssistantMessage,
@@ -832,8 +852,13 @@ export function TextChatOverlay({
   );
 
   useEffect(() => {
-    setupVoiceTextHandlerRef.current = createSetupAccountFromText;
-  }, [createSetupAccountFromText]);
+    firstRunAccountCommandHandlerRef.current = createFirstRunAccountFromCommand;
+    return () => {
+      if (firstRunAccountCommandHandlerRef.current === createFirstRunAccountFromCommand) {
+        firstRunAccountCommandHandlerRef.current = null;
+      }
+    };
+  }, [createFirstRunAccountFromCommand]);
 
   useEffect(() => {
     if (!voice.error) return;
@@ -851,7 +876,7 @@ export function TextChatOverlay({
       return;
     }
 
-    setVoiceHint(voice.error === 'no-speech' ? t('textChat.voice.notHeard') : t('textChat.voice.startFailed'));
+    setVoiceHint(t('textChat.voice.startFailed'));
     voice.reset?.();
   }, [setVoicePermissionPrompted, t, voice, voice.error]);
 
@@ -876,13 +901,13 @@ export function TextChatOverlay({
 
     if (setupIsActive && setupStage === 'account') {
       setValue("");
-      await createSetupAccountFromText(text);
+      await createFirstRunAccountFromCommand(text, "text");
       window.setTimeout(() => inputRef.current?.blur(), 40);
       return;
     }
 
     if (setupCloseLocked) {
-      setVoiceHint(t("textChat.setup.closeLocked"));
+      setOverlayHint(t("textChat.setup.closeLocked"));
       return;
     }
 
@@ -962,10 +987,15 @@ export function TextChatOverlay({
             enableMicLabel={t("textChat.setup.action.enableMic")}
             skipLabel={t("textChat.setup.action.skip")}
             closeChatLabel={t("textChat.setup.action.closeChat")}
+            accountHint={t("textChat.setup.accountHint")}
             onEnableMic={handleSetupEnableMicrophone}
             onSkipMic={handleSetupSkipMicrophone}
             onCloseChat={closeOverlay}
           />
+        ) : null}
+
+        {overlayHint ? (
+          <div className="text-chat-overlay__receipt-hint">{overlayHint}</div>
         ) : null}
 
         {showJumpToBottom ? (
@@ -983,11 +1013,11 @@ export function TextChatOverlay({
           value={value}
           inputRef={inputRef}
           isSending={chat.isSending || isSetupBusy}
-          inputDisabled={setupIsActive && setupStage !== 'account'}
+          inputDisabled={setupIsActive && setupStage === 'microphone'}
           voiceState={voice.state}
           isVoicePressed={isVoicePressed}
           isVoiceCancelledBySwipe={voiceCancelledBySwipeRef.current}
-          placeholder={setupStage === 'account' ? t('textChat.setup.accountPlaceholder') : t("textChat.placeholder")}
+          placeholder={setupIsActive && setupStage === 'account' ? t('textChat.setup.accountPlaceholder') : t("textChat.placeholder")}
           sendLabel={t("textChat.send")}
           voiceLabel={t("textChat.voice.hold")}
           voiceCancelHint={t("textChat.voice.swipeCancel")}

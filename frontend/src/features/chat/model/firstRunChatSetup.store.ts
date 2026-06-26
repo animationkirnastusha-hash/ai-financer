@@ -3,6 +3,12 @@ import type { AccountDto } from '@/features/accounts/api/accounts.api';
 
 export type FirstRunSetupStage = 'idle' | 'microphone' | 'account' | 'done';
 
+export type FirstRunAccountDraft = {
+  name: string;
+  type: 'card' | 'cash';
+  balance: number;
+};
+
 type PersistedSetupState = {
   stage?: FirstRunSetupStage;
   completed?: boolean;
@@ -10,6 +16,7 @@ type PersistedSetupState = {
 
 type FirstRunChatSetupState = {
   stage: FirstRunSetupStage;
+  accountDraft: FirstRunAccountDraft | null;
   createdAccount: AccountDto | null;
   completed: boolean;
   isActive: boolean;
@@ -22,7 +29,7 @@ type FirstRunChatSetupState = {
   reset: () => void;
 };
 
-export const FIRST_RUN_CHAT_SETUP_STORAGE_KEY = 'ai-financer-first-run-chat-setup:v2';
+export const FIRST_RUN_CHAT_SETUP_STORAGE_KEY = 'ai-financer-first-run-chat-setup:v3';
 
 function readPersisted(): PersistedSetupState {
   try {
@@ -35,17 +42,14 @@ function readPersisted(): PersistedSetupState {
   }
 }
 
-function normalizeStage(stage: PersistedSetupState['stage']): FirstRunSetupStage {
-  if (stage === 'microphone' || stage === 'account' || stage === 'done') return stage;
-  return 'idle';
-}
-
 function persist(state: PersistedSetupState) {
   localStorage.setItem(FIRST_RUN_CHAT_SETUP_STORAGE_KEY, JSON.stringify(state));
 }
 
 function clearPersisted() {
   localStorage.removeItem(FIRST_RUN_CHAT_SETUP_STORAGE_KEY);
+  localStorage.removeItem('ai-financer-first-run-chat-setup:v1');
+  localStorage.removeItem('ai-financer-first-run-chat-setup:v2');
 }
 
 function isBlockingStage(stage: FirstRunSetupStage) {
@@ -54,19 +58,23 @@ function isBlockingStage(stage: FirstRunSetupStage) {
 
 export const useFirstRunChatSetupStore = create<FirstRunChatSetupState>((set) => {
   const persisted = readPersisted();
-  const initialStage = persisted.completed ? 'done' : normalizeStage(persisted.stage);
+  const initialStage = persisted.completed ? 'done' : persisted.stage ?? 'idle';
 
   return {
     stage: initialStage,
+    accountDraft: null,
     createdAccount: null,
     completed: Boolean(persisted.completed),
     isActive: initialStage !== 'idle' && !persisted.completed,
     closeLocked: isBlockingStage(initialStage),
 
     start: () => {
+      localStorage.removeItem('ai-financer-first-run-chat-setup:v1');
+      localStorage.removeItem('ai-financer-first-run-chat-setup:v2');
       persist({ stage: 'microphone', completed: false });
       set({
         stage: 'microphone',
+        accountDraft: null,
         createdAccount: null,
         completed: false,
         isActive: true,
@@ -103,6 +111,7 @@ export const useFirstRunChatSetupStore = create<FirstRunChatSetupState>((set) =>
       clearPersisted();
       set({
         stage: 'idle',
+        accountDraft: null,
         createdAccount: null,
         completed: false,
         isActive: false,

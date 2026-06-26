@@ -1,37 +1,39 @@
-/* First-run chat setup. */
+/* First-run chat setup panel. */
 .text-chat-overlay__handle:disabled {
   cursor: default;
   opacity: 0.32;
 }
 
 .text-chat-overlay--setup .text-chat-overlay__messages {
-  padding-bottom: 158px;
+  padding-bottom: 210px;
 }
 
-.text-chat-setup-actions {
+.text-chat-setup-panel,
+.text-chat-setup-hint {
   position: absolute;
   left: 14px;
   right: 14px;
   bottom: calc(env(safe-area-inset-bottom) + 86px);
   z-index: 4;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
   border: 1px solid rgba(255, 255, 255, 0.10);
   border-radius: 24px;
-  background: rgba(7, 12, 18, 0.82);
+  background: rgba(7, 12, 18, 0.84);
   box-shadow: 0 18px 54px rgba(0, 0, 0, 0.28);
-  padding: 10px;
   -webkit-backdrop-filter: blur(18px);
   backdrop-filter: blur(18px);
 }
 
-.text-chat-setup-actions button {
-  min-height: 42px;
-  flex: 1 1 112px;
-  border: 1px solid rgba(52, 211, 153, 0.26);
+.text-chat-setup-panel {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  padding: 10px;
+}
+
+.text-chat-setup-panel button {
+  min-height: 46px;
+  border: 1px solid rgba(255, 255, 255, 0.10);
   border-radius: 18px;
-  background: rgba(52, 211, 153, 0.15);
   color: rgba(236, 253, 245, 0.96);
   font-size: 13px;
   font-weight: 760;
@@ -39,14 +41,39 @@
   padding: 10px 12px;
 }
 
-.text-chat-setup-actions button.is-secondary {
-  border-color: rgba(255, 255, 255, 0.10);
-  background: rgba(255, 255, 255, 0.065);
-  color: rgba(255, 255, 255, 0.82);
+.text-chat-setup-panel__primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: linear-gradient(135deg, rgba(52, 211, 153, 0.28), rgba(16, 185, 129, 0.16));
+  border-color: rgba(52, 211, 153, 0.28) !important;
 }
 
-.text-chat-setup-actions button:disabled {
+.text-chat-setup-panel__secondary {
+  background: rgba(255, 255, 255, 0.065);
+  color: rgba(255, 255, 255, 0.78) !important;
+}
+
+.text-chat-setup-panel__icon {
+  display: inline-grid;
+  width: 24px;
+  height: 24px;
+  place-items: center;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  font-size: 14px;
+}
+
+.text-chat-setup-panel button:disabled {
   opacity: 0.46;
+}
+
+.text-chat-setup-hint {
+  padding: 13px 14px;
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 13px;
+  line-height: 1.42;
 }
 
 .text-chat-overlay__empty--reminder .text-chat-overlay__chips {
@@ -54,12 +81,7 @@
 }
 
 @media (max-width: 380px) {
-  .text-chat-setup-actions {
-    gap: 7px;
-  }
-
-  .text-chat-setup-actions button {
-    flex-basis: 96px;
-    padding-inline: 10px;
+  .text-chat-setup-panel {
+    grid-template-columns: 1fr;
   }
 }

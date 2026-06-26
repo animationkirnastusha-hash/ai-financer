@@ -40,15 +40,17 @@ export function TextChatOverlayHeader({
           <span className="text-chat-overlay__dot" />
           <span>{statusText}</span>
         </div>
-        <button
-          type="button"
-          className="app-icon-button"
-          onClick={onClose}
-          disabled={closeDisabled}
-          aria-label={closeLabel}
-        >
-          ×
-        </button>
+        <div className="text-chat-overlay__head-actions">
+          <button
+            type="button"
+            className="app-icon-button"
+            onClick={onClose}
+            disabled={closeDisabled}
+            aria-label={closeLabel}
+          >
+            ×
+          </button>
+        </div>
       </header>
     </>
   );
