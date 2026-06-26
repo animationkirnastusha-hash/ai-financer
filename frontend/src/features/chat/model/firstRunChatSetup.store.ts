@@ -22,7 +22,7 @@ type FirstRunChatSetupState = {
   reset: () => void;
 };
 
-export const FIRST_RUN_CHAT_SETUP_STORAGE_KEY = 'ai-financer-first-run-chat-setup:v1';
+export const FIRST_RUN_CHAT_SETUP_STORAGE_KEY = 'ai-financer-first-run-chat-setup:v2';
 
 function readPersisted(): PersistedSetupState {
   try {

@@ -1,35 +1,4 @@
-/* First-run chat setup and header receipt entry. */
-.text-chat-overlay__head-receipt {
-  width: auto;
-  min-width: 74px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0 10px;
-  gap: 6px;
-  border-radius: 999px;
-}
-
-.text-chat-overlay__head-receipt-icon {
-  display: block;
-  transform: translateY(-1px);
-  font-size: 14px;
-  line-height: 1;
-}
-
-.text-chat-overlay__head-receipt-text {
-  display: block;
-  font-size: 12px;
-  font-weight: 760;
-  line-height: 1;
-  letter-spacing: -0.01em;
-}
-
-.text-chat-overlay__head-actions .app-icon-button:disabled {
-  opacity: 0.38;
-  transform: none;
-}
-
+/* First-run chat setup. */
 .text-chat-overlay__handle:disabled {
   cursor: default;
   opacity: 0.32;

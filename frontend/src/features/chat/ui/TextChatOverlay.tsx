@@ -14,11 +14,7 @@ import { useChatController } from "@/features/chat/model/useChatController";
 import { useChatStore } from "@/features/chat/model/chat.store";
 import { useFirstRunChatSetupStore } from "@/features/chat/model/firstRunChatSetup.store";
 import { useSettingsStore } from "@/features/settings/model/settings.store";
-import { useAppModalStore } from "@/features/modals/model/appModal.store";
 import { markProductTourPending } from "@/features/product-tour/model/productTourPending.store";
-import { useReceiptScansStore } from "@/features/receipt-scans/model/receiptScans.store";
-import { getReceiptUploadIssueKey } from "@/features/receipt-scans/lib/receiptUploadGuards";
-import { useSubscriptionStore } from "@/features/subscription/model/subscription.store";
 import { createTransaction } from "@/features/transactions/api/transactions.api";
 import { useTransactionsStore } from "@/features/transactions/model/transactions.store";
 import { useVoiceInput } from "@/features/voice/model/useVoiceInput";
@@ -27,8 +23,6 @@ import { shouldIgnoreVoiceCommand } from "@/features/voice/model/voiceText";
 import { useI18n } from "@/shared/lib/i18n";
 import {
   OVERLAY_DISMISS_DRAG_PX,
-  RECEIPT_CAMERA_ACCEPT_TYPES,
-  RECEIPT_FILE_ACCEPT_TYPES,
   SCROLL_BOTTOM_THRESHOLD_PX,
 } from "@/features/chat/ui/text-chat-overlay/constants";
 import {
@@ -160,22 +154,14 @@ export function TextChatOverlay({
   const [dragOffset, setDragOffset] = useState(0);
   const [shouldRender, setShouldRender] = useState(open);
   const [isClosing, setIsClosing] = useState(false);
-  const receiptCameraInputRef = useRef<HTMLInputElement | null>(null);
-  const receiptFileInputRef = useRef<HTMLInputElement | null>(null);
-  const [receiptHint, setReceiptHint] = useState<string | null>(null);
   const [isSetupBusy, setIsSetupBusy] = useState(false);
   const setupVoiceTextHandlerRef = useRef<(text: string) => Promise<boolean>>(async () => false);
 
   const chat = useChatController();
   const appendChatMessage = useChatStore((state) => state.appendMessage);
   const setChatMessages = useChatStore((state) => state.setMessages);
-  const openModal = useAppModalStore((state) => state.openModal);
   const loadAccounts = useAccountsStore((state) => state.loadAccounts);
   const refreshTransactions = useTransactionsStore((state) => state.refreshDashboard);
-  const subscription = useSubscriptionStore((state) => state.status);
-  const loadSubscription = useSubscriptionStore((state) => state.load);
-  const uploadReceipt = useReceiptScansStore((state) => state.upload);
-  const isReceiptUploading = useReceiptScansStore((state) => state.isUploading);
   const setupStage = useFirstRunChatSetupStore((state) => state.stage);
   const setupIsActive = useFirstRunChatSetupStore((state) => state.isActive);
   const setupCloseLocked = useFirstRunChatSetupStore((state) => state.closeLocked);
@@ -218,12 +204,6 @@ export function TextChatOverlay({
   );
 
   const hasBlockingConfirmation = inlinePendingActions.length > 0;
-
-  const hasReceiptAccess = Boolean(
-    subscription?.access?.hasPremium ||
-    subscription?.access?.hasBusiness ||
-    subscription?.features?.receiptScan,
-  );
 
   const sendText = useCallback(
     async (text: string, source: "text" | "voice" = "text") => {
@@ -516,11 +496,6 @@ export function TextChatOverlay({
   }, [onClose, open]);
 
   useEffect(() => {
-    if (!open || subscription) return;
-    void loadSubscription();
-  }, [loadSubscription, open, subscription]);
-
-  useEffect(() => {
     if (!open) return;
     const text = initialAssistantMessage?.trim();
     if (!text) return;
@@ -658,7 +633,7 @@ export function TextChatOverlay({
 
   const closeOverlay = useCallback(() => {
     if (setupCloseLocked) {
-      setReceiptHint(t("textChat.setup.closeLocked"));
+      setVoiceHint(t("textChat.setup.closeLocked"));
       return;
     }
 
@@ -700,29 +675,6 @@ export function TextChatOverlay({
     setDragOffset(0);
   }, [closeOverlay, dragOffset, setupCloseLocked]);
 
-  const handleReceiptFile = useCallback(
-    async (file: File | null) => {
-      if (!hasReceiptAccess || isReceiptUploading) return;
-
-      const issueKey = getReceiptUploadIssueKey(file);
-      if (issueKey) {
-        setReceiptHint(t(issueKey));
-        if (receiptCameraInputRef.current) receiptCameraInputRef.current.value = "";
-        if (receiptFileInputRef.current) receiptFileInputRef.current.value = "";
-        return;
-      }
-
-      setReceiptHint(t("textChat.receipt.uploading"));
-      const scan = await uploadReceipt(file as File);
-      const uploadError = useReceiptScansStore.getState().error;
-      setReceiptHint(scan ? t("textChat.receipt.success") : t(uploadError || "receipts.upload.failed"));
-      if (receiptCameraInputRef.current) receiptCameraInputRef.current.value = "";
-      if (receiptFileInputRef.current) receiptFileInputRef.current.value = "";
-    },
-    [hasReceiptAccess, isReceiptUploading, t, uploadReceipt],
-  );
-
-
   const appendSetupAssistantMessage = useCallback(
     (id: string, text: string, kind: "text" | "success" | "error" = "text") => {
       shouldStickToBottomRef.current = true;
@@ -743,44 +695,48 @@ export function TextChatOverlay({
     if (!open || !setupIsActive) return;
 
     const timers: number[] = [];
-    const schedule = (delay: number, id: string, text: string, kind: "text" | "success" | "error" = "text") => {
+    const schedule = (
+      delay: number,
+      id: string,
+      text: string,
+      kind: "text" | "success" | "error" = "text",
+    ) => {
       timers.push(window.setTimeout(() => appendSetupAssistantMessage(id, text, kind), delay));
     };
 
     if (setupStage === 'microphone') {
       schedule(0, 'first-run-setup-welcome', t('textChat.setup.welcome'));
-      schedule(720, 'first-run-setup-microphone', t('textChat.setup.microphone'));
+      schedule(1300, 'first-run-setup-about', t('textChat.setup.about'));
+      schedule(2800, 'first-run-setup-microphone', t('textChat.setup.microphone'));
+      return () => timers.forEach((timer) => window.clearTimeout(timer));
     }
 
     if (setupStage === 'account') {
-      const hasAccountPrompt = useChatStore.getState().messages.some((message) =>
-        message.id === 'first-run-setup-account' ||
+      const messages = useChatStore.getState().messages;
+      const hasSetupContext = messages.some((message) =>
+        message.id === 'first-run-setup-welcome' ||
+        message.id === 'first-run-setup-about' ||
+        message.id === 'first-run-setup-microphone' ||
         message.id === 'first-run-setup-microphone-ready' ||
-        message.id === 'first-run-setup-microphone-skipped',
+        message.id === 'first-run-setup-microphone-skipped' ||
+        message.id === 'first-run-setup-account',
       );
-      if (!hasAccountPrompt) {
-        schedule(0, 'first-run-setup-account', t('textChat.setup.account'));
+
+      if (!hasSetupContext) {
+        schedule(0, 'first-run-setup-welcome', t('textChat.setup.welcome'));
+        schedule(1300, 'first-run-setup-about', t('textChat.setup.about'));
+        schedule(2800, 'first-run-setup-account', t('textChat.setup.account'));
       }
+      return () => timers.forEach((timer) => window.clearTimeout(timer));
     }
 
     if (setupStage === 'done') {
       schedule(0, 'first-run-setup-created', t('textChat.setup.created'), 'success');
-      schedule(680, 'first-run-setup-tour', t('textChat.setup.tour'));
+      schedule(900, 'first-run-setup-tour', t('textChat.setup.tour'));
     }
 
     return () => timers.forEach((timer) => window.clearTimeout(timer));
   }, [appendSetupAssistantMessage, open, setupIsActive, setupStage, t]);
-
-  const handleReceiptClick = useCallback(() => {
-    if (isReceiptUploading) return;
-
-    if (!hasReceiptAccess) {
-      openModal({ type: 'receipt-premium-lock' });
-      return;
-    }
-
-    receiptCameraInputRef.current?.click();
-  }, [hasReceiptAccess, isReceiptUploading, openModal]);
 
   const handleSetupEnableMicrophone = useCallback(async () => {
     if (setupStage !== 'microphone' || isSetupBusy) return;
@@ -794,11 +750,11 @@ export function TextChatOverlay({
         allowed ? t('textChat.setup.microphoneReady') : t('textChat.setup.microphoneFailed'),
         allowed ? 'success' : 'error',
       );
-      window.setTimeout(finishSetupMicrophone, 420);
+      window.setTimeout(finishSetupMicrophone, 800);
     } catch {
       setVoicePermissionPrompted(false);
       appendSetupAssistantMessage('first-run-setup-microphone-failed', t('textChat.setup.microphoneFailed'), 'error');
-      window.setTimeout(finishSetupMicrophone, 420);
+      window.setTimeout(finishSetupMicrophone, 800);
     } finally {
       setIsSetupBusy(false);
     }
@@ -807,7 +763,7 @@ export function TextChatOverlay({
   const handleSetupSkipMicrophone = useCallback(() => {
     if (setupStage !== 'microphone') return;
     appendSetupAssistantMessage('first-run-setup-microphone-skipped', t('textChat.setup.microphoneSkipped'));
-    window.setTimeout(skipSetupMicrophone, 420);
+    window.setTimeout(skipSetupMicrophone, 800);
   }, [appendSetupAssistantMessage, setupStage, skipSetupMicrophone, t]);
 
   const createSetupAccountFromText = useCallback(
@@ -926,7 +882,7 @@ export function TextChatOverlay({
     }
 
     if (setupCloseLocked) {
-      setReceiptHint(t("textChat.setup.closeLocked"));
+      setVoiceHint(t("textChat.setup.closeLocked"));
       return;
     }
 
@@ -964,10 +920,7 @@ export function TextChatOverlay({
           statusState={statusState}
           statusText={statusText}
           closeLabel={t("common.close")}
-          receiptLabel={t("textChat.receipt.action")}
-          receiptDisabled={isReceiptUploading}
           closeDisabled={setupCloseLocked}
-          onReceiptClick={handleReceiptClick}
           onClose={closeOverlay}
           onDragPointerDown={handleDragPointerDown}
           onDragPointerMove={handleDragPointerMove}
@@ -1013,26 +966,6 @@ export function TextChatOverlay({
             onSkipMic={handleSetupSkipMicrophone}
             onCloseChat={closeOverlay}
           />
-        ) : null}
-
-        <input
-          ref={receiptCameraInputRef}
-          type="file"
-          accept={RECEIPT_CAMERA_ACCEPT_TYPES}
-          capture="environment"
-          className="sr-only"
-          onChange={(event) => void handleReceiptFile(event.target.files?.[0] ?? null)}
-        />
-        <input
-          ref={receiptFileInputRef}
-          type="file"
-          accept={RECEIPT_FILE_ACCEPT_TYPES}
-          className="sr-only"
-          onChange={(event) => void handleReceiptFile(event.target.files?.[0] ?? null)}
-        />
-
-        {receiptHint ? (
-          <div className="text-chat-overlay__receipt-hint">{receiptHint}</div>
         ) : null}
 
         {showJumpToBottom ? (
