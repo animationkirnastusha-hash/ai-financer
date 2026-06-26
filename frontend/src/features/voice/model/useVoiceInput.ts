@@ -65,11 +65,8 @@ export function useVoiceInput({ onText, lang = 'ru-RU', sessionMs = 5200, permis
   }, []);
 
   useEffect(() => {
-    if (permissionWasPrompted) {
-      setPermissionPrimed(true);
-      if (permissionState === 'unknown') setPermissionState('granted');
-    }
-  }, [permissionState, permissionWasPrompted]);
+    if (permissionWasPrompted) setPermissionPrimed(true);
+  }, [permissionWasPrompted]);
 
   useEffect(() => {
     void refreshPermissionState();
@@ -85,8 +82,6 @@ export function useVoiceInput({ onText, lang = 'ru-RU', sessionMs = 5200, permis
   const primePermission = useCallback(async (): Promise<boolean> => {
     setPermissionError(null);
 
-    if (permissionPrimed) return true;
-
     if (typeof navigator === 'undefined' || typeof navigator.mediaDevices?.getUserMedia !== 'function') {
       setPermissionPrimed(false);
       setPermissionState('unsupported');
@@ -97,7 +92,14 @@ export function useVoiceInput({ onText, lang = 'ru-RU', sessionMs = 5200, permis
     const currentPermission = await refreshPermissionState();
     if (currentPermission === 'granted') {
       setPermissionPrimed(true);
+      setPermissionError(null);
       return true;
+    }
+
+    if (currentPermission === 'denied') {
+      setPermissionPrimed(false);
+      setPermissionError('microphone-denied');
+      return false;
     }
 
     if (permissionRequestInFlightRef.current) return false;
@@ -125,11 +127,11 @@ export function useVoiceInput({ onText, lang = 'ru-RU', sessionMs = 5200, permis
       setPermissionState('denied');
       setPermissionError('microphone-denied');
       logVoiceDebugEvent('permission_prime_denied', { error: error instanceof Error ? error.name || error.message : 'unknown' });
-      throw error;
+      return false;
     } finally {
       permissionRequestInFlightRef.current = false;
     }
-  }, [permissionPrimed, refreshPermissionState]);
+  }, [refreshPermissionState]);
 
   const start = useCallback(async (): Promise<VoiceStartResult> => {
     window.speechSynthesis?.cancel();
@@ -147,21 +149,10 @@ export function useVoiceInput({ onText, lang = 'ru-RU', sessionMs = 5200, permis
         return 'permission-ready';
       }
 
-      if (currentPermission !== 'granted' && !permissionPrimed) {
-        logVoiceDebugEvent('manual_voice_permission_gesture_consumed', { permissionState: currentPermission });
-        let allowed = false;
-        try {
-          allowed = await primePermission();
-          setPermissionPrimed(allowed);
-        } catch (error) {
-          logVoiceDebugEvent('manual_voice_permission_gesture_failed', {
-            error: error instanceof Error ? error.name || error.message : 'unknown',
-            permissionState: currentPermission,
-          });
-        } finally {
-          void refreshPermissionState();
-        }
-
+      if (currentPermission !== 'granted') {
+        logVoiceDebugEvent('manual_voice_permission_required', { permissionState: currentPermission, permissionPrimed });
+        const allowed = await primePermission();
+        void refreshPermissionState();
         if (!allowed) return 'permission-consumed';
       }
 

@@ -54,7 +54,8 @@ export function TextChatOverlayHeader({
             disabled={receiptDisabled}
             aria-label={receiptLabel}
           >
-            <span aria-hidden="true">▧</span>
+            <span className="text-chat-overlay__head-receipt-icon" aria-hidden="true">▣</span>
+            <span className="text-chat-overlay__head-receipt-text">{receiptLabel}</span>
           </button>
           <button
             type="button"

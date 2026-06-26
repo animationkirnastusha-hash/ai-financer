@@ -1,29 +1,15 @@
 import { create } from 'zustand';
 import type { AccountDto } from '@/features/accounts/api/accounts.api';
 
-export type FirstRunSetupStage =
-  | 'idle'
-  | 'microphone'
-  | 'account'
-  | 'account_custom'
-  | 'balance'
-  | 'balance_custom'
-  | 'done';
-
-export type FirstRunAccountDraft = {
-  name: string;
-  type: 'card' | 'cash';
-};
+export type FirstRunSetupStage = 'idle' | 'microphone' | 'account' | 'done';
 
 type PersistedSetupState = {
   stage?: FirstRunSetupStage;
-  accountDraft?: FirstRunAccountDraft | null;
   completed?: boolean;
 };
 
 type FirstRunChatSetupState = {
   stage: FirstRunSetupStage;
-  accountDraft: FirstRunAccountDraft | null;
   createdAccount: AccountDto | null;
   completed: boolean;
   isActive: boolean;
@@ -31,9 +17,6 @@ type FirstRunChatSetupState = {
   start: () => void;
   skipMicrophone: () => void;
   finishMicrophone: () => void;
-  requestCustomAccount: () => void;
-  selectAccount: (draft: FirstRunAccountDraft) => void;
-  requestCustomBalance: () => void;
   completeWithAccount: (account: AccountDto | null) => void;
   dismiss: () => void;
   reset: () => void;
@@ -52,6 +35,11 @@ function readPersisted(): PersistedSetupState {
   }
 }
 
+function normalizeStage(stage: PersistedSetupState['stage']): FirstRunSetupStage {
+  if (stage === 'microphone' || stage === 'account' || stage === 'done') return stage;
+  return 'idle';
+}
+
 function persist(state: PersistedSetupState) {
   localStorage.setItem(FIRST_RUN_CHAT_SETUP_STORAGE_KEY, JSON.stringify(state));
 }
@@ -61,26 +49,24 @@ function clearPersisted() {
 }
 
 function isBlockingStage(stage: FirstRunSetupStage) {
-  return stage !== 'idle' && stage !== 'done';
+  return stage === 'microphone' || stage === 'account';
 }
 
 export const useFirstRunChatSetupStore = create<FirstRunChatSetupState>((set) => {
   const persisted = readPersisted();
-  const initialStage = persisted.completed ? 'done' : persisted.stage ?? 'idle';
+  const initialStage = persisted.completed ? 'done' : normalizeStage(persisted.stage);
 
   return {
     stage: initialStage,
-    accountDraft: persisted.accountDraft ?? null,
     createdAccount: null,
     completed: Boolean(persisted.completed),
     isActive: initialStage !== 'idle' && !persisted.completed,
     closeLocked: isBlockingStage(initialStage),
 
     start: () => {
-      persist({ stage: 'microphone', accountDraft: null, completed: false });
+      persist({ stage: 'microphone', completed: false });
       set({
         stage: 'microphone',
-        accountDraft: null,
         createdAccount: null,
         completed: false,
         isActive: true,
@@ -96,22 +82,6 @@ export const useFirstRunChatSetupStore = create<FirstRunChatSetupState>((set) =>
     finishMicrophone: () => {
       persist({ stage: 'account', completed: false });
       set({ stage: 'account', isActive: true, closeLocked: true });
-    },
-
-    requestCustomAccount: () => {
-      persist({ stage: 'account_custom', completed: false });
-      set({ stage: 'account_custom', isActive: true, closeLocked: true });
-    },
-
-    selectAccount: (accountDraft) => {
-      persist({ stage: 'balance', accountDraft, completed: false });
-      set({ stage: 'balance', accountDraft, isActive: true, closeLocked: true });
-    },
-
-    requestCustomBalance: () => {
-      const persisted = readPersisted();
-      persist({ ...persisted, stage: 'balance_custom', completed: false });
-      set({ stage: 'balance_custom', isActive: true, closeLocked: true });
     },
 
     completeWithAccount: (createdAccount) => {
@@ -133,7 +103,6 @@ export const useFirstRunChatSetupStore = create<FirstRunChatSetupState>((set) =>
       clearPersisted();
       set({
         stage: 'idle',
-        accountDraft: null,
         createdAccount: null,
         completed: false,
         isActive: false,

@@ -12,10 +12,7 @@ import { useAccountsStore } from "@/features/accounts/model/accounts.store";
 import { AuditLogDrawer } from "@/features/audit-log/ui/AuditLogDrawer";
 import { useChatController } from "@/features/chat/model/useChatController";
 import { useChatStore } from "@/features/chat/model/chat.store";
-import {
-  useFirstRunChatSetupStore,
-  type FirstRunAccountDraft,
-} from "@/features/chat/model/firstRunChatSetup.store";
+import { useFirstRunChatSetupStore } from "@/features/chat/model/firstRunChatSetup.store";
 import { useSettingsStore } from "@/features/settings/model/settings.store";
 import { useAppModalStore } from "@/features/modals/model/appModal.store";
 import { markProductTourPending } from "@/features/product-tour/model/productTourPending.store";
@@ -54,30 +51,62 @@ function createSetupMessage(id: string, text: string, kind: "text" | "success" |
   };
 }
 
-function inferFirstRunAccountType(name: string): FirstRunAccountDraft["type"] {
+type FirstRunParsedAccount = {
+  name: string;
+  type: "card" | "cash";
+  balance: number;
+};
+
+function inferFirstRunAccountType(name: string): FirstRunParsedAccount["type"] {
   const normalized = name.toLowerCase();
   return normalized.includes("нал") || normalized.includes("cash") ? "cash" : "card";
 }
 
-function parseFirstRunBalance(value: string): number | null {
-  const normalized = value
-    .trim()
-    .toLowerCase()
-    .replaceAll(" ", "")
-    .replaceAll("₽", "")
-    .replaceAll("руб", "")
-    .replaceAll("р", "")
-    .replace(",", ".");
+function parseFirstRunAmount(rawValue: string): { amount: number; token: string } | null {
+  const match = rawValue.match(/(?:^|[\s,.:;])(?<amount>\d+(?:[\s,.]\d{3})*(?:[,.]\d+)?|\d+)(?:\s*)(?<suffix>к|k|тыс\.?|тысяч)?(?=$|[\s,.:;!?₽рr])/i);
+  const amountText = match?.groups?.amount;
+  if (!match || !amountText) return null;
 
-  if (!normalized) return null;
+  const compact = amountText.replace(/\s/g, "");
+  const decimalText = /[,.]\d{1,2}$/.test(compact)
+    ? compact.replace(",", ".")
+    : compact.replace(/[,.]/g, "");
+  const base = Number(decimalText);
+  if (!Number.isFinite(base) || base < 0) return null;
 
-  const hasThousandsSuffix = normalized.endsWith("к") || normalized.endsWith("k");
-  const rawNumber = hasThousandsSuffix ? normalized.slice(0, -1) : normalized;
-  const amount = Number(rawNumber);
+  const suffix = match.groups?.suffix?.toLowerCase() ?? "";
+  const multiplier = suffix ? 1000 : 1;
+  return {
+    amount: Math.round(base * multiplier * 100) / 100,
+    token: match[0],
+  };
+}
 
-  if (!Number.isFinite(amount) || amount < 0) return null;
+function parseFirstRunAccountCommand(value: string): FirstRunParsedAccount | "missing-account" | "missing-balance" {
+  const source = value.trim();
+  if (!source) return "missing-account";
 
-  return Math.round(amount * (hasThousandsSuffix ? 1000 : 1) * 100) / 100;
+  const amount = parseFirstRunAmount(source);
+  if (!amount) return "missing-balance";
+
+  const withoutAmount = source.replace(amount.token, " " );
+  const cleaned = withoutAmount
+    .replace(/[«»"']/g, " " )
+    .replace(/[,.!?;:()]/g, " " )
+    .replace(/\b(создай|создать|добавь|добавить|открой|сделай|первый|первую|сч[её]т|аккаунт|баланс|остаток|сейчас|сумма|положи|пополнить|пополнение|доход|туда|на|в|и|рубл(?:ь|я|ей)?|руб|р|₽)\b/gi, " " )
+    .replace(/\b(create|add|open|make|first|account|balance|current|amount|put|top\s*up|income|money|to|on|in|and|rub|rubles|rur)\b/gi, " " )
+    .replace(/\s+/g, " " )
+    .trim();
+
+  let name = cleaned;
+  const lower = source.toLowerCase();
+  if (!name) {
+    if (lower.includes("нал") || lower.includes("cash")) name = lower.includes("cash") ? "Cash" : "Наличные";
+    else if (lower.includes("карт") || lower.includes("card")) name = lower.includes("card") ? "Card" : "Карта";
+  }
+
+  if (!name) return "missing-account";
+  return { name: name.slice(0, 48), type: inferFirstRunAccountType(name), balance: amount.amount };
 }
 
 type TextChatOverlayProps = {
@@ -135,6 +164,7 @@ export function TextChatOverlay({
   const receiptFileInputRef = useRef<HTMLInputElement | null>(null);
   const [receiptHint, setReceiptHint] = useState<string | null>(null);
   const [isSetupBusy, setIsSetupBusy] = useState(false);
+  const setupVoiceTextHandlerRef = useRef<(text: string) => Promise<boolean>>(async () => false);
 
   const chat = useChatController();
   const appendChatMessage = useChatStore((state) => state.appendMessage);
@@ -147,15 +177,11 @@ export function TextChatOverlay({
   const uploadReceipt = useReceiptScansStore((state) => state.upload);
   const isReceiptUploading = useReceiptScansStore((state) => state.isUploading);
   const setupStage = useFirstRunChatSetupStore((state) => state.stage);
-  const setupAccountDraft = useFirstRunChatSetupStore((state) => state.accountDraft);
   const setupIsActive = useFirstRunChatSetupStore((state) => state.isActive);
   const setupCloseLocked = useFirstRunChatSetupStore((state) => state.closeLocked);
   const startFirstRunSetup = useFirstRunChatSetupStore((state) => state.start);
   const skipSetupMicrophone = useFirstRunChatSetupStore((state) => state.skipMicrophone);
   const finishSetupMicrophone = useFirstRunChatSetupStore((state) => state.finishMicrophone);
-  const requestCustomSetupAccount = useFirstRunChatSetupStore((state) => state.requestCustomAccount);
-  const selectSetupAccount = useFirstRunChatSetupStore((state) => state.selectAccount);
-  const requestCustomSetupBalance = useFirstRunChatSetupStore((state) => state.requestCustomBalance);
   const completeSetupWithAccount = useFirstRunChatSetupStore((state) => state.completeWithAccount);
   const dismissFirstRunSetup = useFirstRunChatSetupStore((state) => state.dismiss);
   const primaryAccountId = useSettingsStore((state) => state.primaryAccountId);
@@ -242,6 +268,12 @@ export function TextChatOverlay({
         setVoiceHint(t("textChat.voice.notHeard"));
         return;
       }
+      const handledBySetup = await setupVoiceTextHandlerRef.current(text);
+      if (handledBySetup) {
+        setVoiceHint(null);
+        return;
+      }
+
       setVoiceHint(t("textChat.voice.thinking"));
       await sendText(text, "voice");
       setVoiceHint(null);
@@ -411,7 +443,7 @@ export function TextChatOverlay({
       voiceStopAfterStartRef.current = true;
       stopVoiceAndSend();
     },
-    [stopVoiceAndSend],
+    [stopVoiceAndSend, voice.state],
   );
 
   const handleVoicePointerCancel = useCallback(
@@ -424,6 +456,48 @@ export function TextChatOverlay({
     },
     [cancelVoice, t],
   );
+
+  useEffect(() => {
+    if (voice.state === "recording") return;
+    if (!voicePressActiveRef.current && !isVoicePressed) return;
+    voicePointerIdRef.current = null;
+    voicePressActiveRef.current = false;
+    voiceStopAfterStartRef.current = false;
+    voiceCancelledBySwipeRef.current = false;
+    setIsVoicePressed(false);
+  }, [isVoicePressed, voice.state]);
+
+  useEffect(() => {
+    if (!open) return;
+
+    const finishLostVoicePointer = () => {
+      if (!voicePressActiveRef.current) return;
+      voicePointerIdRef.current = null;
+      voicePressActiveRef.current = false;
+      if (voiceCancelledBySwipeRef.current) {
+        voiceCancelledBySwipeRef.current = false;
+        return;
+      }
+      stopVoiceAndSend();
+    };
+
+    const cancelLostVoicePointer = () => {
+      if (!voicePressActiveRef.current) return;
+      voicePointerIdRef.current = null;
+      voicePressActiveRef.current = false;
+      voiceCancelledBySwipeRef.current = false;
+      cancelVoice(t("textChat.voice.cancelled"));
+    };
+
+    window.addEventListener('pointerup', finishLostVoicePointer);
+    window.addEventListener('pointercancel', cancelLostVoicePointer);
+    window.addEventListener('blur', cancelLostVoicePointer);
+    return () => {
+      window.removeEventListener('pointerup', finishLostVoicePointer);
+      window.removeEventListener('pointercancel', cancelLostVoicePointer);
+      window.removeEventListener('blur', cancelLostVoicePointer);
+    };
+  }, [cancelVoice, open, stopVoiceAndSend, t]);
 
   useEffect(() => {
     if (!open) return;
@@ -668,56 +742,34 @@ export function TextChatOverlay({
   useEffect(() => {
     if (!open || !setupIsActive) return;
 
-    const messages = (() => {
-      if (setupStage === 'microphone') {
-        return [
-          createSetupMessage('first-run-setup-welcome', t('textChat.setup.welcome')),
-          createSetupMessage('first-run-setup-microphone', t('textChat.setup.microphone')),
-        ];
+    const timers: number[] = [];
+    const schedule = (delay: number, id: string, text: string, kind: "text" | "success" | "error" = "text") => {
+      timers.push(window.setTimeout(() => appendSetupAssistantMessage(id, text, kind), delay));
+    };
+
+    if (setupStage === 'microphone') {
+      schedule(0, 'first-run-setup-welcome', t('textChat.setup.welcome'));
+      schedule(720, 'first-run-setup-microphone', t('textChat.setup.microphone'));
+    }
+
+    if (setupStage === 'account') {
+      const hasAccountPrompt = useChatStore.getState().messages.some((message) =>
+        message.id === 'first-run-setup-account' ||
+        message.id === 'first-run-setup-microphone-ready' ||
+        message.id === 'first-run-setup-microphone-skipped',
+      );
+      if (!hasAccountPrompt) {
+        schedule(0, 'first-run-setup-account', t('textChat.setup.account'));
       }
+    }
 
-      if (setupStage === 'account') {
-        return [
-          createSetupMessage('first-run-setup-about', t('textChat.setup.about')),
-          createSetupMessage('first-run-setup-account', t('textChat.setup.account')),
-        ];
-      }
+    if (setupStage === 'done') {
+      schedule(0, 'first-run-setup-created', t('textChat.setup.created'), 'success');
+      schedule(680, 'first-run-setup-tour', t('textChat.setup.tour'));
+    }
 
-      if (setupStage === 'account_custom') {
-        return [createSetupMessage('first-run-setup-account-custom', t('textChat.setup.accountCustom'))];
-      }
-
-      if (setupStage === 'balance' && setupAccountDraft) {
-        return [
-          createSetupMessage(
-            'first-run-setup-balance',
-            t('textChat.setup.balance', { account: setupAccountDraft.name }),
-          ),
-        ];
-      }
-
-      if (setupStage === 'balance_custom') {
-        return [createSetupMessage('first-run-setup-balance-custom', t('textChat.setup.balanceCustom'))];
-      }
-
-      if (setupStage === 'done') {
-        return [
-          createSetupMessage('first-run-setup-created', t('textChat.setup.created'), 'success'),
-          createSetupMessage('first-run-setup-tour', t('textChat.setup.tour')),
-        ];
-      }
-
-      return [];
-    })();
-
-    if (!messages.length) return;
-    shouldStickToBottomRef.current = true;
-    setChatMessages((currentMessages) => {
-      const existingIds = new Set(currentMessages.map((message) => message.id));
-      const nextMessages = messages.filter((message) => !existingIds.has(message.id));
-      return nextMessages.length ? [...currentMessages, ...nextMessages] : currentMessages;
-    });
-  }, [open, setChatMessages, setupAccountDraft, setupIsActive, setupStage, t]);
+    return () => timers.forEach((timer) => window.clearTimeout(timer));
+  }, [appendSetupAssistantMessage, open, setupIsActive, setupStage, t]);
 
   const handleReceiptClick = useCallback(() => {
     if (isReceiptUploading) return;
@@ -742,11 +794,11 @@ export function TextChatOverlay({
         allowed ? t('textChat.setup.microphoneReady') : t('textChat.setup.microphoneFailed'),
         allowed ? 'success' : 'error',
       );
-      finishSetupMicrophone();
+      window.setTimeout(finishSetupMicrophone, 420);
     } catch {
       setVoicePermissionPrompted(false);
       appendSetupAssistantMessage('first-run-setup-microphone-failed', t('textChat.setup.microphoneFailed'), 'error');
-      finishSetupMicrophone();
+      window.setTimeout(finishSetupMicrophone, 420);
     } finally {
       setIsSetupBusy(false);
     }
@@ -755,27 +807,28 @@ export function TextChatOverlay({
   const handleSetupSkipMicrophone = useCallback(() => {
     if (setupStage !== 'microphone') return;
     appendSetupAssistantMessage('first-run-setup-microphone-skipped', t('textChat.setup.microphoneSkipped'));
-    skipSetupMicrophone();
+    window.setTimeout(skipSetupMicrophone, 420);
   }, [appendSetupAssistantMessage, setupStage, skipSetupMicrophone, t]);
 
-  const handleSetupSelectAccount = useCallback(
-    (draft: FirstRunAccountDraft) => {
-      if (setupStage !== 'account' && setupStage !== 'account_custom') return;
-      setValue('');
-      selectSetupAccount(draft);
-    },
-    [selectSetupAccount, setupStage],
-  );
+  const createSetupAccountFromText = useCallback(
+    async (text: string) => {
+      if (setupStage !== 'account' || isSetupBusy) return false;
 
-  const createSetupAccountWithBalance = useCallback(
-    async (balance: number) => {
-      if (!setupAccountDraft || isSetupBusy) return;
+      const parsed = parseFirstRunAccountCommand(text);
+      if (parsed === 'missing-account') {
+        appendSetupAssistantMessage(`first-run-setup-account-missing-${Date.now()}`, t('textChat.setup.accountNeedName'), 'error');
+        return true;
+      }
+      if (parsed === 'missing-balance') {
+        appendSetupAssistantMessage(`first-run-setup-balance-missing-${Date.now()}`, t('textChat.setup.accountNeedBalance'), 'error');
+        return true;
+      }
 
       setIsSetupBusy(true);
       try {
         const account = await createAccount({
-          name: setupAccountDraft.name,
-          type: setupAccountDraft.type,
+          name: parsed.name,
+          type: parsed.type,
           currency: 'RUB',
           initialBalance: 0,
           showInTotalBalance: true,
@@ -784,10 +837,10 @@ export function TextChatOverlay({
         if (!primaryAccountId) setPrimaryAccountId(account.id);
         if (!incomeAccountId) setIncomeAccountId(account.id);
 
-        if (balance > 0) {
+        if (parsed.balance > 0) {
           await createTransaction({
             accountId: account.id,
-            amount: balance,
+            amount: parsed.balance,
             type: 'income',
             title: t('textChat.setup.initialBalanceTitle'),
             description: t('textChat.setup.initialBalanceDescription'),
@@ -804,6 +857,8 @@ export function TextChatOverlay({
       } finally {
         setIsSetupBusy(false);
       }
+
+      return true;
     },
     [
       appendSetupAssistantMessage,
@@ -815,32 +870,14 @@ export function TextChatOverlay({
       refreshTransactions,
       setIncomeAccountId,
       setPrimaryAccountId,
-      setupAccountDraft,
+      setupStage,
       t,
     ],
   );
 
-  const handleSetupCustomSubmit = useCallback(
-    async (text: string) => {
-      if (setupStage === 'account_custom') {
-        const name = text.trim();
-        if (!name) return;
-        handleSetupSelectAccount({ name, type: inferFirstRunAccountType(name) });
-        return;
-      }
-
-      if (setupStage === 'balance_custom') {
-        const balance = parseFirstRunBalance(text);
-        if (balance === null) {
-          appendSetupAssistantMessage('first-run-setup-balance-invalid', t('textChat.setup.balanceInvalid'), 'error');
-          return;
-        }
-
-        await createSetupAccountWithBalance(balance);
-      }
-    },
-    [appendSetupAssistantMessage, createSetupAccountWithBalance, handleSetupSelectAccount, setupStage, t],
-  );
+  useEffect(() => {
+    setupVoiceTextHandlerRef.current = createSetupAccountFromText;
+  }, [createSetupAccountFromText]);
 
   useEffect(() => {
     if (!voice.error) return;
@@ -858,7 +895,7 @@ export function TextChatOverlay({
       return;
     }
 
-    setVoiceHint(t('textChat.voice.startFailed'));
+    setVoiceHint(voice.error === 'no-speech' ? t('textChat.voice.notHeard') : t('textChat.voice.startFailed'));
     voice.reset?.();
   }, [setVoicePermissionPrompted, t, voice, voice.error]);
 
@@ -881,15 +918,15 @@ export function TextChatOverlay({
     const text = value.trim();
     if (!text || chat.isSending || isSetupBusy) return;
 
-    if (setupIsActive && (setupStage === 'account_custom' || setupStage === 'balance_custom')) {
+    if (setupIsActive && setupStage === 'account') {
       setValue("");
-      await handleSetupCustomSubmit(text);
+      await createSetupAccountFromText(text);
       window.setTimeout(() => inputRef.current?.blur(), 40);
       return;
     }
 
     if (setupCloseLocked) {
-      setReceiptHint(t("textChat.setup.chooseButton"));
+      setReceiptHint(t("textChat.setup.closeLocked"));
       return;
     }
 
@@ -971,22 +1008,9 @@ export function TextChatOverlay({
             isBusy={isSetupBusy}
             enableMicLabel={t("textChat.setup.action.enableMic")}
             skipLabel={t("textChat.setup.action.skip")}
-            cardLabel={t("textChat.setup.action.card")}
-            cashLabel={t("textChat.setup.action.cash")}
-            customLabel={t("textChat.setup.action.custom")}
-            zeroBalanceLabel={t("textChat.setup.action.zero")}
-            quickBalanceLabel={t("textChat.setup.action.quickBalance")}
             closeChatLabel={t("textChat.setup.action.closeChat")}
-            customAccountHint={t("textChat.setup.accountCustomHint")}
-            customBalanceHint={t("textChat.setup.balanceCustomHint")}
             onEnableMic={handleSetupEnableMicrophone}
             onSkipMic={handleSetupSkipMicrophone}
-            onCard={() => handleSetupSelectAccount({ name: t("textChat.setup.account.cardName"), type: 'card' })}
-            onCash={() => handleSetupSelectAccount({ name: t("textChat.setup.account.cashName"), type: 'cash' })}
-            onCustomAccount={requestCustomSetupAccount}
-            onZeroBalance={() => createSetupAccountWithBalance(0)}
-            onQuickBalance={() => createSetupAccountWithBalance(10000)}
-            onCustomBalance={requestCustomSetupBalance}
             onCloseChat={closeOverlay}
           />
         ) : null}
@@ -1026,11 +1050,11 @@ export function TextChatOverlay({
           value={value}
           inputRef={inputRef}
           isSending={chat.isSending || isSetupBusy}
-          inputDisabled={setupIsActive && setupStage !== 'account_custom' && setupStage !== 'balance_custom'}
+          inputDisabled={setupIsActive && setupStage !== 'account'}
           voiceState={voice.state}
           isVoicePressed={isVoicePressed}
           isVoiceCancelledBySwipe={voiceCancelledBySwipeRef.current}
-          placeholder={setupStage === 'account_custom' ? t('textChat.setup.accountCustomPlaceholder') : setupStage === 'balance_custom' ? t('textChat.setup.balanceCustomPlaceholder') : t("textChat.placeholder")}
+          placeholder={setupStage === 'account' ? t('textChat.setup.accountPlaceholder') : t("textChat.placeholder")}
           sendLabel={t("textChat.send")}
           voiceLabel={t("textChat.voice.hold")}
           voiceCancelHint={t("textChat.voice.swipeCancel")}
