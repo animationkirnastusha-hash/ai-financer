@@ -165,7 +165,6 @@ export function TextChatOverlay({
   const startFirstRunSetup = useFirstRunChatSetupStore((state) => state.start);
   const skipSetupMicrophone = useFirstRunChatSetupStore((state) => state.skipMicrophone);
   const finishSetupMicrophone = useFirstRunChatSetupStore((state) => state.finishMicrophone);
-  const failSetupMicrophone = useFirstRunChatSetupStore((state) => state.failMicrophone);
   const completeSetupAccount = useFirstRunChatSetupStore((state) => state.completeAccount);
   const completeSetupWithAccount = useFirstRunChatSetupStore((state) => state.completeWithAccount);
   const dismissFirstRunSetup = useFirstRunChatSetupStore((state) => state.dismiss);
@@ -663,12 +662,19 @@ export function TextChatOverlay({
     if (setupStage !== 'microphone' || isSetupBusy) return;
 
     setIsSetupBusy(true);
+    setLocalHint(null);
     setShowVoicePermissionHelp(false);
+    voice.cancel();
+    voice.reset?.();
+
     try {
       const allowed = await voice.primePermission();
-      setVoicePermissionPrompted(allowed);
+      voice.cancel();
       voice.reset?.();
+      setVoicePermissionPrompted(allowed);
+
       if (allowed) {
+        setShowVoicePermissionHelp(false);
         finishSetupMicrophone();
         return;
       }
@@ -818,14 +824,16 @@ export function TextChatOverlay({
       setVoicePermissionPrompted(false);
       setVoiceHint(t('textChat.voice.needPermission'));
       setShowVoicePermissionHelp(true);
-      if (setupStage === 'microphone') failSetupMicrophone();
+      setLocalHint(t('textChat.setup.microphoneHelpHint'));
+      voice.cancel();
       voice.reset?.();
       return;
     }
 
     setVoiceHint(t('textChat.voice.startFailed'));
+    voice.cancel();
     voice.reset?.();
-  }, [failSetupMicrophone, setVoicePermissionPrompted, setupStage, t, voice, voice.error]);
+  }, [setVoicePermissionPrompted, t, voice, voice.error]);
 
   useEffect(() => () => {
     if (autoCloseTimerRef.current !== null) window.clearTimeout(autoCloseTimerRef.current);
