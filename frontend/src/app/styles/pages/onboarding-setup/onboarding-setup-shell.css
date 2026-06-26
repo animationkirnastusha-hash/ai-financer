@@ -1,6 +1,0 @@
-/* Onboarding setup shell manifest. Keep imports ordered; do not add raw rules here. */
-@import "./onboarding-setup-shell/onboarding-setup-shell-base.css";
-@import "./onboarding-setup-shell/onboarding-setup-shell-cards.css";
-@import "./onboarding-setup-shell/onboarding-setup-shell-form.css";
-@import "./onboarding-setup-shell/onboarding-setup-shell-summary.css";
-@import "./onboarding-setup-shell/onboarding-setup-shell-voice.css";

@@ -1,138 +1,57 @@
 import { create } from 'zustand';
-import { PRODUCT_TOUR_ELIGIBLE_STORAGE_KEY, PRODUCT_TOUR_STORAGE_KEY, useProductTourStore } from '@/features/onboarding/model/productTour.store';
-import type { OnboardingDraft, OnboardingStatus } from '@/features/onboarding/model/onboarding.types';
+import type { OnboardingStatus } from '@/features/onboarding/model/onboarding.types';
 
 const STORAGE_KEY = 'ai-financer-onboarding-seen:v4';
-const DRAFT_KEY = 'ai-financer-onboarding-draft:v1';
-
-const defaultDraft: OnboardingDraft = {
-  currency: 'RUB',
-  accountsSetupMode: 'voice',
-  accounts: [
-    { id: 'cash', enabled: true, name: 'Наличка', type: 'cash', balance: 0 },
-    { id: 'card', enabled: true, name: 'Карта', type: 'card', balance: 0 },
-  ],
-  loan: {
-    enabled: false,
-    kind: 'credit',
-    title: 'Кредит',
-    remainingAmount: 0,
-    monthlyPayment: 0,
-    paymentDay: 10,
-  },
-  goal: {
-    enabled: false,
-    title: 'Подушка безопасности',
-    targetAmount: 50000,
-  },
-  reminders: {
-    timing: 'one_day',
-    creditPayments: true,
-    goals: true,
-    regularExpenses: true,
-    weeklySummary: false,
-  },
-  voice: {
-    voiceEnabled: true,
-    textFallbackEnabled: true,
-    testPhrase: '',
-  },
-  focus: 'personal',
-};
 
 type OnboardingState = {
   isOpen: boolean;
   hasSeenOnboarding: boolean;
   status: OnboardingStatus;
-  draft: OnboardingDraft;
   open: () => void;
   close: () => void;
   complete: () => void;
   skip: () => void;
   reset: () => void;
-  patchDraft: (patch: Partial<OnboardingDraft>) => void;
-  setDraft: (draft: OnboardingDraft) => void;
 };
 
 function readSeen() {
   return localStorage.getItem(STORAGE_KEY) === 'true';
 }
 
-function readDraft(): OnboardingDraft {
-  try {
-    const raw = localStorage.getItem(DRAFT_KEY);
-    if (!raw) return defaultDraft;
-    const parsed = JSON.parse(raw) as Partial<OnboardingDraft>;
-    return {
-      ...defaultDraft,
-      ...parsed,
-      accountsSetupMode: parsed.accountsSetupMode ?? defaultDraft.accountsSetupMode,
-      accounts: Array.isArray(parsed.accounts) && parsed.accounts.length ? parsed.accounts as OnboardingDraft['accounts'] : defaultDraft.accounts,
-      loan: { ...defaultDraft.loan, ...(parsed.loan ?? {}) },
-      goal: { ...defaultDraft.goal, ...(parsed.goal ?? {}) },
-      reminders: { ...defaultDraft.reminders, ...(parsed.reminders ?? {}) },
-      voice: { ...defaultDraft.voice, ...(parsed.voice ?? {}) },
-    };
-  } catch {
-    return defaultDraft;
-  }
+function markSeen() {
+  localStorage.setItem(STORAGE_KEY, 'true');
 }
 
-function saveDraft(draft: OnboardingDraft) {
-  localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
-}
-
-export const ONBOARDING_DRAFT_STORAGE_KEY = DRAFT_KEY;
 export const ONBOARDING_SEEN_STORAGE_KEY = STORAGE_KEY;
 
-export const useOnboardingStore = create<OnboardingState>((set, get) => {
+export const useOnboardingStore = create<OnboardingState>((set) => {
   const hasSeenOnboarding = readSeen();
 
   return {
     hasSeenOnboarding,
     isOpen: !hasSeenOnboarding,
     status: hasSeenOnboarding ? 'completed' : 'not_started',
-    draft: readDraft(),
 
     open: () => set({ isOpen: true, status: 'in_progress' }),
 
     close: () => {
-      localStorage.setItem(STORAGE_KEY, 'true');
-      useProductTourStore.getState().enableForNewUser();
+      markSeen();
       set({ isOpen: false, hasSeenOnboarding: true, status: 'completed' });
     },
 
     complete: () => {
-      saveDraft(get().draft);
-      localStorage.setItem(STORAGE_KEY, 'true');
-      useProductTourStore.getState().enableForNewUser();
+      markSeen();
       set({ isOpen: false, hasSeenOnboarding: true, status: 'completed' });
     },
 
     skip: () => {
-      saveDraft(get().draft);
-      localStorage.setItem(STORAGE_KEY, 'true');
-      useProductTourStore.getState().enableForNewUser();
+      markSeen();
       set({ isOpen: false, hasSeenOnboarding: true, status: 'skipped' });
     },
 
     reset: () => {
       localStorage.removeItem(STORAGE_KEY);
-      localStorage.removeItem(PRODUCT_TOUR_STORAGE_KEY);
-      localStorage.removeItem(PRODUCT_TOUR_ELIGIBLE_STORAGE_KEY);
-      useProductTourStore.getState().reset();
-      set({ isOpen: true, hasSeenOnboarding: false, status: 'in_progress', draft: readDraft() });
-    },
-
-    patchDraft: (patch) => {
-      const draft = { ...get().draft, ...patch };
-      saveDraft(draft);
-      set({ draft });
-    },
-
-    setDraft: (draft) => {
-      saveDraft(draft);
-      set({ draft });
+      set({ isOpen: true, hasSeenOnboarding: false, status: 'in_progress' });
     },
   };
 });

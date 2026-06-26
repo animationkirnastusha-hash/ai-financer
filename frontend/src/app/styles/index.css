@@ -37,9 +37,6 @@
 @import "./features/voice/voice-session.css";
 @import "./features/chat/chat-input-modal.css";
 @import "./features/premium/premium-access.css";
-@import "./pages/onboarding-setup/onboarding-setup-shell.css";
-@import "./pages/onboarding-setup/onboarding-setup-learning.css";
-@import "./pages/onboarding-setup/onboarding-setup-steps.css";
 @import "./features/onboarding/product-learning.css";
 @import "./pages/obligations/obligations-summary.css";
 @import "./pages/obligations/obligations-loans.css";
@@ -104,7 +101,6 @@
 @import "./pages/analytics/analytics-charts.css";
 @import "./pages/analytics/analytics-lists.css";
 @import "./pages/analytics/analytics-foldouts.css";
-@import "./features/onboarding/product-tour.css";
 
 @import "./features/voice/voice-permission-compact.css";
 @import "./features/voice/voice-floating-placement.css";

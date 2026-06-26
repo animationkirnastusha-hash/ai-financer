@@ -39,6 +39,8 @@ export function useVoiceRecorder({ onText, lang = 'ru-RU', chunkMs = VOICE_RECOR
   const cancelledRef = useRef(false);
   const lifecycleBusyRef = useRef(false);
   const manualStopOnlyRef = useRef(false);
+  const stopAfterStartRef = useRef(false);
+  const cancelAfterStartRef = useRef(false);
 
   const [state, setState] = useState<VoiceRecorderState>('idle');
   const [error, setError] = useState<string | null>(null);
@@ -195,6 +197,8 @@ export function useVoiceRecorder({ onText, lang = 'ru-RU', chunkMs = VOICE_RECOR
     lifecycleBusyRef.current = false;
     manualStopOnlyRef.current = false;
     cancelledRef.current = false;
+    stopAfterStartRef.current = false;
+    cancelAfterStartRef.current = false;
     finalHadVoiceRef.current = false;
     finalPeakRmsRef.current = 0;
   }, [clearFinalizeTimer, stopAllStreams, stopVoiceActivityWatcher]);
@@ -427,6 +431,8 @@ export function useVoiceRecorder({ onText, lang = 'ru-RU', chunkMs = VOICE_RECOR
     lifecycleBusyRef.current = true;
     manualStopOnlyRef.current = true;
     cancelledRef.current = false;
+    stopAfterStartRef.current = false;
+    cancelAfterStartRef.current = false;
 
     try {
       setError(null);
@@ -458,6 +464,16 @@ export function useVoiceRecorder({ onText, lang = 'ru-RU', chunkMs = VOICE_RECOR
           persistentStream: hasActiveTracks(rawStreamRef.current),
         });
         setState('recording');
+
+        if (stopAfterStartRef.current || cancelAfterStartRef.current) {
+          const shouldCancel = cancelAfterStartRef.current;
+          logVoiceDebugEvent(shouldCancel ? 'voice_cancel_after_deferred_start' : 'voice_stop_after_deferred_start', {
+            mimeType: recorder.mimeType || recorderFormat.mimeType,
+            extension: recorderFormat.extension,
+          });
+          window.setTimeout(() => finalizeRecording(shouldCancel), 0);
+          return;
+        }
 
         startVoiceActivityWatcher(recorderFormat);
 
@@ -500,6 +516,8 @@ export function useVoiceRecorder({ onText, lang = 'ru-RU', chunkMs = VOICE_RECOR
 
         clearFinalizeTimer();
         stopVoiceActivityWatcher();
+        stopAfterStartRef.current = false;
+        cancelAfterStartRef.current = false;
         mediaRecorderRef.current = null;
         chunksRef.current = [];
         activeFormatRef.current = null;
@@ -535,12 +553,29 @@ export function useVoiceRecorder({ onText, lang = 'ru-RU', chunkMs = VOICE_RECOR
   }, [chunkMs, ensureStream, finalizeRecording, hardCleanup, isSupported, platformConfig, recorderFormat, startVoiceActivityWatcher, state, uploadFinalBlob, clearFinalizeTimer, stopVoiceActivityWatcher]);
 
   const stopRecording = useCallback(() => {
-    logVoiceDebugEvent('voice_session_stop_and_send', { state });
+    logVoiceDebugEvent('voice_session_stop_and_send', { state, startInProgress: startInProgressRef.current });
+
+    const recorder = mediaRecorderRef.current;
+    if (startInProgressRef.current || (recorder && recorder.state === 'inactive' && state !== 'recording')) {
+      stopAfterStartRef.current = true;
+      cancelAfterStartRef.current = false;
+      return;
+    }
+
     finalizeRecording(false);
   }, [finalizeRecording, state]);
 
   const cancelRecording = useCallback(() => {
-    logVoiceDebugEvent('voice_session_cancel', { state });
+    logVoiceDebugEvent('voice_session_cancel', { state, startInProgress: startInProgressRef.current });
+
+    const recorder = mediaRecorderRef.current;
+    if (startInProgressRef.current || (recorder && recorder.state === 'inactive' && state !== 'recording')) {
+      stopAfterStartRef.current = false;
+      cancelAfterStartRef.current = true;
+      cancelledRef.current = true;
+      return;
+    }
+
     finalizeRecording(true);
   }, [finalizeRecording, state]);
 
@@ -551,6 +586,8 @@ export function useVoiceRecorder({ onText, lang = 'ru-RU', chunkMs = VOICE_RECOR
     startInProgressRef.current = false;
     lifecycleBusyRef.current = false;
     manualStopOnlyRef.current = false;
+    stopAfterStartRef.current = false;
+    cancelAfterStartRef.current = false;
   }, [hardCleanup]);
 
   const setManualStopOnly = useCallback((value: boolean) => {

@@ -260,7 +260,9 @@ export class TransactionService {
           accountId: input.accountId,
           toAccountId: input.type === 'transfer' ? input.toAccountId! : null,
           categoryId: taxonomy.categoryId,
-          sectionId: taxonomy.sectionId,
+          // Transactions are category-only in the current taxonomy model.
+          // Section links are legacy grouping data and must not be persisted on money operations.
+          sectionId: null,
           amount,
           type: input.type,
           title: this.buildTransactionTitleFallback(input.type, input.title, input.description, taxonomy),
@@ -379,7 +381,8 @@ export class TransactionService {
           accountId: nextAccountId,
           toAccountId: nextToAccountId,
           categoryId: nextCategoryId,
-          sectionId: nextSectionId,
+          // Keep transaction taxonomy category-only even if older clients or AI payloads send sectionId.
+          sectionId: null,
           amount: nextAmount,
           type: nextType,
           title: this.buildTransactionTitleFallback(nextType, nextTitle, nextDescription, taxonomy),

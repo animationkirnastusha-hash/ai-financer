@@ -4,7 +4,6 @@ import { useNavigationStore } from '@/features/navigation/model/navigation.store
 import { AppNavigationSheet } from '@/features/navigation/ui/AppNavigationSheet';
 import { AppModalManager } from '@/features/modals/ui/AppModalManager';
 import { LaunchOnboardingSheet } from '@/features/onboarding/ui/LaunchOnboardingSheet';
-import { ProductTourOverlay } from '@/features/onboarding/ui/ProductTourOverlay';
 import { ProductAnalyticsTracker } from '@/features/product-analytics/ui/ProductAnalyticsTracker';
 import { useAuthStore } from '@/features/auth/model/auth.store';
 import { useSubscriptionStore } from '@/features/subscription/model/subscription.store';
@@ -75,7 +74,6 @@ export function AppRouter() {
       <AppNavigationSheet />
       <AppModalManager />
       <LaunchOnboardingSheet />
-      <ProductTourOverlay />
     </AppShell>
   );
 }

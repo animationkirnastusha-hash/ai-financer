@@ -35,6 +35,9 @@ export function VoiceFirstCompanionLayer() {
   const [isPriming, setIsPriming] = useState(false);
 
   const lastAssistantMessageKeyRef = useRef('');
+  const previousHasTextChatOverlayRef = useRef(false);
+  const previousPendingActionsCountRef = useRef(0);
+  const suppressPendingOverlayAutoOpenRef = useRef(false);
   const handleTextRef = useRef<(text: string) => Promise<void> | void>(() => undefined);
   const voiceCancelRef = useRef<() => void>(() => undefined);
   const resetVoiceMachineRef = useRef<() => void>(() => undefined);
@@ -292,7 +295,24 @@ export function VoiceFirstCompanionLayer() {
   }, [chat.pendingActions.length, resetGesture, resetVoiceMachine, voice]);
 
   useEffect(() => {
-    if (chat.pendingActions.length <= 0 || hasTextChatOverlay) return;
+    const pendingActionsCount = chat.pendingActions.length;
+    const previousPendingActionsCount = previousPendingActionsCountRef.current;
+    const previousHasTextChatOverlay = previousHasTextChatOverlayRef.current;
+
+    if (pendingActionsCount <= 0) {
+      suppressPendingOverlayAutoOpenRef.current = false;
+    } else if (pendingActionsCount > previousPendingActionsCount) {
+      suppressPendingOverlayAutoOpenRef.current = false;
+    } else if (previousHasTextChatOverlay && !hasTextChatOverlay) {
+      suppressPendingOverlayAutoOpenRef.current = true;
+    }
+
+    previousPendingActionsCountRef.current = pendingActionsCount;
+    previousHasTextChatOverlayRef.current = hasTextChatOverlay;
+  }, [chat.pendingActions.length, hasTextChatOverlay]);
+
+  useEffect(() => {
+    if (chat.pendingActions.length <= 0 || hasTextChatOverlay || suppressPendingOverlayAutoOpenRef.current) return;
     openModal({ type: 'ai-text-overlay', mode: 'text', autoStartVoice: false, autoCloseOnVoiceResult: false });
   }, [chat.pendingActions.length, hasTextChatOverlay, openModal]);
 

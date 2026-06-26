@@ -118,28 +118,24 @@ function checkNoHighConfidenceTechnicalCopy(files) {
   }
 }
 
-function checkProductTourAndLearningWiring() {
+function checkFirstRunLearningWiring() {
   assertFile('src/features/chat/ui/message/AssistantTypingText.tsx');
-  assertFile('src/features/onboarding/ui/ProductTourOverlay.tsx');
+  assertFile('src/features/onboarding/ui/LaunchOnboardingSheet.tsx');
+  assertFile('src/features/onboarding/model/onboarding.store.ts');
   assertFile('src/features/onboarding/ui/ProductLearningCard.tsx');
-  assertFile('src/app/styles/features/onboarding/product-tour.css');
+  assertFile('src/app/styles/pages/onboarding-setup/onboarding-setup-launch.css');
   assertFile('src/app/styles/features/onboarding/product-learning.css');
   assertFile('src/app/styles/animations/chat-motion.css');
 
-  const appRouter = read(path.resolve(srcRoot, 'app/router/AppRouter.tsx'));
   const dashboard = read(path.resolve(srcRoot, 'pages/dashboard/DashboardPage.tsx'));
-  if (!appRouter.includes('ProductTourOverlay') && !dashboard.includes('ProductTourOverlay')) {
-    addFinding('tour-wiring', path.resolve(srcRoot, 'app/router/AppRouter.tsx'), 'ProductTourOverlay is not mounted');
-  }
-
   for (const target of ['home-balance', 'home-fina', 'home-learning', 'home-actions', 'home-chart', 'home-insight']) {
     if (!dashboard.includes(`data-product-tour="${target}"`)) {
-      addFinding('tour-target', path.resolve(srcRoot, 'pages/dashboard/DashboardPage.tsx'), `Product tour target is missing: ${target}`);
+      addFinding('learning-target', path.resolve(srcRoot, 'pages/dashboard/DashboardPage.tsx'), `Product learning target is missing: ${target}`);
     }
   }
 
   const indexCss = read(path.resolve(srcRoot, 'app/styles/index.css'));
-  for (const css of ['product-tour.css', 'product-learning.css', 'chat-motion.css', 'voice-permission-compact.css']) {
+  for (const css of ['onboarding-setup-launch.css', 'product-learning.css', 'chat-motion.css', 'voice-permission-compact.css']) {
     if (!indexCss.includes(css)) addFinding('style-wiring', path.resolve(srcRoot, 'app/styles/index.css'), `${css} is not imported`);
   }
 }
@@ -219,7 +215,7 @@ if (!fs.existsSync(srcRoot)) {
 
 const files = walk(srcRoot);
 checkProductSurfaceFiles();
-checkProductTourAndLearningWiring();
+checkFirstRunLearningWiring();
 checkNavigationIA();
 checkLearningKeys();
 checkNoLegacyOnboardingSteps(files);

@@ -1,66 +1,31 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect } from 'react';
 import { useAuthStore } from '@/features/auth/model/auth.store';
-import { useAppModalStore } from '@/features/modals/model/appModal.store';
-import { AppModalPortal } from '@/features/modals/ui/AppModalPortal';
 import { useNavigationStore } from '@/features/navigation/model/navigation.store';
-import { readMicrophonePermissionState, requestOnboardingMicrophonePermission } from '@/features/onboarding/model/microphonePermission';
 import { useOnboardingStore } from '@/features/onboarding/model/onboarding.store';
 import { useSettingsStore } from '@/features/settings/model/settings.store';
-import { useI18n, type I18nKey } from '@/shared/lib/i18n';
+import { useI18n } from '@/shared/lib/i18n';
 import type { AppLanguage } from '@/features/settings/model/settings.types';
-
-function getFirstName(user: ReturnType<typeof useAuthStore.getState>['user']) {
-  return user?.firstName || user?.username || '';
-}
-
-const ONBOARDING_CHAT_MESSAGE_KEY = 'onboarding.chatStart.assistantMessage';
 
 export function LaunchOnboardingSheet() {
   const { t } = useI18n();
   const isOpen = useOnboardingStore((state) => state.isOpen);
   const complete = useOnboardingStore((state) => state.complete);
-  const user = useAuthStore((state) => state.user);
   const syncUserLocale = useAuthStore((state) => state.syncUserLocale);
   const appLanguage = useSettingsStore((state) => state.appLanguage);
   const setAppLanguage = useSettingsStore((state) => state.setAppLanguage);
-  const voicePermissionPrompted = useSettingsStore((state) => state.voicePermissionPrompted);
-  const setVoicePermissionPrompted = useSettingsStore((state) => state.setVoicePermissionPrompted);
-  const navigateTo = useNavigationStore((state) => state.navigateTo);
-  const openModal = useAppModalStore((state) => state.openModal);
-
-  const name = useMemo(() => getFirstName(user), [user]);
-  const shouldShowLanguageChoice = true;
-  const [isMicRequesting, setIsMicRequesting] = useState(false);
-  const [micMessageKey, setMicMessageKey] = useState<I18nKey | null>(null);
+  const openAIWithCommand = useNavigationStore((state) => state.openAIWithCommand);
 
   useEffect(() => {
     if (!isOpen) return;
-    document.body.classList.add('ai-any-modal-open');
-    document.documentElement.classList.add('ai-any-modal-open');
-    document.body.classList.add('ai-onboarding-active');
-    document.documentElement.classList.add('ai-onboarding-active');
+
+    document.body.classList.add('ai-any-modal-open', 'ai-onboarding-active');
+    document.documentElement.classList.add('ai-any-modal-open', 'ai-onboarding-active');
+
     return () => {
-      document.body.classList.remove('ai-any-modal-open');
-      document.documentElement.classList.remove('ai-any-modal-open');
-      document.body.classList.remove('ai-onboarding-active');
-      document.documentElement.classList.remove('ai-onboarding-active');
+      document.body.classList.remove('ai-any-modal-open', 'ai-onboarding-active');
+      document.documentElement.classList.remove('ai-any-modal-open', 'ai-onboarding-active');
     };
   }, [isOpen]);
-
-  useEffect(() => {
-    if (!isOpen) return;
-
-    let alive = true;
-    void readMicrophonePermissionState().then((state) => {
-      if (!alive) return;
-      if (state === 'granted') setVoicePermissionPrompted(true);
-      if (state === 'denied') setVoicePermissionPrompted(false);
-    });
-
-    return () => {
-      alive = false;
-    };
-  }, [isOpen, setVoicePermissionPrompted]);
 
   if (!isOpen) return null;
 
@@ -69,116 +34,48 @@ export function LaunchOnboardingSheet() {
     void syncUserLocale(language);
   };
 
-  const requestMicrophone = async () => {
-    if (isMicRequesting) return;
-
-    setIsMicRequesting(true);
-    setMicMessageKey(null);
-
-    const result = await requestOnboardingMicrophonePermission();
-    if (result.ok) setMicMessageKey('onboarding.microphone.message.readyShort');
-    else if (result.state === 'denied') setMicMessageKey('onboarding.microphone.message.deniedShort');
-    else if (result.state === 'unsupported') setMicMessageKey('onboarding.microphone.message.unsupported');
-    else setMicMessageKey('onboarding.microphone.message.laterShort');
-
-    setIsMicRequesting(false);
-  };
-
-  const continueInChat = () => {
+  const start = () => {
     complete();
-    navigateTo('dashboard');
-    window.setTimeout(() => {
-      openModal({
-        type: 'ai-text-overlay',
-        initialAssistantMessage: t(ONBOARDING_CHAT_MESSAGE_KEY),
-      });
-    }, 120);
+    window.setTimeout(() => openAIWithCommand(), 0);
   };
 
   return (
-    <AppModalPortal>
-      <div className="app-modal-backdrop px-3" data-no-swipe="true">
-      <div className="app-modal-sheet onboarding-setup-sheet onboarding-setup-sheet--compact" data-no-swipe="true">
-        <div className="app-modal-handle" />
+    <div className="onboarding-entry" role="dialog" aria-modal="true" aria-label={t('onboarding.entry.aria')} data-no-swipe="true">
+      <div className="onboarding-entry__ambient" aria-hidden="true" />
 
-        <div className="app-modal-body onboarding-setup-body onboarding-setup-body--compact">
+      <main className="onboarding-entry__card" data-no-swipe="true">
+        <header className="onboarding-entry__top">
+          <div className="onboarding-entry__brand" aria-hidden="true">
+            <span>F</span>
+          </div>
 
-          {shouldShowLanguageChoice ? (
-            <section className="onboarding-language-card" aria-label={t('onboarding.language.aria')}>
-              <div>
-                <strong>{t('onboarding.language.title')}</strong>
-                <span>{t('onboarding.language.caption')}</span>
-              </div>
-              <div className="onboarding-language-actions" role="group" aria-label={t('onboarding.language.aria')}>
-                {(['en', 'ru'] as AppLanguage[]).map((language) => (
-                  <button
-                    key={language}
-                    type="button"
-                    className={appLanguage === language ? 'is-active' : ''}
-                    onClick={() => chooseLanguage(language)}
-                  >
-                    {t(language === 'en' ? 'onboarding.language.en' : 'onboarding.language.ru')}
-                  </button>
-                ))}
-              </div>
-            </section>
-          ) : null}
+          <div className="onboarding-entry__language" role="group" aria-label={t('onboarding.language.aria')}>
+            {(['en', 'ru'] as AppLanguage[]).map((language) => (
+              <button
+                key={language}
+                type="button"
+                className={appLanguage === language ? 'is-active' : ''}
+                onClick={() => chooseLanguage(language)}
+                aria-pressed={appLanguage === language}
+              >
+                {t(language === 'en' ? 'onboarding.language.enShort' : 'onboarding.language.ruShort')}
+              </button>
+            ))}
+          </div>
+        </header>
 
-          <section className="onboarding-welcome-card">
-            <div className="onboarding-fina-mark" aria-hidden="true">✦</div>
-            <div className="app-eyebrow">{t('onboarding.welcome.eyebrow')}</div>
-            <h2>{t(name ? 'onboarding.welcome.titleWithName' : 'onboarding.welcome.title', { name })}</h2>
-            <p>{t('onboarding.welcome.shortDescription')}</p>
-          </section>
+        <section className="onboarding-entry__hero">
+          <div className="onboarding-entry__orb" aria-hidden="true">✦</div>
+          <h1>{t('onboarding.entry.title')}</h1>
+          <p>{t('onboarding.entry.caption')}</p>
+        </section>
 
-          <section className="onboarding-chat-start-card">
-            <strong>{t('onboarding.chatStart.title')}</strong>
-            <span>{t('onboarding.chatStart.caption')}</span>
-          </section>
-
-          <section className="onboarding-micro-card" aria-label={t('onboarding.microphone.quickTitle')}>
-            <div>
-              <strong>{t('onboarding.microphone.quickTitle')}</strong>
-              <span>{voicePermissionPrompted ? t('onboarding.microphone.quickReady') : t('onboarding.microphone.quickCaption')}</span>
-              {micMessageKey ? <span>{t(micMessageKey)}</span> : null}
-            </div>
-            <button
-              type="button"
-              className="app-secondary-button"
-              onClick={requestMicrophone}
-              disabled={isMicRequesting || voicePermissionPrompted}
-            >
-              {isMicRequesting
-                ? t('onboarding.microphone.action.loading')
-                : voicePermissionPrompted
-                  ? t('onboarding.microphone.action.ready')
-                  : t('onboarding.microphone.action.allow')}
-            </button>
-          </section>
-
-          <section className="onboarding-quick-rules" aria-label={t('onboarding.quick.aria')}>
-            <div>
-              <strong>{t('onboarding.quick.text.title')}</strong>
-              <span>{t('onboarding.quick.text.caption')}</span>
-            </div>
-            <div>
-              <strong>{t('onboarding.quick.voice.title')}</strong>
-              <span>{t('onboarding.quick.voice.caption')}</span>
-            </div>
-            <div>
-              <strong>{t('onboarding.quick.account.title')}</strong>
-              <span>{t('onboarding.quick.account.caption')}</span>
-            </div>
-          </section>
-        </div>
-
-        <footer className="app-modal-footer onboarding-setup-footer onboarding-setup-footer--compact onboarding-setup-footer--single">
-          <button type="button" className="app-primary-button" onClick={continueInChat}>
-            {t('onboarding.action.continueChat')}
+        <footer className="onboarding-entry__footer">
+          <button type="button" className="onboarding-entry__start" onClick={start}>
+            {t('onboarding.entry.start')}
           </button>
         </footer>
-      </div>
-      </div>
-    </AppModalPortal>
+      </main>
+    </div>
   );
 }

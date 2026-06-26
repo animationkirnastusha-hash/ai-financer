@@ -74,6 +74,8 @@ export function TextChatOverlay({
   const voicePointerIdRef = useRef<number | null>(null);
   const voiceStartXRef = useRef(0);
   const voiceCancelledBySwipeRef = useRef(false);
+  const voicePressActiveRef = useRef(false);
+  const voiceStopAfterStartRef = useRef(false);
   const lastAutoClosedMessageKeyRef = useRef("");
   const autoCloseTimerRef = useRef<number | null>(null);
   const initialAssistantMessageKeyRef = useRef<string | null>(null);
@@ -220,6 +222,8 @@ export function TextChatOverlay({
 
   const cancelVoice = useCallback(
     (message?: string) => {
+      voicePressActiveRef.current = false;
+      voiceStopAfterStartRef.current = false;
       setIsVoicePressed(false);
       voice.cancel();
       setVoiceHint(message ?? t("textChat.voice.cancelled"));
@@ -228,13 +232,16 @@ export function TextChatOverlay({
   );
 
   const stopVoiceAndSend = useCallback(() => {
+    voicePressActiveRef.current = false;
     setIsVoicePressed(false);
-    if (voice.state === "recording") {
+
+    if (voice.state === "recording" || voice.state === "idle") {
       setVoiceHint(t("textChat.voice.recognizing"));
       voice.stop();
       return;
     }
-    if (voice.state === "idle") setVoiceHint(null);
+
+    if (voice.state === "uploading") setVoiceHint(t("textChat.voice.recognizing"));
   }, [t, voice]);
 
   const startVoice = useCallback(async () => {
@@ -250,15 +257,19 @@ export function TextChatOverlay({
       setVoicePermissionPrompted(true);
       setVoiceHint(t("textChat.voice.listening"));
       setIsVoicePressed(true);
-      if (voicePointerIdRef.current === null) {
+      if (voiceStopAfterStartRef.current || voicePointerIdRef.current === null) {
+        voiceStopAfterStartRef.current = false;
         window.setTimeout(() => {
           setIsVoicePressed(false);
+          setVoiceHint(t("textChat.voice.recognizing"));
           voice.stop();
-        }, 80);
+        }, 140);
       }
       return true;
     }
 
+    voicePressActiveRef.current = false;
+    voiceStopAfterStartRef.current = false;
     setIsVoicePressed(false);
     voice.reset?.();
 
@@ -286,6 +297,8 @@ export function TextChatOverlay({
       voicePointerIdRef.current = event.pointerId;
       voiceStartXRef.current = event.clientX;
       voiceCancelledBySwipeRef.current = false;
+      voicePressActiveRef.current = true;
+      voiceStopAfterStartRef.current = false;
       event.currentTarget.setPointerCapture?.(event.pointerId);
       void startVoice();
     },
@@ -314,10 +327,17 @@ export function TextChatOverlay({
       event.preventDefault();
       event.stopPropagation();
       voicePointerIdRef.current = null;
+      voicePressActiveRef.current = false;
       if (voiceCancelledBySwipeRef.current) {
         voiceCancelledBySwipeRef.current = false;
         return;
       }
+      if (voice.state === "recording" || voice.state === "uploading") {
+        stopVoiceAndSend();
+        return;
+      }
+
+      voiceStopAfterStartRef.current = true;
       stopVoiceAndSend();
     },
     [stopVoiceAndSend],
@@ -327,6 +347,7 @@ export function TextChatOverlay({
     (event: PointerEvent<HTMLButtonElement>) => {
       if (voicePointerIdRef.current !== event.pointerId) return;
       voicePointerIdRef.current = null;
+      voicePressActiveRef.current = false;
       voiceCancelledBySwipeRef.current = false;
       cancelVoice(t("textChat.voice.cancelled"));
     },
@@ -491,9 +512,16 @@ export function TextChatOverlay({
   ]);
 
   const closeOverlay = useCallback(() => {
-    if (voice.state === "recording" || voice.state === "uploading") voice.cancel();
+    voicePointerIdRef.current = null;
+    voicePressActiveRef.current = false;
+    voiceStopAfterStartRef.current = false;
+    voiceCancelledBySwipeRef.current = false;
+    voice.cancel();
+    voice.reset?.();
     setIsVoicePressed(false);
     setVoiceHint(null);
+    setDragOffset(0);
+    dragStartYRef.current = null;
     onClose();
   }, [onClose, voice]);
 
@@ -567,6 +595,10 @@ export function TextChatOverlay({
     () => () => {
       if (autoCloseTimerRef.current !== null)
         window.clearTimeout(autoCloseTimerRef.current);
+      voicePointerIdRef.current = null;
+      voicePressActiveRef.current = false;
+      voiceStopAfterStartRef.current = false;
+      voiceCancelledBySwipeRef.current = false;
       voice.cancel();
     },
     [voice],

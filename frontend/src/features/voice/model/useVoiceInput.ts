@@ -26,8 +26,8 @@ async function queryMicrophonePermissionState(): Promise<PermissionState | null>
   }
 }
 
-export function useVoiceInput({ onText, lang = 'ru-RU', sessionMs = 5200 }: UseVoiceInputParams) {
-  const [permissionPrimed, setPermissionPrimed] = useState(false);
+export function useVoiceInput({ onText, lang = 'ru-RU', sessionMs = 5200, permissionWasPrompted = false }: UseVoiceInputParams) {
+  const [permissionPrimed, setPermissionPrimed] = useState(Boolean(permissionWasPrompted));
   const [permissionState, setPermissionState] = useState<MicrophonePermissionState>('unknown');
   const [permissionError, setPermissionError] = useState<string | null>(null);
   const permissionRequestInFlightRef = useRef(false);
@@ -63,6 +63,13 @@ export function useVoiceInput({ onText, lang = 'ru-RU', sessionMs = 5200 }: UseV
     setPermissionState('unknown');
     return 'unknown';
   }, []);
+
+  useEffect(() => {
+    if (permissionWasPrompted) {
+      setPermissionPrimed(true);
+      if (permissionState === 'unknown') setPermissionState('granted');
+    }
+  }, [permissionState, permissionWasPrompted]);
 
   useEffect(() => {
     void refreshPermissionState();
@@ -142,8 +149,9 @@ export function useVoiceInput({ onText, lang = 'ru-RU', sessionMs = 5200 }: UseV
 
       if (currentPermission !== 'granted' && !permissionPrimed) {
         logVoiceDebugEvent('manual_voice_permission_gesture_consumed', { permissionState: currentPermission });
+        let allowed = false;
         try {
-          const allowed = await primePermission();
+          allowed = await primePermission();
           setPermissionPrimed(allowed);
         } catch (error) {
           logVoiceDebugEvent('manual_voice_permission_gesture_failed', {
@@ -153,7 +161,8 @@ export function useVoiceInput({ onText, lang = 'ru-RU', sessionMs = 5200 }: UseV
         } finally {
           void refreshPermissionState();
         }
-        return 'permission-consumed';
+
+        if (!allowed) return 'permission-consumed';
       }
 
       const started = await recorder.startRecording();
