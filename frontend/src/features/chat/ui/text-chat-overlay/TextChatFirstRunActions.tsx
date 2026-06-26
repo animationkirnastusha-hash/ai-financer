@@ -6,7 +6,6 @@ type Props = {
   enableMicLabel: string;
   skipLabel: string;
   closeChatLabel: string;
-  accountHint: string;
   onEnableMic: () => void | Promise<void>;
   onSkipMic: () => void;
   onCloseChat: () => void;
@@ -18,7 +17,6 @@ export function TextChatFirstRunActions({
   enableMicLabel,
   skipLabel,
   closeChatLabel,
-  accountHint,
   onEnableMic,
   onSkipMic,
   onCloseChat,
@@ -45,10 +43,6 @@ export function TextChatFirstRunActions({
         </button>
       </div>
     );
-  }
-
-  if (stage === 'account') {
-    return <div className="text-chat-setup-hint">{accountHint}</div>;
   }
 
   if (stage === 'done') {

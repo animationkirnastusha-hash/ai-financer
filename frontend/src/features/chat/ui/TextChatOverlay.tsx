@@ -169,6 +169,7 @@ export function TextChatOverlay({
   const setupStage = useFirstRunChatSetupStore((state) => state.stage);
   const setupIsActive = useFirstRunChatSetupStore((state) => state.isActive);
   const setupCloseLocked = useFirstRunChatSetupStore((state) => state.closeLocked);
+  const setupMicrophoneStatus = useFirstRunChatSetupStore((state) => state.microphoneStatus);
   const startFirstRunSetup = useFirstRunChatSetupStore((state) => state.start);
   const skipSetupMicrophone = useFirstRunChatSetupStore((state) => state.skipMicrophone);
   const finishSetupMicrophone = useFirstRunChatSetupStore((state) => state.finishMicrophone);
@@ -721,10 +722,15 @@ export function TextChatOverlay({
     [setChatMessages],
   );
 
+  const clearFirstRunSetupMessages = useCallback(() => {
+    setChatMessages((messages) => messages.filter((message) => !message.id.startsWith('first-run-setup-')));
+  }, [setChatMessages]);
+
   useEffect(() => {
     if (!open || !firstRunSetup || setupStage !== 'idle') return;
+    clearFirstRunSetupMessages();
     startFirstRunSetup();
-  }, [firstRunSetup, open, setupStage, startFirstRunSetup]);
+  }, [clearFirstRunSetupMessages, firstRunSetup, open, setupStage, startFirstRunSetup]);
 
   useEffect(() => {
     setupMessageTimersRef.current.forEach((timer) => window.clearTimeout(timer));
@@ -738,13 +744,19 @@ export function TextChatOverlay({
     };
 
     if (setupStage === 'microphone') {
-      scheduleMessage(180, 'first-run-setup-welcome', t('textChat.setup.welcome'));
-      scheduleMessage(1250, 'first-run-setup-about', t('textChat.setup.about'));
-      scheduleMessage(2350, 'first-run-setup-microphone', t('textChat.setup.microphone'));
+      scheduleMessage(260, 'first-run-setup-intro', t('textChat.setup.intro'));
     }
 
     if (setupStage === 'account') {
-      scheduleMessage(700, 'first-run-setup-account', t('textChat.setup.account'));
+      const accountMessageKey = setupMicrophoneStatus === 'enabled'
+        ? 'textChat.setup.accountAfterMic'
+        : setupMicrophoneStatus === 'failed'
+          ? 'textChat.setup.accountAfterMicFailed'
+          : setupMicrophoneStatus === 'skipped'
+            ? 'textChat.setup.accountAfterMicSkipped'
+            : 'textChat.setup.account';
+
+      scheduleMessage(360, 'first-run-setup-account', t(accountMessageKey));
     }
 
     if (setupStage === 'done') {
@@ -756,7 +768,7 @@ export function TextChatOverlay({
       setupMessageTimersRef.current.forEach((timer) => window.clearTimeout(timer));
       setupMessageTimersRef.current = [];
     };
-  }, [appendSetupAssistantMessage, open, setupIsActive, setupStage, t]);
+  }, [appendSetupAssistantMessage, open, setupIsActive, setupMicrophoneStatus, setupStage, t]);
 
 
   const handleSetupEnableMicrophone = useCallback(async () => {
@@ -766,26 +778,19 @@ export function TextChatOverlay({
     try {
       const allowed = await voice.primePermission();
       setVoicePermissionPrompted(allowed);
-      appendSetupAssistantMessage(
-        allowed ? 'first-run-setup-microphone-ready' : 'first-run-setup-microphone-failed',
-        allowed ? t('textChat.setup.microphoneReady') : t('textChat.setup.microphoneFailed'),
-        allowed ? 'success' : 'error',
-      );
-      finishSetupMicrophone();
+      finishSetupMicrophone(allowed ? 'enabled' : 'failed');
     } catch {
       setVoicePermissionPrompted(false);
-      appendSetupAssistantMessage('first-run-setup-microphone-failed', t('textChat.setup.microphoneFailed'), 'error');
-      finishSetupMicrophone();
+      finishSetupMicrophone('failed');
     } finally {
       setIsSetupBusy(false);
     }
-  }, [appendSetupAssistantMessage, finishSetupMicrophone, isSetupBusy, setVoicePermissionPrompted, setupStage, t, voice]);
+  }, [finishSetupMicrophone, isSetupBusy, setVoicePermissionPrompted, setupStage, voice]);
 
   const handleSetupSkipMicrophone = useCallback(() => {
     if (setupStage !== 'microphone') return;
-    appendSetupAssistantMessage('first-run-setup-microphone-skipped', t('textChat.setup.microphoneSkipped'));
     skipSetupMicrophone();
-  }, [appendSetupAssistantMessage, setupStage, skipSetupMicrophone, t]);
+  }, [setupStage, skipSetupMicrophone]);
 
   const createFirstRunAccountFromCommand = useCallback(
     async (rawText: string, source: "text" | "voice") => {
@@ -987,7 +992,6 @@ export function TextChatOverlay({
             enableMicLabel={t("textChat.setup.action.enableMic")}
             skipLabel={t("textChat.setup.action.skip")}
             closeChatLabel={t("textChat.setup.action.closeChat")}
-            accountHint={t("textChat.setup.accountHint")}
             onEnableMic={handleSetupEnableMicrophone}
             onSkipMic={handleSetupSkipMicrophone}
             onCloseChat={closeOverlay}
