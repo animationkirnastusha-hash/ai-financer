@@ -174,96 +174,97 @@
   transform: scale(.96);
 }
 
-/* Pack 185: compact balance strip inside cashflow, swipe-only navigation. */
-.app-home-balance-strip {
-  width: min(100%, 320px);
-  margin: 0 auto 8px;
+
+/* Pack 186: compact balance root stabilization. */
+.app-home-balance-card--embedded {
   display: grid;
-  justify-items: center;
-  gap: 6px;
-  padding: 6px 4px 8px;
+  gap: 10px;
+  padding: 12px 12px 10px !important;
   border: 0;
   border-radius: 0;
   background: transparent;
   box-shadow: none;
-  touch-action: pan-y;
 }
 
-.app-home-balance-strip .app-home-balance-card__center {
+.app-home-balance-card__summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+}
+
+.app-home-balance-card__center {
+  justify-items: start;
   gap: 3px;
+  text-align: left;
 }
 
-.app-home-balance-strip .app-eyebrow {
-  justify-self: center;
-  font-size: 10px;
-  letter-spacing: .22em;
+.app-home-balance-card__center .app-eyebrow {
+  justify-self: start;
+  margin-bottom: 1px;
 }
 
-.app-home-balance-strip .app-home-balance-card__amount {
-  width: 100%;
-  text-align: center;
-  font-size: clamp(34px, 10.2vw, 48px) !important;
-  line-height: .94 !important;
-  letter-spacing: -.065em !important;
+.app-home-balance-card--embedded .app-home-balance-card__amount {
+  width: auto;
+  max-width: 100%;
+  text-align: left;
+  font-size: clamp(34px, 9vw, 48px) !important;
 }
 
-.app-home-balance-strip .app-home-balance-card__amount[data-scale="medium"] {
-  font-size: clamp(29px, 8.6vw, 40px) !important;
-}
-
-.app-home-balance-strip .app-home-balance-card__amount[data-scale="compact"] {
-  font-size: clamp(24px, 7.2vw, 34px) !important;
-}
-
-.app-home-balance-strip .app-home-balance-card__center p {
-  font-size: 12px;
+.app-home-balance-card__center p {
+  font-size: 13px;
   line-height: 1.15;
 }
 
-.app-home-balance-strip .app-home-balance-card__center span {
-  font-size: 10px;
-  line-height: 1.1;
+.app-home-balance-card__center span {
+  font-size: 11px;
+  line-height: 1.15;
 }
 
-.app-home-balance-strip .app-home-balance-card__rate {
-  justify-self: center;
-  max-width: 100%;
-  padding: 4px 9px;
+.app-home-balance-card--embedded .app-home-balance-card__rate {
+  justify-self: end;
+  align-self: center;
+  max-width: 88px;
+  padding: 7px 10px;
+  border: 1px solid rgba(110, 231, 183, .16);
   border-radius: 999px;
-  background: rgba(255, 255, 255, .04);
-  color: rgba(255, 255, 255, .50);
-  font-size: 11px !important;
+  background: rgba(110, 231, 183, .07);
+  color: rgba(215, 255, 239, .74);
+  font-size: 12px !important;
+  font-weight: 760;
   line-height: 1.1;
   text-align: center;
+  white-space: nowrap;
 }
 
-.app-home-balance-strip .app-home-balance-card__footer--center {
-  display: grid;
-  grid-template-columns: auto;
-  justify-content: center;
-  margin-top: 2px;
-}
-
-.app-home-balance-strip .app-home-balance-card__dots {
-  display: inline-flex;
+.app-home-balance-card__footer--center {
+  display: flex;
+  justify-content: flex-start;
   align-items: center;
-  justify-content: center;
-  gap: 6px;
+  min-height: 12px;
+  margin-top: 0;
 }
 
-.app-home-balance-strip .app-home-balance-card__dots i {
-  width: 6px;
-  height: 6px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, .15);
-  transition: width 160ms ease, background 160ms ease;
+.app-home-balance-card__footer--center .app-home-balance-card__dots {
+  justify-content: flex-start;
 }
 
-.app-home-balance-strip .app-home-balance-card__dots i[data-active="true"] {
-  width: 22px;
-  background: rgba(110, 231, 183, .92);
-}
-
-.app-home-balance-strip .app-home-balance-card__step {
+.app-home-balance-card__step {
   display: none !important;
+}
+
+@media (max-width: 390px) {
+  .app-home-balance-card__summary {
+    grid-template-columns: minmax(0, 1fr) auto !important;
+  }
+
+  .app-home-balance-card--embedded .app-home-balance-card__amount {
+    font-size: clamp(31px, 9vw, 42px) !important;
+  }
+
+  .app-home-balance-card--embedded .app-home-balance-card__rate {
+    max-width: 78px;
+    padding-inline: 8px;
+    font-size: 11px !important;
+  }
 }

@@ -199,26 +199,17 @@ export function AppNavigationSheet() {
   if (phase === 'closed') return null;
 
   const links = isAdmin ? [...baseLinks, adminLink] : baseLinks;
-  const isVisible = phase === 'opening' || phase === 'open';
-  const drawerClassName = [
-    'app-navigation-drawer',
-    isVisible ? 'is-visible' : '',
-    phase === 'closing' ? 'is-closing' : '',
-    isExpanded ? 'is-expanded' : '',
-    isDragging ? 'is-dragging' : '',
-  ].filter(Boolean).join(' ');
-  const layerClassName = ['app-navigation-layer', phase === 'closing' ? 'is-closing' : ''].filter(Boolean).join(' ');
 
   return (
     <AppModalPortal>
       <div
-        className={layerClassName}
+        className="app-navigation-layer"
         data-state={phase}
         data-no-swipe="true"
       >
         <div
           ref={drawerRef}
-          className={drawerClassName}
+          className={`app-navigation-drawer${phase === 'opening' || phase === 'open' ? ' is-visible' : ''}${phase === 'closing' ? ' is-closing' : ''}${isExpanded ? ' is-expanded' : ''}${isDragging ? ' is-dragging' : ''}`}
           data-state={phase}
           data-no-swipe="true"
           onPointerDown={handlePointerDown}

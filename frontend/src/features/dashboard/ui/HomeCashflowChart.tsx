@@ -4,7 +4,6 @@ import type { HomeCashflowMode, HomeCashflowPeriod } from '@/features/dashboard/
 import { buildHomeFinanceAnalytics, conicGradient } from '@/features/dashboard/lib/homeFinanceAnalytics';
 import { formatMoney } from '@/shared/lib/money';
 import { useI18n } from '@/shared/lib/i18n';
-import { HomeChartLegend } from '@/features/dashboard/ui/HomeChartLegend';
 
 type Rates = { usd: number; eur: number };
 
@@ -73,7 +72,6 @@ export function HomeCashflowChart({
         </span>
       </button>
 
-      <HomeChartLegend groups={analytics.categories} title={t('dashboard.chart.categories')} compact />
 
       <button type="button" className="app-primary-button app-home-cashflow-card__action" onClick={() => onCreate(mode)}>
         {mode === 'expense' ? t('dashboard.cashflow.addExpense') : t('dashboard.cashflow.addIncome')}

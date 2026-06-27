@@ -176,12 +176,16 @@
   margin-bottom: 14px;
 }
 
-/* Pack 185: dashboard order polish after moving Fina hint to bottom. */
+
+/* Pack 186: chart without duplicated category legend. */
 .app-home-cashflow-card__balance {
-  margin: 0 0 12px;
+  margin-bottom: 10px;
 }
 
-.app-home-fina-bottom {
+.app-home-cashflow-card .app-home-chart-legend[data-compact="true"] {
+  display: none !important;
+}
+
+.app-home-chart-preview {
   margin-top: 2px;
-  padding-bottom: 10px;
 }

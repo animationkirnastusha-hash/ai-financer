@@ -77,7 +77,8 @@ export function HomeBalanceCarousel({
   const amountScale = activeAmountText.length > 18 ? 'compact' : activeAmountText.length > 14 ? 'medium' : 'normal';
 
   const go = (direction: 1 | -1) => {
-    setActiveIndex((value) => (value + direction + Math.max(1, slides.length)) % Math.max(1, slides.length));
+    if (slides.length <= 1) return;
+    setActiveIndex((value) => (value + direction + slides.length) % slides.length);
   };
 
   const handleTouchStart = (event: TouchEvent<HTMLElement>) => setTouchX(event.touches[0]?.clientX ?? null);
@@ -91,18 +92,20 @@ export function HomeBalanceCarousel({
   };
 
   return (
-    <section className="app-home-balance-strip" data-no-swipe="true" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
-      <div className="app-home-balance-card__center">
-        <div className="app-eyebrow">{t('dashboard.balance.eyebrow')}</div>
-        <div className="app-home-balance-card__amount" data-scale={amountScale}>{activeAmountText}</div>
-        <p>{active.kind === 'total' ? t('dashboard.balance.allMoney') : active.name}</p>
-        <span>{active.kind === 'total' ? active.caption : `${active.currency} · ${active.caption}`}</span>
+    <section className="app-home-balance-card app-home-balance-card--embedded" data-no-swipe="true" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
+      <div className="app-home-balance-card__summary">
+        <div className="app-home-balance-card__center">
+          <div className="app-eyebrow">{t('dashboard.balance.eyebrow')}</div>
+          <div className="app-home-balance-card__amount" data-scale={amountScale}>{activeAmountText}</div>
+          <p>{active.kind === 'total' ? t('dashboard.balance.allMoney') : active.name}</p>
+          <span>{active.kind === 'total' ? active.caption : `${active.currency} · ${active.caption}`}</span>
+        </div>
+
+        <div className="app-home-balance-card__rate">{active.conversion}</div>
       </div>
 
-      <div className="app-home-balance-card__rate">{active.conversion}</div>
-
-      <div className="app-home-balance-card__footer app-home-balance-card__footer--center" aria-hidden="true">
-        <div className="app-home-balance-card__dots">
+      <div className="app-home-balance-card__footer app-home-balance-card__footer--center">
+        <div className="app-home-balance-card__dots" aria-hidden="true">
           {slides.map((slide, index) => <i key={slide.id} data-active={index === safeIndex} />)}
         </div>
       </div>

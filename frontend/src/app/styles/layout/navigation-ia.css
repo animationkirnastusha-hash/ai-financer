@@ -4,43 +4,43 @@
   inset: 0;
   z-index: 92;
   display: flex;
-  align-items: stretch;
+  align-items: flex-start;
   justify-content: flex-start;
   padding:
-    max(12px, env(safe-area-inset-top))
+    max(18px, env(safe-area-inset-top))
     0
-    calc(126px + env(safe-area-inset-bottom))
+    calc(118px + env(safe-area-inset-bottom))
     max(10px, env(safe-area-inset-left));
   background: transparent;
   -webkit-backdrop-filter: none;
   backdrop-filter: none;
-  opacity: 1;
-  pointer-events: auto;
+  pointer-events: none;
+  touch-action: none;
 }
 
-.app-navigation-layer.is-closing,
-.app-navigation-backdrop.is-closing {
-  pointer-events: none;
+.app-navigation-layer[data-state="open"],
+.app-navigation-layer[data-state="opening"],
+.app-navigation-backdrop.is-visible {
+  pointer-events: auto;
 }
 
 .app-navigation-drawer {
   --app-navigation-swipe-x: 0px;
   --app-navigation-surface:
-    radial-gradient(circle at 52% 0%, rgba(110, 231, 183, .07), transparent 38%),
-    linear-gradient(180deg, rgba(23, 28, 36, .96), rgba(7, 10, 16, .97));
+    radial-gradient(circle at 50% 0%, rgba(110, 231, 183, .08), transparent 36%),
+    linear-gradient(180deg, rgba(24, 31, 39, .96), rgba(8, 11, 17, .98));
   position: relative;
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
-  width: 78px;
-  height: min(636px, 100%);
-  max-height: 100%;
+  width: 72px;
+  max-height: min(560px, calc(100dvh - 168px - env(safe-area-inset-bottom)));
   overflow: visible;
   border: 1px solid rgba(255, 255, 255, .10);
-  border-radius: 30px;
+  border-radius: 28px;
   background: var(--app-navigation-surface);
-  box-shadow: 18px 0 48px rgba(0, 0, 0, .34), inset 0 1px 0 rgba(255, 255, 255, .05);
-  -webkit-backdrop-filter: blur(16px) saturate(108%);
-  backdrop-filter: blur(16px) saturate(108%);
+  box-shadow: 16px 0 42px rgba(0, 0, 0, .32), inset 0 1px 0 rgba(255, 255, 255, .05);
+  -webkit-backdrop-filter: blur(15px) saturate(108%);
+  backdrop-filter: blur(15px) saturate(108%);
   opacity: .01;
   transform: translate3d(calc(-100% - 54px), 0, 0);
   transition:
@@ -51,6 +51,7 @@
     box-shadow var(--app-navigation-motion-expand) ease;
   touch-action: pan-y;
   will-change: transform, opacity, width;
+  pointer-events: auto;
 }
 
 .app-navigation-drawer.is-visible {
@@ -59,15 +60,25 @@
 }
 
 .app-navigation-drawer.is-expanded {
-  width: min(286px, calc(100vw - 42px));
-  border-radius: 34px;
+  width: min(282px, calc(100vw - 64px));
+  border-radius: 32px;
 }
 
 .app-navigation-drawer.is-closing {
   opacity: .01;
   transform: translate3d(calc(-100% - 54px), 0, 0);
-  transition-duration: var(--app-navigation-motion-exit), var(--app-navigation-motion-fast), var(--app-navigation-motion-expand), var(--app-navigation-motion-expand), var(--app-navigation-motion-expand);
-  transition-timing-function: var(--app-navigation-ease-in), ease, var(--app-navigation-ease-standard), ease, ease;
+  transition-duration:
+    var(--app-navigation-motion-exit),
+    var(--app-navigation-motion-fast),
+    var(--app-navigation-motion-expand),
+    var(--app-navigation-motion-expand),
+    var(--app-navigation-motion-expand);
+  transition-timing-function:
+    var(--app-navigation-ease-in),
+    ease,
+    var(--app-navigation-ease-standard),
+    ease,
+    ease;
 }
 
 .app-navigation-drawer.is-dragging {
@@ -77,73 +88,46 @@
 .app-navigation-edge-close {
   position: absolute;
   top: 50%;
-  right: -33px;
-  z-index: 3;
+  right: -54px;
+  z-index: 5;
   display: grid;
-  width: 38px;
-  height: 118px;
+  width: 42px;
+  height: 42px;
   place-items: center;
-  padding: 0 5px 0 0;
-  border: 1px solid rgba(255, 255, 255, .10);
-  border-left: 0;
-  border-radius: 0 999px 999px 0;
-  background: var(--app-navigation-surface);
-  color: rgba(255, 255, 255, .66);
-  box-shadow: 14px 0 32px rgba(0, 0, 0, .24), inset -1px 1px 0 rgba(255, 255, 255, .04);
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, .11);
+  border-radius: 999px;
+  background:
+    radial-gradient(circle at 42% 24%, rgba(110, 231, 183, .12), transparent 42%),
+    rgba(14, 19, 27, .96);
+  color: rgba(255, 255, 255, .78);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, .34), inset 0 1px 0 rgba(255, 255, 255, .055);
   transform: translate3d(0, -50%, 0);
   transition:
     color var(--app-navigation-motion-fast) ease,
     transform var(--app-navigation-motion-fast) var(--app-navigation-ease-standard),
-    height var(--app-navigation-motion-expand) var(--app-navigation-ease-standard),
-    right var(--app-navigation-motion-expand) var(--app-navigation-ease-standard);
-}
-
-.app-navigation-edge-close::before {
-  content: "";
-  position: absolute;
-  top: 1px;
-  bottom: 1px;
-  left: -5px;
-  width: 8px;
-  background: var(--app-navigation-surface);
-  pointer-events: none;
-}
-
-.app-navigation-edge-close::after {
-  content: "";
-  position: absolute;
-  inset: 9px 8px 9px 0;
-  border: 1px solid rgba(255, 255, 255, .055);
-  border-left: 0;
-  border-radius: 0 999px 999px 0;
-  pointer-events: none;
+    background var(--app-navigation-motion-fast) ease,
+    border-color var(--app-navigation-motion-fast) ease;
 }
 
 .app-navigation-edge-close span {
-  position: relative;
-  z-index: 1;
   display: block;
   font-size: 31px;
   line-height: 1;
-  transform: translateX(-1px);
-}
-
-.app-navigation-drawer.is-expanded .app-navigation-edge-close {
-  right: -34px;
-  height: 126px;
+  transform: translateX(-1px) translateY(-1px);
 }
 
 .app-navigation-edge-close:active {
-  color: rgba(255, 255, 255, .94);
-  transform: translate3d(0, -50%, 0) scale(.97);
+  color: rgba(255, 255, 255, .96);
+  transform: translate3d(0, -50%, 0) scale(.95);
 }
 
 .app-navigation-head {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: 10px;
+  gap: 9px;
   align-items: center;
-  padding: 16px 10px 12px;
+  padding: 15px 8px 10px;
   transition:
     grid-template-columns var(--app-navigation-motion-expand) var(--app-navigation-ease-standard),
     padding var(--app-navigation-motion-expand) var(--app-navigation-ease-standard),
@@ -153,7 +137,7 @@
 .app-navigation-drawer.is-expanded .app-navigation-head {
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 12px;
-  padding: 18px 16px 14px;
+  padding: 17px 15px 13px;
 }
 
 .app-navigation-title {
@@ -171,8 +155,7 @@
     color var(--app-navigation-motion-expand) ease,
     font-size var(--app-navigation-motion-expand) var(--app-navigation-ease-standard),
     letter-spacing var(--app-navigation-motion-expand) var(--app-navigation-ease-standard),
-    text-align var(--app-navigation-motion-expand) ease,
-    transform var(--app-navigation-motion-expand) var(--app-navigation-ease-standard);
+    text-align var(--app-navigation-motion-expand) ease;
 }
 
 .app-navigation-drawer.is-expanded .app-navigation-title {
@@ -185,13 +168,13 @@
 
 .app-navigation-toggle {
   display: grid;
-  width: 42px;
-  height: 42px;
+  width: 40px;
+  height: 40px;
   place-items: center;
   justify-self: center;
   border: 1px solid rgba(255, 255, 255, .10);
-  border-radius: 18px;
-  background: rgba(255, 255, 255, .052);
+  border-radius: 17px;
+  background: rgba(255, 255, 255, .048);
   color: rgba(255, 255, 255, .72);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, .045);
   transition:
@@ -243,8 +226,9 @@
 
 .app-navigation-list {
   display: grid;
+  justify-items: center;
   align-content: start;
-  gap: 8px;
+  gap: 10px;
   min-height: 0;
   overflow-y: auto;
   padding: 0 8px 16px;
@@ -260,27 +244,30 @@
 }
 
 .app-navigation-drawer.is-expanded .app-navigation-list {
-  gap: 10px;
+  justify-items: stretch;
+  gap: 9px;
   padding: 0 12px 18px;
 }
 
 .app-navigation-item {
   position: relative;
   display: grid;
-  grid-template-columns: 1fr;
+  width: 46px;
   min-width: 0;
-  min-height: 58px;
+  height: 46px;
+  min-height: 46px;
   place-items: center;
   overflow: hidden;
   border: 1px solid rgba(255, 255, 255, .08);
-  border-radius: 22px;
-  background: rgba(255, 255, 255, .035);
-  color: rgba(255, 255, 255, .54);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, .033);
+  color: rgba(255, 255, 255, .56);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, .035);
   transition:
+    width var(--app-navigation-motion-expand) var(--app-navigation-ease-standard),
+    height var(--app-navigation-motion-expand) var(--app-navigation-ease-standard),
     grid-template-columns var(--app-navigation-motion-expand) var(--app-navigation-ease-standard),
     gap var(--app-navigation-motion-expand) var(--app-navigation-ease-standard),
-    min-height var(--app-navigation-motion-expand) var(--app-navigation-ease-standard),
     padding var(--app-navigation-motion-expand) var(--app-navigation-ease-standard),
     border-radius var(--app-navigation-motion-expand) ease,
     transform var(--app-navigation-motion-fast) ease,
@@ -291,18 +278,20 @@
 }
 
 .app-navigation-drawer.is-expanded .app-navigation-item {
-  grid-template-columns: 44px minmax(0, 1fr);
+  width: auto;
+  height: 56px;
+  min-height: 56px;
+  grid-template-columns: 38px minmax(0, 1fr);
   gap: 10px;
-  min-height: 64px;
   place-items: center start;
-  padding: 10px 12px 10px 10px;
-  border-radius: 24px;
+  padding: 8px 11px 8px 8px;
+  border-radius: 20px;
 }
 
 .app-navigation-item::before {
   content: "";
   position: absolute;
-  inset: 8px;
+  inset: 7px;
   z-index: -1;
   border-radius: inherit;
   background: linear-gradient(135deg, rgba(110, 231, 183, .20), rgba(59, 130, 246, .11));
@@ -316,8 +305,8 @@
 .app-navigation-item[data-active="true"] {
   color: rgba(232, 255, 246, .96);
   border-color: rgba(110, 231, 183, .24);
-  background: rgba(110, 231, 183, .08);
-  box-shadow: 0 12px 34px rgba(0, 0, 0, .20), inset 0 1px 0 rgba(255, 255, 255, .055);
+  background: rgba(110, 231, 183, .075);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, .18), inset 0 1px 0 rgba(255, 255, 255, .055);
 }
 
 .app-navigation-item[data-active="true"]::before {
@@ -326,40 +315,39 @@
 }
 
 .app-navigation-item:active {
-  transform: scale(.97);
+  transform: scale(.96);
 }
 
 .app-navigation-item__icon {
   display: grid;
-  width: 34px;
-  height: 34px;
+  width: 30px;
+  height: 30px;
   place-items: center;
-  border-radius: 15px;
-  background: rgba(255, 255, 255, .045);
+  border-radius: 13px;
+  background: rgba(255, 255, 255, .047);
   color: currentColor;
   transition:
     width var(--app-navigation-motion-expand) var(--app-navigation-ease-standard),
     height var(--app-navigation-motion-expand) var(--app-navigation-ease-standard),
-    border-radius var(--app-navigation-motion-expand) ease,
-    transform var(--app-navigation-motion-expand) var(--app-navigation-ease-standard);
+    border-radius var(--app-navigation-motion-expand) ease;
 }
 
 .app-navigation-drawer.is-expanded .app-navigation-item__icon {
-  width: 42px;
-  height: 42px;
-  border-radius: 17px;
+  width: 34px;
+  height: 34px;
+  border-radius: 14px;
 }
 
 .app-navigation-item__icon svg {
   display: block;
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
   fill: currentColor;
 }
 
 .app-navigation-drawer.is-expanded .app-navigation-item__icon svg {
-  width: 21px;
-  height: 21px;
+  width: 19px;
+  height: 19px;
 }
 
 .app-navigation-item__text {
@@ -412,35 +400,43 @@
 @media (max-height: 720px) {
   .app-navigation-layer,
   .app-navigation-backdrop {
-    padding-bottom: calc(112px + env(safe-area-inset-bottom));
+    padding-bottom: calc(106px + env(safe-area-inset-bottom));
   }
 
   .app-navigation-drawer {
-    height: 100%;
+    max-height: min(512px, calc(100dvh - 146px - env(safe-area-inset-bottom)));
+  }
+
+  .app-navigation-list {
+    gap: 8px;
   }
 
   .app-navigation-item {
-    min-height: 54px;
+    width: 44px;
+    height: 44px;
+    min-height: 44px;
   }
 
   .app-navigation-drawer.is-expanded .app-navigation-item {
-    min-height: 60px;
+    height: 52px;
+    min-height: 52px;
   }
 }
 
 @media (max-width: 370px) {
   .app-navigation-drawer {
-    width: 72px;
+    width: 68px;
     border-radius: 26px;
   }
 
   .app-navigation-drawer.is-expanded {
-    width: min(268px, calc(100vw - 38px));
+    width: min(266px, calc(100vw - 60px));
   }
 
   .app-navigation-edge-close {
-    right: -31px;
-    width: 36px;
+    right: -50px;
+    width: 40px;
+    height: 40px;
   }
 }
 

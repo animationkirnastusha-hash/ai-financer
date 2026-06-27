@@ -283,8 +283,26 @@ export function VoiceFirstCompanionLayer() {
       showThought(voice.error === 'rate-limited' ? t('voice.thought.tooManyRequests') : t('voice.thought.notHeard'), 'warning', 2600);
       resetGesture();
       resetVoiceMachine();
+      window.setTimeout(() => {
+        voice.reset?.();
+      }, 0);
     }
-  }, [openPermissionPrompt, resetGesture, resetVoiceMachine, setVoicePermissionPrompted, showThought, t, voice.error]);
+  }, [openPermissionPrompt, resetGesture, resetVoiceMachine, setVoicePermissionPrompted, showThought, t, voice]);
+
+  useEffect(() => {
+    if (voice.state !== 'recording' && voice.state !== 'uploading') return;
+
+    const timeoutMs = voice.state === 'recording' ? Math.max(recordSessionMs + 4200, 9800) : 24000;
+    const timer = window.setTimeout(() => {
+      logVoiceDebugEvent('voice_session_watchdog_reset', { voiceState: voice.state, timeoutMs });
+      voice.reset?.();
+      resetGesture();
+      resetVoiceMachine();
+      showThought(t('voice.thought.notHeard'), 'warning', 2600);
+    }, timeoutMs);
+
+    return () => window.clearTimeout(timer);
+  }, [recordSessionMs, resetGesture, resetVoiceMachine, showThought, t, voice]);
 
   useEffect(() => {
     const lastMessage = chat.messages.filter((message) => message.role === 'assistant').at(-1);

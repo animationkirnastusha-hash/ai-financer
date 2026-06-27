@@ -249,9 +249,8 @@ export function useVoiceRecorder({ onText, lang = 'ru-RU', chunkMs = VOICE_RECOR
           extension: format.extension,
         },
       );
-      if (isTooSmall) setError('no-speech');
-      recordingStartedAtRef.current = 0;
-      lifecycleBusyRef.current = false;
+      setError('no-speech');
+      hardCleanup();
       setState('idle');
       return;
     }
@@ -284,8 +283,7 @@ export function useVoiceRecorder({ onText, lang = 'ru-RU', chunkMs = VOICE_RECOR
         setError('no-speech');
       }
 
-      recordingStartedAtRef.current = 0;
-      lifecycleBusyRef.current = false;
+      hardCleanup();
       setState('idle');
     } catch (err) {
       const code = typeof err === 'object' && err !== null && 'code' in err ? String((err as { code?: unknown }).code) : '';
@@ -307,11 +305,10 @@ export function useVoiceRecorder({ onText, lang = 'ru-RU', chunkMs = VOICE_RECOR
       }
 
       setError(status === 429 ? 'rate-limited' : code === 'VOICE_TRANSCRIPTION_CLIENT_TIMEOUT' || status === 504 ? 'transcription-timeout' : 'transcription-error');
-      recordingStartedAtRef.current = 0;
-      lifecycleBusyRef.current = false;
+      hardCleanup();
       setState('idle');
     }
-  }, [lang]);
+  }, [hardCleanup, lang]);
 
   const finalizeRecording = useCallback((cancelled = false) => {
     clearFinalizeTimer();
