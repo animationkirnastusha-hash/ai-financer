@@ -456,3 +456,20 @@
     transition: none;
   }
 }
+
+.app-navigation-separator {
+  display: block;
+  width: 34px;
+  height: 1px;
+  margin: 2px 0;
+  border-radius: 999px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .18), transparent);
+  transition:
+    width var(--app-navigation-motion-expand) var(--app-navigation-ease-standard),
+    margin var(--app-navigation-motion-expand) var(--app-navigation-ease-standard);
+}
+
+.app-navigation-drawer.is-expanded .app-navigation-separator {
+  width: 100%;
+  margin: 5px 0;
+}

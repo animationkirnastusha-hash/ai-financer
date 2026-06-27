@@ -114,7 +114,7 @@ export default function CompanionPage() {
             <span>Настройки</span>
             <small>Голос и ввод</small>
           </button>
-          <button type="button" className="app-action-card" onClick={() => navigateTo('goals')}>
+          <button type="button" className="app-action-card" onClick={() => navigateTo('goals-limits')}>
             <span>Цели</span>
             <small>Прогресс и накопления</small>
           </button>

@@ -4,47 +4,47 @@ import { useNavigationStore, type AppScreen } from '@/features/navigation/model/
 import { useI18n, type I18nKey } from '@/shared/lib/i18n';
 import { AppModalPortal } from '@/features/modals/ui/AppModalPortal';
 
+type NavigationIconName = 'goalsLimits' | 'payments' | 'referral' | 'store' | 'admin';
+
 type NavigationItem = {
+  type: 'item';
   screen: AppScreen;
   labelKey: I18nKey;
   captionKey: I18nKey;
-  icon: 'goals' | 'limits' | 'obligations' | 'referral' | 'admin';
+  icon: NavigationIconName;
 };
 
-const baseLinks: NavigationItem[] = [
-  { screen: 'goals', labelKey: 'screen.goals', captionKey: 'nav.goals.caption', icon: 'goals' },
-  { screen: 'spending-limits', labelKey: 'screen.limits', captionKey: 'nav.limits.caption', icon: 'limits' },
-  { screen: 'obligations', labelKey: 'screen.obligations', captionKey: 'nav.obligations.caption', icon: 'obligations' },
-  { screen: 'referral', labelKey: 'common.referrals', captionKey: 'nav.referral.caption', icon: 'referral' },
+type NavigationSeparator = { type: 'separator'; id: string };
+type NavigationEntry = NavigationItem | NavigationSeparator;
+
+const baseLinks: NavigationEntry[] = [
+  { type: 'item', screen: 'goals-limits', labelKey: 'screen.goalsLimits', captionKey: 'nav.goalsLimits.caption', icon: 'goalsLimits' },
+  { type: 'item', screen: 'payments', labelKey: 'screen.payments', captionKey: 'nav.payments.caption', icon: 'payments' },
+  { type: 'separator', id: 'growth' },
+  { type: 'item', screen: 'referral', labelKey: 'common.referrals', captionKey: 'nav.referral.caption', icon: 'referral' },
+  { type: 'item', screen: 'store', labelKey: 'screen.store', captionKey: 'nav.store.caption', icon: 'store' },
 ];
 
 const adminLink: NavigationItem = {
+  type: 'item',
   screen: 'admin',
   labelKey: 'screen.admin',
   captionKey: 'nav.admin.caption',
   icon: 'admin',
 };
 
-function NavigationIcon({ icon }: { icon: NavigationItem['icon'] }) {
-  if (icon === 'goals') {
+function NavigationIcon({ icon }: { icon: NavigationIconName }) {
+  if (icon === 'goalsLimits') {
     return (
       <svg viewBox="0 0 24 24" aria-hidden="true">
         <path d="M12 21a8.8 8.8 0 1 1 8.8-8.8A8.81 8.81 0 0 1 12 21Zm0-2a6.8 6.8 0 1 0-6.8-6.8A6.8 6.8 0 0 0 12 19Z" />
         <path d="M12 16a3.8 3.8 0 1 1 3.8-3.8A3.8 3.8 0 0 1 12 16Zm0-2a1.8 1.8 0 1 0-1.8-1.8A1.8 1.8 0 0 0 12 14Z" />
+        <path d="M17.2 19.2a1 1 0 0 1-1-1v-2.6a1 1 0 1 1 2 0v2.6a1 1 0 0 1-1 1Zm-10.4 0a1 1 0 0 1-1-1v-4.2a1 1 0 1 1 2 0v4.2a1 1 0 0 1-1 1Z" />
       </svg>
     );
   }
 
-  if (icon === 'limits') {
-    return (
-      <svg viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M5.2 18.8a8.8 8.8 0 1 1 13.6 0 1 1 0 0 1-1.55-1.26 6.8 6.8 0 1 0-10.5 0A1 1 0 0 1 5.2 18.8Z" />
-        <path d="M13.2 12.55 16.3 8.9a1 1 0 0 0-1.52-1.3l-3.4 4a1.85 1.85 0 1 0 1.82.95Z" />
-      </svg>
-    );
-  }
-
-  if (icon === 'obligations') {
+  if (icon === 'payments') {
     return (
       <svg viewBox="0 0 24 24" aria-hidden="true">
         <path d="M6.4 4.4h11.2A2.4 2.4 0 0 1 20 6.8v10.4a2.4 2.4 0 0 1-2.4 2.4H6.4A2.4 2.4 0 0 1 4 17.2V6.8a2.4 2.4 0 0 1 2.4-2.4Zm1.1 4.1a1 1 0 1 0 0 2h9a1 1 0 1 0 0-2h-9Zm0 4.1a1 1 0 1 0 0 2h5.8a1 1 0 1 0 0-2H7.5Z" />
@@ -57,6 +57,15 @@ function NavigationIcon({ icon }: { icon: NavigationItem['icon'] }) {
       <svg viewBox="0 0 24 24" aria-hidden="true">
         <path d="M8 12a4 4 0 1 1 3.56-2.18 1 1 0 0 1-1.78.9A2 2 0 1 0 8 12Zm8.6 0a3.4 3.4 0 1 1 2.9-1.62 1 1 0 1 1-1.7-1.05A1.4 1.4 0 1 0 16.6 12Z" />
         <path d="M3.6 19.2a4.4 4.4 0 0 1 8.8 0 1 1 0 0 1-2 0 2.4 2.4 0 0 0-4.8 0 1 1 0 0 1-2 0Zm9.8-.1a3.3 3.3 0 0 1 6.6 0 1 1 0 1 1-2 0 1.3 1.3 0 0 0-2.6 0 1 1 0 0 1-2 0Z" />
+      </svg>
+    );
+  }
+
+  if (icon === 'store') {
+    return (
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M6.8 7.4 8.2 4.6A2.05 2.05 0 0 1 10 3.5h4a2.05 2.05 0 0 1 1.8 1.1l1.4 2.8h.3A2.5 2.5 0 0 1 20 9.9v7.2a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 4 17.1V9.9a2.5 2.5 0 0 1 2.5-2.5h.3Zm3.1-1.9-.95 1.9h6.1L14.1 5.5H9.9Z" />
+        <path d="M8.2 11a1 1 0 0 1 2 0 1.8 1.8 0 1 0 3.6 0 1 1 0 1 1 2 0 3.8 3.8 0 0 1-7.6 0Z" />
       </svg>
     );
   }
@@ -198,7 +207,7 @@ export function AppNavigationSheet() {
 
   if (phase === 'closed') return null;
 
-  const links = isAdmin ? [...baseLinks, adminLink] : baseLinks;
+  const links: NavigationEntry[] = isAdmin ? [...baseLinks, { type: 'separator', id: 'admin' }, adminLink] : baseLinks;
 
   return (
     <AppModalPortal>
@@ -242,7 +251,11 @@ export function AppNavigationSheet() {
 
           <div className="app-navigation-list" role="list">
             {links.map((item) => {
-              const active = currentScreen === item.screen;
+              if (item.type === 'separator') {
+                return <span key={item.id} className="app-navigation-separator" aria-hidden="true" />;
+              }
+
+              const active = currentScreen === item.screen || (item.screen === 'goals-limits' && (currentScreen === 'goals' || currentScreen === 'spending-limits')) || (item.screen === 'payments' && currentScreen === 'obligations');
               return (
                 <button
                   key={item.screen}

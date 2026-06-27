@@ -55,13 +55,13 @@ export default function ObligationsPage() {
   return (
     <div className="app-page app-obligations-page text-white">
       <div className="app-page__inner space-y-4">
-        <ScreenTopBar title="Обязательства" left="back" right={['notifications', 'home']} />
+        <ScreenTopBar title="Платежи" left="back" right={['notifications', 'home']} />
 
         <header className="app-card app-card--hero app-obligations-hero">
           <div className="app-eyebrow">Кредиты, рассрочки и подписки</div>
           <div className="app-obligations-hero__top">
             <div className="min-w-0">
-              <h1 className="app-hero-title">Обязательства</h1>
+              <h1 className="app-hero-title">Платежи</h1>
               <p className="app-hero-caption">Следи за обязательными платежами и не держи даты в голове.</p>
             </div>
             <button type="button" className="app-primary-button shrink-0" onClick={handleCreate}>+ Добавить</button>
@@ -117,10 +117,10 @@ export default function ObligationsPage() {
         ) : null}
 
         {isLoading ? (
-          <div className="app-card p-5 text-sm text-white/55">Загружаю обязательства...</div>
+          <div className="app-card p-5 text-sm text-white/55">Загружаю платежи...</div>
         ) : activeLoans.length === 0 ? (
           <EmptyState
-            eyebrow="Обязательства"
+            eyebrow="Платежи"
             title="Платежей пока нет"
             description="Добавь кредит, ипотеку, рассрочку или подписку. Фина будет держать срок платежа рядом."
           />
@@ -170,7 +170,7 @@ export default function ObligationsPage() {
             <span>{scheduledReminders.length}</span>
           </div>
           {scheduledReminders.length === 0 ? (
-            <p className="app-muted-text">Напоминаний пока нет. Они появятся после добавления обязательства с датой платежа.</p>
+            <p className="app-muted-text">Напоминаний пока нет. Они появятся после добавления платежи с датой платежа.</p>
           ) : (
             <div className="app-reminders-list">
               {scheduledReminders.slice(0, 6).map((reminder) => (
@@ -189,7 +189,7 @@ export default function ObligationsPage() {
         {closedLoans.length > 0 ? (
           <section className="app-card app-closed-loans-card">
             <div className="app-eyebrow">Закрытые</div>
-            <p>{closedLoans.length} обязательств закрыто. Они не участвуют в ближайших платежах.</p>
+            <p>{closedLoans.length} платежей закрыто. Они не участвуют в ближайших платежах.</p>
           </section>
         ) : null}
       </div>

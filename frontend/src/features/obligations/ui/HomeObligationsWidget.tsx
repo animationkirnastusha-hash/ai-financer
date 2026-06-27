@@ -74,7 +74,7 @@ export function HomeObligationsWidget() {
           <span>{t('dashboard.obligations.hidden')}</span>
           <strong>{formatMoney(nearest.monthlyPayment, nearest.currency)}</strong>
         </button>
-        <button type="button" className="app-obligations-widget__ghost" onClick={() => navigateTo('obligations')}>{t('dashboard.obligations.open')}</button>
+        <button type="button" className="app-obligations-widget__ghost" onClick={() => navigateTo('payments')}>{t('dashboard.obligations.open')}</button>
       </section>
     );
   }
@@ -82,7 +82,7 @@ export function HomeObligationsWidget() {
   return (
     <section className={widgetState === 'expanded' ? 'app-card app-obligations-widget app-obligations-widget--expanded' : 'app-card app-obligations-widget app-obligations-widget--compact'}>
       <div className="app-obligations-widget__line">
-        <button type="button" className="app-obligations-widget__main" onClick={() => navigateTo('obligations')}>
+        <button type="button" className="app-obligations-widget__main" onClick={() => navigateTo('payments')}>
           <span className="app-obligations-widget__label">{t('dashboard.obligations.nearest')}</span>
           <span className="app-obligations-widget__title">{nearest.title}</span>
           <small>{dateLabel}</small>

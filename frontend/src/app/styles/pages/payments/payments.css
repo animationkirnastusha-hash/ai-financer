@@ -1,0 +1,164 @@
+.app-payments-shell {
+  display: grid;
+  gap: 18px;
+  padding-top: 10px;
+  padding-bottom: calc(126px + env(safe-area-inset-bottom));
+}
+
+.app-payments-hero {
+  display: grid;
+  gap: 16px;
+  padding: 22px;
+  border-radius: 32px;
+}
+
+.app-payments-hero__main {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 16px;
+  align-items: center;
+}
+
+.app-payments-tabs {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.app-payments-tabs button {
+  min-width: 0;
+  padding-inline: 6px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-payments-nearest {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: center;
+  padding: 18px;
+  border-radius: 28px;
+}
+
+.app-payments-nearest span,
+.app-payments-reminders__head span,
+.app-payment-row__head span {
+  color: rgba(149, 255, 211, .68);
+  font-size: 11px;
+  font-weight: 820;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
+.app-payments-nearest h2,
+.app-payments-reminders__head h2,
+.app-payment-row__head h3 {
+  margin-top: 4px;
+  min-width: 0;
+  color: rgba(255, 255, 255, .94);
+  font-size: 21px;
+  font-weight: 860;
+  letter-spacing: -.055em;
+}
+
+.app-payments-nearest p,
+.app-payment-row__head p {
+  margin-top: 5px;
+  color: rgba(255, 255, 255, .48);
+  font-size: 12px;
+  font-weight: 620;
+}
+
+.app-payments-nearest strong,
+.app-payment-row__head strong {
+  color: rgba(255, 255, 255, .94);
+  font-size: 18px;
+  font-weight: 860;
+  white-space: nowrap;
+}
+
+.app-payment-row__head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: start;
+}
+
+.app-payment-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.app-payment-meta--plain {
+  padding: 11px 12px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, .045);
+}
+
+.app-payments-reminders {
+  display: grid;
+  gap: 14px;
+  padding: 18px;
+  border-radius: 28px;
+}
+
+.app-payments-reminders__head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+}
+
+.app-payments-reminders__head strong {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  border-radius: 16px;
+  background: rgba(110, 231, 183, .11);
+  color: rgba(166, 255, 222, .88);
+}
+
+.app-payments-reminders p {
+  color: rgba(255, 255, 255, .52);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.app-payments-reminder-list {
+  display: grid;
+  gap: 10px;
+}
+
+.app-payments-reminder-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  padding: 12px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, .043);
+}
+
+.app-payments-reminder-row strong,
+.app-payments-reminder-row small {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-payments-reminder-row strong {
+  color: rgba(255, 255, 255, .86);
+  font-size: 13px;
+  font-weight: 760;
+}
+
+.app-payments-reminder-row small {
+  margin-top: 4px;
+  color: rgba(255, 255, 255, .43);
+  font-size: 11px;
+}

@@ -74,7 +74,7 @@ export default function GoalsPage() {
               <div className="app-eyebrow">{t('goals.explainer.eyebrow')}</div>
               <h2>{t('goals.explainer.title')}</h2>
             </div>
-            <button type="button" className="app-secondary-button" onClick={() => navigateTo('obligations')}>{t('goals.explainer.remindersAction')}</button>
+            <button type="button" className="app-secondary-button" onClick={() => navigateTo('payments')}>{t('goals.explainer.remindersAction')}</button>
           </div>
           <div className="app-goals-explainer__grid">
             <article>
