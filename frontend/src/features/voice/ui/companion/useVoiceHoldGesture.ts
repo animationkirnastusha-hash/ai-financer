@@ -5,7 +5,7 @@ import type { GestureMode, GestureRuntime, ShowVoiceThought } from '@/features/v
 
 const SWIPE_CANCEL_PX = 58;
 const TAP_GUARD_MS = 320;
-const HOLD_TO_VOICE_MS = 210;
+const HOLD_TO_VOICE_MS = 80;
 
 const createIdleGesture = (): GestureRuntime => ({
   pointerId: null,

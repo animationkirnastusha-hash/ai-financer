@@ -43,7 +43,7 @@ export const sectionsDictionary = {
   'sections.create.preset.subscriptions.name': 'Подписки',
   'sections.create.preset.subscriptions.description': 'Сервисы, приложения и повторяющиеся платежи',
   'sections.section.expenses': 'Расходы',
-  'sections.section.noCategoriesHint': 'Категории можно добавить вручную или через Фину',
+  'sections.section.noCategoriesHint': 'Категории можно добавить вручную или в диалоге',
   'sections.section.categoriesCount': 'Категорий',
   'sections.section.operationsCount': 'Операций',
   'sections.section.quickProducts': 'Продукты → {name}',

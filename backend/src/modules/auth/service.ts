@@ -148,6 +148,35 @@ export class AuthService {
     return this.hydrateUserLocale(user);
   }
 
+
+  async findOrCreateFallbackDeviceUser(rawDeviceId: unknown) {
+    const source = String(rawDeviceId ?? '').trim();
+
+    if (source.length < 12 || source.length > 128) {
+      return null;
+    }
+
+    const digest = crypto.createHash('sha256').update(source).digest('hex');
+    const numericPart = BigInt(`0x${digest.slice(0, 13)}`);
+    const telegramId = BigInt(9_000_000_000_000) + numericPart;
+    const username = `guest_${digest.slice(0, 10)}`;
+
+    const user = await prisma.user.upsert({
+      where: { telegramId },
+      update: {},
+      create: {
+        telegramId,
+        username,
+        firstName: 'Telegram user',
+        lastName: null,
+        photoUrl: null,
+        isAdmin: false,
+      },
+    });
+
+    return this.hydrateUserLocale(user);
+  }
+
   async hydrateUserLocale<T extends { id: string }>(user: T): Promise<T & { locale: UserLocale | null }> {
     const locale = await readUserLocale(user.id);
     return { ...user, locale };

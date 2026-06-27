@@ -412,7 +412,7 @@ export function TextChatOverlay({
       event.preventDefault();
       event.stopPropagation();
 
-      if (!setupIsActive && voice.permissionState !== "granted") {
+      if (!setupIsActive && (voice.permissionState === "denied" || voice.permissionState === "unsupported")) {
         promptVoicePermissionInChat();
         return;
       }

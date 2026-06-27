@@ -39,6 +39,7 @@ export function VoiceFirstCompanionLayer() {
   const lastAssistantMessageKeyRef = useRef('');
   const previousHasTextChatOverlayRef = useRef(false);
   const previousPendingActionsCountRef = useRef(0);
+  const pendingAutoOpenHydratedRef = useRef(false);
   const suppressPendingOverlayAutoOpenRef = useRef(false);
   const handleTextRef = useRef<(text: string) => Promise<void> | void>(() => undefined);
   const voiceCancelRef = useRef<() => void>(() => undefined);
@@ -171,9 +172,11 @@ export function VoiceFirstCompanionLayer() {
       const allowed = nextPermission === 'granted';
       setVoicePermissionPrompted(allowed);
       if (allowed) {
-        showThought(t('voice.thought.micReady'), 'success', 2800);
-      } else {
+        showThought(t('voice.thought.micReady'), 'success', 2200);
+      } else if (nextPermission === 'denied' || nextPermission === 'unsupported') {
         openPermissionPrompt();
+      } else {
+        showThought(t('voice.thought.micNeeded'), 'warning', 2400);
       }
       resetVoiceMachine();
       voice.reset?.();
@@ -342,7 +345,10 @@ export function VoiceFirstCompanionLayer() {
     const previousPendingActionsCount = previousPendingActionsCountRef.current;
     const previousHasTextChatOverlay = previousHasTextChatOverlayRef.current;
 
-    if (pendingActionsCount <= 0) {
+    if (!pendingAutoOpenHydratedRef.current) {
+      pendingAutoOpenHydratedRef.current = true;
+      suppressPendingOverlayAutoOpenRef.current = pendingActionsCount > 0;
+    } else if (pendingActionsCount <= 0) {
       suppressPendingOverlayAutoOpenRef.current = false;
     } else if (pendingActionsCount > previousPendingActionsCount) {
       suppressPendingOverlayAutoOpenRef.current = false;
@@ -355,6 +361,7 @@ export function VoiceFirstCompanionLayer() {
   }, [chat.pendingActions.length, hasTextChatOverlay]);
 
   useEffect(() => {
+    if (!pendingAutoOpenHydratedRef.current) return;
     if (chat.pendingActions.length <= 0 || hasTextChatOverlay || suppressPendingOverlayAutoOpenRef.current) return;
     openModal({ type: 'ai-text-overlay', mode: 'text', autoStartVoice: false, autoCloseOnVoiceResult: false });
   }, [chat.pendingActions.length, hasTextChatOverlay, openModal]);

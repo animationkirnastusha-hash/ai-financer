@@ -182,30 +182,79 @@ export class AccountService {
       throw new NotFoundError('Account not found');
     }
 
-    const linkedTransactionsCount = await prisma.transaction.count({
-      where: {
-        userId,
-        OR: [{ accountId }, { toAccountId: accountId }],
-      },
-    });
+    await prisma.$transaction(async (tx) => {
+      const linkedTransactions = await tx.transaction.findMany({
+        where: {
+          userId,
+          OR: [{ accountId }, { toAccountId: accountId }],
+        },
+        select: { id: true, type: true, amount: true, accountId: true, toAccountId: true, goalId: true },
+      });
+      const transactionIds = linkedTransactions.map((item) => item.id);
 
-    if (linkedTransactionsCount > 0) {
-      throw new ConflictError('Cannot delete account with linked transactions');
-    }
+      for (const transaction of linkedTransactions) {
+        if (transaction.type !== 'transfer') continue;
 
-    const linkedRecurringCount = await prisma.recurringPayment.count({
-      where: {
-        userId,
-        accountId,
-      },
-    });
+        if (transaction.accountId === accountId && transaction.toAccountId && transaction.toAccountId !== accountId) {
+          await tx.account.updateMany({
+            where: { userId, id: transaction.toAccountId },
+            data: { balance: { decrement: transaction.amount } },
+          });
+        }
 
-    if (linkedRecurringCount > 0) {
-      throw new ConflictError('Cannot delete account with recurring payments');
-    }
+        if (transaction.toAccountId === accountId && transaction.accountId !== accountId) {
+          await tx.account.updateMany({
+            where: { userId, id: transaction.accountId },
+            data: { balance: { increment: transaction.amount } },
+          });
+        }
 
-    await prisma.account.delete({
-      where: { id: accountId },
+        if (transaction.goalId) {
+          await tx.goal.updateMany({
+            where: { userId, id: transaction.goalId },
+            data: { currentAmount: { decrement: transaction.amount } },
+          });
+        }
+      }
+
+      await tx.userAISettings.updateMany({
+        where: {
+          userId,
+          OR: [
+            { defaultExpenseAccountId: accountId },
+            { defaultIncomeAccountId: accountId },
+          ],
+        },
+        data: {
+          defaultExpenseAccountId: null,
+          defaultIncomeAccountId: null,
+        },
+      });
+
+      await tx.goal.updateMany({ where: { userId, accountId }, data: { accountId: null } });
+      await tx.loan.updateMany({ where: { userId, accountId }, data: { accountId: null } });
+      await tx.loanPayment.updateMany({ where: { userId, accountId }, data: { accountId: null } });
+      await tx.recurringPaymentPayment.updateMany({ where: { userId, accountId }, data: { accountId: null } });
+      await tx.receiptScan.updateMany({ where: { userId, accountId }, data: { accountId: null } });
+
+      if (transactionIds.length > 0) {
+        await tx.loanPayment.updateMany({
+          where: { userId, transactionId: { in: transactionIds } },
+          data: { transactionId: null },
+        });
+        await tx.recurringPaymentPayment.updateMany({
+          where: { userId, transactionId: { in: transactionIds } },
+          data: { transactionId: null },
+        });
+        await tx.receiptScan.updateMany({
+          where: { userId, transactionId: { in: transactionIds } },
+          data: { transactionId: null },
+        });
+        await tx.transaction.deleteMany({ where: { userId, id: { in: transactionIds } } });
+      }
+
+      await tx.recurringPayment.deleteMany({ where: { userId, accountId } });
+      await tx.account.delete({ where: { id: accountId } });
     });
 
     return this.serializeAccount(account);

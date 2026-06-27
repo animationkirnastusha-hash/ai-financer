@@ -1,6 +1,5 @@
 import { create } from 'zustand';
 import { authApi, type AuthUserDto } from '@/features/chat/api/auth.api';
-import { hasTelegramRuntime } from '@/shared/lib/telegram';
 import { clearAccessToken, setAccessToken } from '@/features/auth/lib/accessToken';
 import { useSettingsStore } from '@/features/settings/model/settings.store';
 import type { AppLanguage } from '@/features/settings/model/settings.types';
@@ -19,6 +18,18 @@ type AuthState = {
 };
 
 const AUTH_MODE_KEY = 'auth-mode';
+const AUTH_GUEST_DEVICE_ID_KEY = 'auth-guest-device-id';
+
+function getOrCreateGuestDeviceId() {
+  let value = localStorage.getItem(AUTH_GUEST_DEVICE_ID_KEY);
+  if (value && value.length >= 12) return value;
+
+  value = typeof crypto !== 'undefined' && 'randomUUID' in crypto
+    ? crypto.randomUUID()
+    : `guest-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  localStorage.setItem(AUTH_GUEST_DEVICE_ID_KEY, value);
+  return value;
+}
 
 function clearLegacyAuthStorage() {
   localStorage.removeItem('auth-token');
@@ -47,23 +58,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     set({ isLoading: true, error: null });
 
     try {
-      const telegramRuntime = hasTelegramRuntime();
       const hasTelegramInitData = Boolean(initData && initData.length > 20);
 
       /**
-       * Если приложение открыто внутри Telegram, но initData нет —
-       * не используем старый dev-token, иначе разные люди увидят одну базу.
-       * Дальше AuthBootstrap покажет безопасный вход через код из бота.
-       */
-      if (telegramRuntime && !hasTelegramInitData) {
-        clearAccessToken();
-        clearLegacyAuthStorage();
-
-        throw new Error('Не удалось подтвердить вход через Telegram');
-      }
-
-      /**
-       * В Telegram всегда перелогиниваемся через initData.
+       * В официальном Telegram всегда перелогиниваемся через initData.
+       * Если клиент не отдаёт initData, временно используем отдельный
+       * device-id, чтобы пользователь не попадал в общую dev-базу.
        */
       if (hasTelegramInitData) {
         clearAccessToken();
@@ -85,11 +85,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       }
 
       /**
-       * Вне Telegram: dev/web режим.
+       * Неофициальный Telegram / web fallback без initData.
+       * Официальный initData-flow выше не меняется.
        */
       clearLegacyAuthStorage();
 
-      const response = await authApi.login();
+      const fallbackDeviceId = getOrCreateGuestDeviceId();
+      const response = await authApi.login(undefined, fallbackDeviceId);
 
       saveAuth(response);
       applyRemoteLocale(response.user);

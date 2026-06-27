@@ -51,7 +51,7 @@ function buildFinaCommand(flow: FinaFlow, t: (key: string, params?: Record<strin
 export default function GoalsLimitsPage() {
   const { t } = useI18n();
   const currentScreen = useNavigationStore((state) => state.currentScreen);
-  const openAIWithCommand = useNavigationStore((state) => state.openAIWithCommand);
+  const openAIWithPrompt = useNavigationStore((state) => state.openAIWithPrompt);
   const [tab, setTab] = useState<PlannerTab>(currentScreen === 'spending-limits' ? 'limits' : 'goals');
   const [goals, setGoals] = useState<GoalDto[]>([]);
   const [limits, setLimits] = useState<SpendingLimitDto[]>([]);
@@ -59,7 +59,7 @@ export default function GoalsLimitsPage() {
   const [error, setError] = useState<string | null>(null);
 
   const openFina = (flow: FinaFlow, item?: GoalDto | SpendingLimitDto) => {
-    openAIWithCommand(buildFinaCommand(flow, t, item));
+    openAIWithPrompt(buildFinaCommand(flow, t, item));
   };
 
   const load = async () => {
@@ -176,16 +176,6 @@ export default function GoalsLimitsPage() {
           </div>
         </section>
 
-        <section className="app-card app-goals-limits-fina">
-          <div>
-            <span className="app-eyebrow">{t('goalsLimits.fina.eyebrow')}</span>
-            <p>{isGoalsTab ? t('goalsLimits.fina.goals') : t('goalsLimits.fina.limits')}</p>
-          </div>
-          <button type="button" onClick={() => openFina(isGoalsTab ? 'goal-create' : 'limit-create')}>
-            {t('goalsLimits.action.addWithFina')}
-          </button>
-        </section>
-
         {error ? <div className="app-error-box">{error}</div> : null}
 
         {isLoading ? (
@@ -195,7 +185,7 @@ export default function GoalsLimitsPage() {
             eyebrow={isGoalsTab ? t('goalsLimits.tab.goals') : t('goalsLimits.tab.limits')}
             title={emptyTitle}
             description={emptyCaption}
-            actionLabel={t('goalsLimits.action.addWithFina')}
+            actionLabel={t('goalsLimits.action.add')}
             onAction={() => openFina(isGoalsTab ? 'goal-create' : 'limit-create')}
           />
         ) : isGoalsTab ? (

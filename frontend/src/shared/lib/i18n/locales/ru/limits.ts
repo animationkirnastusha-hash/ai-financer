@@ -47,6 +47,6 @@ export const limitsDictionary = {
   'limits.form.amountPlaceholder': 'Сумма',
   'limits.empty.title': 'Лимитов пока нет',
   'limits.empty.caption': 'Скажите Фине: “Поставь лимит на кафе”. Она уточнит сумму и период.',
-  'limits.empty.action': 'Поставить через Фину',
+  'limits.empty.action': 'Поставить лимит',
   'limits.empty.manual': 'Настроить вручную',
 } as const;

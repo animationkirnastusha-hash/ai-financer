@@ -77,7 +77,7 @@ export const settingsDictionary = {
   'settings.taxonomy.noSection': 'Без раздела',
   'settings.taxonomy.presets.title': 'Быстрый старт',
   'settings.taxonomy.loading': 'Загружаю разделы…',
-  'settings.taxonomy.empty': 'Пока пусто. Создай первый раздел вручную или через Фину.',
+  'settings.taxonomy.empty': 'Пока пусто. Создай первый раздел вручную или в диалоге.',
   'settings.taxonomy.category.count': '{count} катег.',
   'settings.taxonomy.category.empty': 'Категорий пока нет',
   'settings.taxonomy.examples.title': 'Что можно сказать или написать',

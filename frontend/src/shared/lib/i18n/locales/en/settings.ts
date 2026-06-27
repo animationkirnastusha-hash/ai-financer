@@ -77,7 +77,7 @@ export const settingsDictionary = {
   'settings.taxonomy.noSection': 'No section',
   'settings.taxonomy.presets.title': 'Quick start',
   'settings.taxonomy.loading': 'Loading sections…',
-  'settings.taxonomy.empty': 'Nothing here yet. Create your first section manually or with Fina.',
+  'settings.taxonomy.empty': 'Nothing here yet. Create your first section manually or in a dialogue.',
   'settings.taxonomy.category.count': '{count} cat.',
   'settings.taxonomy.category.empty': 'No categories yet',
   'settings.taxonomy.examples.title': 'What you can say or type',

@@ -45,6 +45,7 @@ type NavigationState = {
   openSettingsSection: (section: SettingsSection) => void;
   consumeSettingsSection: () => SettingsSection | null;
   openAIWithCommand: (command?: string) => void;
+  openAIWithPrompt: (message: string, quickCreateMode?: 'income' | 'expense' | null) => void;
   openFirstRunChatSetup: () => void;
   goBack: () => void;
   goHome: () => void;
@@ -156,6 +157,25 @@ export const useNavigationStore = create<NavigationState>((set, get) => ({
 
     window.dispatchEvent(new CustomEvent('ai-financer:open-text-chat', {
       detail: { command: trimmedCommand, autoSubmitInitialCommand: Boolean(trimmedCommand) },
+    }));
+
+    set({
+      settingsSection: null,
+      isNavigationMenuOpen: false,
+      isNotificationsOpen: false,
+    });
+  },
+
+
+  openAIWithPrompt: (message, quickCreateMode = null) => {
+    const text = message.trim();
+
+    window.dispatchEvent(new CustomEvent('ai-financer:open-text-chat', {
+      detail: {
+        initialAssistantMessage: text || null,
+        quickCreateMode: quickCreateMode ?? null,
+        autoSubmitInitialCommand: false,
+      },
     }));
 
     set({

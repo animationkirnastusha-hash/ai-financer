@@ -154,11 +154,11 @@ export function useVoiceInput({ onText, lang = 'ru-RU', sessionMs = 5200, permis
         return 'permission-ready';
       }
 
-      if (currentPermission !== 'granted') {
-        logVoiceDebugEvent('manual_voice_permission_required', { permissionState: currentPermission, permissionPrimed });
+      if (currentPermission === 'denied') {
+        logVoiceDebugEvent('manual_voice_permission_denied', { permissionState: currentPermission, permissionPrimed });
         recorder.reset();
         setPermissionPrimed(false);
-        setPermissionError(currentPermission === 'denied' ? 'microphone-denied' : null);
+        setPermissionError('microphone-denied');
         return 'permission-ready';
       }
 

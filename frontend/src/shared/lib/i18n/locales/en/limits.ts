@@ -47,6 +47,6 @@ export const limitsDictionary = {
   'limits.form.amountPlaceholder': 'Amount',
   'limits.empty.title': 'No limits yet',
   'limits.empty.caption': 'Tell Fina: “Set a cafe limit”. She will ask for amount and period.',
-  'limits.empty.action': 'Set with Fina',
+  'limits.empty.action': 'Set limit',
   'limits.empty.manual': 'Set manually',
 } as const;

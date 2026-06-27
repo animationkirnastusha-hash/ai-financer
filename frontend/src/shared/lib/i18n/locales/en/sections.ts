@@ -43,7 +43,7 @@ export const sectionsDictionary = {
   'sections.create.preset.subscriptions.name': 'Subscriptions',
   'sections.create.preset.subscriptions.description': 'Services, apps and recurring payments',
   'sections.section.expenses': 'Expenses',
-  'sections.section.noCategoriesHint': 'Categories can be added manually or with Fina',
+  'sections.section.noCategoriesHint': 'Categories can be added manually or in a dialogue',
   'sections.section.categoriesCount': 'Categories',
   'sections.section.operationsCount': 'Operations',
   'sections.section.quickProducts': 'Groceries → {name}',

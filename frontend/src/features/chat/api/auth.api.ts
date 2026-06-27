@@ -27,9 +27,10 @@ export type FallbackInfoResponse = {
 };
 
 export const authApi = {
-  login: (initData?: string) =>
+  login: (initData?: string, fallbackDeviceId?: string) =>
     apiClient.post<LoginResponse>('/auth/login', {
       initData,
+      fallbackDeviceId,
     }),
 
   me: () =>

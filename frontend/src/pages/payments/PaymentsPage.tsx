@@ -164,7 +164,7 @@ export default function PaymentsPage() {
   const loadAll = useObligationsStore((state) => state.loadAll);
   const markPaid = useObligationsStore((state) => state.markPaid);
   const updateReminderStatus = useObligationsStore((state) => state.updateReminderStatus);
-  const openAIWithCommand = useNavigationStore((state) => state.openAIWithCommand);
+  const openAIWithPrompt = useNavigationStore((state) => state.openAIWithPrompt);
 
   useEffect(() => {
     void Promise.allSettled([loadAll(true), loadAccounts()]);
@@ -190,9 +190,9 @@ export default function PaymentsPage() {
       .sort((a, b) => amount(a.daysUntil) - amount(b.daysUntil))[0] ?? null;
   }, [currentPayments]);
 
-  const openCreate = () => openAIWithCommand(createCommand(tab, t));
-  const openEdit = (record: PaymentRecord) => openAIWithCommand(editCommand(record, t));
-  const openPaidWithFina = (record: PaymentRecord) => openAIWithCommand(paidCommand(record, t));
+  const openCreate = () => openAIWithPrompt(createCommand(tab, t));
+  const openEdit = (record: PaymentRecord) => openAIWithPrompt(editCommand(record, t));
+  const openPaidWithFina = (record: PaymentRecord) => openAIWithPrompt(paidCommand(record, t));
 
   const renderPayment = (payment: PaymentRecord) => {
     const isDebt = payment.tab === 'credit' || payment.tab === 'installment';
@@ -306,14 +306,6 @@ export default function PaymentsPage() {
           </section>
         ) : null}
 
-        <section className="app-card app-payments-fina">
-          <div>
-            <span className="app-eyebrow">{t('payments.fina.eyebrow')}</span>
-            <p>{t('payments.fina.caption')}</p>
-          </div>
-          <button type="button" onClick={openCreate}>{t('payments.action.addWithFina')}</button>
-        </section>
-
         {error ? <div className="app-error-box">{error}</div> : null}
 
         {isLoading ? (
@@ -323,7 +315,7 @@ export default function PaymentsPage() {
             eyebrow={tabTitle(tab, t)}
             title={t('payments.empty.title')}
             description={tabEmptyCaption(tab, t)}
-            actionLabel={t('payments.action.addWithFina')}
+            actionLabel={t('payments.action.add')}
             onAction={openCreate}
           />
         ) : (

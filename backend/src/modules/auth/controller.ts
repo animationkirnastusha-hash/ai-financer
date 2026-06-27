@@ -14,7 +14,7 @@ import {
 const authService = new AuthService();
 
 export const login = asyncHandler(async (req: Request, res: Response) => {
-  const { initData } = req.body as { initData?: string };
+  const { initData, fallbackDeviceId } = req.body as { initData?: string; fallbackDeviceId?: string };
   /**
    * REAL TELEGRAM LOGIN
    */
@@ -41,6 +41,22 @@ export const login = asyncHandler(async (req: Request, res: Response) => {
       user: authService.serializeUser(user),
       token,
       mode: 'telegram',
+    });
+  }
+
+  /**
+   * Temporary no-initData fallback for unofficial Telegram clients.
+   * Official Telegram initData login above is still preferred and unchanged.
+   */
+  const fallbackUser = await authService.findOrCreateFallbackDeviceUser(fallbackDeviceId);
+
+  if (fallbackUser) {
+    const token = authService.generateToken(fallbackUser.id);
+
+    return res.json({
+      user: authService.serializeUser(fallbackUser),
+      token,
+      mode: 'telegram_no_initdata',
     });
   }
 
