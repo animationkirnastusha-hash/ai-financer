@@ -1,84 +1,83 @@
-/* Pack 148: analytics bars, income lists and empty states. */
-
-.analytics-bar-row,
-.analytics-income-grid button {
-  width: 100%;
-  min-width: 0;
-  border: 0;
-  border-radius: 17px;
-  background: rgba(255,255,255,.045);
-  color: inherit;
-  padding: 10px;
-  text-align: left;
-  cursor: pointer;
-}
-
-.analytics-bar-row:hover,
-.analytics-income-grid button:hover,
-.analytics-legend-item:hover,
-.analytics-action-grid button:hover {
-  background: rgba(255,255,255,.075);
-}
-
-.analytics-bar-row > div,
-.analytics-income-grid button {
+/* Pack 188: analytics v2 lists. */
+.analytics-v2-category-list {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  min-width: 0;
+}
+
+.analytics-v2-category-row {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) auto;
   align-items: center;
   gap: 10px;
+  width: 100%;
+  min-width: 0;
+  min-height: 50px;
+  border: 0;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.055);
+  color: #fff;
+  padding: 8px;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+  transition: transform 160ms ease, background 160ms ease;
 }
 
-.analytics-bar-row span,
-.analytics-income-grid span {
+.analytics-v2-category-row:active {
+  transform: scale(0.985);
+  background: rgba(255, 255, 255, 0.09);
+}
+
+.analytics-v2-category-row__icon {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 14px;
+  color: rgba(2, 6, 23, 0.86);
+  font-size: 15px;
+  font-weight: 900;
+}
+
+.analytics-v2-category-row__text {
+  display: grid;
+  gap: 3px;
   min-width: 0;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: rgba(255,255,255,.86);
-  font-size: 13px;
-  line-height: 1.18;
+}
+
+.analytics-v2-category-row__text b {
+  min-width: 0;
   overflow: hidden;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 900;
+  line-height: 1.15;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.analytics-bar-row strong,
-.analytics-income-grid strong {
-  min-width: 0;
-  color: rgba(255,255,255,.92);
+.analytics-v2-category-row__text small {
+  color: rgba(255, 255, 255, 0.46);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.analytics-v2-category-row strong {
+  color: rgba(255, 255, 255, 0.92);
   font-size: 13px;
-  font-weight: 850;
-  line-height: 1.15;
-  overflow-wrap: anywhere;
-  text-align: right;
+  font-weight: 900;
+  white-space: nowrap;
 }
 
-.analytics-bar-row em {
-  display: block;
-  height: 7px;
-  margin-top: 8px;
-  border-radius: 999px;
-  background: rgba(255,255,255,.08);
-  overflow: hidden;
-}
-
-.analytics-bar-row em b {
-  display: block;
-  height: 100%;
-  border-radius: inherit;
-}
-
-.analytics-income-grid .analytics-empty-line {
-  grid-column: 1 / -1;
-}
-
-@media (max-width: 430px) {
-  .analytics-income-grid,
-  .analytics-income-grid button {
-    grid-template-columns: 1fr;
-  }
-
-  .analytics-income-grid strong {
-    text-align: left;
-  }
+.analytics-v2-empty {
+  display: grid;
+  place-items: center;
+  min-height: 96px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.045);
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 13px;
+  font-weight: 800;
+  text-align: center;
 }

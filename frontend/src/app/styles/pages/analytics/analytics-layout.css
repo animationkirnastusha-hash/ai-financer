@@ -1,6 +1,149 @@
-/* Analytics page legacy entry. Detailed analytics styles live in pages/analytics/*.css. */
-.app-analytics-page .app-page__inner {
+/* Pack 188: analytics v2 layout and KPI cards. */
+.analytics-v2-kpi-grid {
   display: grid;
-  gap: 14px;
-  padding-bottom: calc(var(--app-bottom-safe, 24px) + 120px);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.analytics-v2-kpi,
+.analytics-v2-chart-card,
+.analytics-v2-trend-card,
+.analytics-v2-balance-card,
+.analytics-v2-detail-card,
+.analytics-v2-fina {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.analytics-v2-kpi {
+  display: grid;
+  gap: 8px;
+  padding: 12px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.06);
+  box-shadow: 0 16px 40px rgba(3, 7, 18, 0.18);
+}
+
+.analytics-v2-kpi span,
+.analytics-v2-section-head span,
+.analytics-v2-ratio-grid span {
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.15;
+}
+
+.analytics-v2-kpi strong {
+  min-width: 0;
+  color: #fff;
+  font-size: clamp(15px, 4vw, 20px);
+  font-weight: 900;
+  line-height: 1.05;
+  letter-spacing: -0.04em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.analytics-v2-kpi em {
+  justify-self: start;
+  border-radius: 999px;
+  padding: 4px 7px;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.analytics-v2-kpi em.is-positive {
+  color: #bbf7d0;
+  background: rgba(34, 197, 94, 0.13);
+}
+
+.analytics-v2-kpi em.is-negative {
+  color: #fecaca;
+  background: rgba(248, 113, 113, 0.13);
+}
+
+.analytics-v2-section-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.analytics-v2-section-head h2 {
+  margin: 3px 0 0;
+  color: #fff;
+  font-size: 19px;
+  font-weight: 900;
+  letter-spacing: -0.04em;
+}
+
+.analytics-v2-switch {
+  display: inline-grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px;
+  flex: 0 0 auto;
+  padding: 4px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.analytics-v2-switch button {
+  min-height: 30px;
+  padding: 0 9px;
+  border-radius: 12px;
+  background: transparent;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.analytics-v2-switch button.is-active {
+  color: #07111f;
+  background: #e0f2fe;
+}
+
+.analytics-v2-ratio-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.analytics-v2-ratio-grid article {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+  padding: 11px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.055);
+}
+
+.analytics-v2-ratio-grid strong {
+  color: #fff;
+  font-size: 18px;
+  font-weight: 900;
+}
+
+.analytics-v2-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.analytics-v2-actions button,
+.analytics-v2-light-button {
+  min-height: 42px;
+  border-radius: 17px;
+  background: rgba(255, 255, 255, 0.075);
+  color: rgba(255, 255, 255, 0.86);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.analytics-v2-light-button {
+  padding: 0 12px;
 }

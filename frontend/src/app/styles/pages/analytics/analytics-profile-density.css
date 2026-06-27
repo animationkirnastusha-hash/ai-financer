@@ -1,75 +1,13 @@
-.analytics-hero-card,
-.analytics-section-card,
-.analytics-mini-card,
-.analytics-fina-card,
-.profile-hub-hero,
-.profile-hub-tile {
-  border-radius: 22px;
+/* Pack 188: analytics v2 density guard. */
+.analytics-v2-page .app-card {
+  border-radius: 26px;
 }
 
-.analytics-kpi-grid {
-  margin-top: 12px !important;
+.analytics-v2-page button {
+  touch-action: manipulation;
 }
 
-.analytics-kpi-grid article,
-.analytics-income-grid article,
-.analytics-income-grid button,
-.analytics-mini-card,
-.profile-hub-hero__stats article {
-  border-radius: 16px !important;
-  padding: 9px !important;
-}
-
-.analytics-kpi-grid strong,
-.analytics-income-grid strong,
-.analytics-mini-card__value,
-.analytics-mini-card strong,
-.profile-hub-hero__stats strong {
-  font-size: clamp(15px, 4vw, 19px) !important;
-}
-
-.analytics-kpi-grid span,
-.analytics-income-grid span,
-.analytics-mini-card__label,
-.analytics-mini-card__caption,
-.analytics-mini-card small,
-.profile-hub-hero__stats span {
-  font-size: 11px !important;
-}
-
-
-.profile-hub-tile {
-  padding: 12px !important;
-}
-
-.profile-hub-tile b {
-  font-size: 13px !important;
-}
-
-.profile-hub-tile small {
-  font-size: 11px !important;
-  line-height: 1.28 !important;
-}
-
-@media (max-width: 390px) {
-  .fina-command-bar__below {
-    grid-template-columns: 1fr;
-  }
-
-  .home-ia-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-
-  .home-ia-card {
-    min-height: 68px !important;
-  }
-
-  .app-home-chart-preview {
-    grid-template-columns: 72px minmax(0, 1fr) !important;
-  }
-
-  .app-home-donut {
-    width: 72px !important;
-    height: 72px !important;
-  }
+.analytics-v2-page,
+.analytics-v2-page * {
+  box-sizing: border-box;
 }

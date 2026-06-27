@@ -1,130 +1,114 @@
-/* Pack 148: analytics shell, hero and compact KPI layout. */
+/* Pack 188: analytics v2 shell, tabs and period controls. */
+.analytics-v2-page__inner {
+  gap: 14px;
+  padding-bottom: 112px;
+}
 
-.analytics-hero-main {
+.analytics-v2-tabs {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: start;
-  gap: 12px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  padding: 5px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.055);
+  box-shadow: 0 18px 48px rgba(3, 7, 18, 0.22);
 }
 
-.analytics-hero-main h1 {
-  max-width: 100%;
-  margin: 0;
-  font-size: clamp(26px, 7vw, 36px) !important;
-  line-height: 1.02 !important;
-  letter-spacing: -.055em !important;
-}
-
-.analytics-hero-main p {
-  margin: 8px 0 0;
-  color: rgba(255,255,255,.62);
-  font-size: 13px;
-  line-height: 1.42;
-}
-
-.analytics-period-pill {
-  min-height: 32px;
-  display: grid;
-  place-items: center;
-  border: 1px solid rgba(110,231,183,.22);
-  border-radius: 999px;
-  background: rgba(110,231,183,.10);
-  color: rgba(220,255,245,.94);
-  padding: 7px 11px;
-  font-size: 12px;
-  font-weight: 850;
-  white-space: nowrap;
-}
-
-.analytics-kpi-grid article,
-.analytics-mini-card {
-  display: grid;
-  gap: 5px;
-  min-width: 0;
-  border: 1px solid rgba(255,255,255,.09);
-  border-radius: 18px !important;
-  background: rgba(255,255,255,.052);
-  padding: 10px !important;
-}
-
-.analytics-kpi-grid span,
-.analytics-mini-card__label,
-.analytics-mini-card__caption {
-  display: block;
-  min-width: 0;
-  color: rgba(255,255,255,.54);
-  font-size: 11px !important;
-  line-height: 1.25;
-}
-
-.analytics-kpi-grid strong,
-.analytics-mini-card__value {
-  display: block;
-  min-width: 0;
-  color: rgba(255,255,255,.94);
-  font-size: clamp(15px, 4.2vw, 19px) !important;
-  line-height: 1.08;
-  overflow-wrap: anywhere;
-}
-
-.analytics-mini-card--button {
-  border: 1px solid rgba(255,255,255,.09);
-  color: inherit;
-  text-align: left;
+.analytics-v2-tabs button,
+.analytics-v2-period__buttons button,
+.analytics-v2-switch button,
+.analytics-v2-actions button,
+.analytics-v2-light-button {
+  border: 0;
+  color: rgba(255, 255, 255, 0.72);
+  font: inherit;
   cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
 }
 
-.analytics-mini-card--button:hover {
-  background: rgba(255,255,255,.075);
-}
-
-.analytics-fina-card {
-  display: grid;
-  grid-template-columns: 44px minmax(0, 1fr);
-  align-items: center;
-  gap: 12px;
-  padding: 14px !important;
-}
-
-.analytics-fina-card__avatar {
-  width: 44px;
-  height: 44px;
+.analytics-v2-tabs button {
+  min-width: 0;
+  min-height: 40px;
+  padding: 0 8px;
   border-radius: 18px;
-  background: radial-gradient(circle at 40% 30%, rgba(255,255,255,.74), rgba(103,232,249,.18) 38%, rgba(99,102,241,.20));
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  background: transparent;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  transition: background 180ms ease, color 180ms ease, transform 180ms ease;
+}
+
+.analytics-v2-tabs button.is-active {
+  color: #07111f;
+  background: linear-gradient(135deg, rgba(103, 232, 249, 0.98), rgba(110, 231, 183, 0.96));
+  box-shadow: 0 12px 28px rgba(45, 212, 191, 0.22);
+}
+
+.analytics-v2-tabs button:active {
+  transform: scale(0.97);
+}
+
+.analytics-v2-period {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+}
+
+.analytics-v2-period__buttons {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.analytics-v2-period__buttons button {
+  min-height: 34px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.06);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.analytics-v2-period__buttons button.is-active {
+  color: #ecfeff;
+  background: rgba(103, 232, 249, 0.18);
+  box-shadow: inset 0 0 0 1px rgba(103, 232, 249, 0.22);
+}
+
+.analytics-v2-period__calendar {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.analytics-v2-period__calendar label {
+  display: grid;
   gap: 5px;
-  animation: app-fina-float 3.4s ease-in-out infinite;
+  min-width: 0;
 }
 
-.analytics-fina-card__avatar span {
-  width: 5px;
-  height: 5px;
-  border-radius: 999px;
-  background: rgba(0,0,0,.62);
+.analytics-v2-period__calendar span,
+.analytics-v2-period p {
+  color: rgba(255, 255, 255, 0.52);
+  font-size: 11px;
+  font-weight: 700;
 }
 
-.analytics-fina-card b {
-  color: rgba(255,255,255,.92);
-  font-size: 14px;
+.analytics-v2-period__calendar input {
+  width: 100%;
+  min-width: 0;
+  min-height: 38px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 15px;
+  background: rgba(255, 255, 255, 0.065);
+  color: #fff;
+  padding: 0 9px;
+  font: inherit;
+  font-size: 12px;
+  color-scheme: dark;
 }
 
-.analytics-fina-card span {
-  margin-top: 3px;
-  color: rgba(255,255,255,.62);
-  font-size: 13px;
-  line-height: 1.35;
-}
-
-@media (max-width: 430px) {
-  .analytics-hero-main,
-  .analytics-kpi-grid,
-  .analytics-grid-two {
-    grid-template-columns: 1fr;
-  }
-
-  .analytics-period-pill {
-    justify-self: start;
-  }
+.analytics-v2-period p {
+  margin: 0;
+  text-align: center;
 }

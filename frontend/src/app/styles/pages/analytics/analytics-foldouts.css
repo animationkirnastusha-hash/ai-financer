@@ -1,101 +1,101 @@
-/* Pack 148: analytics foldouts and secondary actions. */
-.analytics-foldout {
-  padding: 0 !important;
-  overflow: hidden;
-}
-
-.analytics-foldout > summary {
-  min-height: 68px;
+/* Pack 188: analytics v2 Fina block and responsive polish. */
+.analytics-v2-fina {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 34px;
+  grid-template-columns: 44px minmax(0, 1fr);
+  gap: 12px;
   align-items: center;
-  gap: 12px;
-  padding: 15px;
-  cursor: pointer;
-  list-style: none;
 }
 
-.analytics-foldout > summary::-webkit-details-marker {
-  display: none;
-}
-
-.analytics-foldout > summary small {
-  color: rgba(255,255,255,.46);
-  font-size: 10px;
-  font-weight: 850;
-  letter-spacing: .12em;
-  line-height: 1.1;
-  text-transform: uppercase;
-}
-
-.analytics-foldout > summary b {
-  margin-top: 5px;
-  color: rgba(255,255,255,.92);
-  font-size: 17px;
-  line-height: 1.12;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.analytics-foldout > summary i {
-  width: 34px;
-  height: 34px;
-  border-radius: 999px;
-  background: rgba(255,255,255,.07);
+.analytics-v2-fina__avatar {
   position: relative;
-}
-
-.analytics-foldout > summary i::before,
-.analytics-foldout > summary i::after {
-  content: "";
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: 12px;
-  height: 2px;
-  border-radius: 999px;
-  background: rgba(255,255,255,.72);
-  transform: translate(-50%, -50%);
-}
-
-.analytics-foldout > summary i::after {
-  transform: translate(-50%, -50%) rotate(90deg);
-  transition: transform .18s ease, opacity .18s ease;
-}
-
-.analytics-foldout[open] > summary i::after {
-  opacity: 0;
-  transform: translate(-50%, -50%) rotate(0deg);
-}
-
-.analytics-foldout__body {
   display: grid;
-  gap: 12px;
-  padding: 0 15px 15px;
-}
-
-.analytics-action-grid button {
-  min-width: 0;
-  border: 1px solid rgba(255,255,255,.10);
+  place-items: center;
+  width: 44px;
+  height: 44px;
   border-radius: 18px;
-  background: rgba(255,255,255,.06);
-  color: rgba(255,255,255,.9);
-  padding: 12px;
-  text-align: left;
-  font-size: 13px;
-  line-height: 1.25;
+  background: linear-gradient(135deg, rgba(103, 232, 249, 0.95), rgba(196, 181, 253, 0.92));
+  box-shadow: 0 14px 34px rgba(103, 232, 249, 0.18);
 }
 
-.analytics-empty-line {
-  margin: 0;
-  color: rgba(255,255,255,.58);
+.analytics-v2-fina__avatar span {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  top: 18px;
+  border-radius: 999px;
+  background: #07111f;
+}
+
+.analytics-v2-fina__avatar span:first-child {
+  left: 14px;
+}
+
+.analytics-v2-fina__avatar span:last-child {
+  right: 14px;
+}
+
+.analytics-v2-fina b {
+  display: block;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 950;
+  letter-spacing: -0.02em;
+}
+
+.analytics-v2-fina p {
+  margin: 3px 0 0;
+  color: rgba(255, 255, 255, 0.68);
   font-size: 13px;
-  line-height: 1.4;
+  font-weight: 650;
+  line-height: 1.35;
 }
 
 @media (max-width: 430px) {
-  .analytics-action-grid--two {
+  .analytics-v2-page__inner {
+    gap: 12px;
+  }
+
+  .analytics-v2-tabs {
+    gap: 5px;
+    border-radius: 21px;
+  }
+
+  .analytics-v2-tabs button {
+    min-height: 36px;
+    padding: 0 5px;
+    font-size: 11px;
+  }
+
+  .analytics-v2-kpi-grid,
+  .analytics-v2-ratio-grid {
+    gap: 6px;
+  }
+
+  .analytics-v2-kpi {
+    border-radius: 20px;
+    padding: 10px 8px;
+  }
+
+  .analytics-v2-kpi span,
+  .analytics-v2-ratio-grid span {
+    font-size: 10px;
+  }
+
+  .analytics-v2-chart-layout {
     grid-template-columns: 1fr;
+  }
+
+  .analytics-v2-section-head {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .analytics-v2-section-head h2 {
+    font-size: 18px;
+  }
+
+  .analytics-v2-switch {
+    width: 100%;
   }
 }
