@@ -6,10 +6,15 @@
   align-items: stretch;
   justify-content: flex-start;
   padding: max(10px, env(safe-area-inset-top)) 12px max(10px, env(safe-area-inset-bottom));
-  background: rgba(0, 0, 0, .46);
-  -webkit-backdrop-filter: blur(9px);
-  backdrop-filter: blur(9px);
-  animation: app-navigation-backdrop-in .18s ease both;
+  background: rgba(0, 0, 0, .08);
+  -webkit-backdrop-filter: blur(0);
+  backdrop-filter: blur(0);
+  animation: app-navigation-backdrop-in .28s ease both;
+}
+
+.app-navigation-backdrop[data-closing="true"] {
+  pointer-events: none;
+  animation: app-navigation-backdrop-out .23s ease both;
 }
 
 .app-navigation-drawer {
@@ -19,12 +24,21 @@
   overflow: hidden;
   border: 1px solid rgba(255, 255, 255, .12);
   border-radius: 32px;
-  background: linear-gradient(180deg, rgba(23, 27, 36, .95), rgba(8, 12, 20, .96));
+  background:
+    radial-gradient(circle at 24% 0%, rgba(75, 255, 202, .13), transparent 34%),
+    radial-gradient(circle at 90% 8%, rgba(79, 132, 255, .12), transparent 32%),
+    linear-gradient(180deg, rgba(23, 27, 36, .94), rgba(8, 12, 20, .94));
   box-shadow: 26px 0 72px rgba(0, 0, 0, .42), inset 0 1px 0 rgba(255, 255, 255, .08);
-  transform: translateX(calc(var(--app-navigation-swipe-x, 0px) * -1));
+  transform: translate3d(calc(var(--app-navigation-swipe-x, 0px) * -1), 0, 0);
   will-change: transform, opacity;
-  animation: app-navigation-drawer-in .24s cubic-bezier(.2, .9, .22, 1) both;
+  animation: app-navigation-drawer-in .34s cubic-bezier(.19, 1, .22, 1) both;
   touch-action: pan-y;
+  -webkit-backdrop-filter: blur(22px) saturate(150%);
+  backdrop-filter: blur(22px) saturate(150%);
+}
+
+.app-navigation-backdrop[data-closing="true"] .app-navigation-drawer {
+  animation: app-navigation-drawer-out .23s cubic-bezier(.36, 0, .66, -0.2) both;
 }
 
 .app-navigation-drawer__rail {
@@ -36,14 +50,15 @@
   width: 26px;
   height: 58px;
   place-items: center;
-  border: 1px solid rgba(255, 255, 255, .10);
+  border: 1px solid rgba(255, 255, 255, .11);
   border-right: 0;
   border-radius: 18px 0 0 18px;
-  background: rgba(255, 255, 255, .06);
-  color: rgba(255, 255, 255, .56);
+  background: rgba(255, 255, 255, .065);
+  color: rgba(255, 255, 255, .58);
   font-size: 30px;
   line-height: 1;
   transform: translateY(-50%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .06);
 }
 
 .app-navigation-head {
@@ -76,12 +91,14 @@
   width: 38px;
   height: 38px;
   place-items: center;
-  border: 1px solid rgba(255, 255, 255, .10);
+  border: 1px solid rgba(255, 255, 255, .11);
   border-radius: 999px;
-  background: rgba(255, 255, 255, .06);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, .09), rgba(255, 255, 255, .045));
   color: rgba(255, 255, 255, .80);
   font-size: 31px;
   line-height: 1;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .08);
 }
 
 .app-navigation-groups {
@@ -124,12 +141,28 @@
   padding: 14px 15px;
   overflow: hidden;
   text-align: left;
-  border: 1px solid rgba(255, 255, 255, .09);
+  border: 1px solid rgba(255, 255, 255, .10);
   border-radius: 22px;
-  background: rgba(255, 255, 255, .045);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, .065), rgba(255, 255, 255, .035));
   color: rgba(255, 255, 255, .88);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .04);
-  transition: transform .18s ease, border-color .18s ease, background .18s ease;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .045);
+  transition: transform .18s ease, border-color .18s ease, background .18s ease, box-shadow .18s ease;
+}
+
+.app-navigation-item::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(circle at 18% 0%, rgba(76, 255, 201, .11), transparent 34%);
+  opacity: .65;
+}
+
+.app-navigation-item span,
+.app-navigation-item small {
+  position: relative;
+  z-index: 1;
 }
 
 .app-navigation-item span {
@@ -154,8 +187,10 @@
 }
 
 .app-navigation-item[data-active="true"] {
-  border-color: rgba(104, 168, 255, .36);
-  background: rgba(83, 137, 255, .15);
+  border-color: rgba(63, 229, 174, .34);
+  background:
+    linear-gradient(135deg, rgba(61, 229, 174, .18), rgba(70, 133, 255, .12));
+  box-shadow: 0 12px 28px rgba(30, 214, 162, .12), inset 0 1px 0 rgba(255, 255, 255, .08);
   transform: translateX(3px);
 }
 
@@ -167,13 +202,55 @@
 }
 
 @keyframes app-navigation-backdrop-in {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+    background: rgba(0, 0, 0, 0);
+    -webkit-backdrop-filter: blur(0);
+    backdrop-filter: blur(0);
+  }
+  to {
+    opacity: 1;
+    background: rgba(0, 0, 0, .48);
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+  }
+}
+
+@keyframes app-navigation-backdrop-out {
+  from {
+    opacity: 1;
+    background: rgba(0, 0, 0, .48);
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+  }
+  to {
+    opacity: 0;
+    background: rgba(0, 0, 0, 0);
+    -webkit-backdrop-filter: blur(0);
+    backdrop-filter: blur(0);
+  }
 }
 
 @keyframes app-navigation-drawer-in {
-  from { transform: translateX(-18px); opacity: .76; }
-  to { transform: translateX(0); opacity: 1; }
+  from {
+    transform: translate3d(-108%, 0, 0);
+    opacity: .68;
+  }
+  to {
+    transform: translate3d(calc(var(--app-navigation-swipe-x, 0px) * -1), 0, 0);
+    opacity: 1;
+  }
+}
+
+@keyframes app-navigation-drawer-out {
+  from {
+    transform: translate3d(calc(var(--app-navigation-swipe-x, 0px) * -1), 0, 0);
+    opacity: 1;
+  }
+  to {
+    transform: translate3d(-108%, 0, 0);
+    opacity: .68;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -183,4 +260,10 @@
     animation: none;
     transition: none;
   }
+}
+
+/* Late import override: keep the menu button as three lines even after notification icon sizing. */
+.screen-top-bar__svg--menu {
+  width: 21px;
+  height: 21px;
 }

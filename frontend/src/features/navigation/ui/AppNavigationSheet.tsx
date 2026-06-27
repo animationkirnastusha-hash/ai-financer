@@ -1,5 +1,5 @@
 import type { CSSProperties, TouchEvent } from 'react';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useAuthStore } from '@/features/auth/model/auth.store';
 import { useNavigationStore, type AppScreen } from '@/features/navigation/model/navigation.store';
 import { useI18n, type I18nKey } from '@/shared/lib/i18n';
@@ -15,6 +15,8 @@ type NavigationGroup = {
   titleKey: I18nKey;
   items: NavigationItem[];
 };
+
+const CLOSE_ANIMATION_MS = 230;
 
 const sectionLinks: NavigationItem[] = [
   { screen: 'goals', labelKey: 'screen.goals', captionKey: 'nav.goals.caption' },
@@ -38,7 +40,17 @@ export function AppNavigationSheet() {
   const touchStartX = useRef<number | null>(null);
   const touchStartY = useRef<number | null>(null);
   const dragOffsetRef = useRef(0);
+  const closeTimer = useRef<number | null>(null);
   const [dragOffset, setDragOffset] = useState(0);
+  const [isClosing, setIsClosing] = useState(false);
+
+  useEffect(() => {
+    if (isOpen) setIsClosing(false);
+  }, [isOpen]);
+
+  useEffect(() => () => {
+    if (closeTimer.current) window.clearTimeout(closeTimer.current);
+  }, []);
 
   if (!isOpen) return null;
 
@@ -55,52 +67,66 @@ export function AppNavigationSheet() {
     setDragOffset(0);
   };
 
+  const closeWithAnimation = () => {
+    if (isClosing) return;
+    resetDragOffset();
+    setIsClosing(true);
+
+    if (closeTimer.current) window.clearTimeout(closeTimer.current);
+    closeTimer.current = window.setTimeout(() => {
+      close();
+      setIsClosing(false);
+    }, CLOSE_ANIMATION_MS);
+  };
+
   const handleNavigate = (screen: AppScreen) => {
     resetDragOffset();
     close();
     navigateTo(screen);
   };
 
-  const handleClose = () => {
-    resetDragOffset();
-    close();
-  };
-
   const handleTouchStart = (event: TouchEvent<HTMLDivElement>) => {
+    if (isClosing) return;
     const touch = event.touches[0];
     touchStartX.current = touch.clientX;
     touchStartY.current = touch.clientY;
-    resetDragOffset();
+    dragOffsetRef.current = 0;
+    setDragOffset(0);
   };
 
   const handleTouchMove = (event: TouchEvent<HTMLDivElement>) => {
-    if (touchStartX.current === null || touchStartY.current === null) return;
+    if (isClosing || touchStartX.current === null || touchStartY.current === null) return;
 
     const touch = event.touches[0];
     const deltaX = touchStartX.current - touch.clientX;
     const deltaY = Math.abs(touchStartY.current - touch.clientY);
 
     if (deltaX > 0 && deltaX > deltaY) {
-      const nextOffset = Math.min(120, deltaX);
+      const nextOffset = Math.min(128, deltaX);
       dragOffsetRef.current = nextOffset;
       setDragOffset(nextOffset);
     }
   };
 
   const handleTouchEnd = () => {
+    if (isClosing) return;
+
     if (dragOffsetRef.current > 58) {
-      handleClose();
+      closeWithAnimation();
       return;
     }
 
-    touchStartX.current = null;
-    touchStartY.current = null;
     resetDragOffset();
   };
 
   return (
     <AppModalPortal>
-      <div className="app-navigation-backdrop" data-no-swipe="true" onClick={handleClose}>
+      <div
+        className="app-navigation-backdrop"
+        data-closing={isClosing ? 'true' : undefined}
+        data-no-swipe="true"
+        onClick={closeWithAnimation}
+      >
         <aside
           className="app-navigation-drawer"
           role="dialog"
@@ -114,7 +140,7 @@ export function AppNavigationSheet() {
           onTouchEnd={handleTouchEnd}
           onTouchCancel={handleTouchEnd}
         >
-          <button type="button" className="app-navigation-drawer__rail" onClick={handleClose} aria-label={t('common.close')}>‹</button>
+          <button type="button" className="app-navigation-drawer__rail" onClick={closeWithAnimation} aria-label={t('common.close')}>‹</button>
 
           <div className="app-navigation-head">
             <div>
@@ -122,7 +148,7 @@ export function AppNavigationSheet() {
               <h2>{t('nav.title')}</h2>
               <p>{t('nav.caption')}</p>
             </div>
-            <button type="button" className="app-navigation-close" onClick={handleClose} aria-label={t('common.close')}>×</button>
+            <button type="button" className="app-navigation-close" onClick={closeWithAnimation} aria-label={t('common.close')}>×</button>
           </div>
 
           <div className="app-navigation-groups">

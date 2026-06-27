@@ -1,3 +1,4 @@
+import { useAuthStore } from '@/features/auth/model/auth.store';
 import { useNavigationStore, type AppScreen } from '@/features/navigation/model/navigation.store';
 import { useI18n, type I18nKey } from '@/shared/lib/i18n';
 
@@ -57,6 +58,21 @@ function BottomNavIcon({ icon }: { icon: BottomNavItem['icon'] }) {
   );
 }
 
+function getInitials(firstName?: string | null, username?: string | null) {
+  const source = (firstName || username || 'F').trim();
+  return source.slice(0, 1).toUpperCase();
+}
+
+function ProfileAvatar() {
+  const user = useAuthStore((state) => state.user);
+
+  if (user?.photoUrl) {
+    return <img src={user.photoUrl} alt="" className="app-bottom-navigation__avatar-image" loading="lazy" />;
+  }
+
+  return <span className="app-bottom-navigation__avatar-fallback">{getInitials(user?.firstName, user?.username)}</span>;
+}
+
 function NavButton({ item, profile = false }: { item: BottomNavItem; profile?: boolean }) {
   const { t } = useI18n();
   const currentScreen = useNavigationStore((state) => state.currentScreen);
@@ -73,8 +89,14 @@ function NavButton({ item, profile = false }: { item: BottomNavItem; profile?: b
       aria-current={active ? 'page' : undefined}
       aria-label={t(item.labelKey)}
     >
-      <span className="app-bottom-navigation__icon" aria-hidden="true"><BottomNavIcon icon={item.icon} /></span>
-      <span className="app-bottom-navigation__label">{t(item.labelKey)}</span>
+      {profile ? (
+        <span className="app-bottom-navigation__avatar" aria-hidden="true"><ProfileAvatar /></span>
+      ) : (
+        <>
+          <span className="app-bottom-navigation__icon" aria-hidden="true"><BottomNavIcon icon={item.icon} /></span>
+          <span className="app-bottom-navigation__label">{t(item.labelKey)}</span>
+        </>
+      )}
     </button>
   );
 }

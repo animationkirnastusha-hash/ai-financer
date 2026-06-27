@@ -23,7 +23,7 @@ const FIXED_RIGHT_ACTIONS: Action[] = ['notifications', 'settings'];
 function MenuDotsIcon() {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true" className="screen-top-bar__svg screen-top-bar__svg--menu">
-      <path d="M8 7.5a1.65 1.65 0 1 1-3.3 0A1.65 1.65 0 0 1 8 7.5Zm5.65 0a1.65 1.65 0 1 1-3.3 0 1.65 1.65 0 0 1 3.3 0Zm5.65 0a1.65 1.65 0 1 1-3.3 0 1.65 1.65 0 0 1 3.3 0ZM8 16.5a1.65 1.65 0 1 1-3.3 0A1.65 1.65 0 0 1 8 16.5Zm5.65 0a1.65 1.65 0 1 1-3.3 0 1.65 1.65 0 0 1 3.3 0Zm5.65 0a1.65 1.65 0 1 1-3.3 0 1.65 1.65 0 0 1 3.3 0Z" />
+      <path d="M5.6 7.4a1 1 0 0 1 1-1h10.8a1 1 0 1 1 0 2H6.6a1 1 0 0 1-1-1Zm0 4.6a1 1 0 0 1 1-1h10.8a1 1 0 1 1 0 2H6.6a1 1 0 0 1-1-1Zm0 4.6a1 1 0 0 1 1-1h10.8a1 1 0 1 1 0 2H6.6a1 1 0 0 1-1-1Z" />
     </svg>
   );
 }
