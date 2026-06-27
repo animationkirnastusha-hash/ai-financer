@@ -7,10 +7,6 @@ import { accountsDictionary } from './accounts';
 import { transactionsDictionary } from './transactions';
 import { journalDictionary } from './journal';
 import { dashboardDictionary } from './dashboard';
-import { receiptsDictionary } from './receipts';
-import { storeDictionary } from './store';
-import { premiumDictionary } from './premium';
-import { businessDictionary } from './business';
 import { referralDictionary } from './referral';
 import { profileDictionary } from './profile';
 import { sectionsDictionary } from './sections';
@@ -27,10 +23,6 @@ export const ruDictionary = {
   ...transactionsDictionary,
   ...journalDictionary,
   ...dashboardDictionary,
-  ...receiptsDictionary,
-  ...storeDictionary,
-  ...premiumDictionary,
-  ...businessDictionary,
   ...referralDictionary,
   ...profileDictionary,
   ...sectionsDictionary,

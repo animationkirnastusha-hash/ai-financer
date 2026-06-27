@@ -1,8 +1,7 @@
 import { spawnSync } from 'node:child_process';
 
 const checks = [
-  ['store/subscription', 'scripts/smoke/check-store-subscription.mjs'],
-  ['business workspace', 'scripts/smoke/check-business-workspace.mjs'],
+  ['payments/subscription', 'scripts/smoke/check-store-subscription.mjs'],
   ['receipt scans', 'scripts/smoke/check-receipt-scans.mjs'],
   ['receipt taxonomy preview', 'scripts/smoke/check-receipt-taxonomy-preview.mjs'],
   ['ai training', 'scripts/smoke/check-ai-training.mjs'],

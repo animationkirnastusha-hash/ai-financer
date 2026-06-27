@@ -1,0 +1,33 @@
+.pending-action-card__edit-toggle {
+  margin-top: 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,.10);
+  background: rgba(255,255,255,.04);
+  padding: 6px 12px;
+  font-size: 12px;
+  color: rgba(255,255,255,.70);
+  transition: transform .16s ease, background .16s ease, border-color .16s ease;
+}
+
+.pending-action-card__edit-toggle:active {
+  transform: scale(.95);
+}
+
+.pending-action-card__editor {
+  margin-top: 12px;
+  display: grid;
+  gap: 12px;
+  border-radius: 24px;
+  border: 1px solid rgba(255,255,255,.08);
+  background: rgba(0,0,0,.24);
+  padding: 12px;
+}
+
+.pending-action-card__editor-action {
+  display: grid;
+  gap: 8px;
+  border-radius: 20px;
+  border: 1px solid rgba(255,255,255,.08);
+  background: rgba(255,255,255,.03);
+  padding: 12px;
+}

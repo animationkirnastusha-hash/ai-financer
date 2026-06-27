@@ -15,9 +15,9 @@ function getTitle(transaction: TransactionDto) {
 }
 
 function getTone(transaction: TransactionDto) {
-  if (transaction.type === 'income') return 'border-emerald-300/15 bg-emerald-300/[0.07] text-emerald-200';
-  if (transaction.type === 'transfer') return 'border-sky-300/15 bg-sky-300/[0.07] text-sky-200';
-  return 'border-white/10 bg-white/[0.05] text-white';
+  if (transaction.type === 'income') return 'timeline-event-card__amount--income';
+  if (transaction.type === 'transfer') return 'timeline-event-card__amount--transfer';
+  return '';
 }
 
 function getAmountSign(transaction: TransactionDto): 'plus' | 'minus' | 'none' {
@@ -42,9 +42,9 @@ export function TimelineEventCard({ transaction, onClick }: Props) {
     <button
       type="button"
       onClick={() => onClick?.(transaction)}
-      className="group relative w-full overflow-hidden rounded-[26px] border border-white/8 bg-black/22 p-4 text-left transition active:scale-[0.985] active:bg-white/[0.06]"
+      className="timeline-event-card group"
     >
-      <div className="pointer-events-none absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent opacity-70" />
+      <div className="timeline-event-card__shine" />
 
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0 flex-1">
@@ -74,7 +74,7 @@ export function TimelineEventCard({ transaction, onClick }: Props) {
         </div>
 
         <div className="shrink-0 text-right">
-          <div className={`rounded-2xl border px-3 py-2 text-sm font-semibold ${getTone(transaction)}`}>
+          <div className={`timeline-event-card__amount ${getTone(transaction)}`.trim()}>
             {formatMoney(Number(transaction.amount) || 0, currency, {
               sign: getAmountSign(transaction),
             })}

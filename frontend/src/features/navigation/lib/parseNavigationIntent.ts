@@ -21,8 +21,6 @@ function normalize(input: string) {
 
 function detectScreen(input: string): AppScreen | null {
   if (includesAny(input, ['админ', 'админка', 'admin', 'админ панель', 'админская панель', 'панель администратора'])) return 'admin';
-  if (includesAny(input, ['чек', 'чеки', 'фото чека', 'скан чека', 'receipt', 'receipts'])) return 'receipt-scans';
-  if (includesAny(input, ['магазин', 'store', 'стор', 'тарифы', 'купить премиум', 'premium', 'business', 'ии бухгалтер', 'бухгалтер', 'бухгалтерия', 'фина бухгалтер', 'самозанятый', 'ип', 'малый бизнес'])) return 'store';
   if (includesAny(input, ['журнал', 'история', 'история операций', 'операции', 'операцию', 'транзакции', 'транзакция', 'transactions'])) return 'journal';
   if (includesAny(input, ['аналитика', 'аналитику', 'анализ', 'analytics', 'статистика', 'отчет', 'отчеты'])) return 'analytics';
   if (includesAny(input, ['цели', 'цель', 'копилка', 'копилки', 'goals'])) return 'goals';
@@ -60,8 +58,6 @@ function isBareNavigationTarget(input: string, screen: AppScreen) {
     sections: ['категории', 'разделы', 'категории и разделы', 'разделы и категории'],
     companion: ['компаньон', 'фина', 'помощник'],
     admin: ['админка', 'админ', 'админ панель', 'админская панель', 'панель администратора'],
-    store: ['магазин', 'стор', 'тарифы', 'premium', 'премиум'],
-    'receipt-scans': ['чеки', 'чек', 'фото чека', 'скан чека'],
   };
 
   return (bareAliases[screen] ?? []).some((alias) => input === alias || input === `страница ${alias}` || input === `экран ${alias}`);

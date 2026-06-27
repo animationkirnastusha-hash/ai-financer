@@ -36,7 +36,7 @@ function parseSubscriptionBody(input: unknown) {
   if (!input || typeof input !== 'object') return {};
   const body = input as { product?: unknown; days?: unknown; lifetime?: unknown };
   return {
-    product: body.product === 'business' ? 'business' as const : 'premium' as const,
+    product: 'premium' as const,
     days: typeof body.days === 'number' ? body.days : typeof body.days === 'string' ? Number(body.days) : undefined,
     lifetime: body.lifetime === true,
   };
@@ -46,7 +46,7 @@ function parseRevokeBody(input: unknown) {
   if (!input || typeof input !== 'object') return {};
   const body = input as { product?: unknown };
   return {
-    product: body.product === 'business' ? 'business' as const : 'premium' as const,
+    product: 'premium' as const,
   };
 }
 
@@ -246,10 +246,8 @@ export class AdminService {
         subscription: {
           select: {
             premiumUntil: true,
-            businessUntil: true,
             trialUntil: true,
             premiumLifetime: true,
-            businessLifetime: true,
           },
         },
         _count: {
@@ -284,11 +282,9 @@ export class AdminService {
             subscription: {
               select: {
                 premiumUntil: true,
-                businessUntil: true,
-                trialUntil: true,
+                    trialUntil: true,
                 premiumLifetime: true,
-                businessLifetime: true,
-              },
+                  },
             },
             _count: {
               select: {

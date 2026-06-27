@@ -15,7 +15,7 @@ await runSmoke('ai-training', async (context) => {
     throw new Error('AI training item has invalid shape');
   }
 
-  const correctedOutput = item.correctedOutput || 'Smoke check: reviewed without changing business logic.';
+  const correctedOutput = item.correctedOutput || 'Smoke check: reviewed without changing app logic.';
   const updated = await requestJson(context, `/admin/ai-training/${item.id}`, {
     method: 'PATCH',
     body: {

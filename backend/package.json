@@ -34,7 +34,6 @@
     "smoke:ai-regression": "node scripts/smoke/check-ai-command-regression.mjs",
     "bot:webhook:set": "node scripts/configure-telegram-bot-webhook.mjs",
     "bot:webhook:check": "node scripts/check-telegram-bot-webhook.mjs",
-    "bot:storefront": "node scripts/configure-telegram-bot-storefront.mjs",
     "test:ai-launch": "node scripts/run-ai-launch-checks.mjs",
     "smoke:ai-launch": "node scripts/run-ai-launch-checks.mjs"
   },

@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect } from 'react';
+import { lazy, Suspense } from 'react';
 import { AppShell } from '@/shared/ui/AppShell';
 import { useNavigationStore } from '@/features/navigation/model/navigation.store';
 import { AppNavigationSheet } from '@/features/navigation/ui/AppNavigationSheet';
@@ -6,8 +6,6 @@ import { AppModalManager } from '@/features/modals/ui/AppModalManager';
 import { LaunchOnboardingSheet } from '@/features/onboarding/ui/LaunchOnboardingSheet';
 import { ProductAnalyticsTracker } from '@/features/product-analytics/ui/ProductAnalyticsTracker';
 import { useAuthStore } from '@/features/auth/model/auth.store';
-import { useSubscriptionStore } from '@/features/subscription/model/subscription.store';
-import { canShowStoreSurface, hasFeatureAccess } from '@/features/subscription/lib/entitlements';
 import { Spinner } from '@/shared/ui/Spinner';
 
 const AccountsPage = lazy(() => import('@/pages/accounts/AccountsPage'));
@@ -19,8 +17,6 @@ const DashboardPage = lazy(() => import('@/pages/dashboard/DashboardPage'));
 const GoalsPage = lazy(() => import('@/pages/goals/GoalsPage'));
 const ObligationsPage = lazy(() => import('@/pages/obligations/ObligationsPage'));
 const SpendingLimitsPage = lazy(() => import('@/pages/spending-limits/SpendingLimitsPage'));
-const PremiumPage = lazy(() => import('@/pages/premium/PremiumPage'));
-const ReceiptScansPage = lazy(() => import('@/pages/receipt-scans/ReceiptScansPage'));
 const SettingsPage = lazy(() => import('@/pages/settings/SettingsPage'));
 const SectionsPage = lazy(() => import('@/pages/sections/SectionsPage'));
 const AdminPage = lazy(() => import('@/pages/admin/AdminPage'));
@@ -39,14 +35,6 @@ export function AppRouter() {
   const user = useAuthStore((state) => state.user);
   const isAdmin = Boolean(user?.isAdmin);
   const goBack = useNavigationStore((state) => state.goBack);
-  const subscription = useSubscriptionStore((state) => state.status);
-  const loadSubscription = useSubscriptionStore((state) => state.load);
-  const canShowStore = canShowStoreSurface(subscription);
-  const canShowReceipts = hasFeatureAccess(subscription, 'receiptScan');
-
-  useEffect(() => {
-    if (user) void loadSubscription();
-  }, [loadSubscription, user]);
 
   return (
     <AppShell>
@@ -62,10 +50,6 @@ export function AppRouter() {
         {currentScreen === 'spending-limits' && <SpendingLimitsPage />}
         {currentScreen === 'companion' && <CompanionPage />}
         {currentScreen === 'settings' && <SettingsPage />}
-        {currentScreen === 'store' && (canShowStore ? <PremiumPage /> : <DashboardPage />)}
-        {currentScreen === 'premium' && (canShowStore ? <PremiumPage /> : <DashboardPage />)}
-        {currentScreen === 'business-accountant' && <DashboardPage />}
-        {currentScreen === 'receipt-scans' && (canShowReceipts ? <ReceiptScansPage /> : <DashboardPage />)}
         {currentScreen === 'sections' && <SectionsPage onBack={goBack} />}
         {currentScreen === 'admin' && (isAdmin ? <AdminPage /> : <DashboardPage />)}
         {currentScreen === 'referral' && <ReferralPage />}

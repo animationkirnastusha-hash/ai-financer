@@ -273,3 +273,7 @@
   background: rgba(255, 90, 90, .08);
   color: rgba(255, 198, 198, .86);
 }
+
+.transaction-edit-modal__description {
+  min-height: 88px;
+}

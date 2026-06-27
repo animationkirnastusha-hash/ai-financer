@@ -6,11 +6,9 @@ import { HomeFinanceInsight } from '@/features/dashboard/ui/HomeFinanceInsight';
 import { HomeObligationsWidget } from '@/features/obligations/ui/HomeObligationsWidget';
 import { FinaCommandBar } from '@/features/fina/ui/FinaCommandBar';
 import { ProductLearningCard } from '@/features/onboarding/ui/ProductLearningCard';
-import { useSubscriptionStore } from '@/features/subscription/model/subscription.store';
 import { useI18n } from '@/shared/lib/i18n';
 import type { HomeCashflowMode, HomeCashflowPeriod } from '@/features/dashboard/lib/homeFinanceAnalytics';
 import { useNavigationStore } from '@/features/navigation/model/navigation.store';
-import { useAppModalStore } from '@/features/modals/model/appModal.store';
 import { useSettingsStore } from '@/features/settings/model/settings.store';
 import type { AppCurrency } from '@/features/settings/model/settings.types';
 import { useTransactionsStore } from '@/features/transactions/model/transactions.store';
@@ -34,7 +32,6 @@ function fromRub(amount: number, currency: AppCurrency, rates: { usd: number; eu
 export default function DashboardPage() {
   const { t } = useI18n();
   const navigateTo = useNavigationStore((state) => state.navigateTo);
-  const openModal = useAppModalStore((state) => state.openModal);
   const accounts = useAccountsStore((state) => state.items);
   const accountsLoading = useAccountsStore((state) => state.isLoading);
   const accountsError = useAccountsStore((state) => state.error);
@@ -43,8 +40,6 @@ export default function DashboardPage() {
   const transactionsLoading = useTransactionsStore((state) => state.isLoading);
   const transactionsError = useTransactionsStore((state) => state.error);
   const loadTransactions = useTransactionsStore((state) => state.loadTransactions);
-  const subscription = useSubscriptionStore((state) => state.status);
-  const loadSubscription = useSubscriptionStore((state) => state.load);
 
   const [cashflowMode, setCashflowMode] = useState<HomeCashflowMode>('expense');
   const [cashflowPeriod, setCashflowPeriod] = useState<HomeCashflowPeriod>('month');
@@ -56,26 +51,17 @@ export default function DashboardPage() {
   const rubToEurRate = useSettingsStore((state) => state.rubToEurRate);
 
   useEffect(() => {
-    void Promise.allSettled([loadAccounts(), loadTransactions(), loadSubscription()]);
-  }, [loadAccounts, loadSubscription, loadTransactions]);
+    void Promise.allSettled([loadAccounts(), loadTransactions()]);
+  }, [loadAccounts, loadTransactions]);
 
   const rates = useMemo(() => ({ usd: rubToUsdRate || 90, eur: rubToEurRate || 100 }), [rubToEurRate, rubToUsdRate]);
-  const hasReceiptAccess = Boolean(subscription?.access?.hasPremium || subscription?.access?.hasBusiness || subscription?.features?.receiptScan);
   const financeIsInitiallyLoading = (accountsLoading || transactionsLoading) && accounts.length === 0 && transactions.length === 0;
   const financeLoadError = accounts.length === 0 && transactions.length === 0 ? accountsError || transactionsError : null;
 
   const retryFinanceLoad = () => {
-    void Promise.allSettled([loadAccounts(true), loadTransactions(true), loadSubscription()]);
+    void Promise.allSettled([loadAccounts(true), loadTransactions(true)]);
   };
 
-  const openReceiptFlow = () => {
-    if (hasReceiptAccess) {
-      navigateTo('receipt-scans');
-      return;
-    }
-
-    openModal({ type: 'receipt-premium-lock' });
-  };
 
   const month = useMemo(() => {
     const currentMonth = transactions.filter((item) => isCurrentMonth(item.date));
@@ -111,7 +97,7 @@ export default function DashboardPage() {
           </section>
         ) : null}
 
-        <div data-product-tour="home-balance">
+        <div>
           <HomeBalanceCarousel
             accounts={accounts}
             mainCurrency={mainCurrency}
@@ -122,12 +108,10 @@ export default function DashboardPage() {
             expenses={month.expenses}
             delta={month.delta}
             onOpenAccounts={() => navigateTo('accounts')}
-            onReceiptClick={openReceiptFlow}
-            receiptAvailable={hasReceiptAccess}
           />
         </div>
 
-        <div data-product-tour="home-fina">
+        <div>
           <FinaCommandBar
             compact
             showTextAction={false}
@@ -138,11 +122,11 @@ export default function DashboardPage() {
           />
         </div>
 
-        <div data-product-tour="home-learning">
+        <div>
           <ProductLearningCard />
         </div>
 
-        <section className="home-ia-grid" aria-label={t('dashboard.ia.label')} data-product-tour="home-actions">
+        <section className="home-ia-grid" aria-label={t('dashboard.ia.label')}>
           <button type="button" className="app-card home-ia-card" onClick={() => navigateTo('accounts')}>
             <span>{t('dashboard.ia.accounts.title')}</span>
             <small>{t('dashboard.ia.accounts.caption')}</small>
@@ -159,7 +143,7 @@ export default function DashboardPage() {
 
         <HomeObligationsWidget />
 
-        <div data-product-tour="home-chart">
+        <div>
           <HomeCashflowChart
             transactions={transactions}
             mode={cashflowMode}
@@ -167,12 +151,12 @@ export default function DashboardPage() {
             rates={rates}
             onModeChange={setCashflowMode}
             onPeriodChange={setCashflowPeriod}
-            onOpenDetails={() => openModal({ type: 'home-chart-details', mode: cashflowMode, period: cashflowPeriod })}
-            onCreate={() => openModal({ type: 'transaction-create', initialType: cashflowMode })}
+            onOpenDetails={() => navigateTo('analytics')}
+            onCreate={() => window.dispatchEvent(new CustomEvent('ai-financer:open-text-chat', { detail: { command: cashflowMode === 'income' ? 'Добавь доход' : 'Добавь расход' } }))}
           />
         </div>
 
-        <div data-product-tour="home-insight">
+        <div>
           <HomeFinanceInsight
             transactions={transactions}
             mode={cashflowMode}

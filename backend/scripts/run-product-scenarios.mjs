@@ -16,7 +16,6 @@ const scenarios = [
   ['scenario-02-goal-autosave-flow', 'scripts/product-scenarios/scenario-02-goal-autosave-flow.mjs'],
   ['scenario-03-taxonomy-merchant-meaning', 'scripts/product-scenarios/scenario-03-taxonomy-merchant-meaning.mjs'],
   ['scenario-04-limits-obligations-reports', 'scripts/product-scenarios/scenario-04-limits-obligations-reports.mjs'],
-  ['scenario-05-store-business-receipts-safety', 'scripts/product-scenarios/scenario-05-store-business-receipts-safety.mjs'],
 ];
 
 const results = [];

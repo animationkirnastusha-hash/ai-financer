@@ -2,8 +2,8 @@ import { prisma } from '../../lib/prisma';
 import { BadRequestError, ForbiddenError, NotFoundError } from '../../shared/core/errors';
 import type { AIOperationEvent, Subscription } from '@prisma/client';
 
-export type StoreProduct = 'premium' | 'business' | 'bundle_try' | 'bundle_week';
-export type SubscriptionProduct = 'premium' | 'business';
+export type StoreProduct = 'premium' | 'bundle_try' | 'bundle_week';
+export type SubscriptionProduct = 'premium';
 export type BundleProduct = 'bundle_try' | 'bundle_week';
 export type GrantMode = 'days' | 'lifetime';
 export type SubscriptionUsageKind = 'voiceCommands' | 'receiptScans' | 'advancedReports';
@@ -14,19 +14,16 @@ export type SubscriptionLimits = {
   advancedReportsPerMonth: number;
 };
 
-type SubscriptionStatusCode = 'free' | 'trial' | 'premium' | 'business';
+type SubscriptionStatusCode = 'free' | 'trial' | 'premium';
 
 type SubscriptionAccess = {
   status: SubscriptionStatusCode;
   hasPremium: boolean;
-  hasBusiness: boolean;
   trialActive: boolean;
   trialUsed: boolean;
   premiumUntil: string | null;
-  businessUntil: string | null;
   trialUntil: string | null;
   premiumLifetime: boolean;
-  businessLifetime: boolean;
 };
 
 type SubscriptionFeatureMap = Record<string, boolean> & {
@@ -40,8 +37,6 @@ type SubscriptionFeatureMap = Record<string, boolean> & {
   advancedReports: boolean;
   receiptScan: boolean;
   creditAdvice: boolean;
-  businessWorkspace: boolean;
-  businessReports: boolean;
 };
 
 type UsageLimitBucket = {
@@ -161,8 +156,8 @@ function clampRemaining(limit: number, used: number): number {
   return Math.max(0, limit - used);
 }
 
-function normalizeProduct(value: unknown): SubscriptionProduct {
-  return value === 'business' ? 'business' : 'premium';
+function normalizeProduct(_value: unknown): SubscriptionProduct {
+  return 'premium';
 }
 
 function normalizeBundleProduct(value: unknown): BundleProduct {
@@ -227,30 +222,23 @@ export class SubscriptionService {
   private getAccess(subscription: Subscription | null): SubscriptionAccess {
     const now = new Date();
     const trialActive = isFuture(subscription?.trialUntil, now);
-    const businessActive = Boolean(subscription?.businessLifetime || isFuture(subscription?.businessUntil, now));
-    const premiumActive = Boolean(subscription?.premiumLifetime || isFuture(subscription?.premiumUntil, now) || trialActive || businessActive);
-
-    const status: SubscriptionStatusCode = businessActive
-      ? 'business'
-      : premiumActive
-        ? (trialActive && !subscription?.premiumLifetime && !isFuture(subscription?.premiumUntil, now) ? 'trial' : 'premium')
-        : 'free';
+    const premiumActive = Boolean(subscription?.premiumLifetime || isFuture(subscription?.premiumUntil, now) || trialActive);
+    const status: SubscriptionStatusCode = premiumActive
+      ? (trialActive && !subscription?.premiumLifetime && !isFuture(subscription?.premiumUntil, now) ? 'trial' : 'premium')
+      : 'free';
 
     return {
       status,
       hasPremium: premiumActive,
-      hasBusiness: businessActive,
       trialActive,
       trialUsed: Boolean(subscription?.trialStartedAt),
       premiumUntil: asDateOrNull(subscription?.premiumUntil),
-      businessUntil: asDateOrNull(subscription?.businessUntil),
       trialUntil: asDateOrNull(subscription?.trialUntil),
       premiumLifetime: Boolean(subscription?.premiumLifetime),
-      businessLifetime: Boolean(subscription?.businessLifetime),
     };
   }
 
-  private getFeatureMap(access: { hasPremium: boolean; hasBusiness: boolean }, packageCredits: PackageCreditsSnapshot): SubscriptionFeatureMap {
+  private getFeatureMap(access: { hasPremium: boolean }, packageCredits: PackageCreditsSnapshot) {
     const hasReceiptCredits = packageCredits.receiptScans.remaining > 0;
     const hasAnalysisCredits = packageCredits.advancedReports.remaining > 0 || packageCredits.reports.remaining > 0;
 
@@ -265,15 +253,10 @@ export class SubscriptionService {
       advancedReports: access.hasPremium || hasAnalysisCredits,
       receiptScan: access.hasPremium || hasReceiptCredits,
       creditAdvice: access.hasPremium,
-      businessWorkspace: access.hasBusiness,
-      businessReports: access.hasBusiness,
     };
   }
 
-  private getLimits(access: { hasPremium: boolean; hasBusiness: boolean }): SubscriptionLimits {
-    if (access.hasBusiness) {
-      return { voiceCommandsPerDay: 1000, receiptScansPerMonth: 250, advancedReportsPerMonth: 100 };
-    }
+  private getLimits(access: { hasPremium: boolean }): SubscriptionLimits {
     if (access.hasPremium) {
       return { voiceCommandsPerDay: 500, receiptScansPerMonth: 100, advancedReportsPerMonth: 50 };
     }
@@ -525,15 +508,13 @@ export class SubscriptionService {
   }
 
   async grant(userId: string, input: GrantInput): Promise<SubscriptionStatus> {
-    const product = normalizeProduct(input.product);
+    normalizeProduct(input.product);
     const subscription = await this.ensureSubscription(userId);
 
     if (input.lifetime) {
       await prisma.subscription.update({
         where: { userId },
-        data: product === 'business'
-          ? { businessLifetime: true, premiumLifetime: true }
-          : { premiumLifetime: true },
+        data: { premiumLifetime: true },
       });
       await this.syncUserTier(userId);
       return this.getStatus(userId);
@@ -542,18 +523,10 @@ export class SubscriptionService {
     const days = normalizeDays(input.days);
     const premiumUntil = addDaysFromBase(subscription.premiumUntil, days);
 
-    if (product === 'business') {
-      const businessUntil = addDaysFromBase(subscription.businessUntil, days);
-      await prisma.subscription.update({
-        where: { userId },
-        data: { premiumUntil, businessUntil },
-      });
-    } else {
-      await prisma.subscription.update({
-        where: { userId },
-        data: { premiumUntil },
-      });
-    }
+    await prisma.subscription.update({
+      where: { userId },
+      data: { premiumUntil },
+    });
 
     await this.syncUserTier(userId);
     return this.getStatus(userId);
@@ -589,25 +562,23 @@ export class SubscriptionService {
   }
 
   async revoke(userId: string, product?: unknown): Promise<SubscriptionStatus> {
-    const normalized = normalizeProduct(product);
+    normalizeProduct(product);
     await this.ensureSubscription(userId);
 
     await prisma.subscription.update({
       where: { userId },
-      data: normalized === 'business'
-        ? { businessUntil: null, businessLifetime: false }
-        : { premiumUntil: null, trialUntil: null, premiumLifetime: false, businessUntil: null, businessLifetime: false },
+      data: { premiumUntil: null, trialUntil: null, premiumLifetime: false },
     });
 
     await this.syncUserTier(userId);
     return this.getStatus(userId);
   }
 
-  async syncUserTier(userId: string): Promise<'FREE' | 'PREMIUM' | 'BUSINESS'> {
+  async syncUserTier(userId: string): Promise<'FREE' | 'PREMIUM'> {
     await this.ensureUser(userId);
     const subscription = await this.ensureSubscription(userId);
     const access = this.getAccess(subscription);
-    const tier: 'FREE' | 'PREMIUM' | 'BUSINESS' = access.hasBusiness ? 'BUSINESS' : access.hasPremium ? 'PREMIUM' : 'FREE';
+    const tier: 'FREE' | 'PREMIUM' = access.hasPremium ? 'PREMIUM' : 'FREE';
     await prisma.user.update({ where: { id: userId }, data: { tier } });
     return tier;
   }

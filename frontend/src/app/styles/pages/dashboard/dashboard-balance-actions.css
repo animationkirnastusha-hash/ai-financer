@@ -1,4 +1,3 @@
-/* Pack 124: compact home balance actions and receipt gate. */
 .app-home-balance-card {
   padding-bottom: 14px !important;
 }
@@ -39,15 +38,11 @@
   font-size: 12px !important;
   font-weight: 820;
   white-space: nowrap;
-}
 
-.app-home-balance-card__receipt {
   border: 1px solid rgba(255,255,255,.10) !important;
   background: rgba(255,255,255,.045) !important;
   color: rgba(255,255,255,.62) !important;
-}
 
-.app-home-balance-card__receipt[data-locked="false"] {
   border-color: rgba(110,231,183,.24) !important;
   background: rgba(110,231,183,.09) !important;
   color: rgba(220,255,243,.92) !important;
@@ -59,27 +54,8 @@
   color: rgba(220,255,243,.94) !important;
 }
 
-.dashboard-receipt-lock__body h2 {
-  margin-top: 6px;
-  color: rgba(255,255,255,.96);
-  font-size: 24px;
-  line-height: 1.05;
-  letter-spacing: -.045em;
-  font-weight: 780;
-}
 
-.dashboard-receipt-lock__body p {
-  margin-top: 8px;
-  color: rgba(255,255,255,.58);
-  font-size: 14px;
-  line-height: 1.55;
-}
 
-.dashboard-receipt-lock__actions {
-  display: grid;
-  grid-template-columns: .9fr 1.1fr;
-  gap: 10px;
-}
 
 .fina-command-bar--compact + .fina-command-bar__below {
   display: none !important;

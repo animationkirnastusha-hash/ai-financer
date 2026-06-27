@@ -23,8 +23,6 @@ export const authNavigationRuntimeDictionary: Record<string, string> = {
   'Категории': 'Categories',
   'Разделы': 'Sections',
   'Обязательства': 'Obligations',
-  'Premium': 'Premium',
-  'Премиум': 'Premium',
   'ИИ-бухгалтер': 'AI accountant',
   'Админка': 'Admin',
   'Рефералы': 'Referrals',
@@ -58,7 +56,6 @@ export const authNavigationRuntimeDictionary: Record<string, string> = {
   'Кредиты, подписки и напоминания': 'Loans, subscriptions and reminders',
   'Разделы расходов и доходов': 'Expense and income sections',
   'Тарифы и возможности': 'Plans and features',
-  'Для ИП, самозанятых и бизнеса': 'For freelancers and business',
   'Приглашения и бонусы': 'Invites and bonuses',
   'Пользователи и инструменты': 'Users and tools',
 };

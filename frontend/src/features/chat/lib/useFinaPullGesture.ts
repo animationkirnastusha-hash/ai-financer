@@ -22,10 +22,6 @@ const SAFE_CHAT_SWIPE_SCREENS = new Set<AppScreen>([
   'settings',
   'sections',
   'companion',
-  'store',
-  'premium',
-  'business-accountant',
-  'receipt-scans',
   'referral',
   'admin',
 ]);
@@ -43,9 +39,7 @@ function hasActiveEditableElement() {
 
 function hasBlockingLayer() {
   return Boolean(
-    document.body.classList.contains('product-tour-active') ||
-    document.documentElement.classList.contains('product-tour-active') ||
-    document.querySelector('[role="dialog"], .product-tour, .app-modal-backdrop, .app-modal-sheet, .bottom-sheet, .app-navigation-sheet'),
+    document.querySelector('[role="dialog"], .app-modal-backdrop, .app-modal-sheet, .bottom-sheet, .app-navigation-sheet'),
   );
 }
 

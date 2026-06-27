@@ -1,7 +1,7 @@
 import { prisma } from '../../lib/prisma';
 import { AIModelRole } from './providers/ai-provider.types';
 
-export type AIUserTier = 'FREE' | 'PREMIUM' | 'BUSINESS' | string;
+export type AIUserTier = 'FREE' | 'PREMIUM' | string;
 
 export class AIModelRouter {
   async getUserTier(userId: string): Promise<AIUserTier> {
@@ -29,11 +29,7 @@ export class AIModelRouter {
     return String(tier).toUpperCase() === 'PREMIUM';
   }
 
-  isBusiness(tier: AIUserTier) {
-    return String(tier).toUpperCase() === 'BUSINESS';
-  }
-
   isPremiumLike(tier: AIUserTier) {
-    return this.isPremium(tier) || this.isBusiness(tier);
+    return this.isPremium(tier);
   }
 }

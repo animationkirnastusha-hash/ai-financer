@@ -14,9 +14,7 @@
 .app-home-chart-group b,
 .app-home-chart-group small,
 .app-home-section-breakdown__head b,
-.app-home-section-breakdown__head small,
-.receipt-taxonomy-group__head b,
-.receipt-taxonomy-group__head small {
+.app-home-section-breakdown__head small{
   display: block;
   min-width: 0;
   overflow: hidden;

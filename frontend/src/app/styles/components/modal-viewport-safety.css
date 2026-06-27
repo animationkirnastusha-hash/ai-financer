@@ -41,8 +41,6 @@
 .app-drawer-body,
 .notification-sheet__body,
 .trial-offer-sheet__body,
-.store-payment-sheet__body,
-.store-limits-sheet__body,
 .app-settings-modal__body {
   flex: 1 1 auto;
   min-height: 0;
@@ -94,8 +92,7 @@
 
 [data-ai-core-modal="true"].fixed > div,
 .app-account-details-sheet__panel,
-.app-account-transfer-sheet,
-.premium-upgrade-sheet {
+.app-account-transfer-sheet{
   max-height: calc(100dvh - max(8px, env(safe-area-inset-top)));
   min-height: 0;
   overflow-y: auto;

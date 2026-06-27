@@ -61,7 +61,6 @@ model User {
   onboardingState          OnboardingState?
   subscription             Subscription?
   storePaymentOrders       StorePaymentOrder[]
-  businessWorkspace        BusinessWorkspace?
   receiptScans             ReceiptScan[]
   financialCycleSettings  FinancialCycleSettings?
 
@@ -99,8 +98,6 @@ model Account {
   receiptScans              ReceiptScan[]
   goals                     Goal[]
   spendingLimits            SpendingLimit[]           @relation("AccountSpendingLimits")
-  businessIncomeWorkspaces  BusinessWorkspace[]       @relation("BusinessIncomeAccount")
-  businessExpenseWorkspaces BusinessWorkspace[]       @relation("BusinessExpenseAccount")
 
   @@index([userId])
   @@index([type])
@@ -461,43 +458,18 @@ model Subscription {
   id               String    @id @default(cuid())
   userId           String    @unique
   premiumUntil     DateTime?
-  businessUntil    DateTime?
   trialStartedAt   DateTime?
   trialUntil       DateTime?
   premiumLifetime  Boolean   @default(false)
-  businessLifetime Boolean   @default(false)
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([premiumUntil])
-  @@index([businessUntil])
   @@index([trialUntil])
 }
 
-model BusinessWorkspace {
-  id                 String   @id @default(cuid())
-  userId             String   @unique
-  profileType        String   @default("self_employed")
-  displayName        String?
-  taxMode            String?
-  incomeAccountId    String?
-  expenseAccountId   String?
-  monthlyIncomePlan  Int      @default(0)
-  monthlyExpensePlan Int      @default(0)
-  reminderDay        Int?
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
-
-  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  incomeAccount  Account? @relation("BusinessIncomeAccount", fields: [incomeAccountId], references: [id], onDelete: SetNull)
-  expenseAccount Account? @relation("BusinessExpenseAccount", fields: [expenseAccountId], references: [id], onDelete: SetNull)
-
-  @@index([profileType])
-  @@index([incomeAccountId])
-  @@index([expenseAccountId])
-}
 
 model StorePaymentOrder {
   id                      String    @id @default(cuid())

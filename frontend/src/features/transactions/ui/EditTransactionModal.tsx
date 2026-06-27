@@ -55,7 +55,7 @@ export function EditTransactionModal({ open, transaction, isSaving = false, onCl
         <label className="block">
           <span className="mb-2 block text-xs text-white/45">Описание</span>
           <TextField
-            className="min-h-[88px]"
+            className="transaction-edit-modal__description"
             value={description}
             onChange={(event) => setDescription(event.target.value)}
             placeholder="Кофе"

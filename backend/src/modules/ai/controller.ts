@@ -199,7 +199,6 @@ export const confirmCommand = asyncHandler(async (req: Request, res: Response) =
 
   // Confirmation must never be served from a cached idempotency response.
   // A stale confirm cache can make the UI believe an action was handled while
-  // the business executor did not mutate accounts/transactions/goals.
   const raw = await aiService.confirmCommand(userId, pendingActionId);
   const result = aiResponseNormalizer.normalize(raw);
 

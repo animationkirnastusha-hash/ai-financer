@@ -217,14 +217,14 @@ export function PendingActionCard({ item, onConfirm, onCancel, onUpdate }: Props
           <button
             type="button"
             onClick={() => setShowEditor((value) => !value)}
-            className="mt-3 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs text-white/70 transition active:scale-95"
+            className="pending-action-card__edit-toggle"
           >
             {showEditor ? 'Скрыть правки' : 'Изменить'}
           </button>
         ) : null}
 
         {showEditor ? (
-          <div className="mt-3 space-y-3 rounded-[24px] border border-white/8 bg-black/24 p-3">
+          <div className="pending-action-card__editor">
             {actions.map((action, index) => {
               const intent = getActionTool(action);
               const input = getActionInput(action);
@@ -233,7 +233,7 @@ export function PendingActionCard({ item, onConfirm, onCancel, onUpdate }: Props
                 ?? Object.keys(input).filter((key) => !key.startsWith('__') && key !== 'intent' && key !== 'tool');
 
               return (
-                <div key={`${intent}-${index}`} className="space-y-2 rounded-[20px] border border-white/8 bg-white/[0.03] p-3">
+                <div key={`${intent}-${index}`} className="pending-action-card__editor-action">
                   <div className="text-xs font-medium uppercase tracking-[0.14em] text-white/40">
                     {view.actionCount > 1 ? `${index + 1}. ` : ''}{intent || 'действие'}
                   </div>

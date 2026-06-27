@@ -1,0 +1,49 @@
+.timeline-event-card {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  border-radius: 26px;
+  border: 1px solid rgba(255,255,255,.08);
+  background: rgba(0,0,0,.22);
+  padding: 16px;
+  text-align: left;
+  transition: transform .16s ease, background .16s ease, border-color .16s ease;
+}
+
+.timeline-event-card:active {
+  transform: scale(.985);
+  background: rgba(255,255,255,.06);
+}
+
+.timeline-event-card__shine {
+  pointer-events: none;
+  position: absolute;
+  left: 24px;
+  right: 24px;
+  top: 0;
+  height: 1px;
+  background: linear-gradient(to right, transparent, rgba(255,255,255,.20), transparent);
+  opacity: .70;
+}
+
+.timeline-event-card__amount {
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,.10);
+  background: rgba(255,255,255,.05);
+  padding: 8px 12px;
+  font-size: 14px;
+  font-weight: 650;
+  color: #fff;
+}
+
+.timeline-event-card__amount--income {
+  border-color: rgba(110,231,183,.15);
+  background: rgba(110,231,183,.07);
+  color: rgb(167,243,208);
+}
+
+.timeline-event-card__amount--transfer {
+  border-color: rgba(125,211,252,.15);
+  background: rgba(125,211,252,.07);
+  color: rgb(186,230,253);
+}

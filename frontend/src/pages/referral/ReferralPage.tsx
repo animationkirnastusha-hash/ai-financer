@@ -10,8 +10,8 @@ function formatBonus(value: number) {
 }
 
 function transactionText(item: ReferralTransactionDto) {
-  if (item.type === 'invite_activated') return `+${item.amount} день Premium`;
-  if (item.type === 'premium_purchase_days' || item.type === 'business_purchase_days') return `+${item.amount} дней Premium`;
+  if (item.type === 'invite_activated') return `+${item.amount} бонус`;
+  if (item.type === 'premium_purchase_days' || item.type === 'business_purchase_days') return `+${item.amount} бонусов`;
   if (item.type === 'purchase_bonus_balance') return `+${formatBonus(item.amount)}`;
   return `+${item.amount}`;
 }

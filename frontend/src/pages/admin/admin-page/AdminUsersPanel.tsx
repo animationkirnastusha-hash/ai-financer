@@ -1,20 +1,14 @@
 import { FormEvent, useEffect, useState } from 'react';
 import type { AdminUser } from '@/features/admin/api/admin.api';
 import { useI18n } from '@/shared/lib/i18n';
-import { formatDate, formatSubscriptionDate } from './adminPage.formatters';
+import { formatDate } from './adminPage.formatters';
 
 type Props = {
   users: AdminUser[];
   searchQuery: string;
   resettingUserId: string | null;
-  subscriptionBusy: string | null;
-  subscriptionDays: Record<string, string>;
   onSearch: (query: string) => void;
-  onSubscriptionDaysChange: (userId: string, value: string) => void;
   onResetUser: (userId: string, mode: 'finance' | 'full') => void;
-  onGrantSubscription: (userId: string, product: 'premium' | 'business', lifetime?: boolean) => void;
-  onRevokeSubscription: (userId: string, product: 'premium' | 'business') => void;
-  onRestartTrial: (userId: string) => void;
 };
 
 function userName(user: AdminUser) {
@@ -25,14 +19,8 @@ export function AdminUsersPanel({
   users,
   searchQuery,
   resettingUserId,
-  subscriptionBusy,
-  subscriptionDays,
   onSearch,
-  onSubscriptionDaysChange,
   onResetUser,
-  onGrantSubscription,
-  onRevokeSubscription,
-  onRestartTrial,
 }: Props) {
   const { t } = useI18n();
   const [query, setQuery] = useState(searchQuery);
@@ -117,38 +105,6 @@ export function AdminUsersPanel({
               <div><span>{t('admin.users.accounts')}</span><b>{item._count.accounts}</b></div>
               <div><span>{t('admin.users.transactions')}</span><b>{item._count.transactions}</b></div>
               <div><span>{t('admin.users.referrals')}</span><b>{item._count.referrals}</b></div>
-            </div>
-
-            <div className="admin-user-access">
-              <div className="admin-user-access__head">
-                <div>
-                  <b>{t('admin.users.access')}</b>
-                  <span>
-                    Premium: {item.subscription?.premiumLifetime ? t('admin.users.forever') : formatSubscriptionDate(item.subscription?.premiumUntil)} · Business: {item.subscription?.businessLifetime ? t('admin.users.forever') : formatSubscriptionDate(item.subscription?.businessUntil)}
-                  </span>
-                </div>
-                <button type="button" disabled={subscriptionBusy !== null} onClick={() => onRestartTrial(item.id)}>
-                  {subscriptionBusy === `${item.id}:trial` ? t('admin.users.trial.loading') : t('admin.users.trial')}
-                </button>
-              </div>
-
-              <div className="admin-user-access__days">
-                <input
-                  value={subscriptionDays[item.id] ?? '30'}
-                  onChange={(event) => onSubscriptionDaysChange(item.id, event.target.value)}
-                  inputMode="numeric"
-                />
-                <span>{t('admin.users.days')}</span>
-              </div>
-
-              <div className="admin-user-actions admin-user-actions--access">
-                <button type="button" disabled={subscriptionBusy !== null} onClick={() => onGrantSubscription(item.id, 'premium')}>Premium</button>
-                <button type="button" disabled={subscriptionBusy !== null} onClick={() => onGrantSubscription(item.id, 'business')}>Business</button>
-                <button type="button" disabled={subscriptionBusy !== null} onClick={() => onGrantSubscription(item.id, 'premium', true)}>{t('admin.users.premiumForever')}</button>
-                <button type="button" disabled={subscriptionBusy !== null} onClick={() => onGrantSubscription(item.id, 'business', true)}>{t('admin.users.businessForever')}</button>
-                <button type="button" disabled={subscriptionBusy !== null} onClick={() => onRevokeSubscription(item.id, 'premium')}>{t('admin.users.revokePremium')}</button>
-                <button type="button" disabled={subscriptionBusy !== null} onClick={() => onRevokeSubscription(item.id, 'business')}>{t('admin.users.revokeBusiness')}</button>
-              </div>
             </div>
 
             <div className="admin-user-actions admin-user-actions--danger">

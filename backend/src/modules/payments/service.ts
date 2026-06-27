@@ -1,8 +1,8 @@
 import { prisma } from '../../lib/prisma';
 import { BadRequestError, ForbiddenError, NotFoundError } from '../../shared/core/errors';
-import { subscriptionService, type StoreProduct, type BundleProduct } from '../subscription/service';
+import { subscriptionService, type BundleProduct } from '../subscription/service';
 import { createTelegramStarsInvoiceLink, isTelegramStarsConfigured, answerTelegramPreCheckoutQuery } from './lib/telegram-stars';
-import { getAvailableDurations, getPricePlan, type PaymentDuration } from './lib/payment-pricing';
+import { getAvailableDurations, getPricePlan, type PaymentDuration, type PaymentStoreProduct } from './lib/payment-pricing';
 import {
   createYooKassaSbpPayment,
   getYooKassaPayment,
@@ -40,17 +40,14 @@ type TelegramUpdate = {
 };
 
 const ORDER_TTL_MS = 30 * 60 * 1000;
-const BUSINESS_PAYMENTS_ENABLED = false;
-
-function normalizeProduct(value: unknown): StoreProduct {
-  if (value === 'business') return 'business';
+function normalizeProduct(value: unknown): PaymentStoreProduct {
   if (value === 'bundle_try') return 'bundle_try';
   if (value === 'bundle_week') return 'bundle_week';
   if (value === 'premium' || value == null) return 'premium';
   throw new BadRequestError('Unknown product');
 }
 
-function isBundleProduct(product: StoreProduct): product is BundleProduct {
+function isBundleProduct(product: PaymentStoreProduct): product is BundleProduct {
   return product === 'bundle_try' || product === 'bundle_week';
 }
 
@@ -134,7 +131,6 @@ export class PaymentService {
     return {
       products: [
         { product: 'premium', title: 'Premium', options: this.getProductOptions('premium') },
-        { product: 'business', title: 'Business Fina', options: BUSINESS_PAYMENTS_ENABLED ? this.getProductOptions('business') : [], comingSoon: !BUSINESS_PAYMENTS_ENABLED },
         { product: 'bundle_try', title: 'Попробовать Фину', options: this.getProductOptions('bundle_try') },
         { product: 'bundle_week', title: 'На неделю', options: this.getProductOptions('bundle_week') },
       ],
@@ -144,7 +140,7 @@ export class PaymentService {
     };
   }
 
-  private getProductOptions(product: StoreProduct) {
+  private getProductOptions(product: PaymentStoreProduct) {
     return getAvailableDurations(product).map((duration) => {
       const plan = getPricePlan(product, duration);
       return {
@@ -167,9 +163,6 @@ export class PaymentService {
     if (!user) throw new NotFoundError('User not found');
 
     const product = normalizeProduct(input.product);
-    if (product === 'business' && !BUSINESS_PAYMENTS_ENABLED) {
-      throw new BadRequestError('Business Fina will be available as a separate product soon');
-    }
     const durationInput = normalizeDuration(input.duration);
     const availableDurations = getAvailableDurations(product);
     const fallbackDuration: PaymentDuration = availableDurations[0] ?? 'once';

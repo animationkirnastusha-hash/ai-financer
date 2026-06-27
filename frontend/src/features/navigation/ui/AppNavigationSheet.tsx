@@ -1,8 +1,5 @@
-import { useEffect } from 'react';
 import { useAuthStore } from '@/features/auth/model/auth.store';
 import { useNavigationStore, type AppScreen } from '@/features/navigation/model/navigation.store';
-import { useSubscriptionStore } from '@/features/subscription/model/subscription.store';
-import { canShowStoreSurface, hasFeatureAccess } from '@/features/subscription/lib/entitlements';
 import { useI18n, type I18nKey } from '@/shared/lib/i18n';
 import { AppModalPortal } from '@/features/modals/ui/AppModalPortal';
 
@@ -27,15 +24,6 @@ const setupLinks: NavigationItem[] = [
   { screen: 'sections', labelKey: 'screen.sections', captionKey: 'nav.sections.caption' },
 ];
 
-const storeLinks: NavigationItem[] = [
-  { screen: 'store', labelKey: 'screen.store', captionKey: 'nav.store.caption' },
-];
-
-const receiptLinks: NavigationItem[] = [
-  { screen: 'receipt-scans', labelKey: 'screen.receipts', captionKey: 'nav.receipts.caption' },
-];
-
-
 const adminLinks: NavigationItem[] = [
   { screen: 'admin', labelKey: 'screen.admin', captionKey: 'nav.admin.caption' },
 ];
@@ -48,14 +36,6 @@ export function AppNavigationSheet() {
   const navigateTo = useNavigationStore((state) => state.navigateTo);
   const user = useAuthStore((state) => state.user);
   const isAdmin = Boolean(user?.isAdmin);
-  const subscription = useSubscriptionStore((state) => state.status);
-  const loadSubscription = useSubscriptionStore((state) => state.load);
-  const canShowStore = canShowStoreSurface(subscription);
-  const canShowReceipts = hasFeatureAccess(subscription, 'receiptScan');
-
-  useEffect(() => {
-    if (isOpen && user && !subscription) void loadSubscription();
-  }, [isOpen, loadSubscription, subscription, user]);
 
   if (!isOpen) return null;
 
@@ -64,8 +44,6 @@ export function AppNavigationSheet() {
     { titleKey: 'nav.group.setup', items: setupLinks },
   ];
 
-  if (canShowStore) groups.push({ titleKey: 'nav.group.store', items: storeLinks });
-  if (canShowReceipts) groups.push({ titleKey: 'nav.group.premium', items: receiptLinks });
   if (isAdmin) groups.push({ titleKey: 'nav.group.admin', items: adminLinks });
 
   const handleNavigate = (screen: AppScreen) => {

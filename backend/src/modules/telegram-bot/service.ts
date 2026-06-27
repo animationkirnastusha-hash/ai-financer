@@ -22,9 +22,9 @@ const CALLBACK_LANGUAGE = `${CALLBACK_PREFIX}lang:`;
 const CALLBACK_MENU = `${CALLBACK_PREFIX}menu:`;
 const MAX_CALLBACK_ACTION_ID_LENGTH = 48;
 
-type BotMenuPage = 'home' | 'plans' | 'features' | 'support' | 'terms';
+type BotMenuPage = 'home' | 'features' | 'support' | 'terms';
 
-const BOT_MENU_PAGES = new Set<BotMenuPage>(['home', 'plans', 'features', 'support', 'terms']);
+const BOT_MENU_PAGES = new Set<BotMenuPage>(['home', 'features', 'support', 'terms']);
 
 function getStoredLocale(user: unknown): UserLocale | null {
   return normalizeUserLocale((user as { locale?: unknown } | null | undefined)?.locale);
@@ -148,26 +148,6 @@ function normalizeMenuPage(value: unknown): BotMenuPage {
 }
 
 function buildMenuText(page: BotMenuPage, locale: UserLocale) {
-  if (page === 'plans') {
-    return [
-      botT(locale, 'storefrontTitle'),
-      '',
-      botT(locale, 'storefrontIntro'),
-      '',
-      `• ${botT(locale, 'storefrontPremiumTitle')} — ${botT(locale, 'storefrontPremiumPrice')}`,
-      botT(locale, 'storefrontPremiumDescription'),
-      '',
-      `• ${botT(locale, 'storefrontBusinessTitle')} — ${botT(locale, 'storefrontBusinessPrice')}`,
-      botT(locale, 'storefrontBusinessDescription'),
-      '',
-      botT(locale, 'storefrontOneTimeTitle'),
-      `• ${botT(locale, 'storefrontVoicePack')}`,
-      `• ${botT(locale, 'storefrontReceiptPack')}`,
-      '',
-      botT(locale, 'storefrontOrderHint'),
-    ].join('\n');
-  }
-
   if (page === 'features') {
     return [
       botT(locale, 'featuresTitle'),
@@ -208,9 +188,6 @@ function buildMenuText(page: BotMenuPage, locale: UserLocale) {
     '',
     botT(locale, 'homeIntro'),
     '',
-    `• ${botT(locale, 'homePremiumLine')}`,
-    `• ${botT(locale, 'homeBusinessLine')}`,
-    '',
     botT(locale, 'homeHint'),
     botT(locale, 'homeAgreementHint'),
   ].join('\n');
@@ -228,7 +205,6 @@ function buildMenuMarkup(page: BotMenuPage, locale: UserLocale) {
 
   if (page === 'home') {
     rows.push([
-      { text: botT(locale, 'menuPlans'), callback_data: `${CALLBACK_MENU}plans` },
       { text: botT(locale, 'menuFeatures'), callback_data: `${CALLBACK_MENU}features` },
     ]);
     rows.push([
@@ -253,11 +229,11 @@ function buildMenuMarkup(page: BotMenuPage, locale: UserLocale) {
   return rows.length ? { inline_keyboard: rows } : undefined;
 }
 
-function buildStorefrontMarkup(locale: UserLocale) {
+function buildStartMarkup(locale: UserLocale) {
   return buildMenuMarkup('home', locale);
 }
 
-function buildStorefrontText(locale: UserLocale) {
+function buildStartText(locale: UserLocale) {
   return buildMenuText('home', locale);
 }
 
@@ -384,11 +360,11 @@ async function sendMenuPage(chatId: number | string, page: BotMenuPage, locale: 
 async function sendStart(chatId: number | string, locale: UserLocale) {
   await telegramBotClient.sendMessage(
     chatId,
-    escapeHtml(buildStorefrontText(locale)),
-    buildStorefrontMarkup(locale),
+    escapeHtml(buildStartText(locale)),
+    buildStartMarkup(locale),
   );
 
-  return { handled: true, action: 'storefront_sent' };
+  return { handled: true, action: 'start_sent' };
 }
 
 function readAudioPayload(message: TelegramBotMessage) {
@@ -474,7 +450,7 @@ async function handleFinancialMessage(message: TelegramBotMessage) {
       if (!storedLocale && normalizeUserLocale(from.language_code)) {
         await authService.updateUserLocale(user.id, locale);
       }
-      return sendMenuPage(chatId, 'plans', locale);
+      return sendMenuPage(chatId, 'features', locale);
     }
     if (isTermsCommand(text)) {
       if (!storedLocale && normalizeUserLocale(from.language_code)) {

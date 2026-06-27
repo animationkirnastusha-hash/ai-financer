@@ -1,25 +1,46 @@
-/* Shared active-state feedback for tappable surfaces. */
+/* Shared lightweight interaction affordances. Keep page-specific motion in page files. */
+@media (hover: hover) {
+  .app-primary-button,
+  .app-secondary-button,
+  .app-icon-button,
+  .app-action-card,
+  .app-bottom-nav__item,
+  .app-topbar__action,
+  .timeline-event-card,
+  .pending-action-card__edit-toggle {
+    cursor: pointer;
+  }
+}
+
+.app-primary-button,
+.app-secondary-button,
+.app-icon-button,
+.app-action-card,
+.app-bottom-nav__item,
+.app-topbar__action {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
 .app-primary-button:active,
 .app-secondary-button:active,
 .app-icon-button:active,
-.text-chat-overlay__composer button:active,
-.text-chat-overlay__chips button:active,
-.premium-upgrade-later:active,
-.premium-upgrade-trigger:active,
-.store-card:active,
-.app-list-button:active,
 .app-action-card:active,
-.app-card:active,
-.ai-confirm-mode-grid button:active,
-.product-learning-task:active,
-.store-product-tile:active,
-.app-account-card:active,
-.onboarding-learning-task:active,
-.onboarding-language-actions button:active,
-.onboarding-choice:active,
-.onboarding-currency:active,
-.onboarding-chip:active,
-.app-action-card:active,
-.app-goal-card:active {
+.app-bottom-nav__item:active,
+.app-topbar__action:active {
   transform: scale(.985);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-primary-button,
+  .app-secondary-button,
+  .app-icon-button,
+  .app-action-card,
+  .app-bottom-nav__item,
+  .app-topbar__action,
+  .timeline-event-card,
+  .pending-action-card__edit-toggle {
+    transition: none !important;
+    animation: none !important;
+  }
 }

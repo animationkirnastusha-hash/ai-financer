@@ -62,6 +62,7 @@ const obsoleteScripts = [
   'backend/scripts/run-final-tester-check.mjs',
   'backend/scripts/check-taxonomy.mjs',
   'backend/scripts/check-receipt-scans.mjs',
+  'backend/scripts/smoke/check-business-workspace.mjs',
   'frontend/scripts/audit-hardcoded-russian.mjs',
   'frontend/scripts/audit-i18n.mjs',
 ];
@@ -72,6 +73,9 @@ const confirmedOrphanFiles = [
   'frontend/src/pages/settings/TaxonomySettingsPage.css',
   'frontend/src/shared/lib/queryProvider.tsx',
   'frontend/src/features/payments/ui/PaymentStatusBanner.tsx',
+  'frontend/src/features/business-workspace',
+  'frontend/src/pages/business-accountant',
+  'backend/src/modules/business-workspace',
 ];
 
 for (const item of forbiddenRepoArtifacts) {
@@ -112,7 +116,6 @@ const requiredBackendFiles = [
   'backend/scripts/smoke/check-ai-base.mjs',
   'backend/scripts/smoke/check-reset-admin.mjs',
   'backend/scripts/smoke/check-store-subscription.mjs',
-  'backend/scripts/smoke/check-business-workspace.mjs',
   'backend/scripts/smoke/check-receipt-scans.mjs',
   'backend/scripts/smoke/check-receipt-taxonomy-preview.mjs',
   'backend/scripts/smoke/check-ai-training.mjs',
@@ -122,7 +125,6 @@ const requiredBackendFiles = [
   'backend/scripts/product-scenarios/scenario-02-goal-autosave-flow.mjs',
   'backend/scripts/product-scenarios/scenario-03-taxonomy-merchant-meaning.mjs',
   'backend/scripts/product-scenarios/scenario-04-limits-obligations-reports.mjs',
-  'backend/scripts/product-scenarios/scenario-05-store-business-receipts-safety.mjs',
 ];
 
 for (const file of requiredBackendFiles) {
@@ -140,6 +142,15 @@ if (exists(tokenScriptPath)) {
     && source.includes('JWT_SECRET is required');
   if (hasModernToken) addOk('create-test-token.mjs uses modern JWT claims');
   else addProblem('create-test-token.mjs still creates legacy JWT tokens');
+}
+
+
+const prismaSchemaPath = 'backend/prisma/schema.prisma';
+if (exists(prismaSchemaPath)) {
+  const schema = read(prismaSchemaPath);
+  for (const forbidden of ['BusinessWorkspace', 'businessWorkspace', 'businessUntil', 'businessLifetime']) {
+    if (schema.includes(forbidden)) addProblem(`remove Business schema leftover: ${forbidden}`);
+  }
 }
 
 const backendPackagePath = 'backend/package.json';

@@ -9,8 +9,7 @@
 .app-account-card,
 .app-goal-card,
 .app-loan-card,
-.notification-card,
-.receipt-preview-card {
+.notification-card{
   position: relative;
   min-width: 0;
 }

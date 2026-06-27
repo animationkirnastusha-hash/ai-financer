@@ -46,15 +46,6 @@
 .app-home-insight,
 .app-obligations-widget,
 .app-xp-hero,
-.store-card,
-.store-feature-card,
-.store-status-card,
-.premium-upgrade-hero,
-.premium-feature-gate,
-.premium-admin-plan-card,
-.premium-admin-feature-card,
-.business-workspace-card,
-.receipt-scan-card,
 .notification-sheet__item,
 .onboarding-card,
 .onboarding-choice,
@@ -72,23 +63,17 @@
 .app-card:nth-child(2),
 .app-settings-card:nth-child(2),
 .app-action-card:nth-child(2),
-.app-list-button:nth-child(2),
-.store-card:nth-child(2),
-.premium-admin-plan-card:nth-child(2) { animation-delay: 35ms; }
+.app-list-button:nth-child(2) { animation-delay: 35ms; }
 
 .app-card:nth-child(3),
 .app-settings-card:nth-child(3),
 .app-action-card:nth-child(3),
-.app-list-button:nth-child(3),
-.store-card:nth-child(3),
-.premium-admin-plan-card:nth-child(3) { animation-delay: 70ms; }
+.app-list-button:nth-child(3) { animation-delay: 70ms; }
 
 .app-card:nth-child(4),
 .app-settings-card:nth-child(4),
 .app-action-card:nth-child(4),
-.app-list-button:nth-child(4),
-.store-card:nth-child(4),
-.premium-admin-plan-card:nth-child(4) { animation-delay: 105ms; }
+.app-list-button:nth-child(4) { animation-delay: 105ms; }
 
 @media (hover: hover) and (pointer: fine) {
   .app-card:hover,
@@ -98,14 +83,7 @@
   .app-list-button:hover,
   .app-transaction-row:hover,
   .app-home-balance-card:hover,
-  .app-home-chart:hover,
-  .store-card:hover,
-  .store-feature-card:hover,
-  .premium-feature-gate:hover,
-  .premium-admin-plan-card:hover,
-  .premium-admin-feature-card:hover,
-  .business-workspace-card:hover,
-  .receipt-scan-card:hover {
+  .app-home-chart:hover {
     transform: translate3d(0, -2px, 0);
     border-color: rgba(255,255,255,.14);
   }
@@ -118,9 +96,6 @@ button,
 .app-compact-menu-button,
 .app-chip,
 .app-choice,
-.store-payment-method,
-.store-payment-plan-toggle button,
-.premium-upgrade-trigger,
 .voice-first-control-button,
 .voice-first-lock-action,
 .text-chat-overlay__send,
@@ -143,9 +118,6 @@ button:active,
 .app-compact-menu-button:active,
 .app-chip:active,
 .app-choice:active,
-.store-payment-method:active,
-.store-payment-plan-toggle button:active,
-.premium-upgrade-trigger:active,
 .voice-first-control-button:active,
 .voice-first-lock-action:active,
 .text-chat-overlay__send:active,
@@ -161,7 +133,6 @@ button:focus-visible,
 .app-compact-menu-button:focus-visible,
 .app-chip:focus-visible,
 .app-choice:focus-visible,
-.store-payment-method:focus-visible,
 .text-chat-overlay__input:focus-visible,
 input:focus-visible,
 select:focus-visible,
@@ -173,7 +144,6 @@ textarea:focus-visible {
 .app-modal-backdrop,
 .drawer-backdrop,
 .text-chat-overlay,
-.premium-upgrade-backdrop,
 .voice-pending-confirm-modal {
   animation: app-fade-up var(--motion-base) var(--motion-ease-out) both;
 }
@@ -182,7 +152,6 @@ textarea:focus-visible {
 .drawer,
 .bottom-sheet,
 .text-chat-overlay__panel,
-.premium-upgrade-sheet,
 .voice-pending-confirm-modal__sheet,
 .notification-sheet,
 .command-list-sheet,
@@ -202,9 +171,7 @@ textarea:focus-visible {
 .app-xp-panel__track i,
 .app-progress-bar i,
 .app-home-chart-ring,
-.app-home-balance-card__amount,
-.store-payment-selected-price strong,
-.premium-upgrade-price strong {
+.app-home-balance-card__amount{
   transition:
     width var(--motion-slow) var(--motion-ease-out),
     transform var(--motion-base) var(--motion-ease),
@@ -228,9 +195,7 @@ textarea:focus-visible {
 
 .app-empty-button,
 .app-empty-inline,
-.notification-empty,
-.receipt-scan-empty,
-.store-empty-state {
+.notification-empty{
   animation: app-soft-pop var(--motion-slow) var(--motion-ease-out) both;
 }
 

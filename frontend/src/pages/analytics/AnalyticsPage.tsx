@@ -1,8 +1,6 @@
 import { useEffect, useMemo, type ReactNode } from 'react';
 import { useAppModalStore } from '@/features/modals/model/appModal.store';
 import { useNavigationStore } from '@/features/navigation/model/navigation.store';
-import { useSubscriptionStore } from '@/features/subscription/model/subscription.store';
-import { hasRealBusinessAccess, hasRealPremiumAccess } from '@/features/subscription/lib/entitlements';
 import { useTransactionsStore } from '@/features/transactions/model/transactions.store';
 import type { TransactionDto } from '@/features/transactions/api/transactions.api';
 import { formatMoney } from '@/shared/lib/money';
@@ -211,9 +209,6 @@ export default function AnalyticsPage() {
   const { t, rt } = useI18n();
   const openModal = useAppModalStore((state) => state.openModal);
   const openJournal = useNavigationStore((state) => state.openJournal);
-  const navigateTo = useNavigationStore((state) => state.navigateTo);
-  const subscription = useSubscriptionStore((state) => state.status);
-  const canShowPremiumAnalytics = hasRealPremiumAccess(subscription) || hasRealBusinessAccess(subscription);
   const transactions = useTransactionsStore((state) => state.items);
   const loadTransactions = useTransactionsStore((state) => state.loadTransactions);
 
@@ -350,15 +345,6 @@ export default function AnalyticsPage() {
           </div>
         </AnalyticsFoldout>
 
-        {canShowPremiumAnalytics ? (
-          <AnalyticsFoldout title={t('analytics.premium.title')} eyebrow={t('analytics.premium.eyebrow')}>
-            <p className="analytics-premium-caption">{t('analytics.premium.caption')}</p>
-            <div className="analytics-action-grid analytics-action-grid--two">
-              <button type="button" onClick={() => openModal({ type: 'report-export', mode: 'premium' })}>{t('analytics.report.premium')}</button>
-              <button type="button" onClick={() => navigateTo('store')}>{t('analytics.action.store')}</button>
-            </div>
-          </AnalyticsFoldout>
-        ) : null}
       </div>
     </div>
   );

@@ -1,6 +1,5 @@
-import type { StoreProduct } from '../../subscription/service';
-
 export type PaymentDuration = 'month' | 'year' | 'once';
+export type PaymentStoreProduct = 'premium' | 'bundle_try' | 'bundle_week';
 
 export type StorePricePlan = {
   amount: number;
@@ -19,7 +18,7 @@ export type StorePricePlan = {
 const RUB = 'RUB' as const;
 const XTR = 'XTR' as const;
 
-export const STORE_PRICE_CATALOG: Record<StoreProduct, Partial<Record<PaymentDuration, StorePricePlan>>> = {
+export const STORE_PRICE_CATALOG: Record<PaymentStoreProduct, Partial<Record<PaymentDuration, StorePricePlan>>> = {
   premium: {
     month: {
       amount: 39_900,
@@ -43,34 +42,6 @@ export const STORE_PRICE_CATALOG: Record<StoreProduct, Partial<Record<PaymentDur
       starsCurrency: XTR,
       title: 'Premium на год',
       description: 'Premium доступ на 12 месяцев, оплата как за 9 месяцев',
-      days: 365,
-      discountPercent: 25,
-      monthsCharged: 9,
-    },
-  },
-  business: {
-    month: {
-      amount: 89_900,
-      baseAmount: 119_900,
-      currency: RUB,
-      starsAmount: 934,
-      starsBaseAmount: 1_245,
-      starsCurrency: XTR,
-      title: 'Business на месяц',
-      description: 'Business доступ на 30 дней. Premium включён',
-      days: 30,
-      discountPercent: 25,
-      monthsCharged: 1,
-    },
-    year: {
-      amount: 809_000,
-      baseAmount: 1_078_800,
-      currency: RUB,
-      starsAmount: 8_394,
-      starsBaseAmount: 11_199,
-      starsCurrency: XTR,
-      title: 'Business на год',
-      description: 'Business доступ на 12 месяцев, оплата как за 9 месяцев. Premium включён',
       days: 365,
       discountPercent: 25,
       monthsCharged: 9,
@@ -108,11 +79,11 @@ export const STORE_PRICE_CATALOG: Record<StoreProduct, Partial<Record<PaymentDur
   },
 };
 
-export function getAvailableDurations(product: StoreProduct): PaymentDuration[] {
-  return product === 'premium' || product === 'business' ? ['month', 'year'] : ['once'];
+export function getAvailableDurations(product: PaymentStoreProduct): PaymentDuration[] {
+  return product === 'premium' ? ['month', 'year'] : ['once'];
 }
 
-export function getPricePlan(product: StoreProduct, duration: PaymentDuration): StorePricePlan {
+export function getPricePlan(product: PaymentStoreProduct, duration: PaymentDuration): StorePricePlan {
   const plan = STORE_PRICE_CATALOG[product]?.[duration];
   if (!plan) {
     const fallback = getAvailableDurations(product)[0] ?? 'once';

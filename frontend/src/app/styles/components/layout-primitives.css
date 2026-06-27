@@ -11,18 +11,6 @@
 .product-learning-task b,
 .product-learning-task small,
 .monetization-hero,
-.store-card,
-.store-showcase,
-.store-status-card,
-.store-trial-card,
-.store-usage-card,
-.store-payment-section,
-.store-feature-section,
-.store-product-detail,
-.store-feature-card,
-.store-card,
-.store-feature-card,
-.store-usage-grid > div,
 .app-taxonomy-page .app-taxonomy-actions,
 .app-taxonomy-page .app-taxonomy-rule-grid,
 .app-taxonomy-page .app-taxonomy-suggestions,
@@ -73,16 +61,10 @@
 .app-xp-card,
 .app-dashboard-page [class*="xp"],
 .app-dashboard-page [class*="XP"],
-.receipt-preview-card__fields div,
-.receipt-taxonomy-group__head,
 .app-home-section-breakdown__head,
 .analytics-bar-row > div,
 .limits-guide-card,
 .referral-benefit-card,
-.store-compact-card,
-.business-account-list article,
-.business-detail-lists article,
-.receipt-history-card__head,
 .app-card > *,
 .app-stat-card > *,
 .app-action-card > *,
@@ -139,43 +121,26 @@
 .app-home-section-breakdown__categories,
 .onboarding-learning-list,
 .onboarding-quick-rules,
-.profile-command-examples__group,
-.receipt-preview-card__fields {
+.profile-command-examples__group{
   display: grid;
   gap: 8px;
 }
 
 .ai-settings-panel,
-.store-minimal-grid,
-.store-compact-extras,
-.store-foldout-stack,
-.store-limits-sheet__body,
-.store-limits-list,
-.store-active-packs,
-.store-active-pack-list,
-.store-product-detail__copy,
-.store-card-grid,
 .app-taxonomy-grid,
 .admin-users-panel,
 .admin-users-list,
-.business-insights-card,
-.business-detail-lists section,
-.dashboard-receipt-lock__body,
 .journal-filter-card,
 .journal-filter-grid,
 .journal-date-grid,
-.limits-list,
-.receipt-hero,
-.receipt-list {
+.limits-list{
   display: grid;
   gap: 12px;
 }
 
 .ai-settings-group__head,
-.premium-admin-section__head,
 .referral-admin-section__head,
 .admin-ai-training__hero,
-.business-section-head,
 .app-recurring-card__head,
 .app-accounts-hero__top,
 .app-accounts-group__head,
@@ -188,7 +153,6 @@
 }
 
 .ai-settings-fields,
-.store-payment-methods,
 .analytics-action-grid,
 .app-home-chart-groups,
 .app-home-category-operation-list {
@@ -197,7 +161,6 @@
 }
 
 .ai-settings-fields label,
-.business-form-grid label,
 .app-home-chart-legend__items,
 .onboarding-field {
   display: grid;
@@ -205,17 +168,14 @@
 }
 
 .app-navigation-groups,
-.store-payment-sheet__body,
 .admin-ai-training__item,
 .analytics-chart-card,
 .analytics-hero-card,
 .app-home-cashflow-card,
 .limits-form,
 .app-recurring-card,
-.business-mini-app-shell,
 .profile-hub,
 .profile-hub-support,
-.receipt-upload-card,
 .report-export-sheet {
   display: grid;
   gap: 14px;
@@ -243,22 +203,17 @@
 }
 
 .product-learning-card__head,
-.store-product-detail-card__head,
 .app-taxonomy-picker__head,
 .app-account-details-sheet__head,
 .admin-user-card__head,
-.admin-user-access__head,
-.receipt-upload-card__head,
-.receipt-preview-card__head {
+.admin-user-access__head{
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
 }
 
-.premium-admin-roadmap,
 .referral-admin-roadmap,
-.store-limits-list,
 .admin-user-actions--access,
 .admin-user-actions--danger,
 .analytics-action-grid--two,
@@ -274,8 +229,6 @@
 }
 
 .referral-admin-code-card__actions,
-.store-payment-plan-toggle,
-.business-summary-grid,
 .onboarding-choice-grid,
 .onboarding-two-cols,
 .onboarding-summary-grid,
@@ -285,14 +238,11 @@
   gap: 10px;
 }
 
-.store-compact-extras,
 .app-account-details-actions,
 .analytics-bars,
 .analytics-income-grid,
 .analytics-kpi-grid,
 .analytics-grid-two,
-.business-insight-list,
-.business-detail-lists,
 .journal-summary-grid,
 .app-obligation-source-panel,
 .app-recurring-list,
@@ -303,7 +253,6 @@
 .onboarding-feature-list,
 .onboarding-flow,
 .onboarding-rule-list,
-.business-account-list,
 .profile-command-examples__groups,
 .referral-code-panel__actions,
 .referral-apply-card__form,
@@ -330,7 +279,6 @@
 .limits-hero__stats,
 .limits-guide-grid,
 .onboarding-currency-grid,
-.business-money-grid,
 .profile-hub-hero__stats,
 .profile-hub-grid,
 .referral-hero__stats,

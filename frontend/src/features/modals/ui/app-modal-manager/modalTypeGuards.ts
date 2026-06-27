@@ -6,12 +6,7 @@ const HOME_FINANCE_MODAL_TYPES = new Set<AppModalDescriptor['type']>(['home-char
 const OBLIGATION_MODAL_TYPES = new Set<AppModalDescriptor['type']>(['obligation-edit']);
 const NOTIFICATION_MODAL_TYPES = new Set<AppModalDescriptor['type']>(['notifications']);
 const REPORT_MODAL_TYPES = new Set<AppModalDescriptor['type']>(['report-export']);
-const STORE_MODAL_TYPES = new Set<AppModalDescriptor['type']>(['store-limits', 'store-payment']);
-const PREMIUM_MODAL_TYPES = new Set<AppModalDescriptor['type']>(['premium-upgrade']);
-const RECEIPT_LOCK_MODAL_TYPES = new Set<AppModalDescriptor['type']>(['receipt-premium-lock']);
-const RECEIPT_REVIEW_MODAL_TYPES = new Set<AppModalDescriptor['type']>(['receipt-review']);
 const TEXT_CHAT_MODAL_TYPES = new Set<AppModalDescriptor['type']>(['ai-text-overlay']);
-const TRIAL_OFFER_MODAL_TYPES = new Set<AppModalDescriptor['type']>(['trial-offer']);
 const UTILITY_MODAL_TYPES = new Set<AppModalDescriptor['type']>(['accounts-tools', 'taxonomy-tools', 'taxonomy-section']);
 
 export function isAccountModal(modal: AppModalDescriptor): modal is Extract<AppModalDescriptor, { type: 'account-create' | 'account-details' | 'account-transfer' | 'account-edit' }> {
@@ -46,23 +41,8 @@ export function isTextChatModal(modal: AppModalDescriptor): modal is Extract<App
   return TEXT_CHAT_MODAL_TYPES.has(modal.type);
 }
 
-export function isTrialOfferModal(modal: AppModalDescriptor): modal is Extract<AppModalDescriptor, { type: 'trial-offer' }> {
-  return TRIAL_OFFER_MODAL_TYPES.has(modal.type);
-}
 
 
-export function isStoreModal(modal: AppModalDescriptor): modal is Extract<AppModalDescriptor, { type: 'store-limits' | 'store-payment' }> {
-  return STORE_MODAL_TYPES.has(modal.type);
-}
 
-export function isPremiumModal(modal: AppModalDescriptor): modal is Extract<AppModalDescriptor, { type: 'premium-upgrade' }> {
-  return PREMIUM_MODAL_TYPES.has(modal.type);
-}
 
-export function isReceiptLockModal(modal: AppModalDescriptor): modal is Extract<AppModalDescriptor, { type: 'receipt-premium-lock' }> {
-  return RECEIPT_LOCK_MODAL_TYPES.has(modal.type);
-}
 
-export function isReceiptReviewModal(modal: AppModalDescriptor): modal is Extract<AppModalDescriptor, { type: 'receipt-review' }> {
-  return RECEIPT_REVIEW_MODAL_TYPES.has(modal.type);
-}

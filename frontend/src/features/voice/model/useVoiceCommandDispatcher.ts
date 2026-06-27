@@ -28,7 +28,6 @@ function getScreenVoiceLabel(screen: string) {
     settings: 'настройки',
     sections: 'категории',
     companion: 'компаньона',
-    premium: 'премиум',
     referral: 'рефералы',
     admin: 'админку',
   };

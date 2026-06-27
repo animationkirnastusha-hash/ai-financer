@@ -16,25 +16,16 @@ export const extraRuntimeTextDictionary: Record<string, string> = {
   'сравни этот месяц с прошлым': 'compare this month with the previous one',
   'какие траты можно сократить?': 'which expenses can be reduced?',
   'Глубже': 'Deeper',
-  'Прогнозы, месячные отчёты и более глубокие выводы для Premium.': 'Forecasts, monthly reports and deeper Premium insights.',
 
-  // Business account
   'Скоро': 'Coming soon',
   'Фина Бухгалтер готовится': 'Fina Accountant is being prepared',
-  'Раздел для самозанятых, ИП и малого бизнеса появится отдельно от личных финансов.': 'A separate area for self-employed users, sole proprietors and small business will appear separately from personal finance.',
   'На главную': 'Go home',
-  'Для ИП, самозанятых и малого бизнеса': 'For sole proprietors, self-employed users and small business',
-  'Отдельное направление поверх личных финансов: доходы, расходы бизнеса, документы, сроки и отчёты без смешивания с личными деньгами.': 'A separate layer above personal finance: business income, expenses, documents, deadlines and reports without mixing them with personal money.',
-  'К Premium': 'Go to Premium',
   'Позиционирование': 'Positioning',
   'Фина помогает вести учёт, готовить данные и видеть сроки. Она не заменяет бухгалтера и не обещает юридическую гарантию расчётов.': 'Fina helps keep records, prepare data and track deadlines. It does not replace an accountant and does not provide a legal guarantee for calculations.',
-  'Простой учёт доходов, расходов, чеков и напоминаний без тяжёлой бухгалтерии.': 'Simple tracking of income, expenses, receipts and reminders without heavy accounting.',
   'доходы по клиентам': 'income by clients',
   'напоминания о налоге': 'tax reminders',
   'экспорт для себя': 'export for yourself',
-  'Бизнес-кошелёк отдельно от личных финансов, дедлайны и подготовка данных для отчётов.': 'A business wallet separate from personal finance, with deadlines and report preparation.',
   'налоговый календарь': 'tax calendar',
-  'расходы бизнеса': 'business expenses',
   'выгрузка для бухгалтера': 'export for accountant',
   'Контроль регулярных платежей, документов, оборота и первичной картины по деньгам.': 'Control recurring payments, documents, turnover and the first money picture.',
   'документы': 'documents',
@@ -42,9 +33,6 @@ export const extraRuntimeTextDictionary: Record<string, string> = {
   'риски кассовых разрывов': 'cash gap risks',
   'Налоги и дедлайны': 'Taxes and deadlines',
   'Календарь платежей, напоминания и предварительная оценка будущей нагрузки.': 'Payment calendar, reminders and an initial estimate of future load.',
-  'Разделение личных денег и бизнес-доходов, клиенты, источники, повторяемость.': 'Separate personal money and business income, clients, sources and recurrence.',
-  'Категории для бизнеса, чеки, подписки, аренда, связь, реклама и материалы.': 'Business categories, receipts, subscriptions, rent, communication, ads and materials.',
-  'Место для актов, чеков, счетов и будущего распознавания документов.': 'A place for acts, receipts, invoices and future document recognition.',
   'Экспорт данных для себя или бухгалтера без ручной сборки таблиц.': 'Export data for yourself or an accountant without manually building spreadsheets.',
   'Осторожный режим': 'Careful mode',
   'Фина готовит данные и подсвечивает риски, но не заменяет юридическую консультацию.': 'Fina prepares data and highlights risks, but does not replace legal advice.',
@@ -56,8 +44,6 @@ export const extraRuntimeTextDictionary: Record<string, string> = {
   'отдельный режим': 'separate mode',
   'Сценарий': 'Scenario',
   'Как это должно ощущаться': 'How it should feel',
-  'Пользователь выбирает статус: самозанятый, ИП или малый бизнес.': 'The user chooses a status: self-employed, sole proprietor or small business.',
-  'Фина разделяет личные и бизнес-деньги, не смешивая счета и категории.': 'Fina separates personal and business money without mixing accounts and categories.',
   'Приложение напоминает о сроках, готовит отчёты и показывает риски.': 'The app reminds about deadlines, prepares reports and shows risks.',
 
   // Goals
@@ -95,8 +81,6 @@ export const extraRuntimeTextDictionary: Record<string, string> = {
   'Категории, которые ещё нужно разложить': 'Categories that still need sorting',
   'Разобрать': 'Sort out',
 
-  // Premium / referrals
-  'Premium-дни за приглашения': 'Premium days for invites',
   'Пользователь приглашает друга, друг начинает пользоваться приложением — оба получают бонус.': 'The user invites a friend, the friend starts using the app — both receive a bonus.',
   'Твой код': 'Your code',
   'Скопировано': 'Copied',
@@ -126,7 +110,6 @@ export const extraRuntimeTextDictionary: Record<string, string> = {
   'Excel': 'Excel',
   'Скачать PDF': 'Download PDF',
   'Скачать Excel': 'Download Excel',
-  'Открыть Premium': 'Open Premium',
   'Открыть ИИ-бухгалтера': 'Open AI accountant',
 
   // Common forms

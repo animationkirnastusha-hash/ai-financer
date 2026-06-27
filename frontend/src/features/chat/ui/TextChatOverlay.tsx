@@ -14,7 +14,6 @@ import { useChatController } from "@/features/chat/model/useChatController";
 import { useChatStore } from "@/features/chat/model/chat.store";
 import { useFirstRunChatSetupStore } from "@/features/chat/model/firstRunChatSetup.store";
 import { useSettingsStore } from "@/features/settings/model/settings.store";
-import { markProductTourPending } from "@/features/product-tour/model/productTourPending.store";
 import { createTransaction } from "@/features/transactions/api/transactions.api";
 import { useTransactionsStore } from "@/features/transactions/model/transactions.store";
 import { useVoiceInput } from "@/features/voice/model/useVoiceInput";
@@ -165,6 +164,7 @@ export function TextChatOverlay({
   const startFirstRunSetup = useFirstRunChatSetupStore((state) => state.start);
   const skipSetupMicrophone = useFirstRunChatSetupStore((state) => state.skipMicrophone);
   const finishSetupMicrophone = useFirstRunChatSetupStore((state) => state.finishMicrophone);
+  const failSetupMicrophone = useFirstRunChatSetupStore((state) => state.failMicrophone);
   const completeSetupAccount = useFirstRunChatSetupStore((state) => state.completeAccount);
   const completeSetupWithAccount = useFirstRunChatSetupStore((state) => state.completeWithAccount);
   const dismissFirstRunSetup = useFirstRunChatSetupStore((state) => state.dismiss);
@@ -640,10 +640,7 @@ export function TextChatOverlay({
       }
 
       if (setupStage === 'done') {
-        return [
-          createSetupMessage('first-run-setup-created', t('textChat.setup.created'), 'success'),
-          createSetupMessage('first-run-setup-tour', t('textChat.setup.tour')),
-        ];
+        return [createSetupMessage('first-run-setup-created', t('textChat.setup.created'), 'success')];
       }
 
       return [];
@@ -662,19 +659,12 @@ export function TextChatOverlay({
     if (setupStage !== 'microphone' || isSetupBusy) return;
 
     setIsSetupBusy(true);
-    setLocalHint(null);
     setShowVoicePermissionHelp(false);
-    voice.cancel();
-    voice.reset?.();
-
     try {
       const allowed = await voice.primePermission();
-      voice.cancel();
-      voice.reset?.();
       setVoicePermissionPrompted(allowed);
-
+      voice.reset?.();
       if (allowed) {
-        setShowVoicePermissionHelp(false);
         finishSetupMicrophone();
         return;
       }
@@ -727,7 +717,6 @@ export function TextChatOverlay({
       if (amount !== null && amount > 0) {
         await addInitialBalance(account, amount);
         await Promise.all([loadAccounts(true), refreshTransactions()]);
-        markProductTourPending();
         completeSetupWithAccount(account);
         return;
       }
@@ -748,7 +737,6 @@ export function TextChatOverlay({
     try {
       if (amount > 0) await addInitialBalance(setupCreatedAccount, amount);
       await Promise.all([loadAccounts(true), refreshTransactions()]);
-      markProductTourPending();
       completeSetupWithAccount(setupCreatedAccount);
     } catch {
       appendSetupAssistantMessage('first-run-setup-balance-save-failed', t('textChat.setup.createFailed'), 'error');
@@ -824,16 +812,14 @@ export function TextChatOverlay({
       setVoicePermissionPrompted(false);
       setVoiceHint(t('textChat.voice.needPermission'));
       setShowVoicePermissionHelp(true);
-      setLocalHint(t('textChat.setup.microphoneHelpHint'));
-      voice.cancel();
+      if (setupStage === 'microphone') failSetupMicrophone();
       voice.reset?.();
       return;
     }
 
     setVoiceHint(t('textChat.voice.startFailed'));
-    voice.cancel();
     voice.reset?.();
-  }, [setVoicePermissionPrompted, t, voice, voice.error]);
+  }, [failSetupMicrophone, setVoicePermissionPrompted, setupStage, t, voice, voice.error]);
 
   useEffect(() => () => {
     if (autoCloseTimerRef.current !== null) window.clearTimeout(autoCloseTimerRef.current);
@@ -945,7 +931,7 @@ export function TextChatOverlay({
           />
         ) : null}
 
-        {localHint ? <div className="text-chat-overlay__receipt-hint">{localHint}</div> : null}
+        {localHint ? <div className="text-chat-overlay__local-hint">{localHint}</div> : null}
 
         {showJumpToBottom ? (
           <button type="button" className="text-chat-overlay__jump" onClick={() => scrollToBottom()} aria-label={t("textChat.jumpToBottom")}>

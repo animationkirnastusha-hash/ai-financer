@@ -1,10 +1,8 @@
 /* Shared page content flow and responsive presentation. */
 .app-dashboard-page .app-home-layout,
 .app-analytics-page .app-page__inner,
-.receipt-scans-page .app-page__inner,
 .spending-limits-page .app-page__inner,
 .referral-page .app-page__inner,
-.business-workspace-page .app-page__inner,
 .app-taxonomy-page .app-page__inner {
   gap: var(--app-content-gap, 14px);
 }
@@ -14,15 +12,10 @@
 .app-dashboard-page .app-card,
 .app-analytics-page .analytics-hero-card,
 .app-analytics-page .analytics-section-card,
-.receipt-scans-page .receipt-hero,
-.receipt-scans-page .receipt-preview-card,
-.receipt-scans-page .receipt-upload-card,
 .spending-limits-page .limits-hero,
 .spending-limits-page .limits-card,
 .referral-page .referral-hero,
-.referral-page .referral-code-panel,
-.business-workspace-page .business-workspace-hero,
-.business-workspace-page .business-module-section {
+.referral-page .referral-code-panel{
   animation: app-soft-rise .22s ease both;
 }
 
@@ -39,8 +32,7 @@
 .app-home-metrics-grid,
 .analytics-kpi-grid,
 .limits-hero__stats,
-.referral-hero__stats,
-.business-summary-grid {
+.referral-hero__stats{
   align-items: stretch;
 }
 
@@ -48,8 +40,7 @@
 .app-home-metrics-grid > *,
 .analytics-kpi-grid > *,
 .limits-hero__stats > *,
-.referral-hero__stats > *,
-.business-summary-grid > * {
+.referral-hero__stats > *{
   min-width: 0;
   overflow: hidden;
 }
@@ -57,13 +48,9 @@
 .app-home-chart-card,
 .app-home-chart-modal,
 .app-home-section-breakdown,
-.receipt-taxonomy-group,
-.receipt-preview-card,
 .analytics-section-card,
 .limits-card,
-.referral-benefit-card,
-.business-module-card,
-.store-carousel-card {
+.referral-benefit-card{
   box-shadow: 0 18px 54px rgba(0,0,0,.18), inset 0 1px 0 rgba(255,255,255,.055);
 }
 
@@ -72,7 +59,6 @@
 }
 
 .app-home-chart-ring-block small,
-.receipt-taxonomy-group__head small,
 .app-home-section-breakdown__head small {
   letter-spacing: .01em;
 }
@@ -80,7 +66,6 @@
 .analytics-kpi-grid strong,
 .analytics-income-grid strong,
 .analytics-mini-card__value,
-.business-summary-card strong,
 .limits-hero__stats strong,
 .referral-hero__stats strong {
   font-size: clamp(17px, 4.8vw, 24px);
@@ -89,26 +74,17 @@
 }
 
 .analytics-section-card__head,
-.business-section-head,
-.receipt-preview-card__head,
-.receipt-history-card__head,
 .referral-code-panel {
   align-items: center;
 }
 
-.receipt-preview-card__fields strong,
-.receipt-taxonomy-group__head strong,
 .app-home-section-breakdown__head strong,
 .analytics-bar-row > div strong {
   max-width: 42vw;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
 
-.store-carousel-card,
-.store-payment-sheet,
-.premium-upgrade-sheet {
   animation: app-soft-scale-in .2s ease both;
 }
 
@@ -125,26 +101,18 @@ body:has(.app-modal-backdrop) {
 @media (min-width: 760px) {
   .app-home-chart-modal__visual--split {
     grid-template-columns: minmax(280px, .9fr) minmax(220px, .65fr);
-  }
 
-  .receipt-preview-card__fields,
-  .receipt-taxonomy-groups {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .analytics-action-grid--two,
-  .receipt-action-grid,
-  .store-minimal-grid,
-  .business-money-grid,
   .referral-benefits-grid,
   .limits-guide-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
-
 @media (min-width: 1080px) {
   .analytics-kpi-grid,
-  .business-summary-grid,
   .referral-hero__stats,
   .limits-hero__stats {
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -153,9 +121,6 @@ body:has(.app-modal-backdrop) {
 
 @media (max-width: 620px) {
   .analytics-section-card__head,
-  .business-section-head,
-  .receipt-preview-card__head,
-  .receipt-history-card__head,
   .referral-code-panel,
   .app-home-balance-card__footer {
     grid-template-columns: 1fr;
@@ -164,15 +129,12 @@ body:has(.app-modal-backdrop) {
   }
 
   .analytics-section-card__head .app-secondary-button,
-  .business-section-head .app-secondary-button,
-  .receipt-preview-card__head .app-secondary-button,
   .app-home-balance-card__footer .app-secondary-button {
     width: 100%;
   }
 
   .app-home-balance-card__metrics,
   .analytics-kpi-grid,
-  .business-summary-grid,
   .limits-hero__stats,
   .referral-hero__stats {
     grid-template-columns: 1fr;
@@ -182,8 +144,6 @@ body:has(.app-modal-backdrop) {
     gap: 12px;
   }
 
-  .receipt-preview-card__fields strong,
-  .receipt-taxonomy-group__head strong,
   .app-home-section-breakdown__head strong,
   .analytics-bar-row > div strong {
     max-width: 38vw;

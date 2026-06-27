@@ -1,8 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { reportsApi, type ReportFormat, type ReportMode, type ReportPreviewDto, type ReportType } from '@/features/reports/api/reports.api';
-import { useNavigationStore } from '@/features/navigation/model/navigation.store';
-import { hasRealBusinessAccess, hasRealPremiumAccess } from '@/features/subscription/lib/entitlements';
-import { useSubscriptionStore } from '@/features/subscription/model/subscription.store';
 import { Drawer } from '@/shared/ui/Drawer';
 import { formatMoney } from '@/shared/lib/money';
 
@@ -20,16 +17,6 @@ const modeCopy: Record<ReportMode, { title: string; caption: string; badge: stri
     title: 'Экспорт операций',
     caption: 'Простая выгрузка доходов, расходов и переводов за выбранный период.',
     badge: 'База',
-  },
-  premium: {
-    title: 'Расширенный отчёт',
-    caption: 'Подробный финансовый отчёт с категориями, счетами, целями и обязательствами.',
-    badge: 'Premium',
-  },
-  business: {
-    title: 'Бизнес-отчёт',
-    caption: 'Сводка для себя, партнёра или бухгалтера: доходы, расходы и итог периода.',
-    badge: 'Бизнес',
   },
 };
 
@@ -66,20 +53,7 @@ export function ReportExportSheet({ open, mode = 'base', layer, onClose }: Props
   const [isLoadingPreview, setIsLoadingPreview] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const navigateTo = useNavigationStore((state) => state.navigateTo);
-  const subscription = useSubscriptionStore((state) => state.status);
-  const loadSubscription = useSubscriptionStore((state) => state.load);
-
-  useEffect(() => {
-    if (open) void loadSubscription();
-  }, [loadSubscription, open]);
-
-  const copy = modeCopy[mode];
-  const hasPremiumAccess = hasRealPremiumAccess(subscription);
-  const hasBusinessAccess = hasRealBusinessAccess(subscription);
-  const isLockedPremiumReport = mode === 'premium' && !hasPremiumAccess;
-  const isLockedBusinessReport = mode === 'business' && !hasBusinessAccess;
-  const isHeroClickable = isLockedPremiumReport || isLockedBusinessReport;
+  const copy = modeCopy[mode] ?? modeCopy.base;
 
   function changePeriod(next: PeriodPreset) {
     setPeriod(next);
@@ -111,17 +85,6 @@ export function ReportExportSheet({ open, mode = 'base', layer, onClose }: Props
     }
   }
 
-  function openModePage() {
-    if (mode === 'premium') {
-      onClose();
-      navigateTo('premium');
-      return;
-    }
-    if (mode === 'business') {
-      onClose();
-      navigateTo('store');
-    }
-  }
 
   async function download() {
     setIsDownloading(true);
@@ -139,24 +102,13 @@ export function ReportExportSheet({ open, mode = 'base', layer, onClose }: Props
     <Drawer open={open} onClose={onClose} title={copy.title} layer={layer}>
       <div className="report-export-sheet">
         <section
-          className={`report-export-hero report-export-hero--${mode}${isHeroClickable ? ' report-export-hero--clickable' : ''}`}
-          role={isHeroClickable ? 'button' : undefined}
-          tabIndex={isHeroClickable ? 0 : undefined}
-          onClick={isHeroClickable ? openModePage : undefined}
-          onKeyDown={isHeroClickable ? (event) => {
-            if (event.key === 'Enter' || event.key === ' ') {
-              event.preventDefault();
-              openModePage();
-            }
-          } : undefined}
+          className={`report-export-hero report-export-hero--${mode}`}
         >
           <div>
             <span>{copy.badge}</span>
             <h2>{copy.title}</h2>
             <p>{copy.caption}</p>
-            {isHeroClickable ? <small>{mode === 'premium' ? 'Открыть Premium' : 'Скоро отдельный продукт'}</small> : null}
           </div>
-          {isHeroClickable ? <i aria-hidden="true">›</i> : null}
         </section>
 
         <section className="report-export-section">
@@ -217,11 +169,6 @@ export function ReportExportSheet({ open, mode = 'base', layer, onClose }: Props
           </section>
         ) : null}
 
-        {mode !== 'base' ? (
-          <section className="report-export-note">
-            В расширенный отчёт входят счета, категории, цели и обязательства. Для бизнес-режима добавляется отдельная сводка по прибыли.
-          </section>
-        ) : null}
 
         {error ? <div className="report-export-error">{error}</div> : null}
 

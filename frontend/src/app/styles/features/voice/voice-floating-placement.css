@@ -21,9 +21,7 @@
 
 body:has(.monetization-page) .voice-first-companion,
 body:has(.referral-page) .voice-first-companion,
-body:has(.spending-limits-page) .voice-first-companion,
-body:has(.business-workspace-page) .voice-first-companion,
-body:has(.receipt-scans-page) .voice-first-companion,
+body:has(.spending- limits-page) .voice-first-companion,
 body:has(.app-analytics-page) .voice-first-companion,
 body:has(.app-dashboard-page) .voice-first-companion {
   right: max(12px, env(safe-area-inset-right)) !important;

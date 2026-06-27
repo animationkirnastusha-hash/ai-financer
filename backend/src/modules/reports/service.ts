@@ -5,7 +5,7 @@ import ExcelJS from 'exceljs';
 import { prisma } from '../../lib/prisma';
 
 export type ReportFormat = 'xlsx' | 'pdf';
-export type ReportMode = 'base' | 'premium' | 'business';
+export type ReportMode = 'base' | 'premium';
 export type ReportTransactionType = 'all' | 'income' | 'expense' | 'transfer';
 
 export type ReportFilters = {
@@ -55,7 +55,7 @@ type ReportData = {
 };
 
 function normalizeMode(value: unknown): ReportMode {
-  return value === 'premium' || value === 'business' ? value : 'base';
+  return value === 'premium' ? value : 'base';
 }
 
 function normalizeFormat(value: unknown): ReportFormat {
@@ -379,19 +379,6 @@ export class ReportService {
       autoWidth(goals);
     }
 
-    if (data.mode === 'business') {
-      const business = workbook.addWorksheet('Бизнес-отчёт');
-      addWorksheetTitle(business, 'Сводка для бизнеса', 'Доходы, расходы и итог за выбранный период');
-      business.addRows([
-        ['Выручка', data.summary.income],
-        ['Расходы', data.summary.expense],
-        ['Прибыль до налогов', data.summary.balance],
-        ['Операций', data.summary.count],
-      ]);
-      business.getColumn(2).numFmt = '#,##0 ₽';
-      autoWidth(business);
-    }
-
     const buffer = await workbook.xlsx.writeBuffer();
     return Buffer.from(buffer);
   }
@@ -414,7 +401,6 @@ export class ReportService {
         this.drawPdfOperations(doc, data);
 
         if (data.mode !== 'base') this.drawPdfPremiumBlocks(doc, data);
-        if (data.mode === 'business') this.drawPdfBusinessBlock(doc, data);
 
         doc.end();
       } catch (error) {
@@ -424,14 +410,13 @@ export class ReportService {
   }
 
   getReportTitle(mode: ReportMode) {
-    if (mode === 'business') return 'Бизнес-отчёт Фины';
     if (mode === 'premium') return 'Расширенный финансовый отчёт';
     return 'Отчёт по операциям';
   }
 
   getFilename(mode: ReportMode, format: ReportFormat) {
     const date = new Date().toISOString().slice(0, 10);
-    const prefix = mode === 'business' ? 'fina-business-report' : mode === 'premium' ? 'fina-premium-report' : 'fina-operations-report';
+    const prefix = mode === 'premium' ? 'fina-premium-report' : 'fina-operations-report';
     return `${prefix}-${date}.${format === 'pdf' ? 'pdf' : 'xlsx'}`;
   }
 
@@ -518,17 +503,6 @@ export class ReportService {
     doc.moveDown();
   }
 
-  private drawPdfBusinessBlock(doc: any, data: ReportData) {
-    if (doc.y > 690) doc.addPage();
-    doc.fontSize(13).text('Бизнес-сводка', { underline: true });
-    doc.moveDown(0.4);
-    doc.fontSize(9);
-    doc.text(`Выручка: ${formatMoney(data.summary.income)}`);
-    doc.text(`Расходы: ${formatMoney(data.summary.expense)}`);
-    doc.text(`Прибыль до налогов: ${formatMoney(data.summary.balance)}`);
-    doc.text('Этот блок можно использовать как первичную сводку для себя или бухгалтера.');
-    doc.moveDown();
-  }
 }
 
 export const reportService = new ReportService();

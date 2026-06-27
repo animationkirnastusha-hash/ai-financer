@@ -86,12 +86,9 @@ export const accountsTransactionsRuntimeDictionary: Record<string, string> = {
   'Период': 'Period',
   'Расширенный отчёт': 'Advanced report',
   'Расширенный отчет': 'Advanced report',
-  'Бизнес-отчёт': 'Business report',
-  'Бизнес-отчет': 'Business report',
   'Экспорт операций': 'Transaction export',
   'Простая выгрузка доходов, расходов и переводов за выбранный период.': 'Simple export of income, expenses and transfers for the selected period.',
   'Подробный финансовый отчёт с категориями, счетами, целями и обязательствами.': 'Detailed financial report with categories, accounts, goals and obligations.',
   'Сводка для себя, партнёра или бухгалтера: доходы, расходы и итог периода.': 'Summary for yourself, a partner or an accountant: income, expenses and period total.',
-  'В расширенный отчёт входят счета, категории, цели и обязательства. Для бизнес-режима добавляется отдельная сводка по прибыли.': 'The advanced report includes accounts, categories, goals and obligations. Business mode adds a separate profit summary.',
   'Готовлю…': 'Preparing…',
 };

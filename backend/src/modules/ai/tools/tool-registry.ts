@@ -41,7 +41,7 @@ export const AI_TOOL_REGISTRY: AIToolDefinition[] = [
     description: 'Record one finished expense or income. Use semantic fields: category = broad money purpose, merchant/place = where it happened, items/tags/description = context. Do not use this for transfers, goals, obligations, or recurring payments. Do not use section for new user transactions.',
     risk: 'low',
     requiresConfirmation: false,
-    input: { kind: 'income|expense', amount: 'number|string', currency: 'RUB|USD|EUR|VND|null', account: 'string|null', title: 'short clean label|null', category: 'broad financial meaning|null', section: 'legacy|null', description: 'notes/context|null', merchant: 'store/person/business|null', place: 'location/channel|null', items: 'purchased item meanings[]|null', tags: 'search context[]|null' },
+    input: { kind: 'income|expense', amount: 'number|string', currency: 'RUB|USD|EUR|VND|null', account: 'string|null', title: 'short clean label|null', category: 'broad financial meaning|null', section: 'legacy|null', description: 'notes/context|null', merchant: 'store/person/company|null', place: 'location/channel|null', items: 'purchased item meanings[]|null', tags: 'search context[]|null' },
   },
   {
     name: 'update_transaction',

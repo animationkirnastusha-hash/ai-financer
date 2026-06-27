@@ -7,9 +7,6 @@ import type { GoalDto } from '@/features/goals/api/goals.api';
 import type { LoanDto, LoanType } from '@/features/obligations/api/obligations.api';
 import type { HomeCashflowMode, HomeCashflowPeriod, HomeFinanceGroup } from '@/features/dashboard/lib/homeFinanceAnalytics';
 import type { ReportMode } from '@/features/reports/api/reports.api';
-import type { StoreCard } from '@/features/store/model/storeCatalog';
-import type { PremiumTrigger } from '@/features/premium/model/premium.types';
-import type { ReceiptScanDto } from '@/features/receipt-scans/api/receiptScans.api';
 
 export type AppModalDescriptor =
   | { type: 'account-create'; prefill?: Partial<{ name: string; type: AccountType; currency: 'RUB' | 'USD' | 'EUR'; initialBalance: string }> }
@@ -23,12 +20,6 @@ export type AppModalDescriptor =
   | { type: 'goal-edit'; goal?: GoalDto | null; onAfterSave?: () => void }
   | { type: 'obligation-edit'; loan?: LoanDto | null; initialType?: LoanType | null }
   | { type: 'notifications' }
-  | { type: 'trial-offer'; source?: 'tour_complete' | 'tour_skip' | 'store' | 'premium' | 'manual' }
-  | { type: 'store-limits' }
-  | { type: 'store-payment'; product: StoreCard }
-  | { type: 'premium-upgrade'; trigger: PremiumTrigger }
-  | { type: 'receipt-premium-lock' }
-  | { type: 'receipt-review'; scanId: string; initialScan?: ReceiptScanDto }
   | { type: 'report-export'; mode?: ReportMode }
   | { type: 'ai-text-overlay'; initialCommand?: string | null; initialAssistantMessage?: string | null; mode?: 'text' | 'voice'; autoStartVoice?: boolean; autoCloseOnVoiceResult?: boolean; autoSubmitInitialCommand?: boolean; firstRunSetup?: boolean }
   | { type: 'home-chart-details'; mode: HomeCashflowMode; period: HomeCashflowPeriod }
@@ -39,13 +30,7 @@ export type AppModalDescriptor =
 
 const SINGLETON_MODAL_TYPES = new Set<AppModalDescriptor['type']>([
   'ai-text-overlay',
-  'store-limits',
-  'store-payment',
-  'premium-upgrade',
-  'receipt-premium-lock',
-  'receipt-review',
   'notifications',
-  'trial-offer',
 ]);
 
 type AppModalState = {

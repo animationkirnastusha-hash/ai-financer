@@ -1,9 +1,7 @@
 /* Cross-page grids and shared product surfaces. */
 .analytics-page .app-card,
 .spending-limits-page .app-card,
-.referral-page .app-card,
-.receipt-scans-page .app-card,
-.business-workspace-page .app-card {
+.referral-page .app-card{
   border-color: rgba(255,255,255,.095);
   background: linear-gradient(145deg, rgba(255,255,255,.085), rgba(255,255,255,.038));
   box-shadow: 0 20px 60px rgba(0,0,0,.18);
@@ -11,21 +9,13 @@
 
 .limits-guide-grid,
 .referral-hero__stats,
-.referral-benefits-grid,
-.store-minimal-grid,
-.store-compact-feature-row,
-.business-money-grid,
-.receipt-action-grid {
+.referral-benefits-grid{
   align-items: stretch;
 }
 
 .spending-limits-page select,
 .spending-limits-page input,
-.referral-page input,
-.business-workspace-page input,
-.business-workspace-page select,
-.receipt-scans-page input,
-.receipt-scans-page select {
+.referral-page input{
   min-height: 50px;
   border-radius: 18px;
   background: rgba(10, 14, 20, .42);
@@ -33,18 +23,13 @@
 }
 
 .limits-card__footer div,
-.referral-code-panel__actions,
-.receipt-preview-card__actions,
-.business-tabbar,
-.store-carousel__controls {
+.referral-code-panel__actions{
   gap: 8px;
 }
 
 .limits-card__footer button,
 .referral-page .app-secondary-button,
-.referral-page .app-primary-button,
-.receipt-scans-page .app-primary-button,
-.receipt-scans-page .app-secondary-button {
+.referral-page .app-primary-button{
   min-height: 42px;
   border-radius: 16px;
 }
@@ -60,26 +45,20 @@
 
 .referral-code-panel__actions {
   min-width: min(240px, 100%);
-}
 
-.business-mini-app-shell {
   display: grid;
   gap: 16px;
   padding: 4px;
   border-radius: 34px;
   background: linear-gradient(180deg, rgba(255,255,255,.045), rgba(255,255,255,.018));
-}
 
-.business-tabbar {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   padding: 6px;
   border: 1px solid rgba(255,255,255,.09);
   border-radius: 22px;
   background: rgba(255,255,255,.045);
-}
 
-.business-tabbar button {
   min-width: 0;
   min-height: 42px;
   border: 0;
@@ -88,23 +67,15 @@
   color: rgba(255,255,255,.62);
   font-size: 13px;
   font-weight: 760;
-}
 
-.business-tabbar button.is-active {
   background: rgba(255,255,255,.12);
   color: #fff;
-}
 
-.receipt-hero--compact {
   padding: 20px 18px;
-}
 
-.receipt-history-card {
   padding: 18px;
   border-radius: 30px;
-}
 
-.receipt-history-card__head {
   display: grid;
   grid-template-columns: minmax(0,1fr) auto;
   gap: 12px;
@@ -125,21 +96,14 @@
 
 @media (max-width: 620px) {
   .referral-code-panel,
-  .business-tabbar,
   .limits-guide-grid,
   .referral-hero__stats,
-  .referral-benefits-grid,
-  .business-money-grid,
-  .store-minimal-grid,
-  .store-compact-feature-row {
+  .referral-benefits-grid{
     grid-template-columns: 1fr;
   }
 
   .referral-code-panel__actions {
     min-width: 0;
-  }
-
-  .business-tabbar button {
     min-height: 40px;
   }
 }

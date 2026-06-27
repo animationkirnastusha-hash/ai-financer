@@ -29,9 +29,7 @@ body {
   h1,
   h2,
   h3,
-  .app-home-balance-card__amount,
-  .receipt-history-card__head h2,
-  .business-section-head h2 {
+  .app-home-balance-card__amount{
     overflow-wrap: anywhere;
   }
 }
@@ -41,12 +39,9 @@ body {
     padding-inline: 24px !important;
   }
 
-  .store-minimal-grid,
   .analytics-summary-grid,
   .limits-guide-grid,
-  .referral-dashboard-grid,
-  .receipt-action-grid,
-  .business-money-grid {
+  .referral-dashboard-grid{
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
@@ -66,15 +61,13 @@ body {
 
   .dashboard-page .app-page__inner,
   .analytics-page .app-page__inner,
-  .business-workspace-page .app-page__inner,
   .monetization-page .app-page__inner {
     max-width: 1240px;
   }
 
   .accounts-page .app-page__inner,
   .spending-limits-page .app-page__inner,
-  .referral-page .app-page__inner,
-  .receipt-scans-page .app-page__inner {
+  .referral-page .app-page__inne{
     max-width: 1040px;
   }
 
@@ -86,9 +79,7 @@ body {
   }
 
   .drawer,
-  .bottom-sheet,
-  .premium-upgrade-sheet,
-  .store-payment-sheet {
+  .bottom-sheet{
     max-width: 620px;
     margin-inline: auto;
   }
@@ -100,7 +91,6 @@ body {
   }
 
   .analytics-page .app-page__inner,
-  .business-workspace-page .app-page__inner,
   .monetization-page .app-page__inner {
     display: grid;
     gap: 18px;

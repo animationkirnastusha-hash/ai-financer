@@ -120,18 +120,6 @@ export async function ensurePremiumAccess(context) {
   return completed.payload.subscription;
 }
 
-export async function ensureBusinessAccess(context) {
-  const order = await requestJson(context, '/payments/orders', {
-    method: 'POST',
-    body: { product: 'business', duration: 'month', provider: 'mock' },
-  });
-  const orderId = requireId(order.payload?.order?.id, 'business order');
-  const completed = await requestJson(context, `/payments/orders/${orderId}/mock-complete`, { method: 'POST' });
-  if (!completed.payload?.subscription?.access?.hasBusiness) throw new Error('Business access was not granted');
-  if (!completed.payload?.subscription?.access?.hasPremium) throw new Error('Business must include Premium');
-  return completed.payload.subscription;
-}
-
 export async function uploadFakeReceipt(context, name = 'scenario-receipt.png') {
   const form = new FormData();
   const fakePng = new Uint8Array([

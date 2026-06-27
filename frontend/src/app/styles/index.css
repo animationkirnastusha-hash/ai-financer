@@ -36,7 +36,6 @@
 @import "./pages/shared-product-screens/product-forms.css";
 @import "./features/voice/voice-session.css";
 @import "./features/chat/chat-input-modal.css";
-@import "./features/premium/premium-access.css";
 @import "./features/onboarding/product-learning.css";
 @import "./pages/obligations/obligations-summary.css";
 @import "./pages/obligations/obligations-loans.css";
@@ -51,35 +50,23 @@
 @import "./pages/accounts/account-details-sheet.css";
 @import "./features/chat/voice-composer.css";
 @import "./pages/limits/spending-limits.css";
-@import "./pages/business/business-workspace.css";
-@import "./pages/receipts/receipt-scans.css";
-@import "./features/store/store.css";
-@import "./features/store/payments.css";
-@import "./features/store/premium-sheet.css";
-@import "./pages/product-areas/receipts-business-entry.css";
 @import "./pages/referral/referral.css";
 @import "./pages/analytics/analytics-layout.css";
 @import "./pages/admin/ai-training.css";
 @import "./pages/admin/admin-users.css";
-@import "./features/store/store-layout.css";
-@import "./features/store/store-layout-compact.css";
-@import "./features/store/store-foldouts.css";
 @import "./animations/app-motion.css";
-@import "./animations/store-motion.css";
 @import "./components/shared-surfaces.css";
-@import "./features/store/product-carousel.css";
-@import "./features/store/payment-sheet.css";
 @import "./layout/device-adaptive.css";
 @import "./layout/page-grid.css";
 @import "./features/taxonomy/taxonomy-picker.css";
 @import "./pages/dashboard/dashboard-taxonomy.css";
-@import "./pages/receipts/receipt-taxonomy.css";
-@import "./features/receipt-scans/receipt-review-sheet.css";
 @import "./animations/motion-safety.css";
 @import "./animations/chat-motion.css";
 @import "./layout/device-adaptive/cross-device-layout.css";
 @import "./layout/page-content.css";
 @import "./features/taxonomy/taxonomy-layout-safety.css";
+@import "./features/pending-actions/pending-action-card.css";
+@import "./features/transactions/timeline-event-card.css";
 
 @import "./features/chat/fina-pull-gesture.css";
 @import "./features/fina/fina-command-bar.css";
@@ -106,6 +93,5 @@
 @import "./features/voice/voice-floating-placement.css";
 @import "./pages/dashboard/dashboard-device-safety.css";
 
-@import "./features/subscription/trial-offer.css";
 
 @import "./pages/onboarding-setup/onboarding-setup-launch.css";

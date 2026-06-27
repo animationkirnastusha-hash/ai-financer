@@ -7,7 +7,6 @@ export type AdminOverview = {
     usersToday: number;
     users7d: number;
     activeUsers30d: number;
-    premiumUsers: number;
     transactionsTotal: number;
     transactionsToday: number;
     accountsTotal: number;
@@ -60,13 +59,6 @@ export type AdminUser = {
   streakDays: number;
   lastActiveAt: string | null;
   createdAt: string;
-  subscription?: {
-    premiumUntil: string | null;
-    businessUntil: string | null;
-    trialUntil: string | null;
-    premiumLifetime: boolean;
-    businessLifetime: boolean;
-  } | null;
   _count: {
     accounts: number;
     transactions: number;
@@ -99,8 +91,6 @@ export type AdminAITrainingExample = {
 };
 
 export type AdminResetMode = 'finance' | 'full';
-export type AdminSubscriptionProduct = 'premium' | 'business';
-
 export const adminApi = {
   overview: () => apiClient.get<AdminOverview>('/admin/overview'),
   users: (query = '') => {
@@ -112,12 +102,6 @@ export const adminApi = {
   monitoring: () => apiClient.get<AdminMonitoring>('/admin/monitoring'),
   resetUser: (userId: string, mode: AdminResetMode, confirm: string) => apiClient.post<{ success: boolean }>('/admin/users/' + userId + '/reset', { mode, confirm }),
   resetAll: (mode: AdminResetMode, confirm: string) => apiClient.post<{ success: boolean }>('/admin/reset', { mode, confirm }),
-  grantSubscription: (userId: string, product: AdminSubscriptionProduct, days: number) =>
-    apiClient.post<{ success: boolean }>('/admin/users/' + userId + '/subscription/grant', { product, days }),
-  grantLifetimeSubscription: (userId: string, product: AdminSubscriptionProduct) =>
-    apiClient.post<{ success: boolean }>('/admin/users/' + userId + '/subscription/grant', { product, lifetime: true }),
-  revokeSubscription: (userId: string, product: AdminSubscriptionProduct) =>
-    apiClient.post<{ success: boolean }>('/admin/users/' + userId + '/subscription/revoke', { product }),
   restartTrial: (userId: string) => apiClient.post<{ success: boolean }>('/admin/users/' + userId + '/trial/restart'),
   processReferralRewards: () => apiClient.post<{ success: boolean; result: { referrers: number; checked: number; awarded: number } }>('/admin/referrals/process'),
   aiTraining: () => apiClient.get<{ items: AdminAITrainingExample[] }>('/admin/ai-training'),

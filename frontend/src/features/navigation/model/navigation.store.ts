@@ -22,10 +22,6 @@ export type AppScreen =
   | 'companion'
   | 'settings'
   | 'profile'
-  | 'store'
-  | 'premium'
-  | 'business-accountant'
-  | 'receipt-scans'
   | 'sections'
   | 'admin'
   | 'referral';

@@ -11,7 +11,6 @@ function assertAccess(status) {
   const access = status?.access;
   if (!access || typeof access.status !== 'string') throw new Error('Subscription access is missing');
   if (typeof access.hasPremium !== 'boolean') throw new Error('Subscription hasPremium is invalid');
-  if (typeof access.hasBusiness !== 'boolean') throw new Error('Subscription hasBusiness is invalid');
 
   assertBucket('voiceCommandsToday', status.usage?.voiceCommandsToday);
   assertBucket('receiptScansThisMonth', status.usage?.receiptScansThisMonth);
@@ -46,9 +45,7 @@ await runSmoke('store-subscription', async (context) => {
   if (!Array.isArray(products)) throw new Error('Payment catalog products list is invalid');
 
   const premiumProduct = products.find((item) => item.product === 'premium');
-  const businessProduct = products.find((item) => item.product === 'business');
   if (!premiumProduct) throw new Error('Payment catalog does not contain premium product');
-  if (!businessProduct) throw new Error('Payment catalog does not contain business product placeholder');
 
   const premiumPlan = premiumProduct.options?.find((option) => option.duration === 'month');
   const premiumYear = premiumProduct.options?.find((option) => option.duration === 'year');
@@ -58,10 +55,6 @@ await runSmoke('store-subscription', async (context) => {
   if (typeof premiumPlan?.starsBaseAmount !== 'number' || premiumPlan.starsBaseAmount <= 0) throw new Error('Premium month Stars base price is missing');
   if (typeof premiumYear?.starsAmount !== 'number' || premiumYear.starsAmount <= 0) throw new Error('Premium year Stars price is missing');
 
-  if (businessProduct.comingSoon !== true) throw new Error('Business product must be marked as coming soon');
-  if (Array.isArray(businessProduct.options) && businessProduct.options.length > 0) {
-    throw new Error('Business product must not expose purchasable options in personal Fina');
-  }
 
   const starsOrder = await requestJson(context, '/payments/orders', {
     method: 'POST',
@@ -72,14 +65,8 @@ await runSmoke('store-subscription', async (context) => {
   if (starsOrder.payload?.order?.amount !== premiumPlan.starsAmount) throw new Error('Telegram Stars order amount mismatch');
   if (!['ready', 'not_configured'].includes(starsOrder.payload?.checkout?.status)) throw new Error('Telegram Stars checkout status mismatch');
 
-  const blockedBusinessOrder = await requestJson(context, '/payments/orders', {
-    method: 'POST',
-    expected: [400],
-    body: { product: 'business', duration: 'month', provider: 'mock' },
-  });
-  if (blockedBusinessOrder.payload?.error?.code !== 'BAD_REQUEST') throw new Error('Business purchase block response is invalid');
 
-  for (const feature of ['store', 'receiptScan', 'advancedReports', 'businessWorkspace']) {
+  for (const feature of ['store', 'receiptScan', 'advancedReports']) {
     const featureAccess = await requestJson(context, `/subscription/features/${feature}`);
     if (featureAccess.payload?.feature !== feature) throw new Error(`Feature access mismatch for ${feature}`);
     if (typeof featureAccess.payload?.allowed !== 'boolean') throw new Error(`Feature access allowed flag is invalid for ${feature}`);
@@ -87,7 +74,6 @@ await runSmoke('store-subscription', async (context) => {
 
   const premium = await createAndCompleteMockOrder(context, 'premium');
   if (!premium.access?.hasPremium) throw new Error('Premium mock payment did not grant premium access');
-  if (premium.access?.hasBusiness) throw new Error('Premium payment must not grant business access');
 
   const referral = await requestJson(context, '/referral');
   const referralData = referral.payload?.referral ?? referral.payload ?? {};
@@ -99,8 +85,6 @@ await runSmoke('store-subscription', async (context) => {
   context.log('store and subscription flow passed', {
     status: premium.access.status,
     hasPremium: premium.access.hasPremium,
-    hasBusiness: premium.access.hasBusiness,
-    businessComingSoon: businessProduct.comingSoon === true,
     referralCode,
   });
 });

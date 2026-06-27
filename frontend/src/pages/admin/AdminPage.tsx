@@ -20,9 +20,6 @@ export default function AdminPage() {
   const user = useAuthStore((state) => state.user);
   const [tab, setTab] = useState<AdminTab>('overview');
   const [resettingUserId, setResettingUserId] = useState<string | null>(null);
-  const [subscriptionBusy, setSubscriptionBusy] = useState<string | null>(null);
-  const [subscriptionDays, setSubscriptionDays] = useState<Record<string, string>>({});
-  const [premiumPreviewEnabled, setPremiumPreviewEnabled] = useState(() => localStorage.getItem('ai-financer-premium-preview') === '1');
   const [userSearchQuery, setUserSearchQuery] = useState('');
   const replayOnboarding = useOnboardingStore((state) => state.reset);
 
@@ -47,16 +44,6 @@ export default function AdminPage() {
   } = useAdminTraining(isAdmin, tab);
 
   if (!isAdmin) return <AdminAccessDenied />;
-
-  const handleSubscriptionDaysChange = (userId: string, value: string) => {
-    setSubscriptionDays((state) => ({ ...state, [userId]: value }));
-  };
-
-  const togglePremiumPreview = () => {
-    const next = !premiumPreviewEnabled;
-    setPremiumPreviewEnabled(next);
-    localStorage.setItem('ai-financer-premium-preview', next ? '1' : '0');
-  };
 
   const refreshAdminData = async () => {
     await reloadUsers(userSearchQuery);
@@ -85,37 +72,6 @@ export default function AdminPage() {
     }
   };
 
-  const handleGrantSubscription = async (userId: string, product: 'premium' | 'business', lifetime = false) => {
-    const days = Number(subscriptionDays[userId] || '30');
-    setSubscriptionBusy(`${userId}:${product}:${lifetime ? 'forever' : 'days'}`);
-    try {
-      if (lifetime) await adminApi.grantLifetimeSubscription(userId, product);
-      else await adminApi.grantSubscription(userId, product, Number.isFinite(days) ? days : 30);
-      await refreshAdminData();
-    } finally {
-      setSubscriptionBusy(null);
-    }
-  };
-
-  const handleRevokeSubscription = async (userId: string, product: 'premium' | 'business') => {
-    setSubscriptionBusy(`${userId}:${product}:revoke`);
-    try {
-      await adminApi.revokeSubscription(userId, product);
-      await refreshAdminData();
-    } finally {
-      setSubscriptionBusy(null);
-    }
-  };
-
-  const handleRestartTrial = async (userId: string) => {
-    setSubscriptionBusy(`${userId}:trial`);
-    try {
-      await adminApi.restartTrial(userId);
-      await reloadUsers(userSearchQuery);
-    } finally {
-      setSubscriptionBusy(null);
-    }
-  };
 
   return (
     <div className="app-page text-white">
@@ -138,14 +94,8 @@ export default function AdminPage() {
             users={users}
             resettingUserId={resettingUserId}
             searchQuery={userSearchQuery}
-            subscriptionBusy={subscriptionBusy}
-            subscriptionDays={subscriptionDays}
-            onSubscriptionDaysChange={handleSubscriptionDaysChange}
             onSearch={(query) => void handleSearchUsers(query)}
             onResetUser={(userId, mode) => void handleResetUser(userId, mode)}
-            onGrantSubscription={(userId, product, lifetime) => void handleGrantSubscription(userId, product, lifetime)}
-            onRevokeSubscription={(userId, product) => void handleRevokeSubscription(userId, product)}
-            onRestartTrial={(userId) => void handleRestartTrial(userId)}
           />
         ) : null}
 
@@ -165,9 +115,7 @@ export default function AdminPage() {
 
         {tab === 'tools' ? (
           <AdminToolsPanel
-            premiumPreviewEnabled={premiumPreviewEnabled}
             onReplayOnboarding={replayOnboarding}
-            onTogglePremiumPreview={togglePremiumPreview}
           />
         ) : null}
 

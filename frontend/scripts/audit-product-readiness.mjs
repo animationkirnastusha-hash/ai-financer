@@ -29,15 +29,18 @@ function walk(dir, files = []) {
   return files;
 }
 
+function exists(relativePath) {
+  return fs.existsSync(path.resolve(frontendRoot, relativePath));
+}
+
 function assertFile(relativePath) {
   const full = path.resolve(frontendRoot, relativePath);
   if (!fs.existsSync(full)) addFinding('missing-file', full, `${relativePath} is missing`);
 }
 
-function assertContains(relativePath, pattern, message) {
+function assertAbsent(relativePath) {
   const full = path.resolve(frontendRoot, relativePath);
-  const content = read(full);
-  if (!content.includes(pattern)) addFinding('missing-wiring', full, message);
+  if (fs.existsSync(full)) addFinding('obsolete-surface', full, `${relativePath} must be removed from base frontend`);
 }
 
 function extractStringLiterals(line) {
@@ -67,7 +70,7 @@ function checkNoFixedAmountsInLearningExamples(files) {
   for (const file of targetFiles) {
     const lines = read(file).split(/\r?\n/);
     lines.forEach((line, index) => {
-      const isLikelyExample = /(example|examples|learning|prompt|command|подсказ|пример|tour)/i.test(line);
+      const isLikelyExample = /(example|examples|learning|prompt|command|подсказ|пример)/i.test(line);
       if (isLikelyExample && commandWords.test(line) && amountLike.test(line)) {
         addFinding('fixed-amount-example', file, 'learning/example command should not contain a fixed amount', index + 1);
       }
@@ -118,20 +121,23 @@ function checkNoHighConfidenceTechnicalCopy(files) {
   }
 }
 
-function checkFirstRunLearningWiring() {
-  assertFile('src/features/chat/ui/message/AssistantTypingText.tsx');
-  assertFile('src/features/onboarding/ui/LaunchOnboardingSheet.tsx');
-  assertFile('src/features/onboarding/model/onboarding.store.ts');
-  assertFile('src/features/onboarding/ui/ProductLearningCard.tsx');
-  assertFile('src/app/styles/pages/onboarding-setup/onboarding-setup-launch.css');
-  assertFile('src/app/styles/features/onboarding/product-learning.css');
-  assertFile('src/app/styles/animations/chat-motion.css');
+function checkBaseOnboardingAndChatWiring() {
+  for (const file of [
+    'src/features/chat/ui/TextChatOverlay.tsx',
+    'src/features/chat/ui/message/AssistantTypingText.tsx',
+    'src/features/chat/model/firstRunChatSetup.store.ts',
+    'src/features/onboarding/ui/LaunchOnboardingSheet.tsx',
+    'src/features/onboarding/model/onboarding.store.ts',
+    'src/features/onboarding/ui/ProductLearningCard.tsx',
+    'src/app/styles/pages/onboarding-setup/onboarding-setup-launch.css',
+    'src/app/styles/features/onboarding/product-learning.css',
+    'src/app/styles/animations/chat-motion.css',
+    'src/app/styles/features/voice/voice-permission-compact.css',
+  ]) assertFile(file);
 
-  const dashboard = read(path.resolve(srcRoot, 'pages/dashboard/DashboardPage.tsx'));
-  for (const target of ['home-balance', 'home-fina', 'home-learning', 'home-actions', 'home-chart', 'home-insight']) {
-    if (!dashboard.includes(`data-product-tour="${target}"`)) {
-      addFinding('learning-target', path.resolve(srcRoot, 'pages/dashboard/DashboardPage.tsx'), `Product learning target is missing: ${target}`);
-    }
+  const textChat = read(path.resolve(srcRoot, 'features/chat/ui/TextChatOverlay.tsx'));
+  if (/productTour|ProductTour|markProductTour|ai-financer:product-tour/.test(textChat)) {
+    addFinding('obsolete-tour', path.resolve(srcRoot, 'features/chat/ui/TextChatOverlay.tsx'), 'first-run chat must not start the removed product tour');
   }
 
   const indexCss = read(path.resolve(srcRoot, 'app/styles/index.css'));
@@ -149,23 +155,38 @@ function checkNavigationIA() {
     if (navSheet.includes(`screen: '${screen}'`)) addFinding('navigation-duplication', path.resolve(srcRoot, 'features/navigation/ui/AppNavigationSheet.tsx'), `menu duplicates first-level screen ${screen}`);
   }
 
-  if (!navSheet.includes(`screen: 'store'`)) addFinding('store-entry', path.resolve(srcRoot, 'features/navigation/ui/AppNavigationSheet.tsx'), 'Store must stay available from menu for base users');
-  if (!navSheet.includes(`screen: 'sections'`)) addFinding('taxonomy-entry', path.resolve(srcRoot, 'features/navigation/ui/AppNavigationSheet.tsx'), 'Categories/sections must stay in secondary menu');
+  for (const removedScreen of ['store', 'premium', 'business', 'receipts']) {
+    if (navSheet.includes(`screen: '${removedScreen}'`)) addFinding('obsolete-navigation', path.resolve(srcRoot, 'features/navigation/ui/AppNavigationSheet.tsx'), `${removedScreen} must not be available in base navigation`);
+  }
 }
 
-function checkProductSurfaceFiles() {
+function checkRemovedProductSurfaces(files) {
   for (const relativePath of [
-    'src/features/receipt-scans/ui/ReceiptQuickAction.tsx',
-    'src/pages/analytics/AnalyticsPage.tsx',
-    'src/pages/premium/PremiumPage.tsx',
-    'src/pages/referral/ReferralPage.tsx',
-    'src/pages/spending-limits/SpendingLimitsPage.tsx',
-    'src/pages/goals/GoalsPage.tsx',
-    'src/features/chat/ui/TextChatOverlay.tsx',
-    'src/features/voice/ui/VoicePermissionIntro.tsx',
-    'src/features/modals/ui/AppModalManager.tsx',
-  ]) {
-    assertFile(relativePath);
+    'src/features/business-workspace',
+    'src/features/premium',
+    'src/features/receipt-scans',
+    'src/features/store',
+    'src/features/product-tour',
+    'src/pages/business-accountant',
+    'src/pages/premium',
+    'src/pages/receipt-scans',
+  ]) assertAbsent(relativePath);
+
+  const forbiddenPatterns = [
+    ['product-tour', /product-tour|ProductTour|productTour|ai-financer:product-tour/i],
+    ['premium-ui', /features\/premium|pages\/premium|PremiumUpgrade|PremiumFeatureGate/i],
+    ['store-ui', /features\/store|screen:\s*['"]store['"]|StorePage/i],
+    ['business-ui', /business-workspace|BusinessAccountant|screen:\s*['"]business/i],
+    ['receipt-ui', /features\/receipt-scans|ReceiptQuickAction|screen:\s*['"]receipts/i],
+  ];
+
+  for (const file of files) {
+    const relative = path.relative(frontendRoot, file).replace(/\\/g, '/');
+    if (relative.includes('scripts/audit-product-readiness.mjs')) continue;
+    const content = read(file);
+    for (const [type, pattern] of forbiddenPatterns) {
+      if (pattern.test(content)) addFinding(type, file, 'removed product surface is still referenced');
+    }
   }
 }
 
@@ -214,9 +235,9 @@ if (!fs.existsSync(srcRoot)) {
 }
 
 const files = walk(srcRoot);
-checkProductSurfaceFiles();
-checkFirstRunLearningWiring();
+checkBaseOnboardingAndChatWiring();
 checkNavigationIA();
+checkRemovedProductSurfaces(files);
 checkLearningKeys();
 checkNoLegacyOnboardingSteps(files);
 checkNoFixedAmountsInLearningExamples(files);

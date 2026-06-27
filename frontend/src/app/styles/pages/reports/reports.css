@@ -5,13 +5,8 @@
   border-radius: 24px;
   padding: 18px;
   background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.035));
-}
-
-.report-export-hero--premium {
   background: linear-gradient(135deg, rgba(255, 214, 102, 0.18), rgba(255, 255, 255, 0.04));
-}
 
-.report-export-hero--business {
   background: linear-gradient(135deg, rgba(86, 145, 255, 0.18), rgba(255, 255, 255, 0.04));
 }
 
@@ -129,35 +124,27 @@
   grid-template-columns: 1fr 1fr;
   gap: 10px;
   padding-top: 2px;
-}
 
-.business-report-card {
   border: 1px solid rgba(112, 166, 255, 0.16);
   border-radius: 26px;
   padding: 18px;
   background: linear-gradient(135deg, rgba(59, 130, 246, 0.16), rgba(255, 255, 255, 0.04));
-}
 
-.business-report-card h2 {
   margin: 8px 0 6px;
   font-size: 20px;
   font-weight: 850;
-}
 
-.business-report-card p {
   margin: 0;
   color: rgba(255, 255, 255, 0.62);
   font-size: 13px;
   line-height: 1.45;
-}
 
-.business-report-card__actions {
   display: flex;
   gap: 10px;
   margin-top: 14px;
 }
 
-/* pack-33b: report sheet polish */
+
 .report-export-sheet {
   gap: 13px !important;
 }
@@ -200,9 +187,7 @@
   color: rgba(129, 239, 208, 0.86);
   font-size: 12px;
   font-weight: 800;
-}
 
-.report-export-hero--premium small {
   color: rgba(255, 224, 138, 0.92);
 }
 

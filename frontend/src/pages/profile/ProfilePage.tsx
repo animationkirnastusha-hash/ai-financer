@@ -3,7 +3,6 @@ import { useAuthStore } from '@/features/auth/model/auth.store';
 import { useNavigationStore, type SettingsSection } from '@/features/navigation/model/navigation.store';
 import { useLearningProgressStore, type LearningProgressStep } from '@/features/onboarding/model/learning-progress.store';
 import { useReferralStore } from '@/features/referral/model/referral.store';
-import { useSubscriptionStore } from '@/features/subscription/model/subscription.store';
 import { useI18n, type I18nKey } from '@/shared/lib/i18n';
 import { ScreenTopBar } from '@/shared/ui/ScreenTopBar';
 
@@ -25,12 +24,6 @@ function formatBonus(value: number) {
   return new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB', maximumFractionDigits: 0 }).format(value / 100);
 }
 
-function formatPlan(status?: string | null) {
-  if (status === 'business') return 'Premium';
-  if (status === 'premium') return 'Premium';
-  if (status === 'trial') return 'Trial';
-  return 'Free';
-}
 
 export default function ProfilePage() {
   const { t } = useI18n();
@@ -39,17 +32,14 @@ export default function ProfilePage() {
   const openSettingsSection = useNavigationStore((state) => state.openSettingsSection);
   const openAIWithCommand = useNavigationStore((state) => state.openAIWithCommand);
   const markLearning = useLearningProgressStore((state) => state.mark);
-  const subscription = useSubscriptionStore((state) => state.status);
-  const loadSubscription = useSubscriptionStore((state) => state.load);
   const referral = useReferralStore((state) => state.info);
   const loadReferral = useReferralStore((state) => state.load);
   const [publicIdCopied, setPublicIdCopied] = useState(false);
 
   useEffect(() => {
-    void Promise.allSettled([loadSubscription(), loadReferral()]);
-  }, [loadReferral, loadSubscription]);
+    void loadReferral();
+  }, [loadReferral]);
 
-  const plan = formatPlan(subscription?.access?.status);
   const displayName = user?.firstName || user?.username || t('profile.user.fallback');
   const publicId = user?.publicId ?? '';
 
@@ -96,9 +86,8 @@ export default function ProfilePage() {
       { title: t('profile.tile.notifications.title'), caption: t('profile.tile.notifications.caption'), action: openSettings('notifications') },
       { title: t('profile.tile.data.title'), caption: t('profile.tile.data.caption'), action: openSettings('data') },
       { title: t('profile.tile.referral.title'), caption: t('profile.tile.referral.caption'), action: () => navigateTo('referral'), badge: String(referral?.referrals.length ?? 0) },
-      { title: t('profile.tile.store.title'), caption: t('profile.tile.store.caption'), action: () => navigateTo('store'), badge: plan },
     ];
-  }, [navigateTo, openSettingsSection, plan, referral?.referrals.length, t]);
+  }, [navigateTo, openSettingsSection, referral?.referrals.length, t]);
 
   const startExample = (example: CommandExample) => {
     if (example.step) markLearning(example.step);
@@ -124,9 +113,8 @@ export default function ProfilePage() {
             ) : null}
           </div>
           <div className="profile-hub-hero__stats">
-            <article><span>{t('profile.plan')}</span><strong>{plan}</strong></article>
             <article><span>{t('profile.friends')}</span><strong>{referral?.referrals.length ?? 0}</strong></article>
-            <article><span>{t('profile.bonus')}</span><strong>{formatBonus(subscription?.referralBalance ?? referral?.referralBalance ?? 0)}</strong></article>
+            <article><span>{t('profile.bonus')}</span><strong>{formatBonus(referral?.referralBalance ?? 0)}</strong></article>
           </div>
         </header>
 

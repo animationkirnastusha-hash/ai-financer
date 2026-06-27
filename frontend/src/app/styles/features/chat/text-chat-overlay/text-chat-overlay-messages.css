@@ -72,38 +72,29 @@
 
 .text-chat-overlay__head {
   padding-top: 8px;
-}
 
-.text-chat-overlay__receipt-actions {
+
   display: flex;
   align-items: center;
   gap: 6px;
   flex: 0 0 auto;
-}
 
-.text-chat-overlay__receipt-main,
-.text-chat-overlay__receipt-mini {
   border: 1px solid rgba(255,255,255,.11) !important;
   background: rgba(255,255,255,.07) !important;
   color: rgba(255,255,255,.86) !important;
   box-shadow: none !important;
-}
 
-.text-chat-overlay__receipt-main {
   width: auto !important;
   min-width: 52px;
   padding: 0 12px;
   font-size: 13px !important;
   font-weight: 700;
-}
 
-.text-chat-overlay__receipt-mini {
+
   width: 42px !important;
   height: 52px !important;
   font-size: 16px !important;
-}
 
-.text-chat-overlay__receipt-hint {
   position: absolute;
   left: 18px;
   right: 18px;
@@ -162,9 +153,21 @@
   .text-chat-overlay__typing,
   .text-chat-overlay__empty,
   .text-chat-overlay__composer,
-  .text-chat-overlay__receipt-hint,
   .text-chat-overlay__dot {
     animation: none !important;
     transition: none !important;
   }
+}
+
+.text-chat-overlay__local-hint {
+  align-self: center;
+  max-width: min(88%, 420px);
+  border-radius: 18px;
+  padding: 10px 12px;
+  border: 1px solid rgba(255,255,255,.1);
+  background: rgba(255,255,255,.06);
+  color: rgba(255,255,255,.72);
+  font-size: 12px;
+  line-height: 1.35;
+  text-align: center;
 }

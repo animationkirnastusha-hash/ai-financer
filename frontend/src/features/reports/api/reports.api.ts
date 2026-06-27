@@ -2,7 +2,7 @@ import { getAccessToken } from '@/features/auth/lib/accessToken';
 import { env } from '@/shared/config/env';
 import { apiClient } from '@/shared/api/client';
 
-export type ReportMode = 'base' | 'premium' | 'business';
+export type ReportMode = 'base';
 export type ReportFormat = 'xlsx' | 'pdf';
 export type ReportType = 'all' | 'income' | 'expense' | 'transfer';
 

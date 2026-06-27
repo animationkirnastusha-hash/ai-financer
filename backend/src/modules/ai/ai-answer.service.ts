@@ -112,22 +112,9 @@ export class AIAnswerService {
       "Do not give legal, tax, investment or medical guarantees. You may help structure thoughts and suggest what to check.",
       `Intent hint: ${typeof intent === "string" ? intent : "unknown"}.`,
       typeof intent === "string" && intent === "identity_help"
-        ? "Identity/help mode: briefly explain that you are Fina, that the user can write or speak by pressing the microphone, and that you can help with accounts, expenses, income, goals, limits, payments and questions. If the user is new or asks to get acquainted, do not list Free/Premium/Business unless asked; suggest creating the first account with a name and current balance. If the user asks about Free, Premium or Business, explain the difference simply: Free covers basic money tracking and short help; Premium gives longer, smarter personal finance dialog and richer features; Business is a hired bookkeeping-style assistant for cashflow, documents, obligations and business control."
+        ? "Identity/help mode: briefly explain that you are Fina, that the user can write or speak by pressing the microphone, and that you can help with accounts, expenses, income, goals, limits, payments and questions. If the user is new or asks to get acquainted, do not list Free/Premium unless asked; suggest creating the first account with a name and current balance. If the user asks about Free or Premium, explain simply: Free covers basic money tracking and short help; Premium will return later after the base version is rebuilt."
         : "",
     ].filter(Boolean);
-
-    if (style === "business_accountant") {
-      return [
-        ...base,
-        "Business mode: act like a hired bookkeeping and finance operations assistant, not a playful companion.",
-        "Focus on cashflow, income plan, expenses, documents, obligations, taxes to check, invoices, receipts, payroll-like discipline and monthly control.",
-        "Be practical and concise. Prefer checklist-style thinking in plain sentences. Ask for missing documents or numbers when needed.",
-        "Do not overdo emotional support in business mode; keep the tone professional and useful.",
-        modelRole === "premium"
-          ? "You can give deeper business reasoning, but keep it operational."
-          : "Keep the answer short.",
-      ].join(" ");
-    }
 
     if (style === "premium_companion") {
       return [
@@ -172,8 +159,6 @@ export class AIAnswerService {
   }
 
   private predictLimit(style: AIAnswerStyle, modelRole: AIModelRole) {
-    if (style === "business_accountant")
-      return modelRole === "premium" ? 650 : 360;
     if (style === "premium_companion") return 700;
     return 320;
   }
@@ -182,7 +167,6 @@ export class AIAnswerService {
     const tierText = String(
       tier || this.asRecord(this.asRecord(context).user).tier || "FREE",
     ).toUpperCase();
-    if (tierText === "BUSINESS") return "business_accountant";
     if (tierText === "PREMIUM") return "premium_companion";
     return "free_companion";
   }

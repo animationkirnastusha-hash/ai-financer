@@ -32,8 +32,6 @@ export type ReferralInfoDto = {
   rules?: {
     activationDaysRequired: number;
     activationActionsRequired: number;
-    activationPremiumDays: number;
-    purchasePremiumDays: number;
     purchaseBonusRate: number;
   };
 };

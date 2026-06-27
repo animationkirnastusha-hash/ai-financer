@@ -5,7 +5,6 @@ export type AIDialogIntent =
   | "financial_action"
   | "financial_question"
   | "financial_coaching"
-  | "business_accounting"
   | "app_navigation"
   | "small_talk"
   | "identity_help"
@@ -13,8 +12,7 @@ export type AIDialogIntent =
 
 export type AIAnswerStyle =
   | "free_companion"
-  | "premium_companion"
-  | "business_accountant";
+  | "premium_companion";
 
 export interface AIDialogRoute {
   intent: AIDialogIntent;
@@ -80,8 +78,7 @@ export class AIDialogRouterService {
       "A completed or intended balance-changing statement belongs to financial_action, even when it is written as a short note rather than an imperative.",
       "Use a natural answer only when the user wants advice, emotional support, planning discussion, or casual conversation without any app mutation.",
       "Never choose tools for general life complaints unless the user explicitly asks to create, update, delete, record, transfer, pay, show or calculate app data.",
-      "For BUSINESS tier, business finance and bookkeeping conversations should use business_accountant style unless they are explicit app mutations.",
-      'JSON shape: {"intent":"financial_action|financial_question|financial_coaching|business_accounting|app_navigation|small_talk|identity_help|unclear","shouldUseTools":true,"answerStyle":"free_companion|premium_companion|business_accountant","confidence":0.0,"summary":"short intent summary"}.',
+      'JSON shape: {"intent":"financial_action|financial_question|financial_coaching|app_navigation|small_talk|identity_help|unclear","shouldUseTools":true,"answerStyle":"free_companion|premium_companion","confidence":0.0,"summary":"short intent summary"}.',
     ].join(" ");
   }
 
@@ -96,9 +93,8 @@ export class AIDialogRouterService {
       "- financial_question: user asks about their spending, income, balance, accounts, goals, obligations, limits, upcoming payments or reports. shouldUseTools=true.",
       "- app_navigation: user asks to open/show an app screen or list. shouldUseTools=true.",
       "- financial_coaching: user wants advice, planning, discussion or support. shouldUseTools=false.",
-      "- business_accounting: business-tier user wants bookkeeping/cashflow/document/accounting discussion, not a direct mutation. shouldUseTools=false.",
       "- small_talk: casual or emotional message without a direct app action. shouldUseTools=false.",
-      "- identity_help: user asks who Fina is, what Fina can do, how to work with Fina, onboarding, Free/Premium/Business capabilities, or says they are a new user. shouldUseTools=false.",
+      "- identity_help: user asks who Fina is, what Fina can do, how to work with Fina, onboarding, Free/Premium capabilities, or says they are a new user. shouldUseTools=false.",
       "- unclear: not enough meaning to act safely. shouldUseTools=false.",
       "USER:",
       command,
@@ -151,7 +147,6 @@ export class AIDialogRouterService {
       value === "financial_action" ||
       value === "financial_question" ||
       value === "financial_coaching" ||
-      value === "business_accounting" ||
       value === "app_navigation" ||
       value === "small_talk" ||
       value === "identity_help" ||
@@ -167,12 +162,6 @@ export class AIDialogRouterService {
     tier: string,
     intent: AIDialogIntent,
   ): AIAnswerStyle {
-    if (
-      value === "business_accountant" ||
-      tier === "BUSINESS" ||
-      intent === "business_accounting"
-    )
-      return "business_accountant";
     if (value === "premium_companion" || tier === "PREMIUM")
       return "premium_companion";
     return "free_companion";
@@ -192,11 +181,9 @@ export class AIDialogRouterService {
       intent: "financial_action",
       shouldUseTools: true,
       answerStyle:
-        tierText === "BUSINESS"
-          ? "business_accountant"
-          : tierText === "PREMIUM"
-            ? "premium_companion"
-            : "free_companion",
+        tierText === "PREMIUM"
+          ? "premium_companion"
+          : "free_companion",
       confidence: 0.5,
     };
   }

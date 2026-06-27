@@ -19,7 +19,6 @@
 
 .app-page h2,
 .monetization-section h2,
-.store-showcase h2,
 .app-settings-modal h2,
 .app-modal-title {
   font-size: var(--app-title-sm);
@@ -31,9 +30,7 @@
 .app-balance-card__amount,
 .app-currency-card__amount,
 .home-balance-carousel__amount,
-.dashboard-balance-card__amount,
-.store-payment-selected-price strong,
-.store-payment-one-time strong {
+.dashboard-balance-card__amount{
   max-width: 100%;
   font-size: var(--app-money-lg);
   line-height: .96;

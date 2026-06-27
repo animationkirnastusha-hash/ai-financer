@@ -22,9 +22,7 @@
   .app-bottom-sheet,
   .drawer-panel,
   .app-home-chart-group,
-  .receipt-preview-card,
-  .app-taxonomy-section-card,
-  .store-carousel-card {
+  .app-taxonomy-section-card{
     animation: none !important;
     transition: none !important;
   }

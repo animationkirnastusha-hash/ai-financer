@@ -24,16 +24,12 @@
 }
 
 .app-settings-modal,
-.store-payment-sheet,
-.store-limits-sheet,
 .trial-offer-sheet,
 .notification-sheet {
   max-height: calc(100dvh - max(8px, env(safe-area-inset-top)));
 }
 
 .app-settings-modal__body,
-.store-payment-sheet__body,
-.store-limits-sheet__body,
 .trial-offer-sheet__body,
 .notification-sheet__body {
   display: grid;
@@ -54,8 +50,6 @@
   .app-modal-sheet.app-drawer-sheet,
   .app-modal-sheet,
   .app-settings-modal,
-  .store-payment-sheet,
-  .store-limits-sheet,
   .trial-offer-sheet,
   .notification-sheet {
     width: 100%;

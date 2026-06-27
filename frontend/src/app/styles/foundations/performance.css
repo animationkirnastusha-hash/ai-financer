@@ -7,8 +7,7 @@
 .app-page__inner,
 .drawer,
 .app-modal-sheet,
-.text-chat-overlay__panel,
-.premium-upgrade-sheet {
+.text-chat-overlay__panel{
   contain: layout style;
 }
 
@@ -16,9 +15,7 @@
 .monetization-section,
 .limits-card,
 .referral-list-card,
-.analytics-block,
-.receipt-history-card,
-.business-mini-app-shell {
+.analytics-block{
   content-visibility: auto;
   contain-intrinsic-size: 1px 420px;
 }
