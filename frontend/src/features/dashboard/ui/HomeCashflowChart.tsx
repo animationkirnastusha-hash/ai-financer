@@ -37,7 +37,9 @@ export function HomeCashflowChart({
     incomeCategory: t('dashboard.analytics.incomeCategory'),
   });
   const hasData = analytics.total > 0;
-  const modeTitle = mode === 'expense' ? t('transaction.type.expense') : t('transaction.type.income');
+  const isIncomeMode = mode === 'income';
+  const modeTitle = isIncomeMode ? t('transaction.type.income') : t('transaction.type.expense');
+  const createActionLabel = isIncomeMode ? t('dashboard.cashflow.addIncome') : t('dashboard.cashflow.addExpense');
   const periodTitle = (value: HomeCashflowPeriod) => value === 'day' ? t('analytics.period.day') : value === 'week' ? t('analytics.period.week') : t('analytics.period.month');
 
   return (
@@ -66,14 +68,14 @@ export function HomeCashflowChart({
           <i />
         </span>
         <span className="app-home-chart-preview__text">
-          <b>{hasData ? formatMoney(analytics.total, 'RUB', { sign: mode === 'expense' ? 'minus' : 'plus' }) : t('dashboard.cashflow.empty')}</b>
+          <b>{hasData ? formatMoney(analytics.total, 'RUB', { sign: isIncomeMode ? 'plus' : 'minus' }) : t('dashboard.cashflow.empty')}</b>
           <small>{hasData ? periodTitle(period) : t('dashboard.cashflow.emptyCaption')}</small>
         </span>
       </button>
 
 
       <button type="button" className="app-primary-button app-home-cashflow-card__action" onClick={() => onCreate(mode)}>
-        {mode === 'expense' ? t('dashboard.cashflow.addExpense') : t('dashboard.cashflow.addIncome')}
+        {createActionLabel}
       </button>
     </section>
   );
