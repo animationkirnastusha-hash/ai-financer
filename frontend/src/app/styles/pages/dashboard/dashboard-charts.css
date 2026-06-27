@@ -175,3 +175,13 @@
 .app-home-cashflow-card__balance {
   margin-bottom: 14px;
 }
+
+/* Pack 185: dashboard order polish after moving Fina hint to bottom. */
+.app-home-cashflow-card__balance {
+  margin: 0 0 12px;
+}
+
+.app-home-fina-bottom {
+  margin-top: 2px;
+  padding-bottom: 10px;
+}

@@ -67,6 +67,8 @@ export const textChatDictionary = {
   'textChat.setup.action.enableMic': 'Включить микро',
   'textChat.setup.action.skip': 'Отмена',
   'textChat.setup.action.closeChat': 'Закрыть чат',
+  'textChat.setup.resume.title': 'Продолжить обучение?',
+  'textChat.setup.resume.caption': 'Быстрая настройка была прервана. Можно продолжить с того же шага или пропустить обучение.',
   'textChat.close.pending': 'Сначала выбери действие.',
   'voiceIntro.aria': 'Разрешение микрофона',
   'voiceIntro.eyebrow': 'Голосовой ввод',

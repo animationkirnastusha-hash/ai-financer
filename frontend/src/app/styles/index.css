@@ -73,6 +73,7 @@
 @import "./features/fina/fina-command-bar.css";
 @import "./layout/bottom-navigation.css";
 @import "./layout/navigation-ia.css";
+@import "./layout/navigation-menu-compact.css";
 @import "./pages/profile/profile.css";
 @import "./pages/journal/journal.css";
 @import "./pages/dashboard/dashboard-ia.css";

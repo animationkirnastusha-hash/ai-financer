@@ -71,46 +71,7 @@
 }
 
 .text-chat-overlay__head {
-  padding-top: 8px;
-
-
-  display: flex;
-  align-items: center;
-  gap: 6px;
   flex: 0 0 auto;
-
-  border: 1px solid rgba(255,255,255,.11) !important;
-  background: rgba(255,255,255,.07) !important;
-  color: rgba(255,255,255,.86) !important;
-  box-shadow: none !important;
-
-  width: auto !important;
-  min-width: 52px;
-  padding: 0 12px;
-  font-size: 13px !important;
-  font-weight: 700;
-
-
-  width: 42px !important;
-  height: 52px !important;
-  font-size: 16px !important;
-
-  position: absolute;
-  left: 18px;
-  right: 18px;
-  bottom: calc(env(safe-area-inset-bottom) + 84px);
-  z-index: 3;
-  border: 1px solid rgba(110,231,183,.18);
-  border-radius: 18px;
-  background: rgba(8,13,20,.84);
-  color: rgba(236,255,250,.92);
-  padding: 10px 12px;
-  font-size: 13px;
-  line-height: 1.35;
-  box-shadow: 0 18px 46px rgba(0,0,0,.28);
-  -webkit-backdrop-filter: blur(16px);
-  backdrop-filter: blur(16px);
-  animation: textChatHintIn .22s ease both;
 }
 
 .text-chat-message__bubble,

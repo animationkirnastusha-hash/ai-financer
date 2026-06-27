@@ -73,17 +73,6 @@ export default function DashboardPage() {
         ) : null}
 
         <div>
-          <FinaCommandBar
-            compact
-            showTextAction={false}
-            titleKey="dashboard.fina.title"
-            captionKey="dashboard.fina.caption"
-            placeholderKey="dashboard.fina.placeholder"
-            suggestions={[]}
-          />
-        </div>
-
-        <div>
           <ProductLearningCard />
         </div>
 
@@ -117,6 +106,17 @@ export default function DashboardPage() {
             mode={cashflowMode}
             period={cashflowPeriod}
             rates={rates}
+          />
+        </div>
+
+        <div className="app-home-fina-bottom">
+          <FinaCommandBar
+            compact
+            showTextAction={false}
+            titleKey="dashboard.fina.title"
+            captionKey="dashboard.fina.caption"
+            placeholderKey="dashboard.fina.placeholder"
+            suggestions={[]}
           />
         </div>
       </div>

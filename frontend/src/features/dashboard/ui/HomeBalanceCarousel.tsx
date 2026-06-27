@@ -91,7 +91,7 @@ export function HomeBalanceCarousel({
   };
 
   return (
-    <section className="app-home-balance-card app-home-balance-card--embedded" data-no-swipe="true" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
+    <section className="app-home-balance-strip" data-no-swipe="true" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
       <div className="app-home-balance-card__center">
         <div className="app-eyebrow">{t('dashboard.balance.eyebrow')}</div>
         <div className="app-home-balance-card__amount" data-scale={amountScale}>{activeAmountText}</div>
@@ -101,12 +101,10 @@ export function HomeBalanceCarousel({
 
       <div className="app-home-balance-card__rate">{active.conversion}</div>
 
-      <div className="app-home-balance-card__footer app-home-balance-card__footer--center">
-        <button type="button" className="app-home-balance-card__step" onClick={() => go(-1)} aria-label={t('dashboard.balance.prev')}>‹</button>
-        <div className="app-home-balance-card__dots" aria-hidden="true">
+      <div className="app-home-balance-card__footer app-home-balance-card__footer--center" aria-hidden="true">
+        <div className="app-home-balance-card__dots">
           {slides.map((slide, index) => <i key={slide.id} data-active={index === safeIndex} />)}
         </div>
-        <button type="button" className="app-home-balance-card__step" onClick={() => go(1)} aria-label={t('dashboard.balance.next')}>›</button>
       </div>
     </section>
   );

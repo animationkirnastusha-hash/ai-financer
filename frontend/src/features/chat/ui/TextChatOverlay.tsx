@@ -130,6 +130,7 @@ export function TextChatOverlay({
   const [localHint, setLocalHint] = useState<string | null>(null);
   const [isSetupBusy, setIsSetupBusy] = useState(false);
   const [showVoicePermissionHelp, setShowVoicePermissionHelp] = useState(false);
+  const [showSetupResumePrompt, setShowSetupResumePrompt] = useState(false);
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
   const listRef = useRef<HTMLDivElement | null>(null);
   const initialCommandRef = useRef<string | null>(null);
@@ -161,12 +162,17 @@ export function TextChatOverlay({
   const setupCreatedAccount = useFirstRunChatSetupStore((state) => state.createdAccount);
   const setupIsActive = useFirstRunChatSetupStore((state) => state.isActive);
   const setupCloseLocked = useFirstRunChatSetupStore((state) => state.closeLocked);
+  const setupInterrupted = useFirstRunChatSetupStore((state) => state.interrupted);
+  const setupCompleted = useFirstRunChatSetupStore((state) => state.completed);
   const startFirstRunSetup = useFirstRunChatSetupStore((state) => state.start);
   const skipSetupMicrophone = useFirstRunChatSetupStore((state) => state.skipMicrophone);
   const finishSetupMicrophone = useFirstRunChatSetupStore((state) => state.finishMicrophone);
   const completeSetupAccount = useFirstRunChatSetupStore((state) => state.completeAccount);
   const completeSetupWithAccount = useFirstRunChatSetupStore((state) => state.completeWithAccount);
   const dismissFirstRunSetup = useFirstRunChatSetupStore((state) => state.dismiss);
+  const markFirstRunSetupInterrupted = useFirstRunChatSetupStore((state) => state.markInterrupted);
+  const resumeFirstRunSetup = useFirstRunChatSetupStore((state) => state.resumeInterrupted);
+  const abandonFirstRunSetup = useFirstRunChatSetupStore((state) => state.abandonInterrupted);
   const primaryAccountId = useSettingsStore((state) => state.primaryAccountId);
   const incomeAccountId = useSettingsStore((state) => state.incomeAccountId);
   const setPrimaryAccountId = useSettingsStore((state) => state.setPrimaryAccountId);
@@ -595,10 +601,7 @@ export function TextChatOverlay({
   }, [autoCloseOnVoiceResult, chat.isSending, chat.messages, hasBlockingConfirmation, isVoicePressed, onClose, open, voice.state]);
 
   const closeOverlay = useCallback(() => {
-    if (setupCloseLocked) {
-      setLocalHint(t("textChat.setup.closeLocked"));
-      return;
-    }
+    const shouldPauseSetup = setupIsActive && setupStage !== 'done';
 
     voicePointerIdRef.current = null;
     voicePressActiveRef.current = false;
@@ -612,12 +615,16 @@ export function TextChatOverlay({
     setShowVoicePermissionHelp(false);
     setDragOffset(0);
     dragStartYRef.current = null;
-    if (setupStage === 'done') {
+    if (shouldPauseSetup) {
+      markFirstRunSetupInterrupted();
+      setChatMessages([]);
+    } else if (setupStage === 'done') {
       setChatMessages([]);
       dismissFirstRunSetup();
     }
+    setShowSetupResumePrompt(false);
     onClose();
-  }, [dismissFirstRunSetup, onClose, setChatMessages, setupCloseLocked, setupStage, t, voice]);
+  }, [dismissFirstRunSetup, markFirstRunSetupInterrupted, onClose, setChatMessages, setupIsActive, setupStage, voice]);
 
   const handleDragPointerDown = useCallback((event: PointerEvent<HTMLButtonElement>) => {
     dragStartYRef.current = event.clientY;
@@ -632,10 +639,10 @@ export function TextChatOverlay({
   }, []);
 
   const handleDragPointerEnd = useCallback(() => {
-    if (!setupCloseLocked && dragOffset >= OVERLAY_DISMISS_DRAG_PX) closeOverlay();
+    if (dragOffset >= OVERLAY_DISMISS_DRAG_PX) closeOverlay();
     dragStartYRef.current = null;
     setDragOffset(0);
-  }, [closeOverlay, dragOffset, setupCloseLocked]);
+  }, [closeOverlay, dragOffset]);
 
   const appendSetupAssistantMessage = useCallback(
     (id: string, text: string, kind: "text" | "success" | "error" = "text") => {
@@ -649,13 +656,22 @@ export function TextChatOverlay({
   );
 
   useEffect(() => {
-    if (!open || !firstRunSetup || setupStage !== 'idle') return;
+    if (!open || setupCompleted) return;
+
+    if (setupInterrupted) {
+      setChatMessages([]);
+      setShowSetupResumePrompt(true);
+      return;
+    }
+
+    if (!firstRunSetup || setupStage !== 'idle') return;
+    setShowSetupResumePrompt(false);
     setChatMessages([]);
     startFirstRunSetup();
-  }, [firstRunSetup, open, setChatMessages, setupStage, startFirstRunSetup]);
+  }, [firstRunSetup, open, setChatMessages, setupCompleted, setupInterrupted, setupStage, startFirstRunSetup]);
 
   useEffect(() => {
-    if (!open || !setupIsActive) return;
+    if (!open || !setupIsActive || showSetupResumePrompt) return;
 
     const messages = (() => {
       if (setupStage === 'microphone') return [createSetupMessage('first-run-setup-intro', t('textChat.setup.intro'))];
@@ -687,7 +703,7 @@ export function TextChatOverlay({
       const nextMessages = messages.filter((message) => !existingIds.has(message.id));
       return nextMessages.length ? [...currentMessages, ...nextMessages] : currentMessages;
     });
-  }, [open, setChatMessages, setupCreatedAccount, setupIsActive, setupMicrophoneStatus, setupStage, t]);
+  }, [open, setChatMessages, setupCreatedAccount, setupIsActive, setupMicrophoneStatus, setupStage, showSetupResumePrompt, t]);
 
   const handleSetupEnableMicrophone = useCallback(async () => {
     if (setupStage !== 'microphone' || isSetupBusy) return;
@@ -893,7 +909,19 @@ export function TextChatOverlay({
     setShowJumpToBottom(!isNearBottom);
   };
 
-  const setupInputDisabled = setupIsActive && (setupStage === 'microphone' || setupStage === 'done');
+  const handleResumeSetup = () => {
+    setShowSetupResumePrompt(false);
+    setChatMessages([]);
+    resumeFirstRunSetup();
+  };
+
+  const handleAbandonSetup = () => {
+    setShowSetupResumePrompt(false);
+    setChatMessages([]);
+    abandonFirstRunSetup();
+  };
+
+  const setupInputDisabled = showSetupResumePrompt || (setupIsActive && (setupStage === 'microphone' || setupStage === 'done'));
   const placeholder = setupStage === 'account'
     ? t('textChat.setup.accountPlaceholder')
     : setupStage === 'balance'
@@ -917,7 +945,7 @@ export function TextChatOverlay({
           statusState={statusState}
           statusText={statusText}
           closeLabel={t("common.close")}
-          closeDisabled={setupCloseLocked}
+          closeDisabled={false}
           onClose={closeOverlay}
           onDragPointerDown={handleDragPointerDown}
           onDragPointerMove={handleDragPointerMove}
@@ -952,7 +980,7 @@ export function TextChatOverlay({
           }
         />
 
-        {setupIsActive ? (
+        {setupIsActive && !showSetupResumePrompt ? (
           <TextChatFirstRunActions
             stage={setupStage}
             isBusy={isSetupBusy}
@@ -963,6 +991,20 @@ export function TextChatOverlay({
             onSkipMic={handleSetupSkipMicrophone}
             onCloseChat={closeOverlay}
           />
+        ) : null}
+
+
+        {showSetupResumePrompt ? (
+          <div className="text-chat-setup-resume" role="dialog" aria-modal="true" aria-label={t('textChat.setup.resume.title')}>
+            <div>
+              <strong>{t('textChat.setup.resume.title')}</strong>
+              <p>{t('textChat.setup.resume.caption')}</p>
+            </div>
+            <div className="text-chat-setup-resume__actions">
+              <button type="button" onClick={handleAbandonSetup} className="is-secondary">{t('common.no')}</button>
+              <button type="button" onClick={handleResumeSetup}>{t('common.yes')}</button>
+            </div>
+          </div>
         ) : null}
 
         {localHint ? <div className="text-chat-overlay__local-hint">{localHint}</div> : null}

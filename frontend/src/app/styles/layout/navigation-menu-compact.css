@@ -1,0 +1,77 @@
+/* Compact sizes for the left navigation menu. Keep motion rules in navigation-ia.css. */
+/* Pack 184: compact menu icon cells only. Motion is intentionally untouched. */
+.app-navigation-item {
+  min-height: 50px;
+  border-radius: 18px;
+}
+
+.app-navigation-drawer.is-expanded .app-navigation-item {
+  grid-template-columns: 36px minmax(0, 1fr);
+  min-height: 54px;
+  gap: 9px;
+  padding: 8px 10px 8px 8px;
+  border-radius: 20px;
+}
+
+.app-navigation-item__icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 13px;
+}
+
+.app-navigation-drawer.is-expanded .app-navigation-item__icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 14px;
+}
+
+.app-navigation-item__icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.app-navigation-drawer.is-expanded .app-navigation-item__icon svg {
+  width: 19px;
+  height: 19px;
+}
+
+/* Pack 185: make compact column cells visually shorter without touching motion. */
+.app-navigation-list {
+  gap: 7px;
+  padding-inline: 9px;
+}
+
+.app-navigation-item {
+  min-height: 44px;
+  border-radius: 16px;
+}
+
+.app-navigation-drawer.is-expanded .app-navigation-item {
+  grid-template-columns: 32px minmax(0, 1fr);
+  min-height: 50px;
+  gap: 8px;
+  padding: 7px 10px 7px 7px;
+  border-radius: 18px;
+}
+
+.app-navigation-item__icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 12px;
+}
+
+.app-navigation-drawer.is-expanded .app-navigation-item__icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 13px;
+}
+
+.app-navigation-item__icon svg {
+  width: 17px;
+  height: 17px;
+}
+
+.app-navigation-drawer.is-expanded .app-navigation-item__icon svg {
+  width: 18px;
+  height: 18px;
+}

@@ -37,6 +37,8 @@ export const commonDictionary = {
   'common.delete': 'Delete',
   'common.copy': 'Copy',
   'common.copied': 'Copied',
+  'common.yes': 'Yes',
+  'common.no': 'No',
   'common.retry': 'Retry',
   'errorState.eyebrow': 'Needs attention',
   'errorState.title': 'Could not load data',

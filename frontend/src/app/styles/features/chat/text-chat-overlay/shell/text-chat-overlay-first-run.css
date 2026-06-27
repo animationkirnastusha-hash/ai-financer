@@ -69,3 +69,64 @@
 .text-chat-overlay__empty--reminder .text-chat-overlay__chips {
   display: none;
 }
+
+/* Pack 185: interrupted first-run setup resume prompt. */
+.text-chat-setup-resume {
+  position: absolute;
+  left: 18px;
+  right: 18px;
+  bottom: calc(env(safe-area-inset-bottom) + 96px);
+  z-index: 5;
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+  border: 1px solid rgba(110, 231, 183, .18);
+  border-radius: 24px;
+  background: rgba(8, 13, 20, .94);
+  box-shadow: 0 20px 62px rgba(0, 0, 0, .38), inset 0 1px 0 rgba(255, 255, 255, .055);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+}
+
+.text-chat-setup-resume strong,
+.text-chat-setup-resume p {
+  display: block;
+  margin: 0;
+  min-width: 0;
+}
+
+.text-chat-setup-resume strong {
+  color: rgba(236, 255, 250, .96);
+  font-size: 15px;
+  font-weight: 820;
+  letter-spacing: -.02em;
+}
+
+.text-chat-setup-resume p {
+  margin-top: 6px;
+  color: rgba(255, 255, 255, .64);
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.text-chat-setup-resume__actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.text-chat-setup-resume__actions button {
+  min-height: 42px;
+  border: 1px solid rgba(52, 211, 153, .30);
+  border-radius: 16px;
+  background: rgba(52, 211, 153, .17);
+  color: rgba(236, 253, 245, .96);
+  font-size: 13px;
+  font-weight: 780;
+}
+
+.text-chat-setup-resume__actions button.is-secondary {
+  border-color: rgba(255, 255, 255, .10);
+  background: rgba(255, 255, 255, .06);
+  color: rgba(255, 255, 255, .78);
+}

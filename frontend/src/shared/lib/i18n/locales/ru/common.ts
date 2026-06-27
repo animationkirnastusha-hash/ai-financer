@@ -37,6 +37,8 @@ export const commonDictionary = {
   'common.delete': 'Удалить',
   'common.copy': 'Скопировать',
   'common.copied': 'Скопировано',
+  'common.yes': 'Да',
+  'common.no': 'Нет',
   'common.retry': 'Повторить',
   'errorState.eyebrow': 'Нужно внимание',
   'errorState.title': 'Не удалось загрузить данные',

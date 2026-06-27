@@ -173,3 +173,97 @@
 .app-home-balance-card__step:active {
   transform: scale(.96);
 }
+
+/* Pack 185: compact balance strip inside cashflow, swipe-only navigation. */
+.app-home-balance-strip {
+  width: min(100%, 320px);
+  margin: 0 auto 8px;
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  padding: 6px 4px 8px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  touch-action: pan-y;
+}
+
+.app-home-balance-strip .app-home-balance-card__center {
+  gap: 3px;
+}
+
+.app-home-balance-strip .app-eyebrow {
+  justify-self: center;
+  font-size: 10px;
+  letter-spacing: .22em;
+}
+
+.app-home-balance-strip .app-home-balance-card__amount {
+  width: 100%;
+  text-align: center;
+  font-size: clamp(34px, 10.2vw, 48px) !important;
+  line-height: .94 !important;
+  letter-spacing: -.065em !important;
+}
+
+.app-home-balance-strip .app-home-balance-card__amount[data-scale="medium"] {
+  font-size: clamp(29px, 8.6vw, 40px) !important;
+}
+
+.app-home-balance-strip .app-home-balance-card__amount[data-scale="compact"] {
+  font-size: clamp(24px, 7.2vw, 34px) !important;
+}
+
+.app-home-balance-strip .app-home-balance-card__center p {
+  font-size: 12px;
+  line-height: 1.15;
+}
+
+.app-home-balance-strip .app-home-balance-card__center span {
+  font-size: 10px;
+  line-height: 1.1;
+}
+
+.app-home-balance-strip .app-home-balance-card__rate {
+  justify-self: center;
+  max-width: 100%;
+  padding: 4px 9px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .04);
+  color: rgba(255, 255, 255, .50);
+  font-size: 11px !important;
+  line-height: 1.1;
+  text-align: center;
+}
+
+.app-home-balance-strip .app-home-balance-card__footer--center {
+  display: grid;
+  grid-template-columns: auto;
+  justify-content: center;
+  margin-top: 2px;
+}
+
+.app-home-balance-strip .app-home-balance-card__dots {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.app-home-balance-strip .app-home-balance-card__dots i {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .15);
+  transition: width 160ms ease, background 160ms ease;
+}
+
+.app-home-balance-strip .app-home-balance-card__dots i[data-active="true"] {
+  width: 22px;
+  background: rgba(110, 231, 183, .92);
+}
+
+.app-home-balance-strip .app-home-balance-card__step {
+  display: none !important;
+}

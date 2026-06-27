@@ -1,3 +1,4 @@
+.app-navigation-layer,
 .app-navigation-backdrop {
   position: fixed;
   inset: 0;
@@ -17,6 +18,7 @@
   pointer-events: auto;
 }
 
+.app-navigation-layer.is-closing,
 .app-navigation-backdrop.is-closing {
   pointer-events: none;
 }
@@ -408,6 +410,7 @@
 }
 
 @media (max-height: 720px) {
+  .app-navigation-layer,
   .app-navigation-backdrop {
     padding-bottom: calc(112px + env(safe-area-inset-bottom));
   }
@@ -442,6 +445,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .app-navigation-layer,
   .app-navigation-backdrop,
   .app-navigation-drawer,
   .app-navigation-edge-close,
@@ -455,40 +459,4 @@
   .app-navigation-item__icon {
     transition: none;
   }
-}
-
-/* Pack 184: compact menu icon cells only. Motion is intentionally untouched. */
-.app-navigation-item {
-  min-height: 50px;
-  border-radius: 18px;
-}
-
-.app-navigation-drawer.is-expanded .app-navigation-item {
-  grid-template-columns: 36px minmax(0, 1fr);
-  min-height: 54px;
-  gap: 9px;
-  padding: 8px 10px 8px 8px;
-  border-radius: 20px;
-}
-
-.app-navigation-item__icon {
-  width: 30px;
-  height: 30px;
-  border-radius: 13px;
-}
-
-.app-navigation-drawer.is-expanded .app-navigation-item__icon {
-  width: 34px;
-  height: 34px;
-  border-radius: 14px;
-}
-
-.app-navigation-item__icon svg {
-  width: 18px;
-  height: 18px;
-}
-
-.app-navigation-drawer.is-expanded .app-navigation-item__icon svg {
-  width: 19px;
-  height: 19px;
 }

@@ -67,6 +67,8 @@ export const textChatDictionary = {
   'textChat.setup.action.enableMic': 'Enable mic',
   'textChat.setup.action.skip': 'Cancel',
   'textChat.setup.action.closeChat': 'Close chat',
+  'textChat.setup.resume.title': 'Continue setup?',
+  'textChat.setup.resume.caption': 'Quick setup was interrupted. You can continue from the same step or skip it.',
   'textChat.close.pending': 'Choose an action first.',
   'voiceIntro.aria': 'Microphone permission',
   'voiceIntro.eyebrow': 'Voice input',
