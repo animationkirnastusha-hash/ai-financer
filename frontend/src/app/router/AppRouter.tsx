@@ -18,7 +18,6 @@ const GoalsPage = lazy(() => import('@/pages/goals/GoalsPage'));
 const ObligationsPage = lazy(() => import('@/pages/obligations/ObligationsPage'));
 const SpendingLimitsPage = lazy(() => import('@/pages/spending-limits/SpendingLimitsPage'));
 const SettingsPage = lazy(() => import('@/pages/settings/SettingsPage'));
-const SectionsPage = lazy(() => import('@/pages/sections/SectionsPage'));
 const AdminPage = lazy(() => import('@/pages/admin/AdminPage'));
 const ReferralPage = lazy(() => import('@/pages/referral/ReferralPage'));
 
@@ -34,7 +33,6 @@ export function AppRouter() {
   const currentScreen = useNavigationStore((state) => state.currentScreen);
   const user = useAuthStore((state) => state.user);
   const isAdmin = Boolean(user?.isAdmin);
-  const goBack = useNavigationStore((state) => state.goBack);
 
   return (
     <AppShell>
@@ -50,7 +48,6 @@ export function AppRouter() {
         {currentScreen === 'spending-limits' && <SpendingLimitsPage />}
         {currentScreen === 'companion' && <CompanionPage />}
         {currentScreen === 'settings' && <SettingsPage />}
-        {currentScreen === 'sections' && <SectionsPage onBack={goBack} />}
         {currentScreen === 'admin' && (isAdmin ? <AdminPage /> : <DashboardPage />)}
         {currentScreen === 'referral' && <ReferralPage />}
       </Suspense>

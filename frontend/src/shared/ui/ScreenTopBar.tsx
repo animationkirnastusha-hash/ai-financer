@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useAppModalStore } from '@/features/modals/model/appModal.store';
 import { useNavigationStore } from '@/features/navigation/model/navigation.store';
 import { useNotificationsStore } from '@/features/notifications/model/notifications.store';
@@ -16,7 +16,17 @@ type Props = {
   className?: string;
 };
 
-const DEFAULT_RIGHT_ACTIONS: Action[] = ['notifications', 'analytics', 'settings'];
+const DEFAULT_RIGHT_ACTIONS: Action[] = ['notifications', 'settings'];
+const FIXED_RIGHT_ACTIONS: Action[] = ['notifications', 'settings'];
+
+
+function MenuDotsIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="screen-top-bar__svg screen-top-bar__svg--menu">
+      <path d="M8 7.5a1.65 1.65 0 1 1-3.3 0A1.65 1.65 0 0 1 8 7.5Zm5.65 0a1.65 1.65 0 1 1-3.3 0 1.65 1.65 0 0 1 3.3 0Zm5.65 0a1.65 1.65 0 1 1-3.3 0 1.65 1.65 0 0 1 3.3 0ZM8 16.5a1.65 1.65 0 1 1-3.3 0A1.65 1.65 0 0 1 8 16.5Zm5.65 0a1.65 1.65 0 1 1-3.3 0 1.65 1.65 0 0 1 3.3 0Zm5.65 0a1.65 1.65 0 1 1-3.3 0 1.65 1.65 0 0 1 3.3 0Z" />
+    </svg>
+  );
+}
 
 function BellIcon() {
   return (
@@ -124,6 +134,22 @@ function isBackLabel(label: string) {
   return normalized === 'назад' || normalized === 'back' || normalized === '<' || normalized === '‹';
 }
 
+
+function normalizeRightActions(actions: Action[]) {
+  const requested = actions.filter((action) => action !== 'home' && action !== 'analytics');
+  const result: Action[] = [];
+
+  for (const action of FIXED_RIGHT_ACTIONS) {
+    if (!result.includes(action)) result.push(action);
+  }
+
+  for (const action of requested) {
+    if (!result.includes(action)) result.push(action);
+  }
+
+  return result;
+}
+
 export function ScreenTopBar({ title, left = 'menu', right = DEFAULT_RIGHT_ACTIONS, className = '' }: Props) {
   const { t } = useI18n();
   const openNavigationMenu = useNavigationStore((state) => state.openNavigationMenu);
@@ -134,7 +160,7 @@ export function ScreenTopBar({ title, left = 'menu', right = DEFAULT_RIGHT_ACTIO
   const openModal = useAppModalStore((state) => state.openModal);
   const unreadCount = useNotificationsStore((state) => state.unreadCount);
   const loadUnreadCount = useNotificationsStore((state) => state.loadUnreadCount);
-  const visibleRight = right.filter((action) => action !== 'home');
+  const visibleRight = useMemo(() => normalizeRightActions(right), [right]);
 
   useEffect(() => {
     if (visibleRight.includes('notifications')) void loadUnreadCount();
@@ -156,7 +182,11 @@ export function ScreenTopBar({ title, left = 'menu', right = DEFAULT_RIGHT_ACTIO
 
       <div className="screen-top-bar__actions">
         <div className="screen-top-bar__side screen-top-bar__side--left">
-          {left === 'menu' ? <TextButton label={t('common.menu')} onClick={openNavigationMenu}>{t('common.menu')}</TextButton> : null}
+          {left !== 'none' ? (
+            <IconButton label={t('common.menu')} onClick={openNavigationMenu}>
+              <MenuDotsIcon />
+            </IconButton>
+          ) : null}
           {left === 'back' ? <TextButton label={t('common.back')} onClick={goBack} compact><BackChevron /></TextButton> : null}
           {typeof left === 'object' ? (
             <TextButton label={left.label} onClick={left.onClick} compact={isBackLabel(left.label)}>

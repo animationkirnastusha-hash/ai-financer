@@ -217,6 +217,21 @@
 
 .screen-top-bar__command-mark { opacity: 0.72; }
 
+.screen-top-bar__svg--menu {
+  width: 19px;
+  height: 19px;
+  opacity: .92;
+}
+
+.screen-top-bar__side--left .screen-top-bar__icon {
+  background: rgba(255, 255, 255, 0.065);
+}
+
+.screen-top-bar__side--left .screen-top-bar__icon:active,
+.screen-top-bar__side--left .screen-top-bar__text-button:active {
+  transform: scale(.96);
+}
+
 .page-header { padding: 12px 16px 8px; }
 .page-header__subtitle {
   max-width: 560px;

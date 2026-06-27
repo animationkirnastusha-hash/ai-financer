@@ -48,6 +48,7 @@ export const commonDictionary = {
   'common.section': 'section',
   'screen.journal': 'Journal',
   'screen.transactions': 'Transactions',
+  'screen.analytics': 'Stats',
   'screen.profile': 'Profile',
   'bottomNav.label': 'Primary navigation',
 } as const;

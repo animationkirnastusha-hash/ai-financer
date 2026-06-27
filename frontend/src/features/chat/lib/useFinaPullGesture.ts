@@ -20,7 +20,6 @@ const SAFE_CHAT_SWIPE_SCREENS = new Set<AppScreen>([
   'spending-limits',
   'profile',
   'settings',
-  'sections',
   'companion',
   'referral',
   'admin',
@@ -39,7 +38,9 @@ function hasActiveEditableElement() {
 
 function hasBlockingLayer() {
   return Boolean(
-    document.querySelector('[role="dialog"], .app-modal-backdrop, .app-modal-sheet, .bottom-sheet, .app-navigation-sheet'),
+    document.body.classList.contains('product-tour-active') ||
+    document.documentElement.classList.contains('product-tour-active') ||
+    document.querySelector('[role="dialog"], .product-tour, .app-modal-backdrop, .app-modal-sheet, .bottom-sheet, .app-navigation-sheet'),
   );
 }
 
