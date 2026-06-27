@@ -1,0 +1,136 @@
+.app-goals-limits-kpi {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.app-goals-limits-kpi article {
+  display: grid;
+  align-content: space-between;
+  gap: 10px;
+  min-height: 122px;
+  padding: 17px 15px;
+  border-radius: 28px;
+}
+
+.app-goals-limits-kpi span {
+  color: rgba(255, 255, 255, .5);
+  font-size: 12px;
+  font-weight: 760;
+}
+
+.app-goals-limits-kpi strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: rgba(255, 255, 255, .96);
+  font-size: clamp(19px, 5vw, 25px);
+  font-weight: 860;
+  letter-spacing: -.055em;
+}
+
+.app-goals-limits-kpi small {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: rgba(149, 255, 211, .78);
+  font-size: 12px;
+  font-weight: 760;
+}
+
+.app-goals-limits-focus {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 18px;
+  align-items: center;
+  padding: 20px;
+  border-radius: 30px;
+}
+
+.app-goals-limits-focus__copy {
+  display: grid;
+  gap: 8px;
+}
+
+.app-goals-limits-focus h2,
+.app-goals-limits-section-head h2 {
+  color: rgba(255, 255, 255, .96);
+  font-size: 22px;
+  font-weight: 860;
+  letter-spacing: -.055em;
+}
+
+.app-goals-limits-focus p,
+.app-goals-limits-fina p {
+  color: rgba(255, 255, 255, .56);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.app-goals-limits-ring {
+  --value: 0%;
+  display: grid;
+  width: 92px;
+  height: 92px;
+  place-items: center;
+  padding: 9px;
+  border-radius: 50%;
+  background: conic-gradient(rgba(110, 231, 183, .95) var(--value), rgba(255, 255, 255, .075) 0);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .08);
+}
+
+.app-goals-limits-ring::before {
+  grid-area: 1 / 1;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  background: rgba(9, 22, 27, .94);
+  content: "";
+}
+
+.app-goals-limits-ring strong,
+.app-goals-limits-ring span {
+  z-index: 1;
+  grid-area: 1 / 1;
+  text-align: center;
+}
+
+.app-goals-limits-ring strong {
+  margin-top: -8px;
+  color: rgba(255, 255, 255, .96);
+  font-size: 20px;
+  font-weight: 860;
+  letter-spacing: -.055em;
+}
+
+.app-goals-limits-ring span {
+  align-self: end;
+  margin-bottom: 18px;
+  color: rgba(255, 255, 255, .45);
+  font-size: 10px;
+  font-weight: 740;
+}
+
+.app-goals-limits-fina {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 16px;
+  align-items: center;
+  padding: 18px;
+  border-radius: 28px;
+  background: linear-gradient(135deg, rgba(110, 231, 183, .12), rgba(95, 156, 255, .07)), rgba(255, 255, 255, .045);
+}
+
+.app-goals-limits-fina button,
+.app-goals-limits-row__bottom button {
+  min-height: 38px;
+  border: 1px solid rgba(149, 255, 211, .16);
+  border-radius: 16px;
+  background: rgba(110, 231, 183, .1);
+  color: rgba(179, 255, 226, .92);
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.app-goals-limits-fina button {
+  padding: 0 14px;
+}

@@ -39,9 +39,9 @@ export function NotificationSheet({ open, layer = 80, onClose }: Props) {
   const loans = useObligationsStore((state) => state.loans);
   const markLoanPaid = useObligationsStore((state) => state.markPaid);
   const loadObligations = useObligationsStore((state) => state.loadAll);
-  const openModal = useAppModalStore((state) => state.openModal);
   const closeAllModals = useAppModalStore((state) => state.closeAllModals);
   const openSettingsSection = useNavigationStore((state) => state.openSettingsSection);
+  const navigateTo = useNavigationStore((state) => state.navigateTo);
 
   useEffect(() => {
     if (open) void Promise.allSettled([load(true), loadObligations(false)]);
@@ -54,9 +54,9 @@ export function NotificationSheet({ open, layer = 80, onClose }: Props) {
   const handleOpenRelated = async (notificationId: string, entityId?: string | null) => {
     await markRead(notificationId);
     if (!entityId) return;
-    const loan = loans.find((item) => item.id === entityId) ?? null;
     closeAllModals();
-    openModal({ type: 'obligation-edit', loan });
+    navigateTo('payments');
+    onClose();
   };
 
   const handleMarkPaid = async (notificationId: string, entityId?: string | null) => {

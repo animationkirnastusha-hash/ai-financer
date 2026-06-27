@@ -1,0 +1,158 @@
+.app-payments-kpi {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.app-payments-kpi .app-card {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  padding: 16px;
+  border-radius: 24px;
+}
+
+.app-payments-kpi span,
+.app-payments-kpi small,
+.app-payments-nearest span,
+.app-payments-reminders__head span,
+.app-payment-row__head span {
+  min-width: 0;
+  overflow: hidden;
+  color: rgba(149, 255, 211, .68);
+  font-size: 10px;
+  font-weight: 840;
+  letter-spacing: .1em;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.app-payments-kpi strong {
+  min-width: 0;
+  overflow: hidden;
+  color: rgba(255, 255, 255, .94);
+  font-size: clamp(15px, 4vw, 21px);
+  font-weight: 880;
+  letter-spacing: -.05em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-payments-kpi small {
+  color: rgba(255, 255, 255, .43);
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.app-payments-focus {
+  padding: 20px;
+  border-radius: 30px;
+  align-items: center;
+}
+
+.app-payments-focus__copy h2,
+.app-payments-nearest h2,
+.app-payments-reminders__head h2,
+.app-payments-section-head h2,
+.app-payment-row__head h3 {
+  min-width: 0;
+  overflow: hidden;
+  color: rgba(255, 255, 255, .94);
+  font-size: 20px;
+  font-weight: 860;
+  letter-spacing: -.052em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-payments-focus__copy p,
+.app-payments-nearest p,
+.app-payment-row__head p,
+.app-payments-reminders p {
+  margin-top: 6px;
+  color: rgba(255, 255, 255, .52);
+  font-size: 13px;
+  font-weight: 620;
+  line-height: 1.42;
+}
+
+.app-payments-ring {
+  --value: 0%;
+  display: grid;
+  width: 82px;
+  height: 82px;
+  place-items: center;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at center, rgba(8, 18, 24, .98) 56%, transparent 58%),
+    conic-gradient(rgba(110, 231, 183, .95) var(--value), rgba(255, 255, 255, .08) 0);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .08), 0 16px 30px rgba(0, 0, 0, .2);
+}
+
+.app-payments-ring strong,
+.app-payments-ring span {
+  grid-area: 1 / 1;
+  text-align: center;
+}
+
+.app-payments-ring strong {
+  color: rgba(255, 255, 255, .96);
+  font-size: 19px;
+  font-weight: 880;
+}
+
+.app-payments-ring span {
+  transform: translateY(17px);
+  color: rgba(255, 255, 255, .42);
+  font-size: 9px;
+  font-weight: 760;
+}
+
+.app-payments-nearest,
+.app-payments-fina,
+.app-payments-reminders {
+  padding: 19px;
+  border-radius: 29px;
+}
+
+.app-payments-nearest strong,
+.app-payment-row__head strong {
+  color: rgba(255, 255, 255, .94);
+  font-size: 18px;
+  font-weight: 880;
+  white-space: nowrap;
+}
+
+.app-payments-fina p {
+  color: rgba(255, 255, 255, .66);
+  font-size: 13px;
+  font-weight: 650;
+  line-height: 1.42;
+}
+
+.app-payments-fina button {
+  min-height: 38px;
+  padding: 0 14px;
+  border-radius: 999px;
+  background: rgba(110, 231, 183, .12);
+  color: rgba(194, 255, 232, .94);
+  font-size: 12px;
+  font-weight: 820;
+  white-space: nowrap;
+}
+
+@media (max-width: 390px) {
+  .app-payments-kpi {
+    gap: 9px;
+  }
+
+  .app-payments-kpi .app-card {
+    padding: 13px;
+  }
+
+  .app-payments-focus,
+  .app-payments-fina {
+    grid-template-columns: 1fr;
+  }
+}

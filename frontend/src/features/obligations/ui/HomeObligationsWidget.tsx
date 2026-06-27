@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useAppModalStore } from '@/features/modals/model/appModal.store';
 import { useNavigationStore } from '@/features/navigation/model/navigation.store';
 import { useObligationsStore } from '@/features/obligations/model/obligations.store';
 import { formatMoney, formatTransactionDate } from '@/shared/lib/money';
@@ -28,7 +27,7 @@ function hasDebtRemainder(type?: string | null) {
 export function HomeObligationsWidget() {
   const { t } = useI18n();
   const navigateTo = useNavigationStore((state) => state.navigateTo);
-  const openModal = useAppModalStore((state) => state.openModal);
+  const openAIWithCommand = useNavigationStore((state) => state.openAIWithCommand);
   const summary = useObligationsStore((state) => state.summary);
   const loadSummary = useObligationsStore((state) => state.loadSummary);
   const markPaid = useObligationsStore((state) => state.markPaid);
@@ -102,7 +101,7 @@ export function HomeObligationsWidget() {
             {showDebtRemainder ? <span>{t('dashboard.obligations.remainder', { amount: formatMoney(summary.totalDebt, nearest.currency) })}</span> : null}
           </div>
           <div className="app-obligations-widget__actions">
-            <button type="button" className="app-secondary-button" onClick={() => openModal({ type: 'obligation-edit', loan: nearest })}>{t('common.edit')}</button>
+            <button type="button" className="app-secondary-button" onClick={() => openAIWithCommand(t('payments.command.paymentEdit', { title: nearest.title }))}>{t('common.edit')}</button>
             <button type="button" className="app-secondary-button" onClick={() => setState('hidden')}>{t('dashboard.obligations.hide')}</button>
             <button type="button" className="app-primary-button" disabled={isMutating} onClick={() => markPaid(nearest.id)}>{t('dashboard.obligations.paid')}</button>
           </div>

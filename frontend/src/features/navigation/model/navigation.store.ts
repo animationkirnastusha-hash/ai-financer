@@ -56,8 +56,16 @@ type NavigationState = {
   closeNotifications: () => void;
 };
 
+function normalizeScreen(screen: AppScreen): AppScreen {
+  if (screen === 'goals' || screen === 'spending-limits') return 'goals-limits';
+  if (screen === 'obligations') return 'payments';
+  return screen;
+}
+
 function compactHistory(history: AppScreen[], currentScreen: AppScreen, nextScreen: AppScreen) {
-  return [...history.filter((screen) => screen !== nextScreen), currentScreen].slice(-12);
+  const normalizedCurrent = normalizeScreen(currentScreen);
+  const normalizedNext = normalizeScreen(nextScreen);
+  return [...history.map(normalizeScreen).filter((screen) => screen !== normalizedNext), normalizedCurrent].slice(-12);
 }
 
 export const useNavigationStore = create<NavigationState>((set, get) => ({
@@ -71,9 +79,11 @@ export const useNavigationStore = create<NavigationState>((set, get) => ({
   journalFilters: null,
 
   navigateTo: (screen) => {
-    const { currentScreen, history } = get();
+    const nextScreen = normalizeScreen(screen);
+    const { currentScreen: rawCurrentScreen, history } = get();
+    const currentScreen = normalizeScreen(rawCurrentScreen);
 
-    if (screen === 'dashboard') {
+    if (nextScreen === 'dashboard') {
       set({
         currentScreen: 'dashboard',
         history: [],
@@ -85,7 +95,7 @@ export const useNavigationStore = create<NavigationState>((set, get) => ({
       return;
     }
 
-    if (screen === currentScreen) {
+    if (nextScreen === currentScreen) {
       set({
         isNavigationMenuOpen: false,
         isNotificationsOpen: false,
@@ -94,17 +104,18 @@ export const useNavigationStore = create<NavigationState>((set, get) => ({
     }
 
     set({
-      currentScreen: screen,
-      history: compactHistory(history, currentScreen, screen),
+      currentScreen: nextScreen,
+      history: compactHistory(history, currentScreen, nextScreen),
       isNavigationMenuOpen: false,
       isNotificationsOpen: false,
-      settingsSection: screen === 'settings' ? get().settingsSection : null,
-      journalFilters: screen === 'journal' ? get().journalFilters : null,
+      settingsSection: nextScreen === 'settings' ? get().settingsSection : null,
+      journalFilters: nextScreen === 'journal' ? get().journalFilters : null,
     });
   },
 
   openJournal: (filters) => {
-    const { currentScreen, history } = get();
+    const { currentScreen: rawCurrentScreen, history } = get();
+    const currentScreen = normalizeScreen(rawCurrentScreen);
     set({
       currentScreen: 'journal',
       history: currentScreen === 'journal' ? history : compactHistory(history, currentScreen, 'journal'),
@@ -122,7 +133,8 @@ export const useNavigationStore = create<NavigationState>((set, get) => ({
   },
 
   openSettingsSection: (section) => {
-    const { currentScreen, history } = get();
+    const { currentScreen: rawCurrentScreen, history } = get();
+    const currentScreen = normalizeScreen(rawCurrentScreen);
     set({
       currentScreen: 'settings',
       history: currentScreen === 'settings' ? history : compactHistory(history, currentScreen, 'settings'),
@@ -166,11 +178,13 @@ export const useNavigationStore = create<NavigationState>((set, get) => ({
   },
 
   goBack: () => {
-    const { history, currentScreen } = get();
-    const nextHistory = [...history];
+    const { history, currentScreen: rawCurrentScreen } = get();
+    const currentScreen = normalizeScreen(rawCurrentScreen);
+    const nextHistory = history.map(normalizeScreen);
     let previous = nextHistory.pop();
 
     while (previous === currentScreen) previous = nextHistory.pop();
+    if (previous) previous = normalizeScreen(previous);
 
     if (!previous) {
       set({ currentScreen: 'dashboard', history: [], isNavigationMenuOpen: false, journalFilters: null });

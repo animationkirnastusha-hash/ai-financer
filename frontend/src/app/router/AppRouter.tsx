@@ -14,15 +14,13 @@ const ProfilePage = lazy(() => import('@/pages/profile/ProfilePage'));
 const AnalyticsPage = lazy(() => import('@/pages/analytics/AnalyticsPage'));
 const CompanionPage = lazy(() => import('@/pages/companion/CompanionPage'));
 const DashboardPage = lazy(() => import('@/pages/dashboard/DashboardPage'));
-const GoalsPage = lazy(() => import('@/pages/goals/GoalsPage'));
 const GoalsLimitsPage = lazy(() => import('@/pages/goals-limits/GoalsLimitsPage'));
-const ObligationsPage = lazy(() => import('@/pages/obligations/ObligationsPage'));
 const PaymentsPage = lazy(() => import('@/pages/payments/PaymentsPage'));
-const SpendingLimitsPage = lazy(() => import('@/pages/spending-limits/SpendingLimitsPage'));
 const StorePage = lazy(() => import('@/pages/store/StorePage'));
 const SettingsPage = lazy(() => import('@/pages/settings/SettingsPage'));
 const AdminPage = lazy(() => import('@/pages/admin/AdminPage'));
 const ReferralPage = lazy(() => import('@/pages/referral/ReferralPage'));
+const SectionsPage = lazy(() => import('@/pages/sections/SectionsPage'));
 
 function RouteFallback() {
   return (
@@ -34,6 +32,7 @@ function RouteFallback() {
 
 export function AppRouter() {
   const currentScreen = useNavigationStore((state) => state.currentScreen);
+  const goBack = useNavigationStore((state) => state.goBack);
   const user = useAuthStore((state) => state.user);
   const isAdmin = Boolean(user?.isAdmin);
 
@@ -46,16 +45,14 @@ export function AppRouter() {
         {currentScreen === 'journal' && <JournalPage />}
         {currentScreen === 'profile' && <ProfilePage />}
         {currentScreen === 'analytics' && <AnalyticsPage />}
-        {currentScreen === 'goals' && <GoalsPage />}
-        {currentScreen === 'goals-limits' && <GoalsLimitsPage />}
-        {currentScreen === 'obligations' && <ObligationsPage />}
-        {currentScreen === 'payments' && <PaymentsPage />}
-        {currentScreen === 'spending-limits' && <SpendingLimitsPage />}
+        {(currentScreen === 'goals' || currentScreen === 'goals-limits' || currentScreen === 'spending-limits') && <GoalsLimitsPage />}
+        {(currentScreen === 'obligations' || currentScreen === 'payments') && <PaymentsPage />}
         {currentScreen === 'store' && <StorePage />}
         {currentScreen === 'companion' && <CompanionPage />}
         {currentScreen === 'settings' && <SettingsPage />}
         {currentScreen === 'admin' && (isAdmin ? <AdminPage /> : <DashboardPage />)}
         {currentScreen === 'referral' && <ReferralPage />}
+        {currentScreen === 'sections' && <SectionsPage onBack={goBack} />}
       </Suspense>
 
       <AppNavigationSheet />

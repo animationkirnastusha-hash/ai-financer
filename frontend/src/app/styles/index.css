@@ -51,6 +51,7 @@
 @import "./features/chat/voice-composer.css";
 @import "./pages/limits/spending-limits.css";
 @import "./pages/goals-limits/goals-limits.css";
+@import "./pages/store/store.css";
 @import "./pages/payments/payments.css";
 @import "./pages/referral/referral.css";
 @import "./pages/analytics/analytics-layout.css";

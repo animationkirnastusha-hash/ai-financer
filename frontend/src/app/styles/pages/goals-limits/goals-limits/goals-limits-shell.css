@@ -1,0 +1,81 @@
+.app-goals-limits-shell {
+  display: grid;
+  gap: 22px;
+  padding-top: 18px;
+  padding-bottom: calc(132px + env(safe-area-inset-bottom));
+}
+
+.app-goals-limits-hero {
+  display: grid;
+  gap: 18px;
+  padding: 22px;
+  border-radius: 32px;
+}
+
+.app-goals-limits-hero__topline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.app-goals-limits-ai-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 7px 11px;
+  border: 1px solid rgba(149, 255, 211, .16);
+  border-radius: 999px;
+  background: rgba(110, 231, 183, .075);
+  color: rgba(172, 255, 224, .82);
+  font-size: 11px;
+  font-weight: 780;
+  white-space: nowrap;
+}
+
+.app-goals-limits-hero__main {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 18px;
+  align-items: center;
+}
+
+.app-goals-limits-add {
+  display: grid;
+  width: 56px;
+  height: 56px;
+  place-items: center;
+  border: 1px solid rgba(110, 231, 183, .32);
+  border-radius: 22px;
+  background: linear-gradient(135deg, rgba(110, 231, 183, .95), rgba(59, 231, 211, .76));
+  color: rgba(3, 11, 14, .94);
+  font-size: 31px;
+  font-weight: 860;
+  box-shadow: 0 18px 42px rgba(55, 217, 189, .2), inset 0 1px 0 rgba(255, 255, 255, .32);
+}
+
+.app-goals-limits-tabs {
+  display: grid;
+  grid-auto-flow: column;
+  gap: 8px;
+  padding: 8px;
+  border: 1px solid rgba(255, 255, 255, .09);
+  border-radius: 28px;
+  background: rgba(255, 255, 255, .042);
+}
+
+.app-goals-limits-tabs button {
+  min-height: 48px;
+  border: 0;
+  border-radius: 21px;
+  background: transparent;
+  color: rgba(255, 255, 255, .56);
+  font-size: 14px;
+  font-weight: 780;
+}
+
+.app-goals-limits-tabs button[data-active="true"] {
+  background: linear-gradient(135deg, rgba(110, 231, 183, .95), rgba(78, 220, 202, .78));
+  color: rgba(3, 11, 14, .94);
+  box-shadow: 0 14px 34px rgba(71, 220, 195, .18);
+}
