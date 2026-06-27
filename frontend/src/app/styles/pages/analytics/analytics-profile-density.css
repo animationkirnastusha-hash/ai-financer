@@ -1,6 +1,6 @@
-/* Pack 188: analytics v2 density guard. */
+/* Pack 188c: analytics v2 density guard. */
 .analytics-v2-page .app-card {
-  border-radius: 26px;
+  border-radius: 28px;
 }
 
 .analytics-v2-page button {
@@ -10,4 +10,9 @@
 .analytics-v2-page,
 .analytics-v2-page * {
   box-sizing: border-box;
+}
+
+
+.analytics-v2-page .app-card {
+  box-shadow: 0 18px 54px rgba(3, 7, 18, 0.2);
 }

@@ -1,10 +1,10 @@
-/* Pack 188b: analytics v2 layout, focus cards and section structure. */
+/* Pack 188c: analytics v2 layout, breathable cards and section structure. */
 .analytics-v2-kpi-grid,
 .analytics-v2-focus-grid,
 .analytics-v2-news-grid,
 .analytics-v2-ratio-grid {
   display: grid;
-  gap: 8px;
+  gap: 14px;
   min-width: 0;
 }
 
@@ -37,7 +37,7 @@
 .analytics-v2-kpi,
 .analytics-v2-news-card {
   display: grid;
-  gap: 7px;
+  gap: 9px;
   min-width: 0;
   border: 1px solid rgba(255, 255, 255, 0.09);
   border-radius: 22px;
@@ -46,11 +46,11 @@
 }
 
 .analytics-v2-kpi {
-  padding: 11px 9px;
+  padding: 14px 12px;
 }
 
 .analytics-v2-news-card {
-  padding: 12px 10px;
+  padding: 15px 13px;
 }
 
 .analytics-v2-kpi span,
@@ -112,7 +112,7 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
-  margin-bottom: 14px;
+  margin-bottom: 18px;
 }
 
 .analytics-v2-section-head > div {
@@ -153,7 +153,7 @@
 }
 
 .analytics-v2-ratio-grid {
-  margin-top: 12px;
+  margin-top: 16px;
 }
 
 .analytics-v2-ratio-grid article {
@@ -178,7 +178,7 @@
 .analytics-v2-actions {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
+  gap: 12px;
 }
 
 .analytics-v2-actions button,
@@ -193,4 +193,26 @@
 
 .analytics-v2-light-button {
   padding: 0 12px;
+}
+
+
+.analytics-v2-chart-card,
+.analytics-v2-trend-card,
+.analytics-v2-balance-card,
+.analytics-v2-detail-card,
+.analytics-v2-news {
+  padding: 18px;
+}
+
+.analytics-v2-kpi-grid {
+  margin-top: 2px;
+}
+
+.analytics-v2-kpi-grid + .analytics-v2-news,
+.analytics-v2-focus-grid + .analytics-v2-chart-card,
+.analytics-v2-chart-card + .analytics-v2-fina,
+.analytics-v2-fina + .analytics-v2-trend-card,
+.analytics-v2-balance-card + .analytics-v2-actions,
+.analytics-v2-detail-card + .analytics-v2-actions {
+  margin-top: 2px;
 }
