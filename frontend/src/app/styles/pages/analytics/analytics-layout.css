@@ -1,49 +1,79 @@
-/* Pack 188: analytics v2 layout and KPI cards. */
-.analytics-v2-kpi-grid {
+/* Pack 188b: analytics v2 layout, focus cards and section structure. */
+.analytics-v2-kpi-grid,
+.analytics-v2-focus-grid,
+.analytics-v2-news-grid,
+.analytics-v2-ratio-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
+  min-width: 0;
+}
+
+.analytics-v2-kpi-grid--overview {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.analytics-v2-focus-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.analytics-v2-focus-grid--balance,
+.analytics-v2-news-grid,
+.analytics-v2-ratio-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .analytics-v2-kpi,
+.analytics-v2-news-card,
 .analytics-v2-chart-card,
 .analytics-v2-trend-card,
 .analytics-v2-balance-card,
 .analytics-v2-detail-card,
+.analytics-v2-news,
 .analytics-v2-fina {
   min-width: 0;
   overflow: hidden;
 }
 
-.analytics-v2-kpi {
+.analytics-v2-kpi,
+.analytics-v2-news-card {
   display: grid;
-  gap: 8px;
-  padding: 12px 10px;
+  gap: 7px;
+  min-width: 0;
   border: 1px solid rgba(255, 255, 255, 0.09);
-  border-radius: 24px;
-  background: rgba(255, 255, 255, 0.06);
-  box-shadow: 0 16px 40px rgba(3, 7, 18, 0.18);
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.055);
+  box-shadow: 0 16px 40px rgba(3, 7, 18, 0.16);
+}
+
+.analytics-v2-kpi {
+  padding: 11px 9px;
+}
+
+.analytics-v2-news-card {
+  padding: 12px 10px;
 }
 
 .analytics-v2-kpi span,
+.analytics-v2-news-card span,
 .analytics-v2-section-head span,
 .analytics-v2-ratio-grid span {
   color: rgba(255, 255, 255, 0.55);
-  font-size: 11px;
+  font-size: 10.5px;
   font-weight: 800;
   line-height: 1.15;
 }
 
-.analytics-v2-kpi strong {
+.analytics-v2-kpi strong,
+.analytics-v2-news-card strong {
   min-width: 0;
-  color: #fff;
-  font-size: clamp(15px, 4vw, 20px);
-  font-weight: 900;
-  line-height: 1.05;
-  letter-spacing: -0.04em;
-  white-space: nowrap;
   overflow: hidden;
+  color: #fff;
+  font-size: clamp(14px, 3.7vw, 19px);
+  font-weight: 950;
+  line-height: 1.05;
+  letter-spacing: -0.05em;
   text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .analytics-v2-kpi em {
@@ -54,6 +84,17 @@
   font-style: normal;
   font-weight: 900;
   line-height: 1;
+}
+
+.analytics-v2-kpi small,
+.analytics-v2-news-card small {
+  min-width: 0;
+  overflow: hidden;
+  color: rgba(255, 255, 255, 0.48);
+  font-size: 10.5px;
+  font-weight: 750;
+  line-height: 1.2;
+  text-overflow: ellipsis;
 }
 
 .analytics-v2-kpi em.is-positive {
@@ -74,12 +115,17 @@
   margin-bottom: 14px;
 }
 
+.analytics-v2-section-head > div {
+  min-width: 0;
+}
+
 .analytics-v2-section-head h2 {
   margin: 3px 0 0;
   color: #fff;
   font-size: 19px;
-  font-weight: 900;
-  letter-spacing: -0.04em;
+  font-weight: 950;
+  letter-spacing: -0.05em;
+  line-height: 1.1;
 }
 
 .analytics-v2-switch {
@@ -107,9 +153,6 @@
 }
 
 .analytics-v2-ratio-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
   margin-top: 12px;
 }
 
@@ -123,9 +166,13 @@
 }
 
 .analytics-v2-ratio-grid strong {
+  min-width: 0;
+  overflow: hidden;
   color: #fff;
-  font-size: 18px;
+  font-size: 15px;
   font-weight: 900;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .analytics-v2-actions {

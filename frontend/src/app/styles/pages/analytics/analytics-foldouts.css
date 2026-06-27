@@ -1,4 +1,4 @@
-/* Pack 188: analytics v2 Fina block and responsive polish. */
+/* Pack 188b: analytics v2 Fina block and responsive polish. */
 .analytics-v2-fina {
   display: grid;
   grid-template-columns: 44px minmax(0, 1fr);
@@ -67,16 +67,22 @@
   }
 
   .analytics-v2-kpi-grid,
-  .analytics-v2-ratio-grid {
+  .analytics-v2-focus-grid,
+  .analytics-v2-ratio-grid,
+  .analytics-v2-news-grid {
     gap: 6px;
   }
 
-  .analytics-v2-kpi {
+  .analytics-v2-kpi,
+  .analytics-v2-news-card {
     border-radius: 20px;
     padding: 10px 8px;
   }
 
   .analytics-v2-kpi span,
+  .analytics-v2-kpi small,
+  .analytics-v2-news-card span,
+  .analytics-v2-news-card small,
   .analytics-v2-ratio-grid span {
     font-size: 10px;
   }

@@ -10,6 +10,7 @@ import { ScreenTopBar } from '@/shared/ui/ScreenTopBar';
 type AnalyticsTab = 'overview' | 'expense' | 'income' | 'balance';
 type PeriodPreset = 'day' | 'week' | 'month' | 'custom';
 type MoneyMode = 'expense' | 'income';
+type ChartMode = MoneyMode | 'balance';
 
 type PeriodRange = {
   start: Date;
@@ -221,6 +222,13 @@ function buildDailyPoints(transactions: TransactionDto[], range: PeriodRange): D
   });
 }
 
+function formatCompactMoney(value: number) {
+  const abs = Math.abs(value);
+  if (abs >= 1_000_000) return `${value < 0 ? '-' : ''}₽${Math.round(abs / 100_000) / 10}м`;
+  if (abs >= 1_000) return `${value < 0 ? '-' : ''}₽${Math.round(abs / 100) / 10}к`;
+  return formatMoney(value, 'RUB', { sign: value < 0 ? 'minus' : 'none' });
+}
+
 function DonutChart({ groups, total, label }: { groups: MoneyGroup[]; total: number; label: string }) {
   const radius = 45;
   const stroke = 12;
@@ -285,36 +293,79 @@ function CategoryList({ groups, total, onOpen }: { groups: MoneyGroup[]; total: 
   );
 }
 
-function DynamicsChart({ points, mode }: { points: DailyPoint[]; mode: MoneyMode | 'balance' }) {
-  const maxValue = Math.max(
-    1,
-    ...points.map((point) => Math.abs(mode === 'balance' ? point.balance : point[mode])),
-  );
+function LineChart({ points, mode }: { points: DailyPoint[]; mode: ChartMode }) {
+  const { t } = useI18n();
+  const values = points.map((point) => (mode === 'balance' ? point.balance : point[mode]));
+  const maxValue = Math.max(0, ...values);
+  const minValue = Math.min(0, ...values);
+  const range = Math.max(1, maxValue - minValue);
+  const width = 320;
+  const height = 164;
+  const padX = 12;
+  const padY = 18;
+  const plotWidth = width - padX * 2;
+  const plotHeight = height - padY * 2;
+  const xStep = points.length > 1 ? plotWidth / (points.length - 1) : 0;
+  const zeroY = padY + ((maxValue - 0) / range) * plotHeight;
+  const coordinates = points.map((point, index) => {
+    const value = mode === 'balance' ? point.balance : point[mode];
+    const x = padX + index * xStep;
+    const y = padY + ((maxValue - value) / range) * plotHeight;
+    return { point, value, x, y };
+  });
+  const line = coordinates.map((item) => `${item.x},${item.y}`).join(' ');
+  const area = coordinates.length > 0
+    ? `${padX},${zeroY} ${line} ${padX + xStep * (coordinates.length - 1)},${zeroY}`
+    : '';
+  const labelIndexes = Array.from(new Set([0, Math.floor((points.length - 1) / 2), points.length - 1])).filter((index) => index >= 0);
+  const total = mode === 'balance' ? values[values.length - 1] || 0 : values.reduce((sum, value) => sum + value, 0);
+  const peak = values.reduce((max, value) => Math.max(max, Math.abs(value)), 0);
 
   return (
-    <div className="analytics-v2-dynamics" aria-hidden="true">
-      {points.map((point) => {
-        const value = mode === 'balance' ? point.balance : point[mode];
-        const height = Math.max(8, Math.round((Math.abs(value) / maxValue) * 86));
-        const tone = value < 0 ? 'negative' : mode;
-        return (
-          <div key={point.key} className="analytics-v2-dynamics__item">
-            <span className={`analytics-v2-dynamics__bar analytics-v2-dynamics__bar--${tone}`} style={{ height: `${height}%` }} />
-            <small>{point.label}</small>
-          </div>
-        );
-      })}
+    <div className={`analytics-v2-line analytics-v2-line--${mode}`}>
+      <div className="analytics-v2-line__summary">
+        <span>{t('analytics.v2.chart.total')}</span>
+        <strong>{formatCompactMoney(total)}</strong>
+        <small>{t('analytics.v2.chart.peak')}: {formatCompactMoney(peak)}</small>
+      </div>
+      <svg viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none" role="img" aria-label={t('analytics.v2.section.dynamic')}>
+        <line className="analytics-v2-line__grid" x1={padX} x2={width - padX} y1={padY} y2={padY} />
+        <line className="analytics-v2-line__grid" x1={padX} x2={width - padX} y1={height / 2} y2={height / 2} />
+        <line className="analytics-v2-line__grid" x1={padX} x2={width - padX} y1={height - padY} y2={height - padY} />
+        <line className="analytics-v2-line__zero" x1={padX} x2={width - padX} y1={zeroY} y2={zeroY} />
+        {area ? <polygon className="analytics-v2-line__area" points={area} /> : null}
+        {line ? <polyline className="analytics-v2-line__path" points={line} /> : null}
+        {coordinates.map((item, index) => (
+          item.value !== 0 || index === coordinates.length - 1
+            ? <circle key={item.point.key} className="analytics-v2-line__dot" cx={item.x} cy={item.y} r="3.2" />
+            : null
+        ))}
+      </svg>
+      <div className="analytics-v2-line__labels">
+        {labelIndexes.map((index) => <span key={points[index]?.key ?? index}>{points[index]?.label ?? ''}</span>)}
+      </div>
     </div>
   );
 }
 
-function KpiCard({ label, value, change, tone }: { label: string; value: string; change: number; tone: 'income' | 'expense' | 'balance' }) {
+function KpiCard({ label, value, change, tone, caption }: { label: string; value: string; change: number; tone: 'income' | 'expense' | 'balance'; caption?: string }) {
   const positive = change >= 0;
   return (
     <article className={`analytics-v2-kpi analytics-v2-kpi--${tone}`}>
       <span>{label}</span>
       <strong>{value}</strong>
       <em className={positive ? 'is-positive' : 'is-negative'}>{formatPercent(change)}</em>
+      {caption ? <small>{caption}</small> : null}
+    </article>
+  );
+}
+
+function NewsCard({ label, value, caption }: { label: string; value: string; caption: string }) {
+  return (
+    <article className="analytics-v2-news-card">
+      <span>{label}</span>
+      <strong>{value}</strong>
+      <small>{caption}</small>
     </article>
   );
 }
@@ -327,8 +378,8 @@ export default function AnalyticsPage() {
   const loadTransactions = useTransactionsStore((state) => state.loadTransactions);
   const [activeTab, setActiveTab] = useState<AnalyticsTab>('overview');
   const [periodPreset, setPeriodPreset] = useState<PeriodPreset>('month');
-  const [chartMode, setChartMode] = useState<MoneyMode>('expense');
-  const [dynamicMode, setDynamicMode] = useState<MoneyMode>('expense');
+  const [overviewStructureMode, setOverviewStructureMode] = useState<MoneyMode>('expense');
+  const [overviewDynamicMode, setOverviewDynamicMode] = useState<MoneyMode>('expense');
   const [customStart, setCustomStart] = useState(() => toDateInputValue(new Date(new Date().getFullYear(), new Date().getMonth(), 1)));
   const [customEnd, setCustomEnd] = useState(() => toDateInputValue(new Date()));
 
@@ -352,6 +403,8 @@ export default function AnalyticsPage() {
     const dailyPoints = buildDailyPoints(current, range);
     const expenseRatio = totalIncome > 0 ? (totalExpense / totalIncome) * 100 : totalExpense > 0 ? 100 : 0;
     const profitRatio = totalIncome > 0 ? (balance / totalIncome) * 100 : 0;
+    const averageExpense = dailyPoints.length > 0 ? totalExpense / dailyPoints.length : 0;
+    const averageIncome = dailyPoints.length > 0 ? totalIncome / dailyPoints.length : 0;
     const topExpense = expenseGroups[0] ?? null;
     const topIncome = incomeGroups[0] ?? null;
 
@@ -371,27 +424,12 @@ export default function AnalyticsPage() {
       dailyPoints,
       expenseRatio,
       profitRatio,
+      averageExpense,
+      averageIncome,
       topExpense,
       topIncome,
     };
   }, [customEnd, customStart, periodPreset, t, transactions]);
-
-  const currentGroups = chartMode === 'expense' ? analytics.expenseGroups : analytics.incomeGroups;
-  const currentTotal = chartMode === 'expense' ? analytics.totalExpense : analytics.totalIncome;
-  const chartTitle = chartMode === 'expense' ? t('analytics.v2.chart.expense') : t('analytics.v2.chart.income');
-  const periodLabel = formatPeriodLabel(analytics.range);
-
-  const finaInsight = useMemo(() => {
-    if (analytics.current.length === 0) return t('analytics.v2.fina.empty');
-    if (analytics.balance < 0) return t('analytics.v2.fina.negative', { amount: formatMoney(Math.abs(analytics.balance), 'RUB') });
-    if (analytics.expenseRatio > 80) return t('analytics.v2.fina.warning', { percent: Math.round(analytics.expenseRatio) });
-    if (analytics.topExpense) return t('analytics.v2.fina.topExpense', { category: rt(analytics.topExpense.name), amount: formatMoney(analytics.topExpense.amount, 'RUB') });
-    return t('analytics.v2.fina.positive');
-  }, [analytics.balance, analytics.current.length, analytics.expenseRatio, analytics.topExpense, rt, t]);
-
-  const openGroupJournal = (group: MoneyGroup, type: 'income' | 'expense') => {
-    openJournal({ period: periodPreset === 'day' ? 'today' : periodPreset === 'week' ? 'week' : periodPreset === 'month' ? 'month' : 'custom', type, query: group.name, tag: normalizeJournalTag(group.name) });
-  };
 
   const tabs: Array<{ value: AnalyticsTab; label: string }> = [
     { value: 'overview', label: t('analytics.v2.tab.overview') },
@@ -406,6 +444,41 @@ export default function AnalyticsPage() {
     { value: 'month', label: t('analytics.period.month') },
     { value: 'custom', label: t('analytics.v2.period.custom') },
   ];
+
+  const finaInsight = useMemo(() => {
+    if (analytics.current.length === 0) return t('analytics.v2.fina.empty');
+
+    if (activeTab === 'expense') {
+      if (analytics.topExpense) return t('analytics.v2.fina.expenseFocus', { category: rt(analytics.topExpense.name), amount: formatMoney(analytics.topExpense.amount, 'RUB') });
+      return t('analytics.v2.fina.expenseCalm');
+    }
+
+    if (activeTab === 'income') {
+      if (analytics.topIncome) return t('analytics.v2.fina.incomeFocus', { category: rt(analytics.topIncome.name), amount: formatMoney(analytics.topIncome.amount, 'RUB') });
+      return t('analytics.v2.fina.incomeCalm');
+    }
+
+    if (activeTab === 'balance') {
+      if (analytics.balance < 0) return t('analytics.v2.fina.negative', { amount: formatMoney(Math.abs(analytics.balance), 'RUB') });
+      return t('analytics.v2.fina.balanceFocus', { percent: Math.round(analytics.profitRatio) });
+    }
+
+    if (analytics.balance < 0) return t('analytics.v2.fina.negative', { amount: formatMoney(Math.abs(analytics.balance), 'RUB') });
+    if (analytics.expenseRatio > 80) return t('analytics.v2.fina.warning', { percent: Math.round(analytics.expenseRatio) });
+    if (analytics.topExpense) return t('analytics.v2.fina.topExpense', { category: rt(analytics.topExpense.name), amount: formatMoney(analytics.topExpense.amount, 'RUB') });
+    return t('analytics.v2.fina.positive');
+  }, [activeTab, analytics.balance, analytics.current.length, analytics.expenseRatio, analytics.profitRatio, analytics.topExpense, analytics.topIncome, rt, t]);
+
+  const openGroupJournal = (group: MoneyGroup, type: 'income' | 'expense') => {
+    openJournal({ period: periodPreset === 'day' ? 'today' : periodPreset === 'week' ? 'week' : periodPreset === 'month' ? 'month' : 'custom', type, query: group.name, tag: normalizeJournalTag(group.name) });
+  };
+
+  const structureMode = activeTab === 'income' ? 'income' : activeTab === 'expense' ? 'expense' : overviewStructureMode;
+  const dynamicMode = activeTab === 'income' ? 'income' : activeTab === 'expense' ? 'expense' : overviewDynamicMode;
+  const structureGroups = structureMode === 'expense' ? analytics.expenseGroups : analytics.incomeGroups;
+  const structureTotal = structureMode === 'expense' ? analytics.totalExpense : analytics.totalIncome;
+  const structureTitle = structureMode === 'expense' ? t('analytics.v2.chart.expense') : t('analytics.v2.chart.income');
+  const dynamicTitle = dynamicMode === 'expense' ? t('analytics.v2.dynamic.expense') : t('analytics.v2.dynamic.income');
 
   return (
     <div className="app-page app-analytics-page analytics-v2-page text-white">
@@ -438,46 +511,91 @@ export default function AnalyticsPage() {
               </button>
             ))}
           </div>
-          <div className="analytics-v2-period__calendar">
-            <label>
-              <span>{t('analytics.v2.period.from')}</span>
-              <input type="date" value={customStart} onChange={(event) => { setCustomStart(event.target.value); setPeriodPreset('custom'); }} />
-            </label>
-            <label>
-              <span>{t('analytics.v2.period.to')}</span>
-              <input type="date" value={customEnd} onChange={(event) => { setCustomEnd(event.target.value); setPeriodPreset('custom'); }} />
-            </label>
-          </div>
-          <p>{periodLabel}</p>
+          {periodPreset === 'custom' ? (
+            <>
+              <div className="analytics-v2-period__calendar">
+                <label>
+                  <span>{t('analytics.v2.period.from')}</span>
+                  <input type="date" value={customStart} onChange={(event) => setCustomStart(event.target.value)} />
+                </label>
+                <label>
+                  <span>{t('analytics.v2.period.to')}</span>
+                  <input type="date" value={customEnd} onChange={(event) => setCustomEnd(event.target.value)} />
+                </label>
+              </div>
+              <p>{formatPeriodLabel(analytics.range)}</p>
+            </>
+          ) : null}
         </section>
 
-        {(activeTab === 'overview' || activeTab === 'expense' || activeTab === 'income' || activeTab === 'balance') && (
-          <section className="analytics-v2-kpi-grid" aria-label={t('analytics.v2.kpi.label')}>
-            <KpiCard label={t('analytics.kpi.expense')} value={formatMoney(analytics.totalExpense, 'RUB', { sign: 'minus' })} change={analytics.expenseChange} tone="expense" />
-            <KpiCard label={t('analytics.kpi.income')} value={formatMoney(analytics.totalIncome, 'RUB', { sign: 'plus' })} change={analytics.incomeChange} tone="income" />
-            <KpiCard label={t('analytics.v2.kpi.balance')} value={formatMoney(analytics.balance, 'RUB', { sign: 'auto' })} change={analytics.balanceChange} tone="balance" />
-          </section>
-        )}
+        {activeTab === 'overview' ? (
+          <>
+            <section className="analytics-v2-kpi-grid analytics-v2-kpi-grid--overview" aria-label={t('analytics.v2.kpi.label')}>
+              <KpiCard label={t('analytics.kpi.expense')} value={formatMoney(analytics.totalExpense, 'RUB', { sign: 'minus' })} change={analytics.expenseChange} tone="expense" />
+              <KpiCard label={t('analytics.kpi.income')} value={formatMoney(analytics.totalIncome, 'RUB', { sign: 'plus' })} change={analytics.incomeChange} tone="income" />
+              <KpiCard label={t('analytics.v2.kpi.balance')} value={formatMoney(analytics.balance, 'RUB', { sign: 'auto' })} change={analytics.balanceChange} tone="balance" />
+            </section>
 
-        {(activeTab === 'overview' || activeTab === 'expense' || activeTab === 'income') && (
+            <section className="app-card analytics-v2-news">
+              <div className="analytics-v2-section-head">
+                <div>
+                  <span>{t('analytics.v2.overview.eyebrow')}</span>
+                  <h2>{t('analytics.v2.overview.title')}</h2>
+                </div>
+                <button type="button" className="analytics-v2-light-button" onClick={() => openJournal({ period: periodPreset === 'day' ? 'today' : periodPreset === 'week' ? 'week' : periodPreset === 'month' ? 'month' : 'custom' })}>{t('analytics.journal.action')}</button>
+              </div>
+              <div className="analytics-v2-news-grid">
+                <NewsCard label={t('analytics.v2.news.balance')} value={formatMoney(analytics.balance, 'RUB', { sign: 'auto' })} caption={t('analytics.v2.news.balanceCaption')} />
+                <NewsCard label={t('analytics.v2.news.topExpense')} value={analytics.topExpense ? rt(analytics.topExpense.name) : '—'} caption={analytics.topExpense ? formatMoney(analytics.topExpense.amount, 'RUB') : t('analytics.v2.empty.groups')} />
+                <NewsCard label={t('analytics.v2.news.activity')} value={String(analytics.current.length)} caption={t('analytics.v2.balance.operations')} />
+              </div>
+            </section>
+          </>
+        ) : null}
+
+        {activeTab === 'expense' ? (
+          <section className="analytics-v2-focus-grid" aria-label={t('analytics.v2.tab.expense')}>
+            <KpiCard label={t('analytics.kpi.expense')} value={formatMoney(analytics.totalExpense, 'RUB', { sign: 'minus' })} change={analytics.expenseChange} tone="expense" caption={t('analytics.v2.expense.totalCaption')} />
+            <KpiCard label={t('analytics.v2.expense.average')} value={formatMoney(analytics.averageExpense, 'RUB')} change={0} tone="expense" caption={t('analytics.v2.expense.averageCaption')} />
+          </section>
+        ) : null}
+
+        {activeTab === 'income' ? (
+          <section className="analytics-v2-focus-grid" aria-label={t('analytics.v2.tab.income')}>
+            <KpiCard label={t('analytics.kpi.income')} value={formatMoney(analytics.totalIncome, 'RUB', { sign: 'plus' })} change={analytics.incomeChange} tone="income" caption={t('analytics.v2.income.totalCaption')} />
+            <KpiCard label={t('analytics.v2.income.average')} value={formatMoney(analytics.averageIncome, 'RUB')} change={0} tone="income" caption={t('analytics.v2.income.averageCaption')} />
+          </section>
+        ) : null}
+
+        {activeTab === 'balance' ? (
+          <section className="analytics-v2-focus-grid analytics-v2-focus-grid--balance" aria-label={t('analytics.v2.tab.balance')}>
+            <KpiCard label={t('analytics.v2.kpi.balance')} value={formatMoney(analytics.balance, 'RUB', { sign: 'auto' })} change={analytics.balanceChange} tone="balance" caption={t('analytics.v2.balance.netCaption')} />
+            <KpiCard label={t('analytics.v2.balance.expenseRatio')} value={`${Math.round(analytics.expenseRatio)}%`} change={0} tone="balance" caption={t('analytics.v2.balance.expenseRatioCaption')} />
+            <KpiCard label={t('analytics.v2.balance.profitRatio')} value={`${Math.round(analytics.profitRatio)}%`} change={0} tone="balance" caption={t('analytics.v2.balance.profitRatioCaption')} />
+          </section>
+        ) : null}
+
+        {(activeTab === 'overview' || activeTab === 'expense' || activeTab === 'income') ? (
           <section className="app-card analytics-v2-chart-card">
             <div className="analytics-v2-section-head">
               <div>
                 <span>{t('analytics.v2.section.structure')}</span>
-                <h2>{chartTitle}</h2>
+                <h2>{structureTitle}</h2>
               </div>
-              <div className="analytics-v2-switch">
-                <button type="button" className={chartMode === 'expense' ? 'is-active' : ''} onClick={() => setChartMode('expense')}>{t('analytics.kpi.expense')}</button>
-                <button type="button" className={chartMode === 'income' ? 'is-active' : ''} onClick={() => setChartMode('income')}>{t('analytics.kpi.income')}</button>
-              </div>
+              {activeTab === 'overview' ? (
+                <div className="analytics-v2-switch">
+                  <button type="button" className={overviewStructureMode === 'expense' ? 'is-active' : ''} onClick={() => setOverviewStructureMode('expense')}>{t('analytics.kpi.expense')}</button>
+                  <button type="button" className={overviewStructureMode === 'income' ? 'is-active' : ''} onClick={() => setOverviewStructureMode('income')}>{t('analytics.kpi.income')}</button>
+                </div>
+              ) : null}
             </div>
 
             <div className="analytics-v2-chart-layout">
-              <DonutChart groups={currentGroups} total={currentTotal} label={chartTitle} />
-              <CategoryList groups={currentGroups} total={currentTotal} onOpen={(group) => openGroupJournal(group, chartMode)} />
+              <DonutChart groups={structureGroups} total={structureTotal} label={structureTitle} />
+              <CategoryList groups={structureGroups} total={structureTotal} onOpen={(group) => openGroupJournal(group, structureMode)} />
             </div>
           </section>
-        )}
+        ) : null}
 
         <section className="analytics-v2-fina app-card">
           <div className="analytics-v2-fina__avatar" aria-hidden="true"><span /><span /></div>
@@ -487,23 +605,25 @@ export default function AnalyticsPage() {
           </div>
         </section>
 
-        {(activeTab === 'overview' || activeTab === 'expense' || activeTab === 'income') && (
+        {(activeTab === 'overview' || activeTab === 'expense' || activeTab === 'income') ? (
           <section className="app-card analytics-v2-trend-card">
             <div className="analytics-v2-section-head">
               <div>
                 <span>{t('analytics.v2.section.dynamic')}</span>
-                <h2>{dynamicMode === 'expense' ? t('analytics.v2.dynamic.expense') : t('analytics.v2.dynamic.income')}</h2>
+                <h2>{dynamicTitle}</h2>
               </div>
-              <div className="analytics-v2-switch">
-                <button type="button" className={dynamicMode === 'expense' ? 'is-active' : ''} onClick={() => setDynamicMode('expense')}>{t('analytics.kpi.expense')}</button>
-                <button type="button" className={dynamicMode === 'income' ? 'is-active' : ''} onClick={() => setDynamicMode('income')}>{t('analytics.kpi.income')}</button>
-              </div>
+              {activeTab === 'overview' ? (
+                <div className="analytics-v2-switch">
+                  <button type="button" className={overviewDynamicMode === 'expense' ? 'is-active' : ''} onClick={() => setOverviewDynamicMode('expense')}>{t('analytics.kpi.expense')}</button>
+                  <button type="button" className={overviewDynamicMode === 'income' ? 'is-active' : ''} onClick={() => setOverviewDynamicMode('income')}>{t('analytics.kpi.income')}</button>
+                </div>
+              ) : null}
             </div>
-            <DynamicsChart points={analytics.dailyPoints} mode={dynamicMode} />
+            <LineChart points={analytics.dailyPoints} mode={dynamicMode} />
           </section>
-        )}
+        ) : null}
 
-        {(activeTab === 'overview' || activeTab === 'balance') && (
+        {activeTab === 'balance' ? (
           <section className="app-card analytics-v2-balance-card">
             <div className="analytics-v2-section-head">
               <div>
@@ -512,15 +632,15 @@ export default function AnalyticsPage() {
               </div>
               <button type="button" className="analytics-v2-light-button" onClick={() => openJournal({ period: periodPreset === 'day' ? 'today' : periodPreset === 'week' ? 'week' : periodPreset === 'month' ? 'month' : 'custom' })}>{t('analytics.journal.action')}</button>
             </div>
-            <DynamicsChart points={analytics.dailyPoints} mode="balance" />
+            <LineChart points={analytics.dailyPoints} mode="balance" />
             <div className="analytics-v2-ratio-grid">
               <article>
-                <span>{t('analytics.v2.balance.expenseRatio')}</span>
-                <strong>{Math.round(analytics.expenseRatio)}%</strong>
+                <span>{t('analytics.v2.balance.income')}</span>
+                <strong>{formatMoney(analytics.totalIncome, 'RUB')}</strong>
               </article>
               <article>
-                <span>{t('analytics.v2.balance.profitRatio')}</span>
-                <strong>{Math.round(analytics.profitRatio)}%</strong>
+                <span>{t('analytics.v2.balance.expense')}</span>
+                <strong>{formatMoney(analytics.totalExpense, 'RUB')}</strong>
               </article>
               <article>
                 <span>{t('analytics.v2.balance.operations')}</span>
@@ -528,9 +648,9 @@ export default function AnalyticsPage() {
               </article>
             </div>
           </section>
-        )}
+        ) : null}
 
-        {(activeTab === 'expense' || activeTab === 'income') && (
+        {(activeTab === 'expense' || activeTab === 'income') ? (
           <section className="app-card analytics-v2-detail-card">
             <div className="analytics-v2-section-head">
               <div>
@@ -544,7 +664,7 @@ export default function AnalyticsPage() {
               onOpen={(group) => openGroupJournal(group, activeTab)}
             />
           </section>
-        )}
+        ) : null}
 
         <section className="analytics-v2-actions">
           <button type="button" onClick={() => openModal({ type: 'ai-text-overlay', initialCommand: t('analytics.ask.topExpense'), autoSubmitInitialCommand: true })}>{t('analytics.v2.action.ask')}</button>

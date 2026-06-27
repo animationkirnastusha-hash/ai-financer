@@ -1,7 +1,13 @@
-/* Pack 188: analytics v2 shell, tabs and period controls. */
+/* Pack 188b: analytics v2 shell, tabs and period controls. */
+.analytics-v2-page {
+  overflow-x: hidden;
+}
+
 .analytics-v2-page__inner {
   gap: 14px;
+  max-width: 100%;
   padding-bottom: 112px;
+  overflow-x: hidden;
 }
 
 .analytics-v2-tabs {
