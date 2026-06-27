@@ -20,10 +20,10 @@ const DEFAULT_RIGHT_ACTIONS: Action[] = ['notifications', 'settings'];
 const FIXED_RIGHT_ACTIONS: Action[] = ['notifications', 'settings'];
 
 
-function MenuDotsIcon() {
+function MenuLinesIcon() {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true" className="screen-top-bar__svg screen-top-bar__svg--menu">
-      <path d="M5.6 7.4a1 1 0 0 1 1-1h10.8a1 1 0 1 1 0 2H6.6a1 1 0 0 1-1-1Zm0 4.6a1 1 0 0 1 1-1h10.8a1 1 0 1 1 0 2H6.6a1 1 0 0 1-1-1Zm0 4.6a1 1 0 0 1 1-1h10.8a1 1 0 1 1 0 2H6.6a1 1 0 0 1-1-1Z" />
+      <path d="M5.5 7.25h13a1.05 1.05 0 1 1 0 2.1h-13a1.05 1.05 0 0 1 0-2.1Zm0 3.7h13a1.05 1.05 0 1 1 0 2.1h-13a1.05 1.05 0 0 1 0-2.1Zm0 3.7h13a1.05 1.05 0 1 1 0 2.1h-13a1.05 1.05 0 0 1 0-2.1Z" />
     </svg>
   );
 }
@@ -182,9 +182,9 @@ export function ScreenTopBar({ title, left = 'menu', right = DEFAULT_RIGHT_ACTIO
 
       <div className="screen-top-bar__actions">
         <div className="screen-top-bar__side screen-top-bar__side--left">
-          {left !== 'none' ? (
+          {left === 'menu' ? (
             <IconButton label={t('common.menu')} onClick={openNavigationMenu}>
-              <MenuDotsIcon />
+              <MenuLinesIcon />
             </IconButton>
           ) : null}
           {left === 'back' ? <TextButton label={t('common.back')} onClick={goBack} compact><BackChevron /></TextButton> : null}

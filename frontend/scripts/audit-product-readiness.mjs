@@ -102,16 +102,23 @@ function checkNavigationIA() {
   const router = read(path.resolve(srcRoot, 'app/router/AppRouter.tsx'));
   const topBar = read(path.resolve(srcRoot, 'shared/ui/ScreenTopBar.tsx'));
 
-  for (const screen of ['dashboard', 'accounts', 'journal', 'analytics', 'profile']) {
+  for (const screen of ['dashboard', 'accounts', 'journal', 'analytics']) {
     if (!bottomNav.includes(`screen: '${screen}'`)) addFinding('bottom-nav', path.resolve(srcRoot, 'features/navigation/ui/AppBottomNavigation.tsx'), `bottom nav missing ${screen}`);
     if (navSheet.includes(`screen: '${screen}'`)) addFinding('navigation-duplication', path.resolve(srcRoot, 'features/navigation/ui/AppNavigationSheet.tsx'), `menu duplicates bottom-nav screen ${screen}`);
+  }
+
+  if (!bottomNav.includes("navigateTo('profile')") && !bottomNav.includes("screen: 'profile'")) {
+    addFinding('bottom-nav', path.resolve(srcRoot, 'features/navigation/ui/AppBottomNavigation.tsx'), 'bottom nav missing profile');
+  }
+  if (navSheet.includes("screen: 'profile'")) {
+    addFinding('navigation-duplication', path.resolve(srcRoot, 'features/navigation/ui/AppNavigationSheet.tsx'), 'menu duplicates bottom-nav screen profile');
   }
 
   for (const screen of ['goals', 'spending-limits', 'obligations', 'referral']) {
     if (!navSheet.includes(`screen: '${screen}'`)) addFinding('navigation-menu', path.resolve(srcRoot, 'features/navigation/ui/AppNavigationSheet.tsx'), `drawer menu missing ${screen}`);
   }
 
-  if (!topBar.includes('MenuDotsIcon')) addFinding('top-bar-menu', path.resolve(srcRoot, 'shared/ui/ScreenTopBar.tsx'), 'top bar menu icon is missing');
+  if (!topBar.includes('MenuDotsIcon') && !topBar.includes('MenuLinesIcon')) addFinding('top-bar-menu', path.resolve(srcRoot, 'shared/ui/ScreenTopBar.tsx'), 'top bar menu icon is missing');
   if (topBar.includes("['notifications', 'analytics', 'settings']")) addFinding('top-bar-analytics', path.resolve(srcRoot, 'shared/ui/ScreenTopBar.tsx'), 'top bar still uses analytics as default action');
 
   for (const removedScreen of ['store', 'premium', 'business', 'business-accountant', 'receipt-scans', 'sections']) {
