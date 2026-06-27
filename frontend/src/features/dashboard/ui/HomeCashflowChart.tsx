@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import type { TransactionDto } from '@/features/transactions/api/transactions.api';
 import type { HomeCashflowMode, HomeCashflowPeriod } from '@/features/dashboard/lib/homeFinanceAnalytics';
 import { buildHomeFinanceAnalytics, conicGradient } from '@/features/dashboard/lib/homeFinanceAnalytics';
@@ -16,6 +17,7 @@ type Props = {
   onPeriodChange: (period: HomeCashflowPeriod) => void;
   onOpenDetails: () => void;
   onCreate: (mode: HomeCashflowMode) => void;
+  balanceSlot?: ReactNode;
 };
 
 export function HomeCashflowChart({
@@ -27,6 +29,7 @@ export function HomeCashflowChart({
   onPeriodChange,
   onOpenDetails,
   onCreate,
+  balanceSlot,
 }: Props) {
   const { t, rt } = useI18n();
   const analytics = buildHomeFinanceAnalytics(transactions, mode, period, rates, {
@@ -41,6 +44,8 @@ export function HomeCashflowChart({
 
   return (
     <section className="app-card app-home-cashflow-card">
+      {balanceSlot ? <div className="app-home-cashflow-card__balance">{balanceSlot}</div> : null}
+
       <div className="app-home-cashflow-card__head">
         <div>
           <div className="app-eyebrow">{t('dashboard.cashflow.eyebrow')}</div>

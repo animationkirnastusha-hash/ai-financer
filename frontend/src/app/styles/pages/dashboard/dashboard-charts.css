@@ -171,3 +171,7 @@
     grid-template-columns: 1fr;
   }
 }
+
+.app-home-cashflow-card__balance {
+  margin-bottom: 14px;
+}

@@ -87,3 +87,89 @@
     grid-template-columns: 1fr !important;
   }
 }
+
+/* Pack 184: balance lives inside the cashflow card. */
+.app-home-balance-card--embedded {
+  display: grid;
+  gap: 12px;
+  padding: 16px 12px 14px;
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 26px;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(129,239,208,.10), transparent 44%),
+    rgba(255,255,255,.035);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.045);
+}
+
+.app-home-balance-card__center {
+  display: grid;
+  justify-items: center;
+  gap: 5px;
+  text-align: center;
+}
+
+.app-home-balance-card__center .app-eyebrow {
+  justify-self: center;
+}
+
+.app-home-balance-card__center p,
+.app-home-balance-card__center span {
+  margin: 0;
+  max-width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-home-balance-card__center p {
+  color: rgba(255,255,255,.82);
+  font-size: 13px;
+  font-weight: 780;
+}
+
+.app-home-balance-card__center span {
+  color: rgba(255,255,255,.46);
+  font-size: 11px;
+  font-weight: 620;
+}
+
+.app-home-balance-card--embedded .app-home-balance-card__amount {
+  width: 100%;
+  text-align: center;
+}
+
+.app-home-balance-card--embedded .app-home-balance-card__rate {
+  justify-self: center;
+  max-width: 100%;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(255,255,255,.045);
+  color: rgba(255,255,255,.54);
+  text-align: center;
+}
+
+.app-home-balance-card__footer--center {
+  display: grid;
+  grid-template-columns: 34px minmax(0, auto) 34px;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+}
+
+.app-home-balance-card__step {
+  width: 34px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 999px;
+  background: rgba(255,255,255,.04);
+  color: rgba(255,255,255,.70);
+  font-size: 19px;
+  line-height: 1;
+}
+
+.app-home-balance-card__step:active {
+  transform: scale(.96);
+}

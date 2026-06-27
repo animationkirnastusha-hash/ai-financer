@@ -19,7 +19,7 @@ import { useTransactionsStore } from "@/features/transactions/model/transactions
 import { useVoiceInput } from "@/features/voice/model/useVoiceInput";
 import { VOICE_MANUAL_SESSION_MS } from "@/features/voice/model/voiceConstants";
 import { shouldIgnoreVoiceCommand } from "@/features/voice/model/voiceText";
-import { VoicePermissionIntro } from "@/features/voice/ui/VoicePermissionIntro";
+import { VoicePermissionMiniPrompt } from "@/features/voice/ui/VoicePermissionMiniPrompt";
 import { useI18n } from "@/shared/lib/i18n";
 import {
   OVERLAY_DISMISS_DRAG_PX,
@@ -164,7 +164,6 @@ export function TextChatOverlay({
   const startFirstRunSetup = useFirstRunChatSetupStore((state) => state.start);
   const skipSetupMicrophone = useFirstRunChatSetupStore((state) => state.skipMicrophone);
   const finishSetupMicrophone = useFirstRunChatSetupStore((state) => state.finishMicrophone);
-  const failSetupMicrophone = useFirstRunChatSetupStore((state) => state.failMicrophone);
   const completeSetupAccount = useFirstRunChatSetupStore((state) => state.completeAccount);
   const completeSetupWithAccount = useFirstRunChatSetupStore((state) => state.completeWithAccount);
   const dismissFirstRunSetup = useFirstRunChatSetupStore((state) => state.dismiss);
@@ -309,6 +308,32 @@ export function TextChatOverlay({
     if (voice.state === "uploading") setVoiceHint(t("textChat.voice.recognizing"));
   }, [t, voice]);
 
+  const promptVoicePermissionInChat = useCallback(() => {
+    voicePointerIdRef.current = null;
+    voicePressActiveRef.current = false;
+    voiceStopAfterStartRef.current = false;
+    voiceCancelledBySwipeRef.current = false;
+    setIsVoicePressed(false);
+    voice.cancel();
+    voice.reset?.();
+    setVoiceHint(t("textChat.voice.needPermission"));
+    setShowVoicePermissionHelp(true);
+    shouldStickToBottomRef.current = true;
+    setChatMessages((messages) => {
+      if (messages.some((message) => message.id === "voice-permission-request")) return messages;
+      return [
+        ...messages,
+        {
+          id: "voice-permission-request",
+          role: "assistant",
+          kind: "text",
+          text: t("textChat.voice.permissionPrompt"),
+          createdAt: new Date().toISOString(),
+        },
+      ];
+    });
+  }, [setChatMessages, t, voice]);
+
   const startVoice = useCallback(async () => {
     if (chat.isSending || voice.state === "recording" || voice.state === "uploading") return false;
 
@@ -339,8 +364,11 @@ export function TextChatOverlay({
       const nextPermission = await voice.refreshPermissionState?.();
       const allowed = nextPermission === "granted";
       setVoicePermissionPrompted(allowed);
-      setVoiceHint(allowed ? t("textChat.voice.permissionReady") : t("textChat.voice.needPermission"));
-      if (!allowed) setShowVoicePermissionHelp(true);
+      if (allowed) {
+        setVoiceHint(t("textChat.voice.permissionReady"));
+      } else {
+        promptVoicePermissionInChat();
+      }
     } else if (result === "busy") {
       setVoiceHint(t("textChat.voice.busy"));
     } else {
@@ -348,13 +376,19 @@ export function TextChatOverlay({
     }
 
     return false;
-  }, [chat.isSending, setVoicePermissionPrompted, t, voice]);
+  }, [chat.isSending, promptVoicePermissionInChat, setVoicePermissionPrompted, t, voice]);
 
   const handleVoicePointerDown = useCallback(
     (event: PointerEvent<HTMLButtonElement>) => {
       if (value.trim() || chat.isSending || voice.state === "uploading" || isSetupBusy || setupStage === 'microphone') return;
       event.preventDefault();
       event.stopPropagation();
+
+      if (!setupIsActive && voice.permissionState !== "granted") {
+        promptVoicePermissionInChat();
+        return;
+      }
+
       voicePointerIdRef.current = event.pointerId;
       voiceStartXRef.current = event.clientX;
       voiceCancelledBySwipeRef.current = false;
@@ -363,7 +397,7 @@ export function TextChatOverlay({
       event.currentTarget.setPointerCapture?.(event.pointerId);
       void startVoice();
     },
-    [chat.isSending, isSetupBusy, setupStage, startVoice, value, voice.state],
+    [chat.isSending, isSetupBusy, promptVoicePermissionInChat, setupIsActive, setupStage, startVoice, value, voice.permissionState, voice.state],
   );
 
   const handleVoicePointerMove = useCallback(
@@ -812,14 +846,14 @@ export function TextChatOverlay({
       setVoicePermissionPrompted(false);
       setVoiceHint(t('textChat.voice.needPermission'));
       setShowVoicePermissionHelp(true);
-      if (setupStage === 'microphone') failSetupMicrophone();
+      setIsVoicePressed(false);
       voice.reset?.();
       return;
     }
 
     setVoiceHint(t('textChat.voice.startFailed'));
     voice.reset?.();
-  }, [failSetupMicrophone, setVoicePermissionPrompted, setupStage, t, voice, voice.error]);
+  }, [setVoicePermissionPrompted, t, voice, voice.error]);
 
   useEffect(() => () => {
     if (autoCloseTimerRef.current !== null) window.clearTimeout(autoCloseTimerRef.current);
@@ -961,12 +995,13 @@ export function TextChatOverlay({
         />
 
         {showVoicePermissionHelp ? (
-          <VoicePermissionIntro
+          <VoicePermissionMiniPrompt
             wakeName={companionName}
             isPriming={isSetupBusy}
             permissionState={voice.permissionState}
+            placement="chat"
             onPrime={handleVoicePermissionRetry}
-            onSkip={setupStage === 'microphone' ? handleSetupSkipMicrophone : () => setShowVoicePermissionHelp(false)}
+            onClose={setupStage === 'microphone' ? handleSetupSkipMicrophone : () => setShowVoicePermissionHelp(false)}
           />
         ) : null}
       </div>

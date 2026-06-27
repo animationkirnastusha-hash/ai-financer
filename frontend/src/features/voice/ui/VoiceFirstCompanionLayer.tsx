@@ -9,6 +9,7 @@ import { useVoiceInput } from '@/features/voice/model/useVoiceInput';
 import { useVoiceSessionMachine } from '@/features/voice/model/useVoiceSessionMachine';
 import type { VoiceCompanionMood } from '@/features/voice/model/voiceSession.types';
 import { VoiceCompanionSurface } from '@/features/voice/ui/companion/VoiceCompanionSurface';
+import { VoicePermissionMiniPrompt } from '@/features/voice/ui/VoicePermissionMiniPrompt';
 import { useVoiceCompanionThought } from '@/features/voice/ui/companion/useVoiceCompanionThought';
 import { useVoiceHoldGesture } from '@/features/voice/ui/companion/useVoiceHoldGesture';
 import { useI18n } from '@/shared/lib/i18n';
@@ -33,6 +34,7 @@ export function VoiceFirstCompanionLayer() {
   const setVoicePermissionPrompted = useSettingsStore((state) => state.setVoicePermissionPrompted);
 
   const [isPriming, setIsPriming] = useState(false);
+  const [showPermissionPrompt, setShowPermissionPrompt] = useState(false);
 
   const lastAssistantMessageKeyRef = useRef('');
   const previousHasTextChatOverlayRef = useRef(false);
@@ -92,6 +94,11 @@ export function VoiceFirstCompanionLayer() {
     }
   }, [canUseVoice, setVoicePermissionPrompted, voice.permissionState, voicePermissionPrompted]);
 
+
+  useEffect(() => {
+    if (voice.permissionState === 'granted') setShowPermissionPrompt(false);
+  }, [voice.permissionState]);
+
   useEffect(() => {
     handleTextRef.current = async (text: string) => {
       const command = text.trim();
@@ -124,11 +131,20 @@ export function VoiceFirstCompanionLayer() {
     openModal({ type: 'ai-text-overlay', mode: 'text', autoStartVoice: false, autoCloseOnVoiceResult: false });
   }, [openModal]);
 
+  const openPermissionPrompt = useCallback(() => {
+    voice.cancel();
+    voice.reset?.();
+    resetVoiceMachine();
+    setIsPriming(false);
+    setShowPermissionPrompt(true);
+    showThought(t('voice.thought.micNeeded'), 'warning', 2600);
+  }, [resetVoiceMachine, showThought, t, voice]);
+
   const explainVoiceUnavailable = useCallback(() => {
     if (!canUseVoice || microphoneUnsupported) showThought(t('voice.thought.unavailable'), 'warning', 2400);
-    else if (voice.permissionState === 'denied') showThought(t('voice.thought.micNeeded'), 'warning', 2800);
+    else if (voice.permissionState === 'denied') openPermissionPrompt();
     else if (hasPending) showThought(t('voice.thought.closeActionFirst'), 'warning', 2400);
-  }, [canUseVoice, hasPending, microphoneUnsupported, showThought, t, voice.permissionState]);
+  }, [canUseVoice, hasPending, microphoneUnsupported, openPermissionPrompt, showThought, t, voice.permissionState]);
 
   const startHoldRecording = useCallback(async () => {
     if (!canAttemptManualRecording) {
@@ -150,11 +166,15 @@ export function VoiceFirstCompanionLayer() {
       return true;
     }
 
-    if (result === 'permission-consumed') {
+    if (result === 'permission-consumed' || result === 'permission-ready') {
       const nextPermission = await voice.refreshPermissionState?.();
       const allowed = nextPermission === 'granted';
       setVoicePermissionPrompted(allowed);
-      showThought(allowed ? t('voice.thought.micReady') : t('voice.thought.micNeeded'), allowed ? 'success' : 'warning', allowed ? 2800 : 3200);
+      if (allowed) {
+        showThought(t('voice.thought.micReady'), 'success', 2800);
+      } else {
+        openPermissionPrompt();
+      }
       resetVoiceMachine();
       voice.reset?.();
       return false;
@@ -162,7 +182,7 @@ export function VoiceFirstCompanionLayer() {
 
     explainVoiceUnavailable();
     return false;
-  }, [canAttemptManualRecording, explainVoiceUnavailable, microphoneUnsupported, resetVoiceMachine, setVoicePermissionPrompted, showThought, t, voice]);
+  }, [canAttemptManualRecording, explainVoiceUnavailable, microphoneUnsupported, openPermissionPrompt, resetVoiceMachine, setVoicePermissionPrompted, showThought, t, voice]);
 
   const handleCompanionTap = useCallback(() => {
     if (!canUseVoice) {
@@ -175,8 +195,8 @@ export function VoiceFirstCompanionLayer() {
       return;
     }
 
-    if (voice.permissionState === 'denied') {
-      showThought(t('voice.thought.micNeeded'), 'warning', 2800);
+    if (voice.permissionState !== 'granted') {
+      openPermissionPrompt();
       return;
     }
 
@@ -186,7 +206,7 @@ export function VoiceFirstCompanionLayer() {
     }
 
     showThought(t('voice.fina.holdVoiceOnly'), 'neutral', 1900);
-  }, [canUseVoice, hasPending, microphoneUnsupported, showThought, t, voice.permissionState]);
+  }, [canUseVoice, hasPending, microphoneUnsupported, openPermissionPrompt, showThought, t, voice.permissionState]);
 
   const primeVoicePermission = useCallback(async () => {
     setIsPriming(true);
@@ -194,6 +214,7 @@ export function VoiceFirstCompanionLayer() {
       const ready = await voice.primePermission();
       if (ready) {
         setVoicePermissionPrompted(true);
+        setShowPermissionPrompt(false);
         showThought(t('voice.thought.micReady'), 'success', 3200);
       } else {
         setVoicePermissionPrompted(false);
@@ -252,7 +273,7 @@ export function VoiceFirstCompanionLayer() {
 
     if (voice.error === 'microphone-denied' || voice.error === 'not-allowed' || voice.error === 'service-not-allowed') {
       setVoicePermissionPrompted(false);
-      showThought(t('voice.thought.micNeeded'), 'warning', 3600);
+      openPermissionPrompt();
       resetGesture();
       resetVoiceMachine();
       return;
@@ -263,7 +284,7 @@ export function VoiceFirstCompanionLayer() {
       resetGesture();
       resetVoiceMachine();
     }
-  }, [resetGesture, resetVoiceMachine, showThought, t, voice.error]);
+  }, [openPermissionPrompt, resetGesture, resetVoiceMachine, setVoicePermissionPrompted, showThought, t, voice.error]);
 
   useEffect(() => {
     const lastMessage = chat.messages.filter((message) => message.role === 'assistant').at(-1);
@@ -338,29 +359,42 @@ export function VoiceFirstCompanionLayer() {
   const showFloatingCompanion = !hasOpenModal;
 
   return (
-    <VoiceCompanionSurface
-      needsIntro={needsIntro}
-      showFloatingCompanion={showFloatingCompanion}
-      wakeName={wakeName}
-      isPriming={isPriming}
-      permissionState={voice.permissionState}
-      onPrimePermission={primeVoicePermission}
-      onSkipPermissionIntro={() => undefined}
-      thought={thought}
-      canUseVoice={canUseVoice}
-      isBusy={isBusy}
-      voiceState={voice.state}
-      captureMode={captureMode}
-      phase={phase}
-      cooldownUntil={cooldownUntil}
-      mood={mood}
-      gestureMode={gestureMode}
-      ariaLabel={t(tapToTextEnabled ? 'voice.fina.tapTextHoldVoice' : 'voice.fina.holdVoiceOnly')}
-      tapToTextEnabled={tapToTextEnabled}
-      onPointerDown={handlePointerDown}
-      onPointerMove={handlePointerMove}
-      onPointerUp={handlePointerUp}
-      onPointerCancel={handlePointerCancel}
-    />
+    <>
+      <VoiceCompanionSurface
+        needsIntro={needsIntro}
+        showFloatingCompanion={showFloatingCompanion}
+        wakeName={wakeName}
+        isPriming={isPriming}
+        permissionState={voice.permissionState}
+        onPrimePermission={primeVoicePermission}
+        onSkipPermissionIntro={() => undefined}
+        thought={thought}
+        canUseVoice={canUseVoice}
+        isBusy={isBusy}
+        voiceState={voice.state}
+        captureMode={captureMode}
+        phase={phase}
+        cooldownUntil={cooldownUntil}
+        mood={mood}
+        gestureMode={gestureMode}
+        ariaLabel={t(tapToTextEnabled ? 'voice.fina.tapTextHoldVoice' : 'voice.fina.holdVoiceOnly')}
+        tapToTextEnabled={tapToTextEnabled}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerCancel}
+      />
+
+      {showPermissionPrompt && !hasOpenModal ? (
+        <VoicePermissionMiniPrompt
+          wakeName={wakeName}
+          isPriming={isPriming}
+          permissionState={voice.permissionState}
+          placement="floating"
+          onPrime={primeVoicePermission}
+          onClose={() => setShowPermissionPrompt(false)}
+        />
+      ) : null}
+    </>
   );
 }

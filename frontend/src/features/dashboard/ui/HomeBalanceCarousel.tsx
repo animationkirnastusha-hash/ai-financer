@@ -14,10 +14,6 @@ type Props = {
   secondaryCurrency: AppCurrency;
   secondaryCurrencyEnabled: boolean;
   rates: Rates;
-  income: number;
-  expenses: number;
-  delta: number;
-  onOpenAccounts: () => void;
 };
 
 type Slide =
@@ -44,10 +40,6 @@ export function HomeBalanceCarousel({
   secondaryCurrency,
   secondaryCurrencyEnabled,
   rates,
-  income,
-  expenses,
-  delta,
-  onOpenAccounts,
 }: Props) {
   const { t } = useI18n();
   const [activeIndex, setActiveIndex] = useState(0);
@@ -99,36 +91,23 @@ export function HomeBalanceCarousel({
   };
 
   return (
-    <header className="app-card app-card--hero app-home-balance-card" data-no-swipe="true" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
-      <div className="app-home-balance-card__top">
-        <div className="min-w-0">
-          <div className="app-eyebrow">{t('dashboard.balance.eyebrow')}</div>
-          <div className="app-home-balance-card__amount" data-scale={amountScale}>{activeAmountText}</div>
-          <p>{active.kind === 'total' ? active.currency : active.name} · {active.caption}</p>
-        </div>
-        <div className="app-home-balance-card__nav">
-          <button type="button" onClick={() => go(-1)} aria-label={t('dashboard.balance.prev')}>‹</button>
-          <span>{active.kind === 'total' ? t('dashboard.balance.total') : active.currency}</span>
-          <button type="button" onClick={() => go(1)} aria-label={t('dashboard.balance.next')}>›</button>
-        </div>
+    <section className="app-home-balance-card app-home-balance-card--embedded" data-no-swipe="true" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
+      <div className="app-home-balance-card__center">
+        <div className="app-eyebrow">{t('dashboard.balance.eyebrow')}</div>
+        <div className="app-home-balance-card__amount" data-scale={amountScale}>{activeAmountText}</div>
+        <p>{active.kind === 'total' ? t('dashboard.balance.allMoney') : active.name}</p>
+        <span>{active.kind === 'total' ? active.caption : `${active.currency} · ${active.caption}`}</span>
       </div>
 
       <div className="app-home-balance-card__rate">{active.conversion}</div>
 
-      <div className="app-home-balance-card__metrics">
-        <div className="app-home-metric"><span>{t('dashboard.balance.income')}</span><b>{formatMoney(income, mainCurrency, { sign: 'plus' })}</b></div>
-        <div className="app-home-metric"><span>{t('dashboard.balance.expenses')}</span><b>{formatMoney(expenses, mainCurrency, { sign: 'minus' })}</b></div>
-        <div className="app-home-metric"><span>{t('dashboard.balance.result')}</span><b>{formatMoney(delta, mainCurrency, { sign: 'auto' })}</b></div>
-      </div>
-
-      <div className="app-home-balance-card__footer">
+      <div className="app-home-balance-card__footer app-home-balance-card__footer--center">
+        <button type="button" className="app-home-balance-card__step" onClick={() => go(-1)} aria-label={t('dashboard.balance.prev')}>‹</button>
         <div className="app-home-balance-card__dots" aria-hidden="true">
           {slides.map((slide, index) => <i key={slide.id} data-active={index === safeIndex} />)}
         </div>
-        <div className="app-home-balance-card__actions">
-          <button type="button" className="app-home-balance-card__accounts" onClick={onOpenAccounts}>{t('dashboard.balance.openAccounts')}</button>
-        </div>
+        <button type="button" className="app-home-balance-card__step" onClick={() => go(1)} aria-label={t('dashboard.balance.next')}>›</button>
       </div>
-    </header>
+    </section>
   );
 }

@@ -156,11 +156,10 @@ export function useVoiceInput({ onText, lang = 'ru-RU', sessionMs = 5200, permis
 
       if (currentPermission !== 'granted') {
         logVoiceDebugEvent('manual_voice_permission_required', { permissionState: currentPermission, permissionPrimed });
-        const allowed = await primePermission();
-        if (!allowed) {
-          recorder.reset();
-          return 'permission-consumed';
-        }
+        recorder.reset();
+        setPermissionPrimed(false);
+        setPermissionError(currentPermission === 'denied' ? 'microphone-denied' : null);
+        return 'permission-ready';
       }
 
       const started = await recorder.startRecording();

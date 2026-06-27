@@ -10,24 +10,8 @@ import { useI18n } from '@/shared/lib/i18n';
 import type { HomeCashflowMode, HomeCashflowPeriod } from '@/features/dashboard/lib/homeFinanceAnalytics';
 import { useNavigationStore } from '@/features/navigation/model/navigation.store';
 import { useSettingsStore } from '@/features/settings/model/settings.store';
-import type { AppCurrency } from '@/features/settings/model/settings.types';
 import { useTransactionsStore } from '@/features/transactions/model/transactions.store';
-import { convertCurrency } from '@/features/currency/lib/currency';
 import { ScreenTopBar } from '@/shared/ui/ScreenTopBar';
-
-function isCurrentMonth(dateValue: string) {
-  const date = new Date(dateValue);
-  const now = new Date();
-  return date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth();
-}
-
-function toRub(amount: number, currency: string, rates: { usd: number; eur: number }) {
-  return convertCurrency(amount, currency, 'RUB', { USD: rates.usd, EUR: rates.eur });
-}
-
-function fromRub(amount: number, currency: AppCurrency, rates: { usd: number; eur: number }) {
-  return convertCurrency(amount, 'RUB', currency, { USD: rates.usd, EUR: rates.eur });
-}
 
 export default function DashboardPage() {
   const { t } = useI18n();
@@ -63,19 +47,10 @@ export default function DashboardPage() {
   };
 
 
-  const month = useMemo(() => {
-    const currentMonth = transactions.filter((item) => isCurrentMonth(item.date));
-    const incomeRub = currentMonth.reduce((sum, item) => item.type === 'income' ? sum + toRub(Number(item.amount || 0), item.account?.currency ?? 'RUB', rates) : sum, 0);
-    const expensesRub = currentMonth.reduce((sum, item) => item.type === 'expense' ? sum + toRub(Number(item.amount || 0), item.account?.currency ?? 'RUB', rates) : sum, 0);
-    const income = fromRub(incomeRub, mainCurrency, rates);
-    const expenses = fromRub(expensesRub, mainCurrency, rates);
-    return { income, expenses, delta: income - expenses };
-  }, [mainCurrency, rates, transactions]);
-
   return (
     <div className="app-page app-dashboard-page text-white">
       <div className="app-page__inner app-home-layout">
-        <ScreenTopBar title={t('screen.dashboard')} right={['notifications', 'analytics', 'settings']} />
+        <ScreenTopBar title={t('screen.dashboard')} right={['notifications', 'settings']} />
 
 
         {financeLoadError ? (
@@ -98,20 +73,6 @@ export default function DashboardPage() {
         ) : null}
 
         <div>
-          <HomeBalanceCarousel
-            accounts={accounts}
-            mainCurrency={mainCurrency}
-            secondaryCurrency={secondaryCurrency}
-            secondaryCurrencyEnabled={secondaryCurrencyEnabled}
-            rates={rates}
-            income={month.income}
-            expenses={month.expenses}
-            delta={month.delta}
-            onOpenAccounts={() => navigateTo('accounts')}
-          />
-        </div>
-
-        <div>
           <FinaCommandBar
             compact
             showTextAction={false}
@@ -126,21 +87,6 @@ export default function DashboardPage() {
           <ProductLearningCard />
         </div>
 
-        <section className="home-ia-grid" aria-label={t('dashboard.ia.label')}>
-          <button type="button" className="app-card home-ia-card" onClick={() => navigateTo('accounts')}>
-            <span>{t('dashboard.ia.accounts.title')}</span>
-            <small>{t('dashboard.ia.accounts.caption')}</small>
-          </button>
-          <button type="button" className="app-card home-ia-card" onClick={() => navigateTo('analytics')}>
-            <span>{t('dashboard.ia.analytics.title')}</span>
-            <small>{t('dashboard.ia.analytics.caption')}</small>
-          </button>
-          <button type="button" className="app-card home-ia-card" onClick={() => navigateTo('obligations')}>
-            <span>{t('dashboard.ia.obligations.title')}</span>
-            <small>{t('dashboard.ia.obligations.caption')}</small>
-          </button>
-        </section>
-
         <HomeObligationsWidget />
 
         <div>
@@ -149,6 +95,15 @@ export default function DashboardPage() {
             mode={cashflowMode}
             period={cashflowPeriod}
             rates={rates}
+            balanceSlot={
+              <HomeBalanceCarousel
+                accounts={accounts}
+                mainCurrency={mainCurrency}
+                secondaryCurrency={secondaryCurrency}
+                secondaryCurrencyEnabled={secondaryCurrencyEnabled}
+                rates={rates}
+              />
+            }
             onModeChange={setCashflowMode}
             onPeriodChange={setCashflowPeriod}
             onOpenDetails={() => navigateTo('analytics')}
