@@ -1,19 +1,61 @@
-/* Shared navigation motion primitives. Reuse for future side panels and compact drawers. */
 :root {
-  --app-navigation-motion-enter: 380ms;
-  --app-navigation-motion-exit: 320ms;
-  --app-navigation-motion-expand: 300ms;
-  --app-navigation-motion-fast: 180ms;
-  --app-navigation-ease-out: cubic-bezier(.16, 1, .3, 1);
-  --app-navigation-ease-in: cubic-bezier(.7, 0, .84, 0);
-  --app-navigation-ease-standard: cubic-bezier(.2, .9, .22, 1);
+  --app-navigation-menu-enter-duration: 360ms;
+  --app-navigation-menu-exit-duration: 320ms;
+  --app-navigation-menu-expand-duration: 260ms;
+  --app-navigation-menu-ease-out: cubic-bezier(.16, 1, .28, 1);
+  --app-navigation-menu-ease-in: cubic-bezier(.45, 0, .7, .2);
+  --app-navigation-menu-ease-expand: cubic-bezier(.2, .82, .2, 1);
 }
 
-@media (prefers-reduced-motion: reduce) {
-  :root {
-    --app-navigation-motion-enter: 1ms;
-    --app-navigation-motion-exit: 1ms;
-    --app-navigation-motion-expand: 1ms;
-    --app-navigation-motion-fast: 1ms;
+@keyframes app-navigation-menu-enter {
+  0% {
+    opacity: .9;
+    transform: translate3d(calc(-100% - 22px), 0, 0) scale(.985);
+  }
+
+  72% {
+    opacity: 1;
+    transform: translate3d(2px, 0, 0) scale(1);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+@keyframes app-navigation-menu-exit {
+  0% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+
+  100% {
+    opacity: .86;
+    transform: translate3d(calc(-100% - 22px), 0, 0) scale(.985);
+  }
+}
+
+@keyframes app-navigation-close-tab-enter {
+  0% {
+    opacity: 0;
+    transform: translate3d(-12px, -50%, 0) scale(.92);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translate3d(0, -50%, 0) scale(1);
+  }
+}
+
+@keyframes app-navigation-close-tab-exit {
+  0% {
+    opacity: 1;
+    transform: translate3d(0, -50%, 0) scale(1);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate3d(-12px, -50%, 0) scale(.92);
   }
 }
