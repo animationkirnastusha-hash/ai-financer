@@ -1,6 +1,5 @@
 /* Cross-page grids and shared product surfaces. */
 .analytics-page .app-card,
-.spending-limits-page .app-card,
 .referral-page .app-card{
   border-color: rgba(255,255,255,.095);
   background: linear-gradient(145deg, rgba(255,255,255,.085), rgba(255,255,255,.038));
@@ -13,8 +12,6 @@
   align-items: stretch;
 }
 
-.spending-limits-page select,
-.spending-limits-page input,
 .referral-page input{
   min-height: 50px;
   border-radius: 18px;

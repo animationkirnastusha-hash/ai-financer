@@ -1,7 +1,6 @@
 /* Shared page content flow and responsive presentation. */
 .app-dashboard-page .app-home-layout,
 .app-analytics-page .app-page__inner,
-.spending-limits-page .app-page__inner,
 .referral-page .app-page__inner,
 .app-taxonomy-page .app-page__inner {
   gap: var(--app-content-gap, 14px);
@@ -12,8 +11,6 @@
 .app-dashboard-page .app-card,
 .app-analytics-page .analytics-hero-card,
 .app-analytics-page .analytics-section-card,
-.spending-limits-page .limits-hero,
-.spending-limits-page .limits-card,
 .referral-page .referral-hero,
 .referral-page .referral-code-panel{
   animation: app-soft-rise .22s ease both;

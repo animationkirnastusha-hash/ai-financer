@@ -1,7 +1,6 @@
 import { AccountModals } from '@/features/modals/ui/AccountModals';
 import { FinanceEntityModals } from '@/features/modals/ui/FinanceEntityModals';
 import { HomeFinanceModals } from '@/features/modals/ui/HomeFinanceModals';
-import { ObligationModals } from '@/features/modals/ui/ObligationModals';
 import { NotificationSheet } from '@/features/notifications/ui/NotificationSheet';
 import { UtilityModals } from '@/features/modals/ui/UtilityModals';
 import { ReportExportSheet } from '@/features/reports/ui/ReportExportSheet';
@@ -14,7 +13,6 @@ import {
   isFinanceEntityModal,
   isHomeFinanceModal,
   isNotificationModal,
-  isObligationModal,
   isReportModal,
   isTextChatModal,
   isUtilityModal,
@@ -108,22 +106,6 @@ export function AppModalRenderer({ closeAllModals, closeModal, deps, index, moda
       />
     );
   }
-
-  if (isObligationModal(modal)) {
-    return (
-      <ObligationModals
-        modal={modal}
-        layer={layer}
-        accounts={deps.accounts}
-        isSaving={deps.isObligationSaving}
-        closeModal={closeModal}
-        createLoan={deps.createLoan}
-        updateLoan={deps.updateLoan}
-        deleteLoan={deps.deleteLoan}
-      />
-    );
-  }
-
   if (isNotificationModal(modal)) {
     return <NotificationSheet open layer={layer} onClose={() => closeModal('notifications')} />;
   }

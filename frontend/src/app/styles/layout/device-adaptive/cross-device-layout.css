@@ -35,7 +35,6 @@ button[class*='button'] {
   .app-dashboard-page .app-page__inner,
   .app-analytics-page .app-page__inner,
   .accounts-page .app-page__inner,
-  .spending-limits-page .app-page__inner,
   .referral-page .app-page__inner,
   .app-taxonomy-page .app-page__inner {
     padding-bottom: 104px !important;
@@ -45,7 +44,6 @@ button[class*='button'] {
 @media (min-width: 1040px) {
   .app-dashboard-page .app-page__inner,
   .app-analytics-page .app-page__inner,
-  .spending-limits-page .app-page__inner,
   .referral-page .app-page__inner{
     display: grid;
     gap: 18px;

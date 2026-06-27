@@ -28,11 +28,4 @@ export function useAppModalHydration(stack: AppModalDescriptor[], deps: AppModal
       void deps.loadTransactions(true);
     }
   }, [deps.loadTransactions, stack]);
-
-
-  useEffect(() => {
-    if (stack.some((modal) => modal.type === 'obligation-edit')) {
-      void Promise.allSettled([deps.loadAccounts(), deps.loadObligations(true)]);
-    }
-  }, [deps.loadAccounts, deps.loadObligations, stack]);
 }

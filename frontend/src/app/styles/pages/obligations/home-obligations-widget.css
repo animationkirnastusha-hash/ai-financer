@@ -1,5 +1,4 @@
-/* Compact home obligations widget. */
-/* Pack 30: compact home obligations widget and visible account picker */
+/* Compact home payments widget used on dashboard. */
 .app-obligations-widget--compact,
 .app-obligations-widget--hidden {
   padding: 12px;

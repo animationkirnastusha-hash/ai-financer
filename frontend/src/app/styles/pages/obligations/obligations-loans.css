@@ -1,6 +1,0 @@
-/* Obligations loans manifest. Keep imports ordered; do not add raw rules here. */
-@import "./obligations-loans/obligations-loans-form-source.css";
-@import "./obligations-loans/obligations-loans-widget.css";
-@import "./obligations-loans/obligations-loans-account-picker.css";
-@import "./obligations-loans/obligations-loans-page-safety.css";
-@import "./obligations-loans/obligations-loans-recurring.css";

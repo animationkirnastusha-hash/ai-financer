@@ -66,8 +66,7 @@ body {
   }
 
   .accounts-page .app-page__inner,
-  .spending-limits-page .app-page__inner,
-  .referral-page .app-page__inne{
+  .referral-page .app-page__inner{
     max-width: 1040px;
   }
 

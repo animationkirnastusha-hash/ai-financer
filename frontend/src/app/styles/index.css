@@ -38,7 +38,6 @@
 @import "./features/chat/chat-input-modal.css";
 @import "./features/onboarding/product-learning.css";
 @import "./pages/obligations/obligations-summary.css";
-@import "./pages/obligations/obligations-loans.css";
 @import "./foundations/ios-input-zoom-guard.css";
 @import "./foundations/zoom-lock.css";
 @import "./foundations/performance.css";
@@ -49,7 +48,6 @@
 @import "./features/chat/text-chat-overlay/text-chat-overlay-actions.css";
 @import "./pages/accounts/account-details-sheet.css";
 @import "./features/chat/voice-composer.css";
-@import "./pages/limits/spending-limits.css";
 @import "./pages/goals-limits/goals-limits.css";
 @import "./pages/store/store.css";
 @import "./pages/payments/payments.css";

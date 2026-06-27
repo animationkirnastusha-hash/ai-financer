@@ -30,8 +30,7 @@ body:has(.app-dashboard-page) .voice-first-companion {
 }
 
 body:has(.monetization-page) .voice-first-companion .ai-companion-control,
-body:has(.referral-page) .voice-first-companion .ai-companion-control,
-body:has(.spending-limits-page) .voice-first-companion .ai-companion-control {
+body:has(.referral-page) .voice-first-companion .ai-companion-control {
   width: clamp(58px, 15vw, 68px) !important;
   height: clamp(58px, 15vw, 68px) !important;
 }

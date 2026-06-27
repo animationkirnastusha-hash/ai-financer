@@ -1,5 +1,3 @@
-import { goalsApi } from '@/features/goals/api/goals.api';
-import { GoalEditSheet } from '@/features/goals/ui/GoalEditSheet';
 import { CategoryEditSheet } from '@/features/sections/ui/CategoryEditSheet';
 import { SectionEditSheet } from '@/features/sections/ui/SectionEditSheet';
 import type { CategoryDto, SectionDto } from '@/features/sections/api/sections.api';
@@ -10,7 +8,7 @@ import type { DeleteTransactionBalanceMode, TransactionDto } from '@/features/tr
 
 type FinanceModal = Extract<
   AppModalDescriptor,
-  { type: 'transaction-create' | 'transaction-edit' | 'category-edit' | 'section-edit' | 'goal-edit' }
+  { type: 'transaction-create' | 'transaction-edit' | 'category-edit' | 'section-edit' }
 >;
 
 type Props = {
@@ -135,26 +133,6 @@ export function FinanceEntityModals({
             await deleteSection(section.id);
             closeModal('section-edit');
             await loadTaxonomy(true);
-          }}
-        />
-      );
-    case 'goal-edit':
-      return (
-        <GoalEditSheet
-          open
-          goal={modal.goal ?? null}
-          isSaving={false}
-          onClose={() => closeModal('goal-edit')}
-          onSave={async (payload) => {
-            if (modal.goal) await goalsApi.update(modal.goal.id, payload);
-            else await goalsApi.create(payload);
-            modal.onAfterSave?.();
-            closeModal('goal-edit');
-          }}
-          onDelete={async (goal) => {
-            await goalsApi.delete(goal.id);
-            modal.onAfterSave?.();
-            closeModal('goal-edit');
           }}
         />
       );
