@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAccountsStore } from '@/features/accounts/model/accounts.store';
 import { HomeBalanceCarousel } from '@/features/dashboard/ui/HomeBalanceCarousel';
 import { HomeCashflowChart } from '@/features/dashboard/ui/HomeCashflowChart';
@@ -45,6 +45,20 @@ export default function DashboardPage() {
   const retryFinanceLoad = () => {
     void Promise.allSettled([loadAccounts(true), loadTransactions(true)]);
   };
+
+  const openGuidedCashflowChat = useCallback((mode: HomeCashflowMode) => {
+    const promptKeys = mode === 'income'
+      ? ['dashboard.quickCreate.income.1', 'dashboard.quickCreate.income.2', 'dashboard.quickCreate.income.3']
+      : ['dashboard.quickCreate.expense.1', 'dashboard.quickCreate.expense.2', 'dashboard.quickCreate.expense.3'];
+    const prompt = t(promptKeys[Math.floor(Date.now() / 1000) % promptKeys.length]);
+
+    window.dispatchEvent(new CustomEvent('ai-financer:open-text-chat', {
+      detail: {
+        initialAssistantMessage: prompt,
+        quickCreateMode: mode,
+      },
+    }));
+  }, [t]);
 
 
   return (
@@ -96,7 +110,7 @@ export default function DashboardPage() {
             onModeChange={setCashflowMode}
             onPeriodChange={setCashflowPeriod}
             onOpenDetails={() => navigateTo('analytics')}
-            onCreate={() => window.dispatchEvent(new CustomEvent('ai-financer:open-text-chat', { detail: { command: cashflowMode === 'income' ? 'Добавь доход' : 'Добавь расход' } }))}
+            onCreate={openGuidedCashflowChat}
           />
         </div>
 

@@ -17,6 +17,7 @@ export type ChatVoiceSessionPayload = {
 
 export type SendChatMessagePayload = {
   text: string;
+  displayText?: string;
   source?: ChatCommandSource;
   voiceSession?: ChatVoiceSessionPayload;
   execute?: boolean;

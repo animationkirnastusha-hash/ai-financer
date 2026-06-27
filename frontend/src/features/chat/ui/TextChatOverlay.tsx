@@ -8,6 +8,7 @@ import {
 } from "react";
 
 import { createAccount, type AccountDto } from "@/features/accounts/api/accounts.api";
+import type { HomeCashflowMode } from "@/features/dashboard/lib/homeFinanceAnalytics";
 import { useAccountsStore } from "@/features/accounts/model/accounts.store";
 import { AuditLogDrawer } from "@/features/audit-log/ui/AuditLogDrawer";
 import { useChatController } from "@/features/chat/model/useChatController";
@@ -41,6 +42,7 @@ function createSetupMessage(id: string, text: string, kind: "text" | "success" |
     role: "assistant" as const,
     kind,
     text,
+    content: text,
     createdAt: new Date().toISOString(),
   };
 }
@@ -106,6 +108,7 @@ type TextChatOverlayProps = {
   autoCloseOnVoiceResult?: boolean;
   autoSubmitInitialCommand?: boolean;
   firstRunSetup?: boolean;
+  quickCreateMode?: HomeCashflowMode | null;
   layer?: number;
   onClose: () => void;
 };
@@ -119,6 +122,7 @@ export function TextChatOverlay({
   autoCloseOnVoiceResult = false,
   autoSubmitInitialCommand = false,
   firstRunSetup = false,
+  quickCreateMode = null,
   layer = 130,
   onClose,
 }: TextChatOverlayProps) {
@@ -151,6 +155,9 @@ export function TextChatOverlay({
   const [shouldRender, setShouldRender] = useState(open);
   const [isClosing, setIsClosing] = useState(false);
   const setupInputHandlerRef = useRef<((text: string) => Promise<boolean>) | null>(null);
+  const quickCreateConsumedRef = useRef(false);
+  const quickCreateBootstrappedRef = useRef(false);
+  const firstRunSetupBootstrappedRef = useRef(false);
 
   const chat = useChatController();
   const appendChatMessage = useChatStore((state) => state.appendMessage);
@@ -202,18 +209,33 @@ export function TextChatOverlay({
 
   const hasBlockingConfirmation = inlinePendingActions.length > 0;
 
+  const buildQuickCreateCommand = useCallback((rawText: string) => {
+    const clean = rawText.trim();
+    if (!quickCreateMode || quickCreateConsumedRef.current || inlinePendingActions.length > 0) {
+      return { text: clean, displayText: clean };
+    }
+
+    quickCreateConsumedRef.current = true;
+    const prefix = appLanguage === "en"
+      ? quickCreateMode === "income" ? "Record income:" : "Record expense:"
+      : quickCreateMode === "income" ? "Запиши доход:" : "Запиши расход:";
+
+    return { text: `${prefix} ${clean}`, displayText: clean };
+  }, [appLanguage, inlinePendingActions.length, quickCreateMode]);
+
   const sendText = useCallback(
     async (text: string, source: "text" | "voice" = "text") => {
       const clean = text.trim();
       if (!clean || chat.isSending) return;
+      const payload = buildQuickCreateCommand(clean);
       shouldStickToBottomRef.current = true;
       if (source === "voice") lastVoiceSendAtRef.current = Date.now();
       await chat.sendMessage(
-        { text: clean, source },
+        { text: payload.text, displayText: payload.displayText, source },
         { supersedeInFlight: true },
       );
     },
-    [chat],
+    [buildQuickCreateCommand, chat],
   );
 
   useEffect(() => {
@@ -488,6 +510,15 @@ export function TextChatOverlay({
   }, [cancelVoice, open, stopVoiceAndSend, t, voice.state]);
 
   useEffect(() => {
+    if (!open) {
+      quickCreateConsumedRef.current = false;
+      quickCreateBootstrappedRef.current = false;
+      firstRunSetupBootstrappedRef.current = false;
+      setShowSetupResumePrompt(false);
+    }
+  }, [open]);
+
+  useEffect(() => {
     if (!open) return;
     void voice.refreshPermissionState?.();
   }, [open, voice.refreshPermissionState]);
@@ -506,7 +537,7 @@ export function TextChatOverlay({
   useEffect(() => {
     if (!open) return;
     const text = initialAssistantMessage?.trim();
-    if (!text || firstRunSetup) return;
+    if (!text || firstRunSetup || quickCreateMode) return;
 
     const key = `onboarding:${text}`;
     if (initialAssistantMessageKeyRef.current === key) return;
@@ -523,7 +554,7 @@ export function TextChatOverlay({
       text,
       createdAt: new Date().toISOString(),
     });
-  }, [appendChatMessage, chat.messages, firstRunSetup, initialAssistantMessage, open]);
+  }, [appendChatMessage, chat.messages, firstRunSetup, initialAssistantMessage, open, quickCreateMode]);
 
   useEffect(() => {
     if (!open || mode !== "voice" || !autoStartVoice || autoStartDoneRef.current) return;
@@ -550,6 +581,21 @@ export function TextChatOverlay({
 
     setValue(command);
   }, [autoSubmitInitialCommand, companionName, initialCommand, open, sendText, t]);
+
+  useEffect(() => {
+    if (!open || !quickCreateMode || quickCreateBootstrappedRef.current) return;
+
+    const text = initialAssistantMessage?.trim();
+    quickCreateBootstrappedRef.current = true;
+    quickCreateConsumedRef.current = false;
+    shouldStickToBottomRef.current = true;
+    setValue("");
+    setShowSetupResumePrompt(false);
+    setShowVoicePermissionHelp(false);
+    setLocalHint(null);
+
+    setChatMessages(text ? [createSetupMessage(`quick-create-${quickCreateMode}-${Date.now()}`, text)] : []);
+  }, [initialAssistantMessage, open, quickCreateMode, setChatMessages]);
 
   useEffect(() => {
     if (!open || mode === "voice") return;
@@ -656,19 +702,28 @@ export function TextChatOverlay({
   );
 
   useEffect(() => {
-    if (!open || setupCompleted) return;
+    if (!open) return;
+
+    if (firstRunSetup) {
+      if (firstRunSetupBootstrappedRef.current) return;
+      firstRunSetupBootstrappedRef.current = true;
+      shouldStickToBottomRef.current = true;
+      setShowSetupResumePrompt(false);
+      setShowVoicePermissionHelp(false);
+      setLocalHint(null);
+      setValue("");
+      setChatMessages([]);
+      startFirstRunSetup();
+      return;
+    }
+
+    if (setupCompleted) return;
 
     if (setupInterrupted) {
       setChatMessages([]);
       setShowSetupResumePrompt(true);
-      return;
     }
-
-    if (!firstRunSetup || setupStage !== 'idle') return;
-    setShowSetupResumePrompt(false);
-    setChatMessages([]);
-    startFirstRunSetup();
-  }, [firstRunSetup, open, setChatMessages, setupCompleted, setupInterrupted, setupStage, startFirstRunSetup]);
+  }, [firstRunSetup, open, setChatMessages, setupCompleted, setupInterrupted, startFirstRunSetup]);
 
   useEffect(() => {
     if (!open || !setupIsActive || showSetupResumePrompt) return;

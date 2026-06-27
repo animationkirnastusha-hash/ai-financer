@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import type { AppModalDescriptor } from '@/features/modals/model/appModal.store';
+import type { HomeCashflowMode } from '@/features/dashboard/lib/homeFinanceAnalytics';
 
 type OpenModal = (modal: AppModalDescriptor) => void;
 
@@ -11,6 +12,7 @@ type TextChatEventDetail = {
   autoCloseOnVoiceResult?: boolean;
   autoSubmitInitialCommand?: boolean;
   firstRunSetup?: boolean;
+  quickCreateMode?: HomeCashflowMode | null;
 };
 
 export function useTextChatModalEvent(openModal: OpenModal) {
@@ -26,6 +28,7 @@ export function useTextChatModalEvent(openModal: OpenModal) {
         autoCloseOnVoiceResult: Boolean(detail?.autoCloseOnVoiceResult),
         autoSubmitInitialCommand: Boolean(detail?.autoSubmitInitialCommand),
         firstRunSetup: Boolean(detail?.firstRunSetup),
+        quickCreateMode: detail?.quickCreateMode ?? null,
       });
     };
 

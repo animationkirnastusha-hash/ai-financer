@@ -30,13 +30,12 @@ export function HomeCashflowChart({
   onCreate,
   balanceSlot,
 }: Props) {
-  const { t, rt } = useI18n();
+  const { t } = useI18n();
   const analytics = buildHomeFinanceAnalytics(transactions, mode, period, rates, {
     otherExpense: t('dashboard.analytics.otherExpense'),
     incomeSection: t('dashboard.analytics.incomeSection'),
     incomeCategory: t('dashboard.analytics.incomeCategory'),
   });
-  const primary = analytics.categories[0];
   const hasData = analytics.total > 0;
   const modeTitle = mode === 'expense' ? t('transaction.type.expense') : t('transaction.type.income');
   const periodTitle = (value: HomeCashflowPeriod) => value === 'day' ? t('analytics.period.day') : value === 'week' ? t('analytics.period.week') : t('analytics.period.month');
@@ -68,7 +67,7 @@ export function HomeCashflowChart({
         </span>
         <span className="app-home-chart-preview__text">
           <b>{hasData ? formatMoney(analytics.total, 'RUB', { sign: mode === 'expense' ? 'minus' : 'plus' }) : t('dashboard.cashflow.empty')}</b>
-          <small>{hasData && primary ? `${primary.icon ? `${primary.icon} ` : ``}${rt(primary.name)} — ${primary.percent}%` : t('dashboard.cashflow.emptyCaption')}</small>
+          <small>{hasData ? periodTitle(period) : t('dashboard.cashflow.emptyCaption')}</small>
         </span>
       </button>
 

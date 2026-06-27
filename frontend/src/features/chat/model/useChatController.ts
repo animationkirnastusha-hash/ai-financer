@@ -82,7 +82,8 @@ export function useChatController() {
       const payload: SendChatMessagePayload =
         typeof input === "string" ? { text: input, source: "text" } : input;
       const text = payload.text.trim();
-      if (!text) return;
+      const displayText = payload.displayText?.trim() || text;
+      if (!text || !displayText) return;
 
       if (isSending && !options.supersedeInFlight) return;
       if (options.supersedeInFlight && requestAbortController) {
@@ -98,8 +99,8 @@ export function useChatController() {
       const userMessage: ChatMessage = {
         id: crypto.randomUUID(),
         role: "user",
-        text,
-        content: text,
+        text: displayText,
+        content: displayText,
         createdAt: new Date().toISOString(),
         kind: "text",
       };
@@ -107,7 +108,7 @@ export function useChatController() {
       setMessages((prev) => appendLocalMessages(prev, userMessage));
 
       const navigationHandled = handleChatNavigationIntent({
-        text,
+        text: displayText,
         t,
         setMessages,
         navigateTo,
