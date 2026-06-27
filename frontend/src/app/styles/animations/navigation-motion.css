@@ -1,0 +1,19 @@
+/* Shared navigation motion primitives. Reuse for future side panels and compact drawers. */
+:root {
+  --app-navigation-motion-enter: 380ms;
+  --app-navigation-motion-exit: 320ms;
+  --app-navigation-motion-expand: 300ms;
+  --app-navigation-motion-fast: 180ms;
+  --app-navigation-ease-out: cubic-bezier(.16, 1, .3, 1);
+  --app-navigation-ease-in: cubic-bezier(.7, 0, .84, 0);
+  --app-navigation-ease-standard: cubic-bezier(.2, .9, .22, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --app-navigation-motion-enter: 1ms;
+    --app-navigation-motion-exit: 1ms;
+    --app-navigation-motion-expand: 1ms;
+    --app-navigation-motion-fast: 1ms;
+  }
+}

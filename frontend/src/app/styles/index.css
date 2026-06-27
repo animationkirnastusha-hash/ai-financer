@@ -55,6 +55,7 @@
 @import "./pages/admin/ai-training.css";
 @import "./pages/admin/admin-users.css";
 @import "./animations/app-motion.css";
+@import "./animations/navigation-motion.css";
 @import "./components/shared-surfaces.css";
 @import "./layout/device-adaptive.css";
 @import "./layout/page-grid.css";

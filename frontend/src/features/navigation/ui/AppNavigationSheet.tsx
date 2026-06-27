@@ -85,8 +85,10 @@ export function AppNavigationSheet() {
   const openFrame = useRef<number | null>(null);
   const drawerRef = useRef<HTMLDivElement | null>(null);
   const startX = useRef(0);
+  const startY = useRef(0);
   const activePointerId = useRef<number | null>(null);
   const swipeDistance = useRef(0);
+  const isHorizontalGesture = useRef(false);
 
   useEffect(() => {
     if (closeTimer.current !== null) {
@@ -102,6 +104,7 @@ export function AppNavigationSheet() {
       setIsRendered(true);
       setIsClosing(false);
       setIsVisible(false);
+      drawerRef.current?.style.removeProperty('--app-navigation-swipe-x');
       openFrame.current = window.requestAnimationFrame(() => {
         openFrame.current = window.requestAnimationFrame(() => {
           setIsVisible(true);
@@ -121,7 +124,7 @@ export function AppNavigationSheet() {
       setIsClosing(false);
       setIsExpanded(false);
       drawerRef.current?.style.removeProperty('--app-navigation-swipe-x');
-    }, 320);
+    }, 360);
 
     return () => {
       if (closeTimer.current !== null) {
@@ -141,24 +144,35 @@ export function AppNavigationSheet() {
 
   const handleNavigate = (screen: AppScreen) => {
     handleClose();
-    window.setTimeout(() => navigateTo(screen), 120);
+    window.setTimeout(() => navigateTo(screen), 160);
   };
 
   const handlePointerDown = (event: PointerEvent<HTMLDivElement>) => {
-    setIsDragging(true);
     activePointerId.current = event.pointerId;
     startX.current = event.clientX;
+    startY.current = event.clientY;
     swipeDistance.current = 0;
+    isHorizontalGesture.current = false;
     drawerRef.current?.setPointerCapture(event.pointerId);
   };
 
   const handlePointerMove = (event: PointerEvent<HTMLDivElement>) => {
     if (activePointerId.current !== event.pointerId) return;
 
-    const delta = event.clientX - startX.current;
-    if (delta >= 0) return;
+    const deltaX = event.clientX - startX.current;
+    const deltaY = event.clientY - startY.current;
 
-    swipeDistance.current = Math.min(Math.abs(delta), 180);
+    if (!isHorizontalGesture.current) {
+      if (Math.abs(deltaY) > 14 && Math.abs(deltaY) > Math.abs(deltaX)) return;
+      if (Math.abs(deltaX) < 8) return;
+      isHorizontalGesture.current = Math.abs(deltaX) > Math.abs(deltaY);
+      if (!isHorizontalGesture.current) return;
+      setIsDragging(true);
+    }
+
+    if (deltaX >= 0) return;
+
+    swipeDistance.current = Math.min(Math.abs(deltaX), isExpanded ? 240 : 150);
     drawerRef.current?.style.setProperty('--app-navigation-swipe-x', `${swipeDistance.current}px`);
   };
 
@@ -171,12 +185,13 @@ export function AppNavigationSheet() {
     activePointerId.current = null;
     setIsDragging(false);
 
-    if (swipeDistance.current > 56) {
+    if (swipeDistance.current > 54) {
       handleClose();
       return;
     }
 
     swipeDistance.current = 0;
+    isHorizontalGesture.current = false;
     drawerRef.current?.style.removeProperty('--app-navigation-swipe-x');
   };
 
@@ -203,11 +218,11 @@ export function AppNavigationSheet() {
         >
           <button
             type="button"
-            className="app-navigation-close-rail"
+            className="app-navigation-edge-close"
             onClick={handleClose}
             aria-label={t('common.close')}
           >
-            ‹
+            <span aria-hidden="true">‹</span>
           </button>
 
           <header className="app-navigation-head">
