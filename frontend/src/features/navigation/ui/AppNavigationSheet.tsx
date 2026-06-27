@@ -77,9 +77,12 @@ export function AppNavigationSheet() {
   const user = useAuthStore((state) => state.user);
   const isAdmin = Boolean(user?.isAdmin);
   const [isRendered, setIsRendered] = useState(isOpen);
+  const [isVisible, setIsVisible] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
   const closeTimer = useRef<number | null>(null);
+  const openFrame = useRef<number | null>(null);
   const drawerRef = useRef<HTMLDivElement | null>(null);
   const startX = useRef(0);
   const activePointerId = useRef<number | null>(null);
@@ -90,26 +93,44 @@ export function AppNavigationSheet() {
       window.clearTimeout(closeTimer.current);
       closeTimer.current = null;
     }
+    if (openFrame.current !== null) {
+      window.cancelAnimationFrame(openFrame.current);
+      openFrame.current = null;
+    }
 
     if (isOpen) {
       setIsRendered(true);
       setIsClosing(false);
+      setIsVisible(false);
+      openFrame.current = window.requestAnimationFrame(() => {
+        openFrame.current = window.requestAnimationFrame(() => {
+          setIsVisible(true);
+          openFrame.current = null;
+        });
+      });
       return;
     }
 
     if (!isRendered) return;
 
+    setIsVisible(false);
     setIsClosing(true);
+    setIsDragging(false);
     closeTimer.current = window.setTimeout(() => {
       setIsRendered(false);
       setIsClosing(false);
+      setIsExpanded(false);
       drawerRef.current?.style.removeProperty('--app-navigation-swipe-x');
-    }, 260);
+    }, 320);
 
     return () => {
       if (closeTimer.current !== null) {
         window.clearTimeout(closeTimer.current);
         closeTimer.current = null;
+      }
+      if (openFrame.current !== null) {
+        window.cancelAnimationFrame(openFrame.current);
+        openFrame.current = null;
       }
     };
   }, [isOpen, isRendered]);
@@ -124,6 +145,7 @@ export function AppNavigationSheet() {
   };
 
   const handlePointerDown = (event: PointerEvent<HTMLDivElement>) => {
+    setIsDragging(true);
     activePointerId.current = event.pointerId;
     startX.current = event.clientX;
     swipeDistance.current = 0;
@@ -147,6 +169,7 @@ export function AppNavigationSheet() {
       drawerRef.current.releasePointerCapture(event.pointerId);
     }
     activePointerId.current = null;
+    setIsDragging(false);
 
     if (swipeDistance.current > 56) {
       handleClose();
@@ -164,13 +187,13 @@ export function AppNavigationSheet() {
   return (
     <AppModalPortal>
       <div
-        className={`app-navigation-backdrop${isClosing ? ' is-closing' : ''}`}
+        className={`app-navigation-backdrop${isVisible ? ' is-visible' : ''}${isClosing ? ' is-closing' : ''}`}
         data-no-swipe="true"
         onClick={handleClose}
       >
         <div
           ref={drawerRef}
-          className={`app-navigation-drawer${isExpanded ? ' is-expanded' : ''}${isClosing ? ' is-closing' : ''}`}
+          className={`app-navigation-drawer${isVisible ? ' is-visible' : ''}${isExpanded ? ' is-expanded' : ''}${isClosing ? ' is-closing' : ''}${isDragging ? ' is-dragging' : ''}`}
           data-no-swipe="true"
           onClick={(event) => event.stopPropagation()}
           onPointerDown={handlePointerDown}
