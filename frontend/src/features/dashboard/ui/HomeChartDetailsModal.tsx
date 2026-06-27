@@ -17,8 +17,8 @@ type Props = {
   onOpenGroup: (group: HomeFinanceGroup) => void;
 };
 
-export function HomeChartDetailsModal({ open, transactions, mode, period, rates, onClose, modalLayer, onOpenAnalytics, onOpenReport }: Props) {
-  const { t } = useI18n();
+export function HomeChartDetailsModal({ open, transactions, mode, period, rates, onClose, modalLayer, onOpenAnalytics, onOpenReport, onOpenGroup }: Props) {
+  const { t, rt } = useI18n();
   if (!open) return null;
 
   const analytics = buildHomeFinanceAnalytics(transactions, mode, period, rates, {
@@ -46,7 +46,7 @@ export function HomeChartDetailsModal({ open, transactions, mode, period, rates,
           <div className="app-home-chart-modal__visual app-home-chart-modal__visual--single">
             <div className="app-home-chart-ring-block">
               <span className="app-home-donut app-home-donut--large" style={{ background: conicGradient(analytics.categories) }}><i /></span>
-
+              <small>{t('dashboard.chart.categories')}</small>
             </div>
           </div>
 
@@ -55,6 +55,20 @@ export function HomeChartDetailsModal({ open, transactions, mode, period, rates,
             <button type="button" onClick={(event) => { event.stopPropagation(); onOpenReport(); }}>{t('dashboard.chart.downloadReport')}</button>
           </div>
 
+          <div className="app-home-chart-groups">
+            {analytics.categories.length === 0 ? (
+              <div className="app-empty-button">{t('dashboard.chart.emptyHint')}</div>
+            ) : analytics.categories.map((group) => (
+              <button key={group.key} type="button" className="app-home-chart-group" onClick={(event) => { event.stopPropagation(); onOpenGroup(group); }}>
+                <i style={{ background: group.color }}>{group.icon || ''}</i>
+                <span className="min-w-0">
+                  <b>{rt(group.name)}</b>
+                  <small>{t('dashboard.chart.operationsCount', { count: group.count })} · {group.percent}%</small>
+                </span>
+                <strong>{formatMoney(group.amount, 'RUB')}</strong>
+              </button>
+            ))}
+          </div>
         </div>
       </div>
     </div>
