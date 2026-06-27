@@ -1,7 +1,7 @@
-/* Pack 188c: analytics v2 lists. */
+/* Pack 188: analytics v2 lists. */
 .analytics-v2-category-list {
   display: grid;
-  gap: 12px;
+  gap: 8px;
   min-width: 0;
 }
 
@@ -12,12 +12,12 @@
   gap: 10px;
   width: 100%;
   min-width: 0;
-  min-height: 54px;
+  min-height: 50px;
   border: 0;
   border-radius: 18px;
   background: rgba(255, 255, 255, 0.055);
   color: #fff;
-  padding: 10px;
+  padding: 8px;
   text-align: left;
   font: inherit;
   cursor: pointer;
@@ -80,4 +80,15 @@
   font-size: 13px;
   font-weight: 800;
   text-align: center;
+}
+
+/* Pack 188d: list spacing polish. */
+.analytics-v2-category-list {
+  gap: 10px;
+}
+
+.analytics-v2-category-row {
+  gap: 12px;
+  min-height: 56px;
+  padding: 10px;
 }

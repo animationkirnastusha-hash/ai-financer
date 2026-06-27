@@ -1,8 +1,8 @@
-/* Pack 188c: analytics v2 Fina block and responsive polish. */
+/* Pack 188b: analytics v2 Fina block and responsive polish. */
 .analytics-v2-fina {
   display: grid;
   grid-template-columns: 44px minmax(0, 1fr);
-  gap: 14px;
+  gap: 12px;
   align-items: center;
 }
 
@@ -52,7 +52,7 @@
 
 @media (max-width: 430px) {
   .analytics-v2-page__inner {
-    gap: 14px;
+    gap: 12px;
   }
 
   .analytics-v2-tabs {
@@ -70,13 +70,13 @@
   .analytics-v2-focus-grid,
   .analytics-v2-ratio-grid,
   .analytics-v2-news-grid {
-    gap: 8px;
+    gap: 6px;
   }
 
   .analytics-v2-kpi,
   .analytics-v2-news-card {
     border-radius: 20px;
-    padding: 12px 10px;
+    padding: 10px 8px;
   }
 
   .analytics-v2-kpi span,
@@ -103,5 +103,48 @@
 
   .analytics-v2-switch {
     width: 100%;
+  }
+}
+
+/* Pack 188d: keep mobile spacing readable. */
+@media (max-width: 430px) {
+  .app-analytics-page .analytics-v2-page__inner {
+    gap: 18px;
+    padding-top: 18px;
+  }
+
+  .analytics-v2-period {
+    padding: 14px;
+  }
+
+  .analytics-v2-kpi-grid,
+  .analytics-v2-focus-grid,
+  .analytics-v2-ratio-grid,
+  .analytics-v2-news-grid {
+    gap: 10px;
+  }
+
+  .analytics-v2-kpi,
+  .analytics-v2-news-card {
+    padding: 13px 10px;
+  }
+
+  .analytics-v2-news,
+  .analytics-v2-chart-card,
+  .analytics-v2-trend-card,
+  .analytics-v2-balance-card,
+  .analytics-v2-detail-card,
+  .analytics-v2-fina {
+    padding: 16px;
+  }
+
+  .analytics-v2-calendar-panel__weekdays,
+  .analytics-v2-calendar-panel__days {
+    gap: 5px;
+  }
+
+  .analytics-v2-calendar-panel__days button {
+    min-height: 32px;
+    border-radius: 13px;
   }
 }

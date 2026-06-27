@@ -1,10 +1,10 @@
-/* Pack 188c: analytics v2 shell, spacing and calendar range picker. */
+/* Pack 188b: analytics v2 shell, tabs and period controls. */
 .analytics-v2-page {
   overflow-x: hidden;
 }
 
 .analytics-v2-page__inner {
-  gap: 18px;
+  gap: 14px;
   max-width: 100%;
   padding-bottom: 112px;
   overflow-x: hidden;
@@ -14,9 +14,9 @@
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 8px;
-  padding: 6px;
+  padding: 5px;
   border: 1px solid rgba(255, 255, 255, 0.09);
-  border-radius: 26px;
+  border-radius: 24px;
   background: rgba(255, 255, 255, 0.055);
   box-shadow: 0 18px 48px rgba(3, 7, 18, 0.22);
 }
@@ -35,9 +35,9 @@
 
 .analytics-v2-tabs button {
   min-width: 0;
-  min-height: 42px;
-  padding: 0 9px;
-  border-radius: 19px;
+  min-height: 40px;
+  padding: 0 8px;
+  border-radius: 18px;
   background: transparent;
   font-size: 12px;
   font-weight: 800;
@@ -57,19 +57,19 @@
 
 .analytics-v2-period {
   display: grid;
-  gap: 14px;
-  padding: 16px;
+  gap: 10px;
+  padding: 12px;
 }
 
 .analytics-v2-period__buttons {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 9px;
+  gap: 7px;
 }
 
 .analytics-v2-period__buttons button {
-  min-height: 38px;
-  border-radius: 16px;
+  min-height: 34px;
+  border-radius: 14px;
   background: rgba(255, 255, 255, 0.06);
   font-size: 11px;
   font-weight: 800;
@@ -119,192 +119,218 @@
   text-align: center;
 }
 
+/* Pack 188d: analytics top breathing room and calendar range picker. */
+.app-analytics-page .analytics-v2-page__inner {
+  gap: 20px;
+  padding-top: max(20px, env(safe-area-inset-top));
+  padding-bottom: max(148px, calc(env(safe-area-inset-bottom) + 128px));
+}
+
+.analytics-v2-page .screen-top-bar {
+  margin-bottom: 2px;
+}
+
+.analytics-v2-tabs {
+  margin-top: 2px;
+  padding: 6px;
+}
+
+.analytics-v2-period {
+  gap: 14px;
+  padding: 16px;
+  border-radius: 28px;
+}
+
+.analytics-v2-period__buttons {
+  gap: 10px;
+}
+
+.analytics-v2-period__buttons button {
+  min-height: 42px;
+  border-radius: 18px;
+}
 
 .analytics-v2-period__range {
   display: grid;
-  min-width: 0;
-}
-
-.analytics-v2-period__range button {
-  display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  gap: 8px 12px;
+  gap: 12px;
   align-items: center;
-  width: 100%;
-  min-height: 48px;
-  border: 1px solid rgba(103, 232, 249, 0.16);
-  border-radius: 18px;
-  background:
-    radial-gradient(circle at 12% 20%, rgba(103, 232, 249, 0.12), transparent 36%),
-    rgba(255, 255, 255, 0.055);
-  color: #fff;
-  padding: 10px 13px;
-  text-align: left;
+  min-width: 0;
+  padding: 10px 12px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.05);
 }
 
 .analytics-v2-period__range span {
-  color: rgba(255, 255, 255, 0.54);
+  color: rgba(255, 255, 255, 0.52);
   font-size: 11px;
   font-weight: 850;
 }
 
-.analytics-v2-period__range strong {
+.analytics-v2-period__range button {
   min-width: 0;
-  overflow: hidden;
-  color: rgba(255, 255, 255, 0.92);
-  font-size: 13px;
-  font-weight: 950;
+  max-width: 100%;
+  border: 0;
+  border-radius: 16px;
+  background: rgba(103, 232, 249, 0.12);
+  color: rgba(236, 254, 255, 0.92);
+  padding: 8px 12px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 900;
   text-align: right;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .analytics-v2-calendar-panel {
   display: grid;
   gap: 12px;
-  padding: 13px;
-  border: 1px solid rgba(255, 255, 255, 0.09);
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid rgba(103, 232, 249, 0.14);
   border-radius: 24px;
   background:
-    radial-gradient(circle at 50% 0%, rgba(103, 232, 249, 0.12), transparent 42%),
+    radial-gradient(circle at 18% 0%, rgba(103, 232, 249, 0.11), transparent 40%),
     rgba(255, 255, 255, 0.045);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
-  animation: analytics-calendar-in 180ms ease both;
 }
 
-.analytics-v2-calendar-panel__head {
+.analytics-v2-calendar-panel__head,
+.analytics-v2-calendar-panel__footer {
   display: grid;
-  grid-template-columns: 38px minmax(0, 1fr) 38px;
-  gap: 8px;
+  grid-template-columns: 36px minmax(0, 1fr) 36px;
+  gap: 10px;
   align-items: center;
 }
 
-.analytics-v2-calendar-panel__head button,
-.analytics-v2-calendar-grid button,
-.analytics-v2-calendar-actions button {
-  border: 0;
+.analytics-v2-calendar-panel__head strong {
+  min-width: 0;
+  overflow: hidden;
   color: #fff;
+  font-size: 14px;
+  font-weight: 950;
+  letter-spacing: -0.03em;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.analytics-v2-calendar-panel__head button,
+.analytics-v2-calendar-panel__apply,
+.analytics-v2-calendar-panel__ghost {
+  border: 0;
   font: inherit;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
 
 .analytics-v2-calendar-panel__head button {
-  width: 38px;
-  height: 38px;
-  border-radius: 15px;
-  background: rgba(255, 255, 255, 0.07);
-  color: rgba(255, 255, 255, 0.82);
-  font-size: 22px;
-  font-weight: 850;
-  line-height: 1;
-}
-
-.analytics-v2-calendar-panel__head strong {
-  color: #fff;
-  font-size: 15px;
-  font-weight: 950;
-  letter-spacing: -0.02em;
-  text-align: center;
-  text-transform: capitalize;
-}
-
-.analytics-v2-calendar-panel__hint {
   display: grid;
   place-items: center;
-  min-height: 30px;
-  border-radius: 999px;
-  background: rgba(103, 232, 249, 0.1);
-  color: rgba(236, 254, 255, 0.82);
-  font-size: 11px;
+  width: 36px;
+  height: 36px;
+  border-radius: 15px;
+  background: rgba(255, 255, 255, 0.07);
+  color: #fff;
+  font-size: 22px;
   font-weight: 850;
-  text-align: center;
 }
 
-.analytics-v2-calendar-weekdays,
-.analytics-v2-calendar-grid {
+.analytics-v2-calendar-panel__weekdays,
+.analytics-v2-calendar-panel__days {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
-  gap: 5px;
+  gap: 6px;
 }
 
-.analytics-v2-calendar-weekdays span {
+.analytics-v2-calendar-panel__weekdays span {
   color: rgba(255, 255, 255, 0.42);
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 900;
   text-align: center;
+  text-transform: uppercase;
 }
 
-.analytics-v2-calendar-grid button {
-  position: relative;
+.analytics-v2-calendar-panel__days button {
   display: grid;
   place-items: center;
   min-width: 0;
-  aspect-ratio: 1;
-  border-radius: 13px;
-  background: rgba(255, 255, 255, 0.055);
-  color: rgba(255, 255, 255, 0.82);
+  min-height: 34px;
+  border: 0;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.052);
+  color: rgba(255, 255, 255, 0.78);
+  font: inherit;
   font-size: 12px;
-  font-weight: 900;
-  transition: transform 140ms ease, background 140ms ease, color 140ms ease, opacity 140ms ease;
+  font-weight: 850;
+  cursor: pointer;
+  transition: transform 160ms ease, background 160ms ease, color 160ms ease;
+  -webkit-tap-highlight-color: transparent;
 }
 
-.analytics-v2-calendar-grid button.is-outside {
-  opacity: 0.32;
-}
-
-.analytics-v2-calendar-grid button.is-in-range {
-  background: rgba(103, 232, 249, 0.15);
-  color: #ecfeff;
-}
-
-.analytics-v2-calendar-grid button.is-start,
-.analytics-v2-calendar-grid button.is-end {
-  background: linear-gradient(135deg, rgba(103, 232, 249, 0.98), rgba(110, 231, 183, 0.96));
-  color: #06121d;
-  box-shadow: 0 12px 24px rgba(45, 212, 191, 0.18);
-}
-
-.analytics-v2-calendar-grid button:active {
+.analytics-v2-calendar-panel__days button:active {
   transform: scale(0.94);
 }
 
-.analytics-v2-calendar-actions {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 48px;
-  gap: 10px;
-  align-items: center;
+.analytics-v2-calendar-panel__days button.is-outside {
+  color: rgba(255, 255, 255, 0.28);
+  background: rgba(255, 255, 255, 0.025);
 }
 
-.analytics-v2-calendar-actions button {
-  min-height: 42px;
-  border-radius: 16px;
-  font-weight: 950;
+.analytics-v2-calendar-panel__days button.is-inside {
+  color: rgba(236, 254, 255, 0.9);
+  background: rgba(103, 232, 249, 0.12);
 }
 
-.analytics-v2-calendar-actions__secondary {
-  background: rgba(255, 255, 255, 0.07);
-  color: rgba(255, 255, 255, 0.78);
-}
-
-.analytics-v2-calendar-actions__primary {
+.analytics-v2-calendar-panel__days button.is-start,
+.analytics-v2-calendar-panel__days button.is-end {
+  color: #07111f;
   background: linear-gradient(135deg, rgba(103, 232, 249, 0.98), rgba(110, 231, 183, 0.96));
-  color: #06121d;
   box-shadow: 0 12px 26px rgba(45, 212, 191, 0.2);
 }
 
-.analytics-v2-calendar-actions__primary:disabled {
-  opacity: 0.38;
-  box-shadow: none;
+.analytics-v2-calendar-panel__footer {
+  grid-template-columns: minmax(0, 1fr) auto;
 }
 
-@keyframes analytics-calendar-in {
-  from {
-    opacity: 0;
-    transform: translateY(-8px) scale(0.985);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
+.analytics-v2-calendar-panel__footer span {
+  min-width: 0;
+  overflow: hidden;
+  color: rgba(255, 255, 255, 0.56);
+  font-size: 11px;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.analytics-v2-calendar-panel__footer div {
+  display: flex;
+  gap: 8px;
+}
+
+.analytics-v2-calendar-panel__ghost {
+  min-height: 36px;
+  border-radius: 15px;
+  background: rgba(255, 255, 255, 0.065);
+  color: rgba(255, 255, 255, 0.72);
+  padding: 0 12px;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.analytics-v2-calendar-panel__apply {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  min-height: 36px;
+  border-radius: 15px;
+  background: linear-gradient(135deg, rgba(103, 232, 249, 0.96), rgba(110, 231, 183, 0.92));
+  color: #07111f;
+  font-size: 16px;
+  font-weight: 950;
+}
+
+.analytics-v2-calendar-panel__apply:disabled {
+  opacity: 0.38;
+  cursor: not-allowed;
 }

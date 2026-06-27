@@ -1,8 +1,8 @@
-/* Pack 188c: analytics v2 charts with cleaner spacing. */
+/* Pack 188b: analytics v2 charts and readable trends. */
 .analytics-v2-chart-layout {
   display: grid;
   grid-template-columns: minmax(118px, 0.62fr) minmax(0, 1fr);
-  gap: 18px;
+  gap: 14px;
   align-items: center;
 }
 
@@ -69,9 +69,9 @@
 
 .analytics-v2-line {
   display: grid;
-  gap: 12px;
+  gap: 8px;
   min-width: 0;
-  padding: 14px;
+  padding: 10px;
   border-radius: 24px;
   background:
     radial-gradient(circle at 22% 12%, rgba(103, 232, 249, 0.13), transparent 34%),
@@ -106,7 +106,7 @@
 .analytics-v2-line svg {
   display: block;
   width: 100%;
-  height: 176px;
+  height: 184px;
   overflow: visible;
 }
 
@@ -178,4 +178,19 @@
   font-size: 10px;
   font-weight: 800;
   white-space: nowrap;
+}
+
+/* Pack 188d: more breathing room inside charts. */
+.analytics-v2-chart-layout {
+  gap: 18px;
+}
+
+.analytics-v2-line {
+  gap: 12px;
+  padding: 14px;
+  border-radius: 26px;
+}
+
+.analytics-v2-line svg {
+  height: 188px;
 }
