@@ -17,7 +17,6 @@
 @import "./components/modal-viewport-safety.css";
 @import "./layout/navigation-swipe.css";
 @import "./pages/dashboard/dashboard.css";
-@import "./pages/accounts/accounts.css";
 @import "./pages/taxonomy/taxonomy.css";
 @import "./pages/settings/settings.css";
 @import "./pages/settings/settings-overlay-controls.css";
@@ -41,10 +40,8 @@
 @import "./features/chat/text-chat-overlay/text-chat-overlay-shell.css";
 @import "./features/chat/text-chat-overlay/text-chat-overlay-messages.css";
 @import "./features/chat/text-chat-overlay/text-chat-overlay-actions.css";
-@import "./pages/accounts/account-details-sheet.css";
 @import "./pages/goals-limits/goals-limits.css";
 @import "./pages/payments/payments.css";
-@import "./pages/referral/referral.css";
 @import "./pages/admin/admin.css";
 @import "./animations/app-motion.css";
 @import "./animations/navigation-motion.css";
@@ -82,6 +79,9 @@
 @import "./pages/analytics/analytics-charts.css";
 @import "./pages/analytics/analytics-lists.css";
 @import "./pages/analytics/analytics-foldouts.css";
+@import "./pages/accounts/accounts.css";
+@import "./pages/accounts/account-details-sheet.css";
+@import "./pages/referral/referral.css";
 
 
 

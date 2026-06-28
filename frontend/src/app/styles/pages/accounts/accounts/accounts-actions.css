@@ -1,29 +1,31 @@
 .app-accounts-actions {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
-  padding: 14px;
-}
-
-.app-accounts-actions .app-action-card {
-  min-height: 86px;
-  display: grid;
-  grid-template-columns: 52px minmax(0, 1fr);
-  align-items: center;
-  gap: 14px;
+  gap: 10px;
+  border-radius: 26px;
   padding: 12px;
 }
 
+.app-accounts-actions .app-action-card {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  align-items: center;
+  gap: 11px;
+  min-height: 68px;
+  border-radius: 20px;
+  padding: 10px;
+}
+
 .app-accounts-actions .app-action-card__icon {
-  width: 52px;
-  height: 52px;
   display: grid;
   place-items: center;
-  border: 1px solid rgba(129, 239, 208, .20);
-  border-radius: 20px;
-  background: rgba(129, 239, 208, .12);
-  color: rgba(224, 255, 247, .94);
-  font-size: 26px;
+  width: 42px;
+  height: 42px;
+  border: 1px solid rgba(129, 239, 208, 0.20);
+  border-radius: 16px;
+  background: rgba(129, 239, 208, 0.12);
+  color: rgba(224, 255, 247, 0.94);
+  font-size: 21px;
   font-weight: 850;
 }
 
@@ -36,17 +38,18 @@
 }
 
 .app-accounts-actions .app-action-card b {
-  color: rgba(255, 255, 255, .94);
-  font-size: 16px;
-  line-height: 1.1;
-  font-weight: 780;
+  color: rgba(255, 255, 255, 0.94);
+  font-size: 14px;
+  font-weight: 850;
+  line-height: 1.12;
   white-space: nowrap;
 }
 
 .app-accounts-actions .app-action-card small {
-  margin-top: 7px;
-  color: rgba(255, 255, 255, .48);
-  font-size: 12px;
+  margin-top: 5px;
+  color: rgba(255, 255, 255, 0.50);
+  font-size: 11px;
+  font-weight: 700;
   line-height: 1.25;
 }
 

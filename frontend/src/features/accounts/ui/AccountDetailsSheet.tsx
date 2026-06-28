@@ -30,8 +30,21 @@ type Props = {
   onAskAI: (account: AccountDto) => void;
 };
 
-function getErrorMessage(error: unknown) {
-  return error instanceof Error && error.message ? error.message : null;
+function getErrorMessage(error: unknown, fallback: string) {
+  if (!(error instanceof Error) || !error.message) return fallback;
+
+  const message = error.message.trim();
+  const normalized = message.toLowerCase();
+
+  if (
+    normalized.includes('linked transactions') ||
+    normalized.includes('foreign key') ||
+    normalized.includes('constraint')
+  ) {
+    return fallback;
+  }
+
+  return message;
 }
 
 export function AccountDetailsSheet({
@@ -76,7 +89,7 @@ export function AccountDetailsSheet({
     try {
       await onDelete(account.id);
     } catch (error) {
-      setDeleteError(getErrorMessage(error) ?? t('accounts.details.delete.error'));
+      setDeleteError(getErrorMessage(error, t('accounts.details.delete.error')));
     }
   };
 
