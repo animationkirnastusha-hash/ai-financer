@@ -1,6 +1,6 @@
 import type { PointerEvent } from 'react';
 
-import type { VoiceInputState } from '@/features/voice/model/voice.types';
+import type { VoiceInputState } from '@/features/voice';
 
 type Props = {
   isVoicePressed: boolean;

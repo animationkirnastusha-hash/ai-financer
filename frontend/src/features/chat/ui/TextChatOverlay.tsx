@@ -13,10 +13,7 @@ import { useChatController } from "@/features/chat/model/useChatController";
 import { useChatStore } from "@/features/chat/model/chat.store";
 import { useFirstRunChatSetupStore } from "@/features/chat/model/firstRunChatSetup.store";
 import { useSettingsStore } from "@/features/settings/model/settings.store";
-import { useUnifiedVoiceCapture } from '@/features/voice/manager/useUnifiedVoiceCapture';
-import { logVoiceDebugEvent } from '@/features/voice/api/voice.api';
-import { VOICE_MANUAL_SESSION_MS } from "@/features/voice/model/voiceConstants";
-import { shouldIgnoreVoiceCommand } from "@/features/voice/model/voiceText";
+import { shouldIgnoreVoiceCommand, usePressToTalkVoice } from "@/features/voice";
 import { VoicePermissionMiniPrompt } from "@/features/voice/ui/VoicePermissionMiniPrompt";
 import { useI18n } from "@/shared/lib/i18n";
 import {
@@ -75,7 +72,6 @@ export function TextChatOverlay({
   const { t } = useI18n();
   const [value, setValue] = useState(initialCommand?.trim() ?? "");
   const [showJumpToBottom, setShowJumpToBottom] = useState(false);
-  const [isVoicePressed, setIsVoicePressed] = useState(false);
   const [voiceHint, setVoiceHint] = useState<string | null>(mode === "voice" ? null : null);
   const [localHint, setLocalHint] = useState<string | null>(null);
   const [isSetupBusy, setIsSetupBusy] = useState(false);
@@ -88,13 +84,6 @@ export function TextChatOverlay({
   const autoStartDoneRef = useRef(false);
   const autoSubmittedInitialCommandRef = useRef<string | null>(null);
   const lastVoiceSendAtRef = useRef(0);
-  const voicePointerIdRef = useRef<number | null>(null);
-  const voiceStartXRef = useRef(0);
-  const voiceCancelledBySwipeRef = useRef(false);
-  const voicePressActiveRef = useRef(false);
-  const voiceStopAfterStartRef = useRef(false);
-  const voicePressStartedAtRef = useRef(0);
-  const voiceReleaseHandledRef = useRef(false);
   const lastAutoClosedMessageKeyRef = useRef("");
   const autoCloseTimerRef = useRef<number | null>(null);
   const initialAssistantMessageKeyRef = useRef<string | null>(null);
@@ -202,15 +191,15 @@ export function TextChatOverlay({
     const timer = window.setTimeout(() => {
       setShouldRender(false);
       setIsClosing(false);
-      setIsVoicePressed(false);
     }, 220);
 
     return () => window.clearTimeout(timer);
   }, [open, shouldRender]);
 
-  const voice = useUnifiedVoiceCapture({
+  const voice = usePressToTalkVoice({
     lang: appLanguage === "en" ? "en-US" : "ru-RU",
-    sessionMs: VOICE_MANUAL_SESSION_MS,
+    source: "chat",
+    maxDurationMs: 9000,
     permissionWasPrompted: voicePermissionPrompted,
     onText: async (rawText) => {
       const text = stripOptionalCompanionName(rawText, companionName);
@@ -255,6 +244,7 @@ export function TextChatOverlay({
             : "ready";
 
   const contextualPrompts: string[] = [];
+  const isVoicePressed = voice.isPressed;
 
   const scrollToBottom = useCallback((behavior: ScrollBehavior = "smooth") => {
     const list = listRef.current;
@@ -264,40 +254,9 @@ export function TextChatOverlay({
     setShowJumpToBottom(false);
   }, []);
 
-  const cancelVoice = useCallback(
-    (message?: string) => {
-      voicePressActiveRef.current = false;
-      voiceStopAfterStartRef.current = false;
-      voiceReleaseHandledRef.current = false;
-      setIsVoicePressed(false);
-      voice.cancel();
-      setVoiceHint(message ?? t("textChat.voice.cancelled"));
-    },
-    [t, voice],
-  );
-
-  const stopVoiceAndSend = useCallback(() => {
-    voicePressActiveRef.current = false;
-    setIsVoicePressed(false);
-
-    if (voice.state === "recording" || voice.state === "idle") {
-      setVoiceHint(t("textChat.voice.recognizing"));
-      voice.stop();
-      return;
-    }
-
-    if (voice.state === "uploading") setVoiceHint(t("textChat.voice.recognizing"));
-  }, [t, voice]);
-
   const promptVoicePermissionInChat = useCallback(() => {
-    voicePointerIdRef.current = null;
-    voicePressActiveRef.current = false;
-    voiceStopAfterStartRef.current = false;
-    voiceReleaseHandledRef.current = false;
-    voiceCancelledBySwipeRef.current = false;
-    setIsVoicePressed(false);
-    voice.cancel();
-    voice.reset?.();
+    voice.cancel('permission-help');
+    voice.reset();
     setVoiceHint(t("textChat.voice.needPermission"));
     setShowVoicePermissionHelp(true);
     shouldStickToBottomRef.current = true;
@@ -305,252 +264,49 @@ export function TextChatOverlay({
       if (messages.some((message) => message.id === "voice-permission-request")) return messages;
       return [
         ...messages,
-        {
-          id: "voice-permission-request",
-          role: "assistant",
-          kind: "text",
-          text: t("textChat.voice.permissionPrompt"),
-          createdAt: new Date().toISOString(),
-        },
+        createSetupMessage(
+          "voice-permission-request",
+          t("textChat.voice.permissionPrompt"),
+        ),
       ];
     });
   }, [setChatMessages, t, voice]);
 
-  const startVoice = useCallback(async () => {
-    if (chat.isSending || voice.state === "recording" || voice.state === "uploading") return false;
-
-    const result = await voice.start();
-    if (result === "started") {
-      setVoicePermissionPrompted(true);
-      setShowVoicePermissionHelp(false);
-      setVoiceHint(t("textChat.voice.listening"));
-      setIsVoicePressed(true);
-      if (voiceStopAfterStartRef.current || voicePointerIdRef.current === null) {
-        voiceStopAfterStartRef.current = false;
-        window.setTimeout(() => {
-          setIsVoicePressed(false);
-          setVoiceHint(t("textChat.voice.recognizing"));
-          voice.stop();
-        }, 140);
-      }
-      return true;
-    }
-
-    voicePointerIdRef.current = null;
-    voicePressActiveRef.current = false;
-    voiceStopAfterStartRef.current = false;
-    voiceReleaseHandledRef.current = false;
-    setIsVoicePressed(false);
-    voice.reset?.();
-
-    if (result === "permission-consumed" || result === "permission-ready") {
-      const nextPermission = await voice.refreshPermissionState?.();
-      const allowed = nextPermission === "granted";
-      setVoicePermissionPrompted(allowed);
-      if (allowed) {
-        setVoiceHint(t("textChat.voice.permissionReady"));
-      } else {
-        promptVoicePermissionInChat();
-      }
-    } else if (result === "busy") {
-      setVoiceHint(t("textChat.voice.busy"));
-    } else {
-      setVoiceHint(t("textChat.voice.startFailed"));
-    }
-
-    return false;
-  }, [chat.isSending, promptVoicePermissionInChat, setVoicePermissionPrompted, t, voice]);
-
   const handleVoicePointerDown = useCallback(
     (event: PointerEvent<HTMLButtonElement>) => {
       if (value.trim() || chat.isSending || voice.state === "uploading" || isSetupBusy || setupStage === 'microphone') return;
-      event.preventDefault();
-      event.stopPropagation();
-
       if (!setupIsActive && (voice.permissionState === "denied" || voice.permissionState === "unsupported")) {
         promptVoicePermissionInChat();
         return;
       }
-
-      voicePointerIdRef.current = event.pointerId;
-      voiceStartXRef.current = event.clientX;
-      voicePressStartedAtRef.current = Date.now();
-      voiceCancelledBySwipeRef.current = false;
-      voicePressActiveRef.current = true;
-      voiceStopAfterStartRef.current = false;
-      voiceReleaseHandledRef.current = false;
-      setIsVoicePressed(true);
-      logVoiceDebugEvent('chat_voice_press_started', {
-        source: 'pointer_down',
-        voiceState: voice.state,
-        pointerActive: true,
-        isPressed: true,
-      });
-      event.currentTarget.setPointerCapture?.(event.pointerId);
-      void startVoice();
+      setVoiceHint(t("textChat.voice.listening"));
+      voice.handlePointerDown(event);
     },
-    [chat.isSending, isSetupBusy, promptVoicePermissionInChat, setupIsActive, setupStage, startVoice, value, voice.permissionState, voice.state],
+    [chat.isSending, isSetupBusy, promptVoicePermissionInChat, setupIsActive, setupStage, t, value, voice],
   );
 
   const handleVoicePointerMove = useCallback(
     (event: PointerEvent<HTMLButtonElement>) => {
-      if (voicePointerIdRef.current !== event.pointerId || voiceCancelledBySwipeRef.current) return;
-      const dx = event.clientX - voiceStartXRef.current;
-      if (dx <= -72) {
-        voiceCancelledBySwipeRef.current = true;
-        cancelVoice(t("textChat.voice.cancelled"));
-      }
+      voice.handlePointerMove(event);
     },
-    [cancelVoice, t],
+    [voice],
   );
 
   const handleVoicePointerEnd = useCallback(
     (event: PointerEvent<HTMLButtonElement>) => {
-      if (voicePointerIdRef.current !== event.pointerId) return;
-      event.preventDefault();
-      event.stopPropagation();
-      voicePointerIdRef.current = null;
-      voicePressActiveRef.current = false;
-      if (voiceReleaseHandledRef.current) return;
-      voiceReleaseHandledRef.current = true;
-      if (voiceCancelledBySwipeRef.current) {
-        voiceCancelledBySwipeRef.current = false;
-        return;
-      }
-      logVoiceDebugEvent('chat_voice_release_detected', {
-        source: 'button_pointerup',
-        voiceState: voice.state,
-        pointerActive: true,
-        isPressed: isVoicePressed,
-        elapsedMs: Math.max(0, Date.now() - voicePressStartedAtRef.current),
-        deferredStop: voice.state !== 'recording' && voice.state !== 'uploading',
-      });
-      if (voice.state === "recording" || voice.state === "uploading") {
-        stopVoiceAndSend();
-        return;
-      }
-
-      voiceStopAfterStartRef.current = true;
-      stopVoiceAndSend();
+      setVoiceHint(t("textChat.voice.recognizing"));
+      voice.handlePointerUp(event);
     },
-    [stopVoiceAndSend, voice.state],
+    [t, voice],
   );
 
   const handleVoicePointerCancel = useCallback(
     (event: PointerEvent<HTMLButtonElement>) => {
-      if (voicePointerIdRef.current !== event.pointerId) return;
-      voicePointerIdRef.current = null;
-      voicePressActiveRef.current = false;
-      voiceReleaseHandledRef.current = false;
-      voiceCancelledBySwipeRef.current = false;
-      cancelVoice(t("textChat.voice.cancelled"));
+      setVoiceHint(t("textChat.voice.cancelled"));
+      voice.handlePointerCancel(event);
     },
-    [cancelVoice, t],
+    [t, voice],
   );
-
-  useEffect(() => {
-    if (!open) return;
-
-    const releaseIfNeeded = (source: string) => {
-      const hadPointer = voicePointerIdRef.current !== null;
-      const shouldRelease = hadPointer || voicePressActiveRef.current || isVoicePressed || voice.state === 'recording';
-      if (!shouldRelease || voiceReleaseHandledRef.current) return;
-      voiceReleaseHandledRef.current = true;
-
-      const shouldDeferStop = voice.state !== 'recording' && voice.state !== 'uploading';
-      voicePointerIdRef.current = null;
-      voicePressActiveRef.current = false;
-
-      if (voiceCancelledBySwipeRef.current) {
-        voiceCancelledBySwipeRef.current = false;
-        logVoiceDebugEvent('chat_voice_release_cancelled_by_swipe', { source, voiceState: voice.state });
-        cancelVoice(t("textChat.voice.cancelled"));
-        return;
-      }
-
-      if (shouldDeferStop) {
-        voiceStopAfterStartRef.current = true;
-      }
-
-      logVoiceDebugEvent('chat_voice_release_detected', {
-        source,
-        voiceState: voice.state,
-        pointerActive: hadPointer,
-        isPressed: isVoicePressed,
-        elapsedMs: Math.max(0, Date.now() - voicePressStartedAtRef.current),
-        deferredStop: shouldDeferStop,
-      });
-      stopVoiceAndSend();
-    };
-
-    const cancelIfNeeded = (source: string) => {
-      const shouldCancel = voicePointerIdRef.current !== null || voicePressActiveRef.current || isVoicePressed || voice.state === 'recording';
-      if (!shouldCancel) return;
-      voicePointerIdRef.current = null;
-      voicePressActiveRef.current = false;
-      voiceStopAfterStartRef.current = false;
-      voiceReleaseHandledRef.current = false;
-      voiceCancelledBySwipeRef.current = false;
-      logVoiceDebugEvent('chat_voice_cancel_detected', { source, voiceState: voice.state, isPressed: isVoicePressed });
-      cancelVoice(t("textChat.voice.cancelled"));
-    };
-
-    const releaseByPointer = (event: Event) => {
-      const activePointerId = voicePointerIdRef.current;
-      const pointerId = typeof (event as unknown as { pointerId?: unknown }).pointerId === 'number'
-        ? (event as unknown as { pointerId: number }).pointerId
-        : null;
-      if (activePointerId !== null && pointerId !== null && pointerId !== activePointerId) return;
-      releaseIfNeeded('window_pointerup');
-    };
-    const cancelByPointer = (event: Event) => {
-      const activePointerId = voicePointerIdRef.current;
-      const pointerId = typeof (event as unknown as { pointerId?: unknown }).pointerId === 'number'
-        ? (event as unknown as { pointerId: number }).pointerId
-        : null;
-      if (activePointerId !== null && pointerId !== null && pointerId !== activePointerId) return;
-      cancelIfNeeded('pointercancel');
-    };
-    const cancelByTouch = () => cancelIfNeeded('touchcancel');
-    const cancelByBlur = () => cancelIfNeeded('blur');
-    const cancelByPageHide = () => cancelIfNeeded('pagehide');
-    const cancelOnHidden = () => {
-      if (document.visibilityState === 'hidden') cancelIfNeeded('visibility_hidden');
-    };
-
-    const stuckTimer = window.setTimeout(() => {
-      if (voicePointerIdRef.current === null && !voicePressActiveRef.current && !isVoicePressed && voice.state !== 'recording') return;
-      logVoiceDebugEvent('chat_voice_hold_guard_release', { voiceState: voice.state, isPressed: isVoicePressed });
-      releaseIfNeeded('hold_guard');
-    }, Math.max(VOICE_MANUAL_SESSION_MS + 1800, 6800));
-
-    window.addEventListener('pointerup', releaseByPointer, true);
-    window.addEventListener('pointercancel', cancelByPointer, true);
-    window.addEventListener('touchcancel', cancelByTouch, true);
-    window.addEventListener('blur', cancelByBlur);
-    window.addEventListener('pagehide', cancelByPageHide);
-    document.addEventListener('visibilitychange', cancelOnHidden);
-
-    return () => {
-      window.clearTimeout(stuckTimer);
-      window.removeEventListener('pointerup', releaseByPointer, true);
-      window.removeEventListener('pointercancel', cancelByPointer, true);
-      window.removeEventListener('touchcancel', cancelByTouch, true);
-      window.removeEventListener('blur', cancelByBlur);
-      window.removeEventListener('pagehide', cancelByPageHide);
-      document.removeEventListener('visibilitychange', cancelOnHidden);
-    };
-  }, [cancelVoice, isVoicePressed, open, stopVoiceAndSend, t, voice.state]);
-
-  useEffect(() => {
-    if (voice.state === 'idle' && isVoicePressed && voicePointerIdRef.current === null) {
-      voicePressActiveRef.current = false;
-      voiceStopAfterStartRef.current = false;
-      voiceReleaseHandledRef.current = false;
-      setIsVoicePressed(false);
-      logVoiceDebugEvent('chat_voice_pressed_state_recovered', { voiceState: voice.state });
-    }
-  }, [isVoicePressed, voice.state]);
 
   useEffect(() => {
     if (!open) {
@@ -563,7 +319,7 @@ export function TextChatOverlay({
 
   useEffect(() => {
     if (!open) return;
-    void voice.refreshPermissionState?.();
+    void voice.refreshPermissionState();
   }, [open, voice.refreshPermissionState]);
 
   useEffect(() => {
@@ -692,14 +448,8 @@ export function TextChatOverlay({
   const closeOverlay = useCallback(() => {
     const shouldPauseSetup = setupIsActive && setupStage !== 'done';
 
-    voicePointerIdRef.current = null;
-    voicePressActiveRef.current = false;
-    voiceStopAfterStartRef.current = false;
-    voiceReleaseHandledRef.current = false;
-    voiceCancelledBySwipeRef.current = false;
-    voice.cancel();
-    voice.reset?.();
-    setIsVoicePressed(false);
+    voice.cancel('overlay-close');
+    voice.reset();
     setVoiceHint(null);
     setLocalHint(null);
     setShowVoicePermissionHelp(false);
@@ -812,7 +562,7 @@ export function TextChatOverlay({
     try {
       const allowed = await voice.primePermission();
       setVoicePermissionPrompted(allowed);
-      voice.reset?.();
+      voice.reset();
       if (allowed) {
         finishSetupMicrophone();
         return;
@@ -828,8 +578,8 @@ export function TextChatOverlay({
   const handleSetupSkipMicrophone = useCallback(() => {
     if (setupStage !== 'microphone') return;
     setShowVoicePermissionHelp(false);
-    voice.cancel();
-    voice.reset?.();
+    voice.cancel('overlay-close');
+    voice.reset();
     setVoicePermissionPrompted(false);
     skipSetupMicrophone();
   }, [setVoicePermissionPrompted, setupStage, skipSetupMicrophone, voice]);
@@ -905,7 +655,7 @@ export function TextChatOverlay({
     try {
       const allowed = await voice.primePermission();
       setVoicePermissionPrompted(allowed);
-      voice.reset?.();
+      voice.reset();
       if (allowed) {
         setShowVoicePermissionHelp(false);
         if (setupStage === 'microphone') finishSetupMicrophone();
@@ -921,31 +671,22 @@ export function TextChatOverlay({
   useEffect(() => {
     if (!voice.error) return;
 
-    setIsVoicePressed(false);
-    voicePointerIdRef.current = null;
-    voicePressActiveRef.current = false;
 
     if (voice.error === 'microphone-denied' || voice.error === 'not-allowed' || voice.error === 'service-not-allowed' || voice.error === 'unsupported') {
       setVoicePermissionPrompted(false);
       setVoiceHint(t('textChat.voice.needPermission'));
       setShowVoicePermissionHelp(true);
-      setIsVoicePressed(false);
-      voice.reset?.();
+      voice.reset();
       return;
     }
 
     setVoiceHint(t('textChat.voice.startFailed'));
-    voice.reset?.();
+    voice.reset();
   }, [setVoicePermissionPrompted, t, voice, voice.error]);
 
   useEffect(() => () => {
     if (autoCloseTimerRef.current !== null) window.clearTimeout(autoCloseTimerRef.current);
-    voicePointerIdRef.current = null;
-    voicePressActiveRef.current = false;
-    voiceStopAfterStartRef.current = false;
-    voiceReleaseHandledRef.current = false;
-    voiceCancelledBySwipeRef.current = false;
-    voice.cancel();
+    voice.cancel('overlay-close');
   }, [voice]);
 
   if (!shouldRender) return null;
@@ -1096,7 +837,7 @@ export function TextChatOverlay({
           inputDisabled={setupInputDisabled}
           voiceState={voice.state}
           isVoicePressed={isVoicePressed}
-          isVoiceCancelledBySwipe={voiceCancelledBySwipeRef.current}
+          isVoiceCancelledBySwipe={voice.isCancelledBySwipe}
           placeholder={placeholder}
           sendLabel={t("textChat.send")}
           voiceLabel={t("textChat.voice.hold")}

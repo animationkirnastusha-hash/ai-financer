@@ -1,4 +1,4 @@
-import type { VoiceThought } from '@/features/voice/model/voiceSession.types';
+import type { VoiceThought } from '@/features/voice';
 
 export function VoiceThoughtBubble({ thought }: { thought: VoiceThought | null }) {
   if (!thought) return null;

@@ -1,7 +1,7 @@
 import type { PointerEvent } from 'react';
-import type { VoiceCompanionMood, VoiceThought, VoiceBubbleTone } from '@/features/voice/model/voiceSession.types';
-import type { VoiceInputState } from '@/features/voice/model/voice.types';
-import type { VoiceCaptureMode, VoiceSessionPhase } from '@/features/voice/model/voiceSession.types';
+import type { VoiceCompanionMood, VoiceThought, VoiceBubbleTone } from '@/features/voice';
+import type { VoiceInputState } from '@/features/voice';
+import type { VoiceCaptureMode, VoiceSessionPhase } from '@/features/voice';
 
 export type GestureMode = 'idle' | 'holding';
 

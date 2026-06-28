@@ -1,6 +1,6 @@
 import type { FormEvent, KeyboardEvent, PointerEvent, RefObject } from 'react';
 
-import type { VoiceInputState } from '@/features/voice/model/voice.types';
+import type { VoiceInputState } from '@/features/voice';
 
 type Props = {
   value: string;

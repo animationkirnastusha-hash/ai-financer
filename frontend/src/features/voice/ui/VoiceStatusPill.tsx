@@ -1,5 +1,5 @@
-import type { VoiceCaptureMode, VoiceSessionPhase } from '@/features/voice/model/voiceSession.types';
-import type { VoiceInputState } from '@/features/voice/model/voice.types';
+import type { VoiceCaptureMode, VoiceSessionPhase } from '@/features/voice';
+import type { VoiceInputState } from '@/features/voice';
 import { useI18n } from '@/shared/lib/i18n';
 
 type VoiceStatusPillProps = {

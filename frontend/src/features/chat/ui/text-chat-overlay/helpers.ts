@@ -1,4 +1,4 @@
-import { normalizeForVoiceText, normalizeVoiceText } from '@/features/voice/model/voiceText';
+import { normalizeForVoiceText, normalizeVoiceText } from '@/features/voice';
 
 function escapeRegExp(value: string) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
