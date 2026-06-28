@@ -61,6 +61,12 @@ function sanitizeVoiceDebugDetails(details: unknown) {
     'pointerActive',
     'isPressed',
     'deferredStop',
+    'sessionId',
+    'blobType',
+    'chunks',
+    'hasRecorder',
+    'stage',
+    'filename',
   ]);
 
   const source = details as Record<string, unknown>;
