@@ -1,0 +1,64 @@
+/* Pack 207b: payments page spacing and card consistency. */
+.app-payments-shell {
+  gap: 24px;
+}
+
+.app-payments-hero,
+.app-payments-focus,
+.app-payments-nearest,
+.app-payment-row,
+.app-payments-reminders,
+.app-payments-kpi .app-card {
+  border: 1px solid rgba(255, 255, 255, 0.095);
+  background:
+    radial-gradient(circle at 14% 0%, rgba(110, 231, 183, 0.08), transparent 34%),
+    rgba(255, 255, 255, 0.045);
+}
+
+.app-payments-kpi {
+  gap: 12px;
+}
+
+.app-payments-kpi .app-card {
+  min-height: 108px;
+  border-radius: 25px;
+}
+
+.app-payments-focus,
+.app-payments-nearest,
+.app-payments-reminders {
+  border-radius: 32px;
+}
+
+.app-payments-list {
+  gap: 16px;
+}
+
+.app-payment-row {
+  border-radius: 28px;
+}
+
+.app-payment-row__head h3,
+.app-payment-row__head p,
+.app-payment-meta span,
+.app-payments-section-head small {
+  min-width: 0;
+}
+
+.app-payment-actions button {
+  min-width: 0;
+}
+
+@media (max-width: 430px) {
+  .app-payments-shell {
+    gap: 22px;
+  }
+
+  .app-payments-kpi {
+    grid-template-columns: 1fr;
+  }
+
+  .app-payments-kpi .app-card {
+    min-height: 0;
+  }
+}

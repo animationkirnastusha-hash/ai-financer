@@ -159,15 +159,6 @@ function getStableColor(seed: string) {
   return CHART_PALETTE[Math.abs(hash) % CHART_PALETTE.length];
 }
 
-function normalizeJournalTag(value: string) {
-  return value
-    .toLowerCase()
-    .replaceAll('ё', 'е')
-    .replace(/[^a-zа-я0-9\s-]+/gi, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-
 function formatPeriodLabel(range: PeriodRange) {
   const formatter = new Intl.DateTimeFormat('ru-RU', { day: '2-digit', month: 'short' });
   return `${formatter.format(range.start)} — ${formatter.format(range.end)}`;
@@ -190,6 +181,7 @@ function sumTransactions(transactions: TransactionDto[], type: 'income' | 'expen
     .filter((item) => item.type === type)
     .reduce((sum, item) => sum + Number(item.amount || 0), 0);
 }
+
 
 function groupTransactions(transactions: TransactionDto[], fallbackName: string): MoneyGroup[] {
   const grouped = transactions.reduce<Record<string, MoneyGroup>>((acc, item) => {
@@ -315,14 +307,12 @@ function DonutChart({ groups, total, label }: { groups: MoneyGroup[]; total: num
 function CategoryList({
   groups,
   total,
-  onOpen,
   limit,
   onMore,
   variant = 'default',
 }: {
   groups: MoneyGroup[];
   total: number;
-  onOpen: (group: MoneyGroup) => void;
   limit?: number;
   onMore?: () => void;
   variant?: 'default' | 'preview' | 'sheet';
@@ -341,7 +331,7 @@ function CategoryList({
       {visibleGroups.map((group) => {
         const percent = total > 0 ? Math.round((group.amount / total) * 100) : 0;
         return (
-          <button key={group.key} type="button" className="analytics-v2-category-row" onClick={() => onOpen(group)}>
+          <div key={group.key} className="analytics-v2-category-row" role="listitem">
             <span className="analytics-v2-category-row__dot" style={{ backgroundColor: group.color }} aria-hidden="true" />
             <span className="analytics-v2-category-row__text">
               <b>{rt(group.name)}</b>
@@ -349,7 +339,7 @@ function CategoryList({
             </span>
             <span className="analytics-v2-category-row__amount">{formatMoney(group.amount, 'RUB')}</span>
             <span className="analytics-v2-category-row__percent">{percent}%</span>
-          </button>
+          </div>
         );
       })}
       {hiddenCount > 0 && onMore ? (
@@ -367,13 +357,11 @@ function CategoryBreakdownSheet({
   groups,
   total,
   onClose,
-  onOpen,
 }: {
   title: string;
   groups: MoneyGroup[];
   total: number;
   onClose: () => void;
-  onOpen: (group: MoneyGroup) => void;
 }) {
   const { t } = useI18n();
   const chartGroups = compactDonutGroups(groups, t('analytics.group.other'));
@@ -400,7 +388,7 @@ function CategoryBreakdownSheet({
         </div>
         <div className="analytics-v2-breakdown__body">
           <DonutChart groups={chartGroups} total={total} label={title} />
-          <CategoryList groups={groups} total={total} onOpen={onOpen} variant="sheet" />
+          <CategoryList groups={groups} total={total} variant="sheet" />
         </div>
       </section>
     </div>
@@ -547,15 +535,6 @@ function KpiCard({ label, value, change, tone, caption }: { label: string; value
   );
 }
 
-function NewsCard({ label, value, caption }: { label: string; value: string; caption: string }) {
-  return (
-    <article className="analytics-v2-news-card">
-      <span>{label}</span>
-      <strong>{value}</strong>
-      <small>{caption}</small>
-    </article>
-  );
-}
 
 export default function AnalyticsPage() {
   const { t, rt, language } = useI18n();
@@ -573,7 +552,7 @@ export default function AnalyticsPage() {
   const [draftStart, setDraftStart] = useState(customStart);
   const [draftEnd, setDraftEnd] = useState(customEnd);
   const [calendarMonth, setCalendarMonth] = useState(() => fromDateInputValue(customStart, new Date()));
-  const [breakdown, setBreakdown] = useState<{ title: string; groups: MoneyGroup[]; total: number; mode: MoneyMode } | null>(null);
+  const [breakdown, setBreakdown] = useState<{ title: string; groups: MoneyGroup[]; total: number } | null>(null);
 
   useEffect(() => { void loadTransactions(); }, [loadTransactions]);
 
@@ -711,9 +690,6 @@ export default function AnalyticsPage() {
     return t('analytics.v2.fina.positive');
   }, [activeTab, analytics.balance, analytics.current.length, analytics.expenseRatio, analytics.profitRatio, analytics.topExpense, analytics.topIncome, rt, t]);
 
-  const openGroupJournal = (group: MoneyGroup, type: 'income' | 'expense') => {
-    openJournal({ period: periodPreset === 'day' ? 'today' : periodPreset === 'week' ? 'week' : periodPreset === 'month' ? 'month' : 'custom', type, query: group.name, tag: normalizeJournalTag(group.name) });
-  };
 
   const structureMode = activeTab === 'income' ? 'income' : activeTab === 'expense' ? 'expense' : overviewStructureMode;
   const dynamicMode = activeTab === 'income' ? 'income' : activeTab === 'expense' ? 'expense' : overviewDynamicMode;
@@ -776,28 +752,11 @@ export default function AnalyticsPage() {
         </section>
 
         {activeTab === 'overview' ? (
-          <>
-            <section className="analytics-v2-kpi-grid analytics-v2-kpi-grid--overview" aria-label={t('analytics.v2.kpi.label')}>
-              <KpiCard label={t('analytics.kpi.expense')} value={formatMoney(analytics.totalExpense, 'RUB', { sign: 'minus' })} change={analytics.expenseChange} tone="expense" />
-              <KpiCard label={t('analytics.kpi.income')} value={formatMoney(analytics.totalIncome, 'RUB', { sign: 'plus' })} change={analytics.incomeChange} tone="income" />
-              <KpiCard label={t('analytics.v2.kpi.balance')} value={formatMoney(analytics.balance, 'RUB', { sign: 'auto' })} change={analytics.balanceChange} tone="balance" />
-            </section>
-
-            <section className="app-card analytics-v2-news">
-              <div className="analytics-v2-section-head">
-                <div>
-                  <span>{t('analytics.v2.overview.eyebrow')}</span>
-                  <h2>{t('analytics.v2.overview.title')}</h2>
-                </div>
-                <button type="button" className="analytics-v2-light-button" onClick={() => openJournal({ period: periodPreset === 'day' ? 'today' : periodPreset === 'week' ? 'week' : periodPreset === 'month' ? 'month' : 'custom' })}>{t('analytics.journal.action')}</button>
-              </div>
-              <div className="analytics-v2-news-grid">
-                <NewsCard label={t('analytics.v2.news.balance')} value={formatMoney(analytics.balance, 'RUB', { sign: 'auto' })} caption={t('analytics.v2.news.balanceCaption')} />
-                <NewsCard label={t('analytics.v2.news.topExpense')} value={analytics.topExpense ? rt(analytics.topExpense.name) : '—'} caption={analytics.topExpense ? formatMoney(analytics.topExpense.amount, 'RUB') : t('analytics.v2.empty.groups')} />
-                <NewsCard label={t('analytics.v2.news.activity')} value={String(analytics.current.length)} caption={t('analytics.v2.balance.operations')} />
-              </div>
-            </section>
-          </>
+          <section className="analytics-v2-kpi-grid analytics-v2-kpi-grid--overview" aria-label={t('analytics.v2.kpi.label')}>
+            <KpiCard label={t('analytics.kpi.expense')} value={formatMoney(analytics.totalExpense, 'RUB', { sign: 'minus' })} change={analytics.expenseChange} tone="expense" />
+            <KpiCard label={t('analytics.kpi.income')} value={formatMoney(analytics.totalIncome, 'RUB', { sign: 'plus' })} change={analytics.incomeChange} tone="income" />
+            <KpiCard label={t('analytics.v2.kpi.balance')} value={formatMoney(analytics.balance, 'RUB', { sign: 'auto' })} change={analytics.balanceChange} tone="balance" />
+          </section>
         ) : null}
 
         {activeTab === 'expense' ? (
@@ -844,8 +803,7 @@ export default function AnalyticsPage() {
                 total={structureTotal}
                 limit={CATEGORY_PREVIEW_LIMIT}
                 variant="preview"
-                onOpen={(group) => openGroupJournal(group, structureMode)}
-                onMore={() => setBreakdown({ title: structureTitle, groups: structureGroups, total: structureTotal, mode: structureMode })}
+                onMore={() => setBreakdown({ title: structureTitle, groups: structureGroups, total: structureTotal })}
               />
             </div>
           </section>
@@ -915,7 +873,6 @@ export default function AnalyticsPage() {
             <CategoryList
               groups={activeTab === 'expense' ? analytics.expenseGroups : analytics.incomeGroups}
               total={activeTab === 'expense' ? analytics.totalExpense : analytics.totalIncome}
-              onOpen={(group) => openGroupJournal(group, activeTab)}
             />
           </section>
         ) : null}
@@ -931,10 +888,6 @@ export default function AnalyticsPage() {
           groups={breakdown.groups}
           total={breakdown.total}
           onClose={() => setBreakdown(null)}
-          onOpen={(group) => {
-            setBreakdown(null);
-            openGroupJournal(group, breakdown.mode);
-          }}
         />
       ) : null}
     </div>
