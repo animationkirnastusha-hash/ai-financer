@@ -32,7 +32,7 @@ function hasCyrillic(value: unknown) {
 function resolveAssistantText(response: any, t: (key: string) => string, language: "ru" | "en") {
   const raw = typeof response?.message === "string" ? response.message.trim() : "";
 
-  if (response?.executed) return t("textChat.result.actionDone");
+  if (response?.executed) return raw || t("textChat.result.actionDone");
   if (response?.intent === "clarification" && language === "en" && hasCyrillic(raw)) {
     const field = response?.meta?.clarification?.field || response?.parsed?.clarification?.field;
     if (field === "amount") return t("textChat.clarification.amount");

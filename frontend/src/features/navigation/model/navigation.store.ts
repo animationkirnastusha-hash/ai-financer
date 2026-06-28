@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import type { HomeCashflowMode } from '@/features/dashboard/lib/homeFinanceAnalytics';
 
 export type SettingsSection = 'voice' | 'fina' | 'overlay' | 'ai' | 'currency' | 'data' | 'notifications';
 
@@ -45,7 +46,7 @@ type NavigationState = {
   openSettingsSection: (section: SettingsSection) => void;
   consumeSettingsSection: () => SettingsSection | null;
   openAIWithCommand: (command?: string) => void;
-  openAIWithPrompt: (message: string, quickCreateMode?: 'income' | 'expense' | null) => void;
+  openAIWithPrompt: (message: string, quickCreateMode?: HomeCashflowMode | null, hiddenCommandPrefix?: string | null) => void;
   openFirstRunChatSetup: () => void;
   goBack: () => void;
   goHome: () => void;
@@ -167,13 +168,15 @@ export const useNavigationStore = create<NavigationState>((set, get) => ({
   },
 
 
-  openAIWithPrompt: (message, quickCreateMode = null) => {
+  openAIWithPrompt: (message, quickCreateMode = null, hiddenCommandPrefix = null) => {
     const text = message.trim();
+    const prefix = hiddenCommandPrefix?.trim() || null;
 
     window.dispatchEvent(new CustomEvent('ai-financer:open-text-chat', {
       detail: {
         initialAssistantMessage: text || null,
         quickCreateMode: quickCreateMode ?? null,
+        hiddenCommandPrefix: prefix,
         autoSubmitInitialCommand: false,
       },
     }));

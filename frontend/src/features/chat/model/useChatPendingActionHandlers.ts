@@ -32,7 +32,7 @@ export function useChatPendingActionHandlers({
 
       try {
         const response: any = await pendingActionsApi.confirm(actionId);
-        const assistantText = t("textChat.result.actionDone");
+        const assistantText = typeof response?.message === "string" && response.message.trim() ? response.message.trim() : t("textChat.result.actionDone");
 
         setMessages((prev) =>
           appendLocalMessages(prev, {

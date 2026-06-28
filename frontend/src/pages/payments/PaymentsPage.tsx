@@ -77,6 +77,21 @@ function editCommand(record: PaymentRecord, t: TFn) {
 function paidCommand(record: PaymentRecord, t: TFn) {
   return t(record.source === 'recurring' ? 'payments.command.recurringPaid' : 'payments.command.paymentPaid', { title: record.title });
 }
+function createContext(tab: PaymentTab, t: TFn) {
+  if (tab === 'credit') return t('payments.command.creditCreateContext');
+  if (tab === 'installment') return t('payments.command.installmentCreateContext');
+  if (tab === 'subscription') return t('payments.command.subscriptionCreateContext');
+  return t('payments.command.otherCreateContext');
+}
+
+function editContext(record: PaymentRecord, t: TFn) {
+  return t(record.source === 'recurring' ? 'payments.command.recurringEditContext' : 'payments.command.paymentEditContext', { title: record.title });
+}
+
+function paidContext(record: PaymentRecord, t: TFn) {
+  return t(record.source === 'recurring' ? 'payments.command.recurringPaidContext' : 'payments.command.paymentPaidContext', { title: record.title });
+}
+
 
 function tabFocusTitle(tab: PaymentTab, t: TFn) {
   if (tab === 'credit') return t('payments.focus.credit.title');
@@ -190,9 +205,9 @@ export default function PaymentsPage() {
       .sort((a, b) => amount(a.daysUntil) - amount(b.daysUntil))[0] ?? null;
   }, [currentPayments]);
 
-  const openCreate = () => openAIWithPrompt(createCommand(tab, t));
-  const openEdit = (record: PaymentRecord) => openAIWithPrompt(editCommand(record, t));
-  const openPaidWithFina = (record: PaymentRecord) => openAIWithPrompt(paidCommand(record, t));
+  const openCreate = () => openAIWithPrompt(createCommand(tab, t), null, createContext(tab, t));
+  const openEdit = (record: PaymentRecord) => openAIWithPrompt(editCommand(record, t), null, editContext(record, t));
+  const openPaidWithFina = (record: PaymentRecord) => openAIWithPrompt(paidCommand(record, t), null, paidContext(record, t));
 
   const renderPayment = (payment: PaymentRecord) => {
     const isDebt = payment.tab === 'credit' || payment.tab === 'installment';
@@ -230,11 +245,11 @@ export default function PaymentsPage() {
         )}
 
         <div className="app-payment-actions">
-          <button type="button" className="app-secondary-button" onClick={() => openEdit(payment)}>{t('payments.action.editWithFina')}</button>
+          <button type="button" className="app-secondary-button" onClick={() => openEdit(payment)}>{t('payments.action.edit')}</button>
           {payment.source === 'loan' ? (
             <button type="button" className="app-primary-button" disabled={isMutating} onClick={() => payment.rawLoan ? markPaid(payment.rawLoan.id) : openPaidWithFina(payment)}>{t('payments.action.paid')}</button>
           ) : (
-            <button type="button" className="app-primary-button" onClick={() => openPaidWithFina(payment)}>{t('payments.action.paidWithFina')}</button>
+            <button type="button" className="app-primary-button" onClick={() => openPaidWithFina(payment)}>{t('payments.action.paid')}</button>
           )}
         </div>
       </article>

@@ -13,6 +13,7 @@ type TextChatEventDetail = {
   autoSubmitInitialCommand?: boolean;
   firstRunSetup?: boolean;
   quickCreateMode?: HomeCashflowMode | null;
+  hiddenCommandPrefix?: string | null;
 };
 
 export function useTextChatModalEvent(openModal: OpenModal) {
@@ -29,6 +30,7 @@ export function useTextChatModalEvent(openModal: OpenModal) {
         autoSubmitInitialCommand: Boolean(detail?.autoSubmitInitialCommand),
         firstRunSetup: Boolean(detail?.firstRunSetup),
         quickCreateMode: detail?.quickCreateMode ?? null,
+        hiddenCommandPrefix: detail?.hiddenCommandPrefix ?? null,
       });
     };
 

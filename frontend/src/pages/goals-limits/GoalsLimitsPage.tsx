@@ -33,7 +33,7 @@ function periodLabel(period: SpendingLimitDto['period'], t: (key: string) => str
   return t('goalsLimits.period.month');
 }
 
-function buildFinaCommand(flow: FinaFlow, t: (key: string, params?: Record<string, string | number>) => string, item?: GoalDto | SpendingLimitDto) {
+function buildFinaMessage(flow: FinaFlow, t: (key: string, params?: Record<string, string | number>) => string, item?: GoalDto | SpendingLimitDto) {
   if (flow === 'goal-create') return t('goalsLimits.command.goalCreate');
 
   if (flow === 'goal-edit') {
@@ -45,6 +45,20 @@ function buildFinaCommand(flow: FinaFlow, t: (key: string, params?: Record<strin
 
   const limit = item as SpendingLimitDto | undefined;
   return t('goalsLimits.command.limitEdit', { amount: limit ? amount(limit.amount) : '' });
+}
+
+function buildFinaContext(flow: FinaFlow, t: (key: string, params?: Record<string, string | number>) => string, item?: GoalDto | SpendingLimitDto) {
+  if (flow === 'goal-create') return t('goalsLimits.command.goalCreateContext');
+
+  if (flow === 'goal-edit') {
+    const goal = item as GoalDto | undefined;
+    return t('goalsLimits.command.goalEditContext', { title: goal?.title ?? '' });
+  }
+
+  if (flow === 'limit-create') return t('goalsLimits.command.limitCreateContext');
+
+  const limit = item as SpendingLimitDto | undefined;
+  return t('goalsLimits.command.limitEditContext', { amount: limit ? amount(limit.amount) : '' });
 }
 
 
@@ -59,7 +73,7 @@ export default function GoalsLimitsPage() {
   const [error, setError] = useState<string | null>(null);
 
   const openFina = (flow: FinaFlow, item?: GoalDto | SpendingLimitDto) => {
-    openAIWithPrompt(buildFinaCommand(flow, t, item));
+    openAIWithPrompt(buildFinaMessage(flow, t, item), null, buildFinaContext(flow, t, item));
   };
 
   const load = async () => {
@@ -213,7 +227,7 @@ export default function GoalsLimitsPage() {
                   </div>
                   <div className="app-goals-limits-row__bottom">
                     <span>{goal.account?.name ?? t('goalsLimits.goal.noAccount')}</span>
-                    <button type="button" onClick={() => openFina('goal-edit', goal)}>{t('goalsLimits.action.editWithFina')}</button>
+                    <button type="button" onClick={() => openFina('goal-edit', goal)}>{t('goalsLimits.action.edit')}</button>
                   </div>
                 </article>
               );
@@ -244,7 +258,7 @@ export default function GoalsLimitsPage() {
                   </div>
                   <div className="app-goals-limits-row__bottom">
                     <span>{periodLabel(limit.period, t)} · {t('goalsLimits.limit.notify', { percent: limit.notifyAt })}</span>
-                    <button type="button" onClick={() => openFina('limit-edit', limit)}>{t('goalsLimits.action.editWithFina')}</button>
+                    <button type="button" onClick={() => openFina('limit-edit', limit)}>{t('goalsLimits.action.edit')}</button>
                   </div>
                 </article>
               );

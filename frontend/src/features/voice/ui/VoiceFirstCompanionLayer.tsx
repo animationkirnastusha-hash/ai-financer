@@ -5,7 +5,7 @@ import { useAppModalStore } from '@/features/modals/model/appModal.store';
 import { useSettingsStore } from '@/features/settings/model/settings.store';
 import { logVoiceDebugEvent } from '@/features/voice/api/voice.api';
 import { useVoiceCommandDispatcher } from '@/features/voice/model/useVoiceCommandDispatcher';
-import { useVoiceInput } from '@/features/voice/model/useVoiceInput';
+import { useUnifiedVoiceCapture } from '@/features/voice/manager/useUnifiedVoiceCapture';
 import { useVoiceSessionMachine } from '@/features/voice/model/useVoiceSessionMachine';
 import type { VoiceCompanionMood } from '@/features/voice/model/voiceSession.types';
 import { VoiceCompanionSurface } from '@/features/voice/ui/companion/VoiceCompanionSurface';
@@ -64,7 +64,7 @@ export function VoiceFirstCompanionLayer() {
     reset: resetVoiceMachine,
   } = machine;
 
-  const voice = useVoiceInput({
+  const voice = useUnifiedVoiceCapture({
     lang: appLanguage === 'en' ? 'en-US' : 'ru-RU',
     sessionMs: recordSessionMs,
     permissionWasPrompted: voicePermissionPrompted,

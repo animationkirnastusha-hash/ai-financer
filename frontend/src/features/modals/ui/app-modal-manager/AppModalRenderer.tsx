@@ -128,6 +128,7 @@ export function AppModalRenderer({ closeAllModals, closeModal, deps, index, moda
         autoSubmitInitialCommand={Boolean(modal.autoSubmitInitialCommand)}
         firstRunSetup={Boolean(modal.firstRunSetup)}
         quickCreateMode={modal.quickCreateMode ?? null}
+        hiddenCommandPrefix={modal.hiddenCommandPrefix ?? null}
         layer={layer}
         onClose={() => closeModal('ai-text-overlay')}
       />

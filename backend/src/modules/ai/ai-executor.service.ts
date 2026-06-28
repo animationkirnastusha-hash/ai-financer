@@ -1497,6 +1497,7 @@ export class AIExecutorService {
       await tx.transaction.deleteMany({ where: { userId, id: { in: transactionIds } } });
     }
 
+    await tx.spendingLimit.deleteMany({ where: { userId, accountId: { in: uniqueIds } } });
     await tx.recurringPayment.deleteMany({ where: { userId, accountId: { in: uniqueIds } } });
     await tx.account.deleteMany({ where: { userId, id: { in: uniqueIds } } });
 

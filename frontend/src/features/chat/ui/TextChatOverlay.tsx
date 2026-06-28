@@ -17,7 +17,7 @@ import { useFirstRunChatSetupStore } from "@/features/chat/model/firstRunChatSet
 import { useSettingsStore } from "@/features/settings/model/settings.store";
 import { createTransaction } from "@/features/transactions/api/transactions.api";
 import { useTransactionsStore } from "@/features/transactions/model/transactions.store";
-import { useVoiceInput } from "@/features/voice/model/useVoiceInput";
+import { useUnifiedVoiceCapture } from '@/features/voice/manager/useUnifiedVoiceCapture';
 import { VOICE_MANUAL_SESSION_MS } from "@/features/voice/model/voiceConstants";
 import { shouldIgnoreVoiceCommand } from "@/features/voice/model/voiceText";
 import { VoicePermissionMiniPrompt } from "@/features/voice/ui/VoicePermissionMiniPrompt";
@@ -109,6 +109,7 @@ type TextChatOverlayProps = {
   autoSubmitInitialCommand?: boolean;
   firstRunSetup?: boolean;
   quickCreateMode?: HomeCashflowMode | null;
+  hiddenCommandPrefix?: string | null;
   layer?: number;
   onClose: () => void;
 };
@@ -123,6 +124,7 @@ export function TextChatOverlay({
   autoSubmitInitialCommand = false,
   firstRunSetup = false,
   quickCreateMode = null,
+  hiddenCommandPrefix = null,
   layer = 130,
   onClose,
 }: TextChatOverlayProps) {
@@ -211,7 +213,17 @@ export function TextChatOverlay({
 
   const buildQuickCreateCommand = useCallback((rawText: string) => {
     const clean = rawText.trim();
-    if (!quickCreateMode || quickCreateConsumedRef.current || inlinePendingActions.length > 0) {
+    if (inlinePendingActions.length > 0 || quickCreateConsumedRef.current) {
+      return { text: clean, displayText: clean };
+    }
+
+    const flowPrefix = hiddenCommandPrefix?.trim();
+    if (flowPrefix) {
+      quickCreateConsumedRef.current = true;
+      return { text: `${flowPrefix} ${clean}`, displayText: clean };
+    }
+
+    if (!quickCreateMode) {
       return { text: clean, displayText: clean };
     }
 
@@ -221,7 +233,7 @@ export function TextChatOverlay({
       : quickCreateMode === "income" ? "Запиши доход:" : "Запиши расход:";
 
     return { text: `${prefix} ${clean}`, displayText: clean };
-  }, [appLanguage, inlinePendingActions.length, quickCreateMode]);
+  }, [appLanguage, hiddenCommandPrefix, inlinePendingActions.length, quickCreateMode]);
 
   const sendText = useCallback(
     async (text: string, source: "text" | "voice" = "text") => {
@@ -256,7 +268,7 @@ export function TextChatOverlay({
     return () => window.clearTimeout(timer);
   }, [open, shouldRender]);
 
-  const voice = useVoiceInput({
+  const voice = useUnifiedVoiceCapture({
     lang: appLanguage === "en" ? "en-US" : "ru-RU",
     sessionMs: VOICE_MANUAL_SESSION_MS,
     permissionWasPrompted: voicePermissionPrompted,

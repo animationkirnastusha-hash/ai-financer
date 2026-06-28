@@ -17,7 +17,7 @@ export type AppModalDescriptor =
   | { type: 'section-edit'; section?: SectionDto | null }
   | { type: 'notifications' }
   | { type: 'report-export'; mode?: ReportMode }
-  | { type: 'ai-text-overlay'; initialCommand?: string | null; initialAssistantMessage?: string | null; mode?: 'text' | 'voice'; autoStartVoice?: boolean; autoCloseOnVoiceResult?: boolean; autoSubmitInitialCommand?: boolean; firstRunSetup?: boolean; quickCreateMode?: HomeCashflowMode | null }
+  | { type: 'ai-text-overlay'; initialCommand?: string | null; initialAssistantMessage?: string | null; mode?: 'text' | 'voice'; autoStartVoice?: boolean; autoCloseOnVoiceResult?: boolean; autoSubmitInitialCommand?: boolean; firstRunSetup?: boolean; quickCreateMode?: HomeCashflowMode | null; hiddenCommandPrefix?: string | null }
   | { type: 'home-chart-details'; mode: HomeCashflowMode; period: HomeCashflowPeriod }
   | { type: 'home-category-operations'; group: HomeFinanceGroup }
   | { type: 'accounts-tools' }

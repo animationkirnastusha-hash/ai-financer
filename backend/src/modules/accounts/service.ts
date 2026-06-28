@@ -253,6 +253,7 @@ export class AccountService {
         await tx.transaction.deleteMany({ where: { userId, id: { in: transactionIds } } });
       }
 
+      await tx.spendingLimit.deleteMany({ where: { userId, accountId } });
       await tx.recurringPayment.deleteMany({ where: { userId, accountId } });
       await tx.account.delete({ where: { id: accountId } });
     });
