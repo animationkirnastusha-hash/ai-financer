@@ -20,8 +20,7 @@
 }
 
 .app-home-layout,
-.profile-hub,
-.app-analytics-page .app-page__inner {
+.profile-hub {
   gap: 12px;
 }
 

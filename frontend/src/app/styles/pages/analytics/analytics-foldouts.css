@@ -1,4 +1,4 @@
-/* Pack 188b: analytics v2 Fina block and responsive polish. */
+/* Analytics Fina hint card. Responsive layout rules live in shell/layout/charts. */
 .analytics-v2-fina {
   display: grid;
   grid-template-columns: 44px minmax(0, 1fr);
@@ -19,20 +19,15 @@
 
 .analytics-v2-fina__avatar span {
   position: absolute;
+  top: 18px;
   width: 6px;
   height: 6px;
-  top: 18px;
   border-radius: 999px;
   background: #07111f;
 }
 
-.analytics-v2-fina__avatar span:first-child {
-  left: 14px;
-}
-
-.analytics-v2-fina__avatar span:last-child {
-  right: 14px;
-}
+.analytics-v2-fina__avatar span:first-child { left: 14px; }
+.analytics-v2-fina__avatar span:last-child { right: 14px; }
 
 .analytics-v2-fina b {
   display: block;
@@ -43,7 +38,7 @@
 }
 
 .analytics-v2-fina p {
-  margin: 3px 0 0;
+  margin: 4px 0 0;
   color: rgba(255, 255, 255, 0.68);
   font-size: 13px;
   font-weight: 650;
@@ -51,10 +46,6 @@
 }
 
 @media (max-width: 430px) {
-  .analytics-v2-page__inner {
-    gap: 12px;
-  }
-
   .analytics-v2-tabs {
     gap: 5px;
     border-radius: 21px;
@@ -66,67 +57,8 @@
     font-size: 11px;
   }
 
-  .analytics-v2-kpi-grid,
-  .analytics-v2-focus-grid,
-  .analytics-v2-ratio-grid,
-  .analytics-v2-news-grid {
-    gap: 6px;
-  }
-
-  .analytics-v2-kpi,
-  .analytics-v2-news-card {
-    border-radius: 20px;
-    padding: 10px 8px;
-  }
-
-  .analytics-v2-kpi span,
-  .analytics-v2-kpi small,
-  .analytics-v2-news-card span,
-  .analytics-v2-news-card small,
-  .analytics-v2-ratio-grid span {
-    font-size: 10px;
-  }
-
-  .analytics-v2-chart-layout {
-    grid-template-columns: 1fr;
-  }
-
-  .analytics-v2-section-head {
-    align-items: stretch;
-    flex-direction: column;
-    gap: 10px;
-  }
-
-  .analytics-v2-section-head h2 {
-    font-size: 18px;
-  }
-
-  .analytics-v2-switch {
-    width: 100%;
-  }
-}
-
-/* Pack 188d: keep mobile spacing readable. */
-@media (max-width: 430px) {
-  .app-analytics-page .analytics-v2-page__inner {
-    gap: 18px;
-    padding-top: 18px;
-  }
-
   .analytics-v2-period {
     padding: 14px;
-  }
-
-  .analytics-v2-kpi-grid,
-  .analytics-v2-focus-grid,
-  .analytics-v2-ratio-grid,
-  .analytics-v2-news-grid {
-    gap: 10px;
-  }
-
-  .analytics-v2-kpi,
-  .analytics-v2-news-card {
-    padding: 13px 10px;
   }
 
   .analytics-v2-news,

@@ -1,4 +1,4 @@
-/* Pack 207b: limits page spacing and card consistency. */
+/* Goals and limits final polish: compact KPI row, early list and consistent cards. */
 .app-goals-limits-shell {
   gap: 24px;
 }
@@ -14,12 +14,30 @@
 }
 
 .app-goals-limits-kpi {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
 }
 
 .app-goals-limits-kpi .app-card {
-  min-height: 108px;
-  border-radius: 25px;
+  min-height: 96px;
+  border-radius: 24px;
+  padding: 14px 11px;
+}
+
+.app-goals-limits-kpi span,
+.app-goals-limits-kpi small {
+  overflow: visible;
+  text-overflow: clip;
+  white-space: normal;
+}
+
+.app-goals-limits-kpi strong {
+  overflow: visible;
+  font-size: clamp(15px, 4vw, 22px);
+  line-height: 1.05;
+  text-overflow: clip;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .app-goals-limits-focus {
@@ -32,7 +50,7 @@
 }
 
 .app-goals-limits-section-head {
-  margin-bottom: 2px;
+  margin-bottom: 0;
 }
 
 .app-goals-limits-row {
@@ -45,6 +63,13 @@
   min-width: 0;
 }
 
+.app-goals-limits-row__head span {
+  overflow: visible;
+  text-overflow: clip;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
 .app-goals-limits-row__bottom button {
   flex: 0 0 auto;
 }
@@ -55,10 +80,23 @@
   }
 
   .app-goals-limits-kpi {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
   }
 
   .app-goals-limits-kpi .app-card {
-    min-height: 0;
+    min-height: 88px;
+    padding: 12px 9px;
+    border-radius: 22px;
+  }
+
+  .app-goals-limits-kpi span,
+  .app-goals-limits-kpi small {
+    font-size: 10px;
+    line-height: 1.15;
+  }
+
+  .app-goals-limits-kpi strong {
+    font-size: clamp(13px, 3.8vw, 18px);
   }
 }

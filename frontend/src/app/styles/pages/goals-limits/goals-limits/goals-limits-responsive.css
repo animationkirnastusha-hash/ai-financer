@@ -1,16 +1,7 @@
 @media (max-width: 420px) {
   .app-goals-limits-shell {
-    gap: 20px;
+    gap: 22px;
     padding-top: 14px;
-  }
-
-  .app-goals-limits-kpi {
-    gap: 10px;
-  }
-
-  .app-goals-limits-kpi article {
-    min-height: 114px;
-    padding: 14px 12px;
   }
 
   .app-goals-limits-focus,
@@ -38,14 +29,6 @@
 }
 
 @media (max-width: 380px) {
-  .app-goals-limits-kpi {
-    gap: 8px;
-  }
-
-  .app-goals-limits-kpi article {
-    padding: 12px 10px;
-  }
-
   .app-goals-limits-tabs {
     gap: 6px;
     padding: 6px;

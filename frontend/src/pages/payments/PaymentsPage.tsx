@@ -298,28 +298,7 @@ export default function PaymentsPage() {
           </article>
         </section>
 
-        <section className="app-card app-payments-focus">
-          <div className="app-payments-focus__copy">
-            <span className="app-eyebrow">{t('payments.focus.eyebrow')}</span>
-            <h2>{tabFocusTitle(tab, t)}</h2>
-            <p>{tabFocusCaption(tab, t)}</p>
-          </div>
-          <div className="app-payments-ring" style={{ '--value': `${tab === 'subscription' || tab === 'other' ? Math.min(100, currentPayments.length * 16) : tabProgress}%` } as CSSProperties}>
-            <strong>{tab === 'subscription' || tab === 'other' ? currentPayments.length : `${tabProgress}%`}</strong>
-            <span>{tab === 'subscription' || tab === 'other' ? t('payments.focus.items') : t('payments.focus.closed')}</span>
-          </div>
-        </section>
 
-        {nearestPayment ? (
-          <section className="app-card app-payments-nearest">
-            <div>
-              <span>{t('payments.nearest.eyebrow')}</span>
-              <h2>{nearestPayment.title}</h2>
-              <p>{nearestPayment.nextDate ? formatTransactionDate(nearestPayment.nextDate) : t('payments.card.noDate')} · {daysLabel(nearestPayment.daysUntil, t)}</p>
-            </div>
-            <strong>{formatMoney(nearestPayment.amount, nearestPayment.currency)}</strong>
-          </section>
-        ) : null}
 
         {error ? <div className="app-error-box">{error}</div> : null}
 
@@ -345,6 +324,29 @@ export default function PaymentsPage() {
             {currentPayments.map(renderPayment)}
           </section>
         )}
+
+        <section className="app-card app-payments-focus">
+          <div className="app-payments-focus__copy">
+            <span className="app-eyebrow">{t('payments.focus.eyebrow')}</span>
+            <h2>{tabFocusTitle(tab, t)}</h2>
+            <p>{tabFocusCaption(tab, t)}</p>
+          </div>
+          <div className="app-payments-ring" style={{ '--value': `${tab === 'subscription' || tab === 'other' ? Math.min(100, currentPayments.length * 16) : tabProgress}%` } as CSSProperties}>
+            <strong>{tab === 'subscription' || tab === 'other' ? currentPayments.length : `${tabProgress}%`}</strong>
+            <span>{tab === 'subscription' || tab === 'other' ? t('payments.focus.items') : t('payments.focus.closed')}</span>
+          </div>
+        </section>
+
+        {nearestPayment ? (
+          <section className="app-card app-payments-nearest">
+            <div>
+              <span>{t('payments.nearest.eyebrow')}</span>
+              <h2>{nearestPayment.title}</h2>
+              <p>{nearestPayment.nextDate ? formatTransactionDate(nearestPayment.nextDate) : t('payments.card.noDate')} · {daysLabel(nearestPayment.daysUntil, t)}</p>
+            </div>
+            <strong>{formatMoney(nearestPayment.amount, nearestPayment.currency)}</strong>
+          </section>
+        ) : null}
 
         <section className="app-card app-payments-reminders">
           <div className="app-payments-reminders__head">

@@ -178,17 +178,6 @@ export default function GoalsLimitsPage() {
           </article>
         </section>
 
-        <section className="app-card app-goals-limits-focus">
-          <div className="app-goals-limits-focus__copy">
-            <span className="app-eyebrow">{t('goalsLimits.focus.eyebrow')}</span>
-            <h2>{isGoalsTab ? t('goalsLimits.focus.goals.title') : t('goalsLimits.focus.limits.title')}</h2>
-            <p>{isGoalsTab ? t('goalsLimits.focus.goals.caption') : t('goalsLimits.focus.limits.caption')}</p>
-          </div>
-          <div className="app-goals-limits-ring" style={{ '--value': `${isGoalsTab ? goalProgress : limitUsage}%` } as CSSProperties}>
-            <strong>{isGoalsTab ? goalProgress : limitUsage}%</strong>
-            <span>{isGoalsTab ? t('goalsLimits.focus.progress') : t('goalsLimits.focus.usage')}</span>
-          </div>
-        </section>
 
         {error ? <div className="app-error-box">{error}</div> : null}
 
@@ -265,6 +254,18 @@ export default function GoalsLimitsPage() {
             })}
           </section>
         )}
+
+        <section className="app-card app-goals-limits-focus">
+          <div className="app-goals-limits-focus__copy">
+            <span className="app-eyebrow">{t('goalsLimits.focus.eyebrow')}</span>
+            <h2>{isGoalsTab ? t('goalsLimits.focus.goals.title') : t('goalsLimits.focus.limits.title')}</h2>
+            <p>{isGoalsTab ? t('goalsLimits.focus.goals.caption') : t('goalsLimits.focus.limits.caption')}</p>
+          </div>
+          <div className="app-goals-limits-ring" style={{ '--value': `${isGoalsTab ? goalProgress : limitUsage}%` } as CSSProperties}>
+            <strong>{isGoalsTab ? goalProgress : limitUsage}%</strong>
+            <span>{isGoalsTab ? t('goalsLimits.focus.progress') : t('goalsLimits.focus.usage')}</span>
+          </div>
+        </section>
       </div>
     </div>
   );

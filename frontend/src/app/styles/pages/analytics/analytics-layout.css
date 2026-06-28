@@ -1,25 +1,22 @@
-/* Pack 188b: analytics v2 layout, focus cards and section structure. */
+/* Analytics layout, cards, switches and category breakdown sheet. */
 .analytics-v2-kpi-grid,
 .analytics-v2-focus-grid,
 .analytics-v2-news-grid,
 .analytics-v2-ratio-grid {
   display: grid;
-  gap: 8px;
+  gap: 14px;
   min-width: 0;
 }
 
-.analytics-v2-kpi-grid--overview {
+.analytics-v2-kpi-grid--overview,
+.analytics-v2-focus-grid--balance,
+.analytics-v2-news-grid,
+.analytics-v2-ratio-grid {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .analytics-v2-focus-grid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-.analytics-v2-focus-grid--balance,
-.analytics-v2-news-grid,
-.analytics-v2-ratio-grid {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .analytics-v2-kpi,
@@ -37,20 +34,23 @@
 .analytics-v2-kpi,
 .analytics-v2-news-card {
   display: grid;
-  gap: 7px;
+  gap: 8px;
   min-width: 0;
-  border: 1px solid rgba(255, 255, 255, 0.09);
-  border-radius: 22px;
-  background: rgba(255, 255, 255, 0.055);
+  border: 1px solid rgba(255, 255, 255, 0.095);
+  border-radius: 24px;
+  background:
+    radial-gradient(circle at 14% 0%, rgba(103, 232, 249, 0.08), transparent 34%),
+    rgba(255, 255, 255, 0.05);
   box-shadow: 0 16px 40px rgba(3, 7, 18, 0.16);
 }
 
 .analytics-v2-kpi {
-  padding: 11px 9px;
+  min-height: 96px;
+  padding: 15px 12px;
 }
 
 .analytics-v2-news-card {
-  padding: 12px 10px;
+  padding: 14px 12px;
 }
 
 .analytics-v2-kpi span,
@@ -59,7 +59,7 @@
 .analytics-v2-ratio-grid span {
   color: rgba(255, 255, 255, 0.55);
   font-size: 10.5px;
-  font-weight: 800;
+  font-weight: 820;
   line-height: 1.15;
 }
 
@@ -97,22 +97,25 @@
   text-overflow: ellipsis;
 }
 
-.analytics-v2-kpi em.is-positive {
-  color: #bbf7d0;
-  background: rgba(34, 197, 94, 0.13);
-}
+.analytics-v2-kpi em.is-positive { color: #bbf7d0; background: rgba(34, 197, 94, 0.13); }
+.analytics-v2-kpi em.is-negative { color: #fecaca; background: rgba(248, 113, 113, 0.13); }
 
-.analytics-v2-kpi em.is-negative {
-  color: #fecaca;
-  background: rgba(248, 113, 113, 0.13);
+.analytics-v2-news,
+.analytics-v2-chart-card,
+.analytics-v2-trend-card,
+.analytics-v2-balance-card,
+.analytics-v2-detail-card,
+.analytics-v2-fina {
+  padding: 20px;
+  border-radius: 32px;
 }
 
 .analytics-v2-section-head {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 14px;
+  gap: 14px;
+  margin-bottom: 20px;
 }
 
 .analytics-v2-section-head > div {
@@ -120,12 +123,12 @@
 }
 
 .analytics-v2-section-head h2 {
-  margin: 3px 0 0;
+  margin: 5px 0 0;
   color: #fff;
-  font-size: 19px;
+  font-size: 21px;
   font-weight: 950;
-  letter-spacing: -0.05em;
-  line-height: 1.1;
+  letter-spacing: -0.055em;
+  line-height: 1.08;
 }
 
 .analytics-v2-switch {
@@ -134,14 +137,14 @@
   gap: 4px;
   flex: 0 0 auto;
   padding: 4px;
-  border-radius: 16px;
+  border-radius: 18px;
   background: rgba(255, 255, 255, 0.06);
 }
 
 .analytics-v2-switch button {
-  min-height: 30px;
-  padding: 0 9px;
-  border-radius: 12px;
+  min-height: 32px;
+  padding: 0 11px;
+  border-radius: 14px;
   background: transparent;
   font-size: 11px;
   font-weight: 900;
@@ -153,15 +156,15 @@
 }
 
 .analytics-v2-ratio-grid {
-  margin-top: 12px;
+  margin-top: 14px;
 }
 
 .analytics-v2-ratio-grid article {
   display: grid;
-  gap: 5px;
+  gap: 6px;
   min-width: 0;
-  padding: 11px;
-  border-radius: 18px;
+  padding: 12px;
+  border-radius: 19px;
   background: rgba(255, 255, 255, 0.055);
 }
 
@@ -178,7 +181,8 @@
 .analytics-v2-actions {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
+  gap: 14px;
+  margin-top: 2px;
 }
 
 .analytics-v2-actions button,
@@ -193,62 +197,6 @@
 
 .analytics-v2-light-button {
   padding: 0 12px;
-}
-
-/* Pack 188d: analytics section spacing polish. */
-.analytics-v2-kpi-grid,
-.analytics-v2-focus-grid,
-.analytics-v2-news-grid,
-.analytics-v2-ratio-grid {
-  gap: 12px;
-}
-
-.analytics-v2-kpi,
-.analytics-v2-news-card {
-  padding: 14px 12px;
-}
-
-.analytics-v2-news,
-.analytics-v2-chart-card,
-.analytics-v2-trend-card,
-.analytics-v2-balance-card,
-.analytics-v2-detail-card,
-.analytics-v2-fina {
-  padding: 18px;
-  border-radius: 30px;
-}
-
-.analytics-v2-section-head {
-  gap: 14px;
-  margin-bottom: 18px;
-}
-
-.analytics-v2-news-grid {
-  margin-top: 2px;
-}
-
-.analytics-v2-actions {
-  gap: 14px;
-  margin-top: 2px;
-}
-
-/* Pack 206: analytics block spacing and full category sheet. */
-.app-analytics-page .analytics-v2-page__inner {
-  gap: 22px;
-}
-
-.analytics-v2-news,
-.analytics-v2-chart-card,
-.analytics-v2-trend-card,
-.analytics-v2-balance-card,
-.analytics-v2-detail-card,
-.analytics-v2-fina {
-  margin-top: 2px;
-}
-
-.analytics-v2-kpi-grid,
-.analytics-v2-focus-grid {
-  margin-bottom: 2px;
 }
 
 .analytics-v2-breakdown {
@@ -339,18 +287,24 @@
 }
 
 @keyframes analyticsBreakdownIn {
-  from {
-    opacity: 0;
-    transform: translateY(18px) scale(0.985);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
+  from { opacity: 0; transform: translateY(18px) scale(0.985); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
 @media (max-width: 520px) {
+  .analytics-v2-section-head {
+    display: grid;
+    gap: 12px;
+  }
+
+  .analytics-v2-section-head h2 {
+    font-size: 20px;
+  }
+
+  .analytics-v2-switch {
+    width: 100%;
+  }
+
   .analytics-v2-breakdown__body {
     grid-template-columns: 1fr;
   }

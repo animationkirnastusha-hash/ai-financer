@@ -121,7 +121,7 @@
 
 /* Pack 188d: analytics top breathing room and calendar range picker. */
 .app-analytics-page .analytics-v2-page__inner {
-  gap: 20px;
+  gap: 28px;
   padding-top: max(20px, env(safe-area-inset-top));
   padding-bottom: max(148px, calc(env(safe-area-inset-bottom) + 128px));
 }
@@ -137,7 +137,7 @@
 
 .analytics-v2-period {
   gap: 14px;
-  padding: 16px;
+  padding: 18px;
   border-radius: 28px;
 }
 

@@ -337,8 +337,10 @@ function CategoryList({
               <b>{rt(group.name)}</b>
               <small>{t('analytics.v2.category.operations', { count: group.count })}</small>
             </span>
-            <span className="analytics-v2-category-row__amount">{formatMoney(group.amount, 'RUB')}</span>
-            <span className="analytics-v2-category-row__percent">{percent}%</span>
+            <span className="analytics-v2-category-row__values">
+              <span className="analytics-v2-category-row__amount">{formatMoney(group.amount, 'RUB')}</span>
+              <span className="analytics-v2-category-row__percent">{percent}%</span>
+            </span>
           </div>
         );
       })}
