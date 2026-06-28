@@ -14,6 +14,7 @@ import { useChatStore } from "@/features/chat/model/chat.store";
 import { useFirstRunChatSetupStore } from "@/features/chat/model/firstRunChatSetup.store";
 import { useSettingsStore } from "@/features/settings/model/settings.store";
 import { useUnifiedVoiceCapture } from '@/features/voice/manager/useUnifiedVoiceCapture';
+import { logVoiceDebugEvent } from '@/features/voice/api/voice.api';
 import { VOICE_MANUAL_SESSION_MS } from "@/features/voice/model/voiceConstants";
 import { shouldIgnoreVoiceCommand } from "@/features/voice/model/voiceText";
 import { VoicePermissionMiniPrompt } from "@/features/voice/ui/VoicePermissionMiniPrompt";
@@ -371,6 +372,11 @@ export function TextChatOverlay({
       voiceCancelledBySwipeRef.current = false;
       voicePressActiveRef.current = true;
       voiceStopAfterStartRef.current = false;
+      logVoiceDebugEvent('chat_voice_press_started', {
+        source: 'pointer_down',
+        voiceState: voice.state,
+        pointerActive: true,
+      });
       event.currentTarget.setPointerCapture?.(event.pointerId);
       void startVoice();
     },
@@ -425,38 +431,94 @@ export function TextChatOverlay({
   useEffect(() => {
     if (!open) return;
 
-    const releaseIfNeeded = () => {
-      if (voicePointerIdRef.current === null) return;
+    const releaseIfNeeded = (source: string) => {
+      const hadPointer = voicePointerIdRef.current !== null;
+      const shouldRelease = hadPointer || voicePressActiveRef.current || isVoicePressed || voice.state === 'recording';
+      if (!shouldRelease) return;
+
+      const shouldDeferStop = voice.state !== 'recording' && voice.state !== 'uploading';
       voicePointerIdRef.current = null;
       voicePressActiveRef.current = false;
+
       if (voiceCancelledBySwipeRef.current) {
         voiceCancelledBySwipeRef.current = false;
+        logVoiceDebugEvent('chat_voice_release_cancelled_by_swipe', { source, voiceState: voice.state });
         cancelVoice(t("textChat.voice.cancelled"));
         return;
       }
+
+      if (shouldDeferStop) {
+        voiceStopAfterStartRef.current = true;
+      }
+
+      logVoiceDebugEvent('chat_voice_release_detected', {
+        source,
+        voiceState: voice.state,
+        pointerActive: hadPointer,
+        isPressed: isVoicePressed,
+        deferredStop: shouldDeferStop,
+      });
       stopVoiceAndSend();
     };
 
-    const cancelIfNeeded = () => {
-      if (voicePointerIdRef.current === null && voice.state !== 'recording') return;
+    const cancelIfNeeded = (source: string) => {
+      const shouldCancel = voicePointerIdRef.current !== null || voicePressActiveRef.current || isVoicePressed || voice.state === 'recording';
+      if (!shouldCancel) return;
       voicePointerIdRef.current = null;
       voicePressActiveRef.current = false;
+      voiceStopAfterStartRef.current = false;
       voiceCancelledBySwipeRef.current = false;
+      logVoiceDebugEvent('chat_voice_cancel_detected', { source, voiceState: voice.state, isPressed: isVoicePressed });
       cancelVoice(t("textChat.voice.cancelled"));
     };
 
-    window.addEventListener('pointerup', releaseIfNeeded, true);
-    window.addEventListener('pointercancel', cancelIfNeeded, true);
-    window.addEventListener('blur', cancelIfNeeded);
-    document.addEventListener('visibilitychange', cancelIfNeeded);
+    const releaseByPointer = () => releaseIfNeeded('pointerup');
+    const releaseByMouse = () => releaseIfNeeded('mouseup');
+    const releaseByTouch = () => releaseIfNeeded('touchend');
+    const cancelByPointer = () => cancelIfNeeded('pointercancel');
+    const cancelByTouch = () => cancelIfNeeded('touchcancel');
+    const cancelByBlur = () => cancelIfNeeded('blur');
+    const cancelByPageHide = () => cancelIfNeeded('pagehide');
+    const cancelOnHidden = () => {
+      if (document.visibilityState === 'hidden') cancelIfNeeded('visibility_hidden');
+    };
+
+    const stuckTimer = window.setTimeout(() => {
+      if (voicePointerIdRef.current === null && !voicePressActiveRef.current && !isVoicePressed && voice.state !== 'recording') return;
+      logVoiceDebugEvent('chat_voice_hold_guard_release', { voiceState: voice.state, isPressed: isVoicePressed });
+      releaseIfNeeded('hold_guard');
+    }, Math.max(VOICE_MANUAL_SESSION_MS + 1800, 6800));
+
+    window.addEventListener('pointerup', releaseByPointer, true);
+    window.addEventListener('mouseup', releaseByMouse, true);
+    window.addEventListener('touchend', releaseByTouch, true);
+    window.addEventListener('pointercancel', cancelByPointer, true);
+    window.addEventListener('touchcancel', cancelByTouch, true);
+    window.addEventListener('blur', cancelByBlur);
+    window.addEventListener('pagehide', cancelByPageHide);
+    document.addEventListener('visibilitychange', cancelOnHidden);
 
     return () => {
-      window.removeEventListener('pointerup', releaseIfNeeded, true);
-      window.removeEventListener('pointercancel', cancelIfNeeded, true);
-      window.removeEventListener('blur', cancelIfNeeded);
-      document.removeEventListener('visibilitychange', cancelIfNeeded);
+      window.clearTimeout(stuckTimer);
+      window.removeEventListener('pointerup', releaseByPointer, true);
+      window.removeEventListener('mouseup', releaseByMouse, true);
+      window.removeEventListener('touchend', releaseByTouch, true);
+      window.removeEventListener('pointercancel', cancelByPointer, true);
+      window.removeEventListener('touchcancel', cancelByTouch, true);
+      window.removeEventListener('blur', cancelByBlur);
+      window.removeEventListener('pagehide', cancelByPageHide);
+      document.removeEventListener('visibilitychange', cancelOnHidden);
     };
-  }, [cancelVoice, open, stopVoiceAndSend, t, voice.state]);
+  }, [cancelVoice, isVoicePressed, open, stopVoiceAndSend, t, voice.state]);
+
+  useEffect(() => {
+    if (voice.state === 'idle' && isVoicePressed && voicePointerIdRef.current === null) {
+      voicePressActiveRef.current = false;
+      voiceStopAfterStartRef.current = false;
+      setIsVoicePressed(false);
+      logVoiceDebugEvent('chat_voice_pressed_state_recovered', { voiceState: voice.state });
+    }
+  }, [isVoicePressed, voice.state]);
 
   useEffect(() => {
     if (!open) {

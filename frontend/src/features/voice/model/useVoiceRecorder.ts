@@ -28,6 +28,7 @@ export function useVoiceRecorder({ onText, lang = 'ru-RU', chunkMs = VOICE_RECOR
   const lastVoiceAtRef = useRef(0);
   const vadStartedAtRef = useRef(0);
   const vadPeakRmsRef = useRef(0);
+  const vadSilenceReportedRef = useRef(false);
   const finalHadVoiceRef = useRef(false);
   const finalPeakRmsRef = useRef(0);
   const chunksRef = useRef<BlobPart[]>([]);
@@ -77,6 +78,7 @@ export function useVoiceRecorder({ onText, lang = 'ru-RU', chunkMs = VOICE_RECOR
     lastVoiceAtRef.current = 0;
     vadStartedAtRef.current = 0;
     vadPeakRmsRef.current = 0;
+    vadSilenceReportedRef.current = false;
   }, []);
 
   const stopVoiceActivityWatcher = useCallback(() => {
@@ -398,6 +400,8 @@ export function useVoiceRecorder({ onText, lang = 'ru-RU', chunkMs = VOICE_RECOR
       const requiredSilenceMs = hadStrongVoice ? vadProfile.graceAfterStrongVoiceMs : vadProfile.graceAfterVoiceMs;
 
       if (silenceMs >= requiredSilenceMs) {
+        if (vadSilenceReportedRef.current) return;
+        vadSilenceReportedRef.current = true;
         logVoiceDebugEvent('vad_silence_detected_manual_hold', {
           elapsedMs,
           silenceMs,

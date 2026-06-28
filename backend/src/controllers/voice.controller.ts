@@ -56,6 +56,11 @@ function sanitizeVoiceDebugDetails(details: unknown) {
     'missCount',
     'commandLength',
     'matchType',
+    'source',
+    'voiceState',
+    'pointerActive',
+    'isPressed',
+    'deferredStop',
   ]);
 
   const source = details as Record<string, unknown>;
