@@ -11,7 +11,7 @@ import type { VoiceCompanionMood } from '@/features/voice/model/voiceSession.typ
 import { VoiceCompanionSurface } from '@/features/voice/ui/companion/VoiceCompanionSurface';
 import { VoicePermissionMiniPrompt } from '@/features/voice/ui/VoicePermissionMiniPrompt';
 import { useVoiceCompanionThought } from '@/features/voice/ui/companion/useVoiceCompanionThought';
-import { useVoiceHoldGesture } from '@/features/voice/ui/companion/useVoiceHoldGesture';
+import { useVoiceHoldGesture } from '@/features/voice/manager/useVoiceHoldGesture';
 import { useI18n } from '@/shared/lib/i18n';
 
 export function VoiceFirstCompanionLayer() {
@@ -258,6 +258,7 @@ export function VoiceFirstCompanionLayer() {
     onTap: handleCompanionTap,
     showThought,
     tapToTextEnabled,
+    holdToVoiceMs: 80,
     labels: {
       recognizing: t('voice.thought.recognizing'),
       pullForText: t('voice.thought.pullForText'),

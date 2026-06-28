@@ -6,8 +6,10 @@ type Props = {
   enableMicLabel: string;
   skipLabel: string;
   closeChatLabel: string;
+  skipBalanceLabel: string;
   onEnableMic: () => void | Promise<void>;
   onSkipMic: () => void;
+  onSkipBalance: () => void;
   onCloseChat: () => void;
 };
 
@@ -17,8 +19,10 @@ export function TextChatFirstRunActions({
   enableMicLabel,
   skipLabel,
   closeChatLabel,
+  skipBalanceLabel,
   onEnableMic,
   onSkipMic,
+  onSkipBalance,
   onCloseChat,
 }: Props) {
   if (stage === 'microphone') {
@@ -26,6 +30,14 @@ export function TextChatFirstRunActions({
       <div className="text-chat-setup-actions text-chat-setup-actions--microphone" role="group">
         <button type="button" disabled={isBusy} onClick={() => void onEnableMic()}>{enableMicLabel}</button>
         <button type="button" disabled={isBusy} className="is-secondary" onClick={onSkipMic}>{skipLabel}</button>
+      </div>
+    );
+  }
+
+  if (stage === 'balance') {
+    return (
+      <div className="text-chat-setup-actions text-chat-setup-actions--balance" role="group">
+        <button type="button" disabled={isBusy} className="is-secondary" onClick={onSkipBalance}>{skipBalanceLabel}</button>
       </div>
     );
   }

@@ -13,6 +13,26 @@ type UseVoiceInputParams = {
 type VoiceStartResult = 'started' | 'permission-consumed' | 'permission-ready' | 'busy' | 'error';
 type MicrophonePermissionState = PermissionState | 'unsupported' | 'unknown';
 
+const VOICE_PERMISSION_TIMEOUT_MS = 12000;
+const VOICE_START_TIMEOUT_MS = 12000;
+
+async function withTimeout<T>(promise: Promise<T>, timeoutMs: number, label: string): Promise<T | null> {
+  let timer: number | null = null;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<null>((resolve) => {
+        timer = window.setTimeout(() => {
+          logVoiceDebugEvent(label, { timeoutMs });
+          resolve(null);
+        }, timeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timer !== null) window.clearTimeout(timer);
+  }
+}
+
 async function queryMicrophonePermissionState(): Promise<PermissionState | null> {
   if (typeof navigator === 'undefined') return null;
   if (!('permissions' in navigator)) return null;
@@ -106,14 +126,25 @@ export function useVoiceInput({ onText, lang = 'ru-RU', sessionMs = 5200, permis
     logVoiceDebugEvent('permission_prime_requested', { permissionState: currentPermission });
 
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true,
-          channelCount: 1,
-        },
-      });
+      const stream = await withTimeout(
+        navigator.mediaDevices.getUserMedia({
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true,
+            channelCount: 1,
+          },
+        }),
+        VOICE_PERMISSION_TIMEOUT_MS,
+        'permission_prime_timeout',
+      );
+      if (!stream) {
+        recorder.reset();
+        setPermissionPrimed(false);
+        setPermissionState('unknown');
+        setPermissionError('microphone-timeout');
+        return false;
+      }
       stream.getTracks().forEach((track) => track.stop());
       recorder.reset();
       setPermissionPrimed(true);
@@ -162,7 +193,7 @@ export function useVoiceInput({ onText, lang = 'ru-RU', sessionMs = 5200, permis
         return 'permission-ready';
       }
 
-      const started = await recorder.startRecording();
+      const started = await withTimeout(recorder.startRecording(), VOICE_START_TIMEOUT_MS, 'manual_voice_start_timeout');
       if (!started) {
         const nextPermission = await refreshPermissionState();
         if (nextPermission !== 'granted') {
@@ -171,6 +202,7 @@ export function useVoiceInput({ onText, lang = 'ru-RU', sessionMs = 5200, permis
           setPermissionError(nextPermission === 'unsupported' ? 'unsupported' : 'microphone-denied');
           return 'permission-ready';
         }
+        recorder.cancelRecording();
         recorder.reset();
         return 'error';
       }
@@ -179,10 +211,11 @@ export function useVoiceInput({ onText, lang = 'ru-RU', sessionMs = 5200, permis
       return 'started';
     } catch (error) {
       console.error(error);
+      recorder.cancelRecording();
       recorder.reset();
       return 'error';
     }
-  }, [permissionPrimed, primePermission, recorder, refreshPermissionState]);
+  }, [permissionPrimed, recorder, refreshPermissionState]);
 
   const stop = useCallback(() => {
     recorder.stopRecording();

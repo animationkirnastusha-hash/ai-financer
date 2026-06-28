@@ -7,16 +7,12 @@ import {
   type PointerEvent,
 } from "react";
 
-import { createAccount, type AccountDto } from "@/features/accounts/api/accounts.api";
 import type { HomeCashflowMode } from "@/features/dashboard/lib/homeFinanceAnalytics";
-import { useAccountsStore } from "@/features/accounts/model/accounts.store";
 import { AuditLogDrawer } from "@/features/audit-log/ui/AuditLogDrawer";
 import { useChatController } from "@/features/chat/model/useChatController";
 import { useChatStore } from "@/features/chat/model/chat.store";
 import { useFirstRunChatSetupStore } from "@/features/chat/model/firstRunChatSetup.store";
 import { useSettingsStore } from "@/features/settings/model/settings.store";
-import { createTransaction } from "@/features/transactions/api/transactions.api";
-import { useTransactionsStore } from "@/features/transactions/model/transactions.store";
 import { useUnifiedVoiceCapture } from '@/features/voice/manager/useUnifiedVoiceCapture';
 import { VOICE_MANUAL_SESSION_MS } from "@/features/voice/model/voiceConstants";
 import { shouldIgnoreVoiceCommand } from "@/features/voice/model/voiceText";
@@ -42,61 +38,8 @@ function createSetupMessage(id: string, text: string, kind: "text" | "success" |
     role: "assistant" as const,
     kind,
     text,
-    content: text,
     createdAt: new Date().toISOString(),
   };
-}
-
-function inferFirstRunAccountType(name: string): "card" | "cash" {
-  const normalized = name.toLowerCase();
-  return normalized.includes("нал") || normalized.includes("cash") || normalized.includes("кош") ? "cash" : "card";
-}
-
-function parseFirstRunAmount(value: string): number | null {
-  const match = value
-    .toLowerCase()
-    .replace(/\s+/g, " ")
-    .match(/(?:^|\D)(\d+(?:[\s.,]\d{1,3})*)(?:\s*)(к|k|тыс|тысяч)?(?:\D|$)/i);
-  if (!match) return null;
-
-  const raw = match[1].replace(/\s/g, "").replace(",", ".");
-  const suffix = match[2]?.toLowerCase();
-  const amount = Number(raw);
-  if (!Number.isFinite(amount) || amount < 0) return null;
-
-  const multiplier = suffix === "к" || suffix === "k" || suffix === "тыс" || suffix === "тысяч" ? 1000 : 1;
-  return Math.round(amount * multiplier * 100) / 100;
-}
-
-function cleanFirstRunAccountName(value: string) {
-  return value
-    .replace(/[«»"']/g, "")
-    .replace(/\b(создай|создать|добавь|добавить|открой|сделай|мне|пожалуйста|счет|счёт|account|create|add|open)\b/gi, " ")
-    .replace(/\b(и|and|туда|на|в|положи|положить|закинь|пополнить|пополнение|баланс|balance|put|top\s*up)\b.*$/gi, " ")
-    .replace(/\d+(?:[\s.,]\d{1,3})*(?:\s*)(?:к|k|тыс|тысяч)?/gi, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-function parseFirstRunAccountCommand(text: string): { name: string; type: "card" | "cash"; amount: number | null } | null {
-  const source = text.trim();
-  if (!source) return null;
-
-  const normalized = source.toLowerCase();
-  const hasAccountIntent = /\b(счет|счёт|account)\b/i.test(normalized);
-  if (!hasAccountIntent) return null;
-
-  const amount = parseFirstRunAmount(source);
-  const afterAccount = source.split(/счет|счёт|account/i)[1] ?? source;
-  const name = cleanFirstRunAccountName(afterAccount) || cleanFirstRunAccountName(source);
-  if (!name) return null;
-
-  const prettyName = name.charAt(0).toUpperCase() + name.slice(1);
-  return { name: prettyName, type: inferFirstRunAccountType(prettyName), amount };
-}
-
-function isSkipBalanceCommand(text: string) {
-  return /^(нет|не надо|потом|пропустить|ноль|0|no|later|skip)$/i.test(text.trim());
 }
 
 type TextChatOverlayProps = {
@@ -164,11 +107,9 @@ export function TextChatOverlay({
   const chat = useChatController();
   const appendChatMessage = useChatStore((state) => state.appendMessage);
   const setChatMessages = useChatStore((state) => state.setMessages);
-  const loadAccounts = useAccountsStore((state) => state.loadAccounts);
-  const refreshTransactions = useTransactionsStore((state) => state.refreshDashboard);
   const setupStage = useFirstRunChatSetupStore((state) => state.stage);
   const setupMicrophoneStatus = useFirstRunChatSetupStore((state) => state.microphoneStatus);
-  const setupCreatedAccount = useFirstRunChatSetupStore((state) => state.createdAccount);
+  const setupDraftAccountName = useFirstRunChatSetupStore((state) => state.draftAccountName);
   const setupIsActive = useFirstRunChatSetupStore((state) => state.isActive);
   const setupCloseLocked = useFirstRunChatSetupStore((state) => state.closeLocked);
   const setupInterrupted = useFirstRunChatSetupStore((state) => state.interrupted);
@@ -176,16 +117,12 @@ export function TextChatOverlay({
   const startFirstRunSetup = useFirstRunChatSetupStore((state) => state.start);
   const skipSetupMicrophone = useFirstRunChatSetupStore((state) => state.skipMicrophone);
   const finishSetupMicrophone = useFirstRunChatSetupStore((state) => state.finishMicrophone);
-  const completeSetupAccount = useFirstRunChatSetupStore((state) => state.completeAccount);
+  const setSetupAccountDraftName = useFirstRunChatSetupStore((state) => state.setAccountDraftName);
   const completeSetupWithAccount = useFirstRunChatSetupStore((state) => state.completeWithAccount);
   const dismissFirstRunSetup = useFirstRunChatSetupStore((state) => state.dismiss);
   const markFirstRunSetupInterrupted = useFirstRunChatSetupStore((state) => state.markInterrupted);
   const resumeFirstRunSetup = useFirstRunChatSetupStore((state) => state.resumeInterrupted);
   const abandonFirstRunSetup = useFirstRunChatSetupStore((state) => state.abandonInterrupted);
-  const primaryAccountId = useSettingsStore((state) => state.primaryAccountId);
-  const incomeAccountId = useSettingsStore((state) => state.incomeAccountId);
-  const setPrimaryAccountId = useSettingsStore((state) => state.setPrimaryAccountId);
-  const setIncomeAccountId = useSettingsStore((state) => state.setIncomeAccountId);
   const companionName = useSettingsStore((state) => state.companionName || "Фина");
   const appLanguage = useSettingsStore((state) => state.appLanguage);
   const voicePermissionPrompted = useSettingsStore((state) => state.voicePermissionPrompted);
@@ -228,12 +165,12 @@ export function TextChatOverlay({
     }
 
     quickCreateConsumedRef.current = true;
-    const prefix = appLanguage === "en"
-      ? quickCreateMode === "income" ? "Record income:" : "Record expense:"
-      : quickCreateMode === "income" ? "Запиши доход:" : "Запиши расход:";
+    const prefix = quickCreateMode === "income"
+      ? t("textChat.quickCreate.incomePrefix")
+      : t("textChat.quickCreate.expensePrefix");
 
     return { text: `${prefix} ${clean}`, displayText: clean };
-  }, [appLanguage, hiddenCommandPrefix, inlinePendingActions.length, quickCreateMode]);
+  }, [hiddenCommandPrefix, inlinePendingActions.length, quickCreateMode, t]);
 
   const sendText = useCallback(
     async (text: string, source: "text" | "voice" = "text") => {
@@ -752,8 +689,8 @@ export function TextChatOverlay({
         return [createSetupMessage(`first-run-setup-account-${setupMicrophoneStatus}`, t(key))];
       }
 
-      if (setupStage === 'balance' && setupCreatedAccount) {
-        return [createSetupMessage('first-run-setup-balance', t('textChat.setup.balanceQuestion', { account: setupCreatedAccount.name }))];
+      if (setupStage === 'balance' && setupDraftAccountName) {
+        return [createSetupMessage('first-run-setup-balance', t('textChat.setup.balanceQuestion', { account: setupDraftAccountName }))];
       }
 
       if (setupStage === 'done') {
@@ -770,7 +707,7 @@ export function TextChatOverlay({
       const nextMessages = messages.filter((message) => !existingIds.has(message.id));
       return nextMessages.length ? [...currentMessages, ...nextMessages] : currentMessages;
     });
-  }, [open, setChatMessages, setupCreatedAccount, setupIsActive, setupMicrophoneStatus, setupStage, showSetupResumePrompt, t]);
+  }, [open, setChatMessages, setupDraftAccountName, setupIsActive, setupMicrophoneStatus, setupStage, showSetupResumePrompt, t]);
 
   const handleSetupEnableMicrophone = useCallback(async () => {
     if (setupStage !== 'microphone' || isSetupBusy) return;
@@ -802,99 +739,67 @@ export function TextChatOverlay({
     skipSetupMicrophone();
   }, [setVoicePermissionPrompted, setupStage, skipSetupMicrophone, voice]);
 
-  const addInitialBalance = useCallback(async (account: AccountDto, amount: number) => {
-    if (amount <= 0) return;
-    await createTransaction({
-      accountId: account.id,
-      amount,
-      type: 'income',
-      title: t('textChat.setup.initialBalanceTitle'),
-      description: t('textChat.setup.initialBalanceDescription'),
-      date: new Date().toISOString(),
-      isAIGenerated: false,
-    });
-  }, [t]);
-
-  const createSetupAccount = useCallback(async (name: string, amount: number | null) => {
-    if (isSetupBusy) return;
-
-    setIsSetupBusy(true);
-    try {
-      const account = await createAccount({
-        name,
-        type: inferFirstRunAccountType(name),
-        currency: 'RUB',
-        initialBalance: 0,
-        showInTotalBalance: true,
+  const appendSetupUserMessage = useCallback(
+    (text: string) => {
+      shouldStickToBottomRef.current = true;
+      appendChatMessage({
+        id: crypto.randomUUID(),
+        role: 'user',
+        kind: 'text',
+        text,
+        createdAt: new Date().toISOString(),
       });
+    },
+    [appendChatMessage],
+  );
 
-      if (!primaryAccountId) setPrimaryAccountId(account.id);
-      if (!incomeAccountId) setIncomeAccountId(account.id);
+  const buildFirstRunAccountCommand = useCallback(
+    (accountName: string, balanceText: string) => t('textChat.setup.aiAccountCommand', {
+      account: accountName,
+      balance: balanceText,
+    }),
+    [t],
+  );
 
-      if (amount !== null && amount > 0) {
-        await addInitialBalance(account, amount);
-        await Promise.all([loadAccounts(true), refreshTransactions()]);
-        completeSetupWithAccount(account);
-        return;
+  const finishSetupThroughAi = useCallback(
+    async (balanceText: string) => {
+      const accountName = setupDraftAccountName?.trim();
+      if (!accountName || isSetupBusy) return;
+
+      setIsSetupBusy(true);
+      try {
+        const command = buildFirstRunAccountCommand(accountName, balanceText);
+        await chat.sendMessage(
+          { text: command, displayText: balanceText, source: 'text' },
+          { supersedeInFlight: true },
+        );
+        completeSetupWithAccount(null);
+      } catch {
+        appendSetupAssistantMessage('first-run-setup-create-failed', t('textChat.setup.createFailed'), 'error');
+      } finally {
+        setIsSetupBusy(false);
       }
-
-      await Promise.all([loadAccounts(true), refreshTransactions()]);
-      completeSetupAccount(account);
-    } catch {
-      appendSetupAssistantMessage('first-run-setup-create-failed', t('textChat.setup.createFailed'), 'error');
-    } finally {
-      setIsSetupBusy(false);
-    }
-  }, [addInitialBalance, appendSetupAssistantMessage, completeSetupAccount, completeSetupWithAccount, incomeAccountId, isSetupBusy, loadAccounts, primaryAccountId, refreshTransactions, setIncomeAccountId, setPrimaryAccountId, t]);
-
-  const completeBalanceStep = useCallback(async (amount: number) => {
-    if (!setupCreatedAccount || isSetupBusy) return;
-
-    setIsSetupBusy(true);
-    try {
-      if (amount > 0) await addInitialBalance(setupCreatedAccount, amount);
-      await Promise.all([loadAccounts(true), refreshTransactions()]);
-      completeSetupWithAccount(setupCreatedAccount);
-    } catch {
-      appendSetupAssistantMessage('first-run-setup-balance-save-failed', t('textChat.setup.createFailed'), 'error');
-    } finally {
-      setIsSetupBusy(false);
-    }
-  }, [addInitialBalance, appendSetupAssistantMessage, completeSetupWithAccount, isSetupBusy, loadAccounts, refreshTransactions, setupCreatedAccount, t]);
+    },
+    [appendSetupAssistantMessage, buildFirstRunAccountCommand, chat, completeSetupWithAccount, isSetupBusy, setupDraftAccountName, t],
+  );
 
   const handleSetupInput = useCallback(async (text: string) => {
     const clean = text.trim();
     if (!clean) return true;
 
     if (setupStage === 'account') {
-      const parsed = parseFirstRunAccountCommand(clean);
-      if (!parsed) {
-        appendSetupAssistantMessage('first-run-setup-account-invalid', t('textChat.setup.accountInvalid'), 'error');
-        return true;
-      }
-
-      await createSetupAccount(parsed.name, parsed.amount);
+      appendSetupUserMessage(clean);
+      setSetupAccountDraftName(clean);
       return true;
     }
 
     if (setupStage === 'balance') {
-      if (isSkipBalanceCommand(clean)) {
-        await completeBalanceStep(0);
-        return true;
-      }
-
-      const amount = parseFirstRunAmount(clean);
-      if (amount === null) {
-        appendSetupAssistantMessage('first-run-setup-balance-invalid', t('textChat.setup.balanceInvalid'), 'error');
-        return true;
-      }
-
-      await completeBalanceStep(amount);
+      await finishSetupThroughAi(clean);
       return true;
     }
 
     return false;
-  }, [appendSetupAssistantMessage, completeBalanceStep, createSetupAccount, setupStage, t]);
+  }, [appendSetupUserMessage, finishSetupThroughAi, setSetupAccountDraftName, setupStage]);
 
   useEffect(() => {
     setupInputHandlerRef.current = handleSetupInput;
@@ -988,6 +893,10 @@ export function TextChatOverlay({
     abandonFirstRunSetup();
   };
 
+  const handleSkipSetupBalance = () => {
+    void finishSetupThroughAi(t('textChat.setup.balanceSkipped'));
+  };
+
   const setupInputDisabled = showSetupResumePrompt || (setupIsActive && (setupStage === 'microphone' || setupStage === 'done'));
   const placeholder = setupStage === 'account'
     ? t('textChat.setup.accountPlaceholder')
@@ -1054,8 +963,10 @@ export function TextChatOverlay({
             enableMicLabel={t("textChat.setup.action.enableMic")}
             skipLabel={t("textChat.setup.action.skip")}
             closeChatLabel={t("textChat.setup.action.closeChat")}
+            skipBalanceLabel={t("textChat.setup.action.skipBalance")}
             onEnableMic={handleSetupEnableMicrophone}
             onSkipMic={handleSetupSkipMicrophone}
+            onSkipBalance={handleSkipSetupBalance}
             onCloseChat={closeOverlay}
           />
         ) : null}

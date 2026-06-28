@@ -14,6 +14,7 @@ type PersistedSetupState = {
   stage?: FirstRunSetupStage;
   microphoneStatus?: FirstRunMicrophoneStatus;
   createdAccount?: AccountDto | null;
+  draftAccountName?: string | null;
   completed?: boolean;
   interrupted?: boolean;
 };
@@ -22,6 +23,7 @@ type FirstRunChatSetupState = {
   stage: FirstRunSetupStage;
   microphoneStatus: FirstRunMicrophoneStatus;
   createdAccount: AccountDto | null;
+  draftAccountName: string | null;
   completed: boolean;
   interrupted: boolean;
   isActive: boolean;
@@ -30,6 +32,7 @@ type FirstRunChatSetupState = {
   skipMicrophone: () => void;
   finishMicrophone: () => void;
   failMicrophone: () => void;
+  setAccountDraftName: (accountName: string) => void;
   completeAccount: (account: AccountDto) => void;
   completeWithAccount: (account: AccountDto | null) => void;
   markInterrupted: () => void;
@@ -39,7 +42,7 @@ type FirstRunChatSetupState = {
   reset: () => void;
 };
 
-export const FIRST_RUN_CHAT_SETUP_STORAGE_KEY = 'ai-financer-first-run-chat-setup:v6';
+export const FIRST_RUN_CHAT_SETUP_STORAGE_KEY = 'ai-financer-first-run-chat-setup:v7';
 
 const LEGACY_STORAGE_KEYS = [
   'ai-financer-first-run-chat-setup:v1',
@@ -47,6 +50,7 @@ const LEGACY_STORAGE_KEYS = [
   'ai-financer-first-run-chat-setup:v3',
   'ai-financer-first-run-chat-setup:v4',
   'ai-financer-first-run-chat-setup:v5',
+  'ai-financer-first-run-chat-setup:v6',
 ];
 
 function readPersisted(): PersistedSetupState {
@@ -79,6 +83,7 @@ function getCurrentPersistedState(): PersistedSetupState {
     stage: persisted.stage ?? 'idle',
     microphoneStatus: persisted.microphoneStatus ?? 'pending',
     createdAccount: persisted.createdAccount ?? null,
+    draftAccountName: persisted.draftAccountName ?? null,
     completed: Boolean(persisted.completed),
     interrupted: Boolean(persisted.interrupted),
   };
@@ -96,17 +101,19 @@ export const useFirstRunChatSetupStore = create<FirstRunChatSetupState>((set) =>
     stage: initialStage,
     microphoneStatus: initialMicrophoneStatus,
     createdAccount: persisted.createdAccount ?? null,
+    draftAccountName: persisted.draftAccountName ?? null,
     completed: Boolean(persisted.completed),
     interrupted: initialInterrupted,
     isActive: initialStage !== 'idle' && !persisted.completed && !initialInterrupted,
     closeLocked: false,
 
     start: () => {
-      persist({ stage: 'microphone', microphoneStatus: 'pending', createdAccount: null, completed: false, interrupted: false });
+      persist({ stage: 'microphone', microphoneStatus: 'pending', createdAccount: null, draftAccountName: null, completed: false, interrupted: false });
       set({
         stage: 'microphone',
         microphoneStatus: 'pending',
         createdAccount: null,
+        draftAccountName: null,
         completed: false,
         interrupted: false,
         isActive: true,
@@ -115,32 +122,47 @@ export const useFirstRunChatSetupStore = create<FirstRunChatSetupState>((set) =>
     },
 
     skipMicrophone: () => {
-      persist({ stage: 'account', microphoneStatus: 'skipped', createdAccount: null, completed: false, interrupted: false });
-      set({ stage: 'account', microphoneStatus: 'skipped', interrupted: false, isActive: true, closeLocked: false });
+      persist({ stage: 'account', microphoneStatus: 'skipped', createdAccount: null, draftAccountName: null, completed: false, interrupted: false });
+      set({ stage: 'account', microphoneStatus: 'skipped', createdAccount: null, draftAccountName: null, interrupted: false, isActive: true, closeLocked: false });
     },
 
     finishMicrophone: () => {
-      persist({ stage: 'account', microphoneStatus: 'enabled', createdAccount: null, completed: false, interrupted: false });
-      set({ stage: 'account', microphoneStatus: 'enabled', interrupted: false, isActive: true, closeLocked: false });
+      persist({ stage: 'account', microphoneStatus: 'enabled', createdAccount: null, draftAccountName: null, completed: false, interrupted: false });
+      set({ stage: 'account', microphoneStatus: 'enabled', createdAccount: null, draftAccountName: null, interrupted: false, isActive: true, closeLocked: false });
     },
 
     failMicrophone: () => {
-      persist({ stage: 'account', microphoneStatus: 'failed', createdAccount: null, completed: false, interrupted: false });
-      set({ stage: 'account', microphoneStatus: 'failed', interrupted: false, isActive: true, closeLocked: false });
+      persist({ stage: 'account', microphoneStatus: 'failed', createdAccount: null, draftAccountName: null, completed: false, interrupted: false });
+      set({ stage: 'account', microphoneStatus: 'failed', createdAccount: null, draftAccountName: null, interrupted: false, isActive: true, closeLocked: false });
+    },
+
+    setAccountDraftName: (accountName) => {
+      const microphoneStatus = readPersisted().microphoneStatus ?? 'pending';
+      persist({ stage: 'balance', microphoneStatus, createdAccount: null, draftAccountName: accountName, completed: false, interrupted: false });
+      set({
+        stage: 'balance',
+        createdAccount: null,
+        draftAccountName: accountName,
+        microphoneStatus,
+        interrupted: false,
+        isActive: true,
+        closeLocked: false,
+      });
     },
 
     completeAccount: (createdAccount) => {
       const microphoneStatus = readPersisted().microphoneStatus ?? 'pending';
-      persist({ stage: 'balance', microphoneStatus, createdAccount, completed: false, interrupted: false });
-      set({ stage: 'balance', createdAccount, microphoneStatus, interrupted: false, isActive: true, closeLocked: false });
+      persist({ stage: 'balance', microphoneStatus, createdAccount, draftAccountName: createdAccount.name, completed: false, interrupted: false });
+      set({ stage: 'balance', createdAccount, draftAccountName: createdAccount.name, microphoneStatus, interrupted: false, isActive: true, closeLocked: false });
     },
 
     completeWithAccount: (createdAccount) => {
       const microphoneStatus = readPersisted().microphoneStatus ?? 'pending';
-      persist({ stage: 'done', microphoneStatus, createdAccount, completed: true, interrupted: false });
+      persist({ stage: 'done', microphoneStatus, createdAccount, draftAccountName: null, completed: true, interrupted: false });
       set({
         stage: 'done',
         createdAccount,
+        draftAccountName: null,
         microphoneStatus,
         completed: true,
         interrupted: false,
@@ -148,7 +170,6 @@ export const useFirstRunChatSetupStore = create<FirstRunChatSetupState>((set) =>
         closeLocked: false,
       });
     },
-
 
     markInterrupted: () => {
       const current = getCurrentPersistedState();
@@ -172,6 +193,7 @@ export const useFirstRunChatSetupStore = create<FirstRunChatSetupState>((set) =>
         stage,
         microphoneStatus: current.microphoneStatus ?? 'pending',
         createdAccount: current.createdAccount ?? null,
+        draftAccountName: current.draftAccountName ?? null,
         completed: false,
         interrupted: false,
         isActive: true,
@@ -181,11 +203,12 @@ export const useFirstRunChatSetupStore = create<FirstRunChatSetupState>((set) =>
 
     abandonInterrupted: () => {
       clearPersisted();
-      persist({ stage: 'done', microphoneStatus: 'skipped', createdAccount: null, completed: true, interrupted: false });
+      persist({ stage: 'done', microphoneStatus: 'skipped', createdAccount: null, draftAccountName: null, completed: true, interrupted: false });
       set({
         stage: 'done',
         microphoneStatus: 'skipped',
         createdAccount: null,
+        draftAccountName: null,
         completed: true,
         interrupted: false,
         isActive: false,
@@ -203,6 +226,7 @@ export const useFirstRunChatSetupStore = create<FirstRunChatSetupState>((set) =>
         stage: 'idle',
         microphoneStatus: 'pending',
         createdAccount: null,
+        draftAccountName: null,
         completed: false,
         interrupted: false,
         isActive: false,
