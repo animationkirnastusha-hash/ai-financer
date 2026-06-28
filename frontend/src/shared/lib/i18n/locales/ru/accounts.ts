@@ -31,6 +31,7 @@ export const accountsDictionary = {
   'accounts.details.eyebrow': 'Детали счёта',
   'accounts.details.protection': 'Защита',
   'accounts.details.balance': 'Баланс',
+  'accounts.details.statuses': 'Статусы счёта',
   'accounts.details.badge.primary': 'Главный счёт',
   'accounts.details.badge.income': 'Доходы сюда',
   'accounts.details.badge.inTotal': 'В общем балансе',
@@ -102,7 +103,7 @@ export const accountsDictionary = {
   'accounts.details.delete.caption': 'Операции счёта удалятся, связанные данные отвяжутся.',
   'accounts.details.delete.confirmAction': 'Подтвердить удаление',
   'accounts.details.delete.warning': 'Подтвердите удаление счёта.',
-  'accounts.details.delete.error': 'Не удалось удалить счёт. Обновите страницу и повторите.',
+  'accounts.details.delete.error': 'Не удалось удалить счёт. Связи очищены автоматически, попробуйте ещё раз.',
   'accounts.edit.caption': 'Ручные настройки счёта.',
   'accounts.empty.eyebrow': 'Старт',
 } as const;

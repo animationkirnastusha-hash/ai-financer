@@ -9,6 +9,7 @@ import { aiAnalyticsService } from './ai-analytics.service';
 import { resolveCategoryAppearance, resolveSectionAppearance, shouldReplaceGenericIcon } from '../taxonomy/taxonomy-icons';
 import { normalizeTransactionCategoryName, resolveTransactionSemanticTaxonomy, shouldUseTaxonomyTitleFallback } from '../taxonomy/transaction-taxonomy';
 import { goalAutoSaveService } from '../goals/goal-autosave.service';
+import { cleanupAccountsBeforeDelete } from '../accounts/account-delete-cleanup';
 
 const transactionInclude = {
   account: {
@@ -1433,73 +1434,13 @@ export class AIExecutorService {
   }
 
   private async deleteAccountsByIds(tx: Prisma.TransactionClient, userId: string, accountIds: string[]) {
-    const uniqueIds = Array.from(new Set(accountIds));
+    const uniqueIds = Array.from(new Set(accountIds.filter(Boolean)));
     const accounts = await tx.account.findMany({ where: { userId, id: { in: uniqueIds } } });
 
     if (accounts.length === 0) throw new NotFoundError('Accounts not found');
 
-    const linkedTransactions = await tx.transaction.findMany({
-      where: {
-        userId,
-        OR: [{ accountId: { in: uniqueIds } }, { toAccountId: { in: uniqueIds } }],
-      },
-      select: { id: true, type: true, amount: true, accountId: true, toAccountId: true, goalId: true },
-    });
-    const transactionIds = linkedTransactions.map((item) => item.id);
-    const deletedAccountIds = new Set(uniqueIds);
-
-    for (const transaction of linkedTransactions) {
-      if (transaction.type !== 'transfer') continue;
-
-      if (deletedAccountIds.has(transaction.accountId) && transaction.toAccountId && !deletedAccountIds.has(transaction.toAccountId)) {
-        await tx.account.updateMany({
-          where: { userId, id: transaction.toAccountId },
-          data: { balance: { decrement: transaction.amount } },
-        });
-      }
-
-      if (transaction.toAccountId && deletedAccountIds.has(transaction.toAccountId) && !deletedAccountIds.has(transaction.accountId)) {
-        await tx.account.updateMany({
-          where: { userId, id: transaction.accountId },
-          data: { balance: { increment: transaction.amount } },
-        });
-      }
-
-      if (transaction.goalId) {
-        await tx.goal.updateMany({
-          where: { userId, id: transaction.goalId },
-          data: { currentAmount: { decrement: transaction.amount } },
-        });
-      }
-    }
-
-    await tx.userAISettings.updateMany({
-      where: {
-        userId,
-        OR: [
-          { defaultExpenseAccountId: { in: uniqueIds } },
-          { defaultIncomeAccountId: { in: uniqueIds } },
-        ],
-      },
-      data: { defaultExpenseAccountId: null, defaultIncomeAccountId: null },
-    });
-
-    await tx.goal.updateMany({ where: { userId, accountId: { in: uniqueIds } }, data: { accountId: null } });
-    await tx.loan.updateMany({ where: { userId, accountId: { in: uniqueIds } }, data: { accountId: null } });
-    await tx.loanPayment.updateMany({ where: { userId, accountId: { in: uniqueIds } }, data: { accountId: null } });
-    await tx.recurringPaymentPayment.updateMany({ where: { userId, accountId: { in: uniqueIds } }, data: { accountId: null } });
-    await tx.receiptScan.updateMany({ where: { userId, accountId: { in: uniqueIds } }, data: { accountId: null } });
-
-    if (transactionIds.length > 0) {
-      await tx.loanPayment.updateMany({ where: { userId, transactionId: { in: transactionIds } }, data: { transactionId: null } });
-      await tx.recurringPaymentPayment.updateMany({ where: { userId, transactionId: { in: transactionIds } }, data: { transactionId: null } });
-      await tx.receiptScan.updateMany({ where: { userId, transactionId: { in: transactionIds } }, data: { transactionId: null } });
-      await tx.transaction.deleteMany({ where: { userId, id: { in: transactionIds } } });
-    }
-
-    await tx.spendingLimit.deleteMany({ where: { userId, accountId: { in: uniqueIds } } });
-    await tx.recurringPayment.deleteMany({ where: { userId, accountId: { in: uniqueIds } } });
-    await tx.account.deleteMany({ where: { userId, id: { in: uniqueIds } } });
+    await cleanupAccountsBeforeDelete(tx, userId, accounts.map((account) => account.id));
+    await tx.account.deleteMany({ where: { userId, id: { in: accounts.map((account) => account.id) } } });
 
     return accounts;
   }

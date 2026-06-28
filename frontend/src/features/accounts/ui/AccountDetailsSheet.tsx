@@ -105,7 +105,7 @@ export function AccountDetailsSheet({
         <div className="min-w-0">
           <div className="app-eyebrow">{t('accounts.details.eyebrow')}</div>
           <h2>{account.name}</h2>
-          <p>{typeLabel} · {account.currency}</p>
+          <p>{typeLabel} · {account.currency} · {formatMoney(Number(account.balance) || 0, account.currency)}</p>
         </div>
         <button
           type="button"
@@ -117,21 +117,15 @@ export function AccountDetailsSheet({
         </button>
       </header>
 
-      <section className="app-account-details-balance">
-        <div>
-          <span>{t('accounts.details.balance')}</span>
-          <strong>{formatMoney(Number(account.balance) || 0, account.currency)}</strong>
-        </div>
-        <div className="app-account-details-balance__chips">
-          {isPrimary ? <Badge tone="green">{t('accounts.details.badge.primary')}</Badge> : null}
-          {isIncomeDefault ? <Badge tone="blue">{t('accounts.details.badge.income')}</Badge> : null}
-          {account.showInTotalBalance ? (
-            <Badge tone="green">{t('accounts.details.badge.inTotal')}</Badge>
-          ) : (
-            <Badge tone="yellow">{t('accounts.details.badge.hiddenFromTotal')}</Badge>
-          )}
-        </div>
-      </section>
+      <div className="app-account-details-badges" aria-label={t('accounts.details.statuses')}>
+        {isPrimary ? <Badge tone="green">{t('accounts.details.badge.primary')}</Badge> : null}
+        {isIncomeDefault ? <Badge tone="blue">{t('accounts.details.badge.income')}</Badge> : null}
+        {account.showInTotalBalance ? (
+          <Badge tone="green">{t('accounts.details.badge.inTotal')}</Badge>
+        ) : (
+          <Badge tone="yellow">{t('accounts.details.badge.hiddenFromTotal')}</Badge>
+        )}
+      </div>
 
       <section className="app-account-details-grid">
         <InfoTile label={t('common.type')} value={typeLabel} />

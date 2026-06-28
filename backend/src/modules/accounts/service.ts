@@ -2,6 +2,7 @@ import { Prisma } from '@prisma/client';
 import { prisma } from '../../lib/prisma';
 import { BadRequestError, ConflictError, NotFoundError } from '../../shared/core/errors';
 import { progressionActivityBridge } from '../progression/activity-bridge.service';
+import { cleanupAccountsBeforeDelete } from './account-delete-cleanup';
 
 export interface CreateAccountInput {
   name: string;
@@ -183,84 +184,8 @@ export class AccountService {
     }
 
     await prisma.$transaction(async (tx) => {
-      const linkedTransactions = await tx.transaction.findMany({
-        where: {
-          userId,
-          OR: [{ accountId }, { toAccountId: accountId }],
-        },
-        select: { id: true, type: true, amount: true, accountId: true, toAccountId: true, goalId: true },
-      });
-      const transactionIds = linkedTransactions.map((item) => item.id);
-
-      for (const transaction of linkedTransactions) {
-        if (transaction.type !== 'transfer') continue;
-
-        if (transaction.accountId === accountId && transaction.toAccountId && transaction.toAccountId !== accountId) {
-          await tx.account.updateMany({
-            where: { userId, id: transaction.toAccountId },
-            data: { balance: { decrement: transaction.amount } },
-          });
-        }
-
-        if (transaction.toAccountId === accountId && transaction.accountId !== accountId) {
-          await tx.account.updateMany({
-            where: { userId, id: transaction.accountId },
-            data: { balance: { increment: transaction.amount } },
-          });
-        }
-
-        if (transaction.goalId) {
-          await tx.goal.updateMany({
-            where: { userId, id: transaction.goalId },
-            data: { currentAmount: { decrement: transaction.amount } },
-          });
-        }
-      }
-
-      await tx.userAISettings.updateMany({
-        where: {
-          userId,
-          OR: [
-            { defaultExpenseAccountId: accountId },
-            { defaultIncomeAccountId: accountId },
-          ],
-        },
-        data: {
-          defaultExpenseAccountId: null,
-          defaultIncomeAccountId: null,
-        },
-      });
-
-      await tx.financialCycleSettings.updateMany({
-        where: { userId, salaryAccountId: accountId },
-        data: { salaryAccountId: null },
-      });
-
-      await tx.goal.updateMany({ where: { userId, accountId }, data: { accountId: null } });
-      await tx.loan.updateMany({ where: { userId, accountId }, data: { accountId: null } });
-      await tx.loanPayment.updateMany({ where: { userId, accountId }, data: { accountId: null } });
-      await tx.recurringPaymentPayment.updateMany({ where: { userId, accountId }, data: { accountId: null } });
-      await tx.receiptScan.updateMany({ where: { userId, accountId }, data: { accountId: null } });
-
-      if (transactionIds.length > 0) {
-        await tx.loanPayment.updateMany({
-          where: { userId, transactionId: { in: transactionIds } },
-          data: { transactionId: null },
-        });
-        await tx.recurringPaymentPayment.updateMany({
-          where: { userId, transactionId: { in: transactionIds } },
-          data: { transactionId: null },
-        });
-        await tx.receiptScan.updateMany({
-          where: { userId, transactionId: { in: transactionIds } },
-          data: { transactionId: null },
-        });
-        await tx.transaction.deleteMany({ where: { userId, id: { in: transactionIds } } });
-      }
-
-      await tx.spendingLimit.deleteMany({ where: { userId, accountId } });
-      await tx.recurringPayment.deleteMany({ where: { userId, accountId } });
-      await tx.account.delete({ where: { id: accountId } });
+      await cleanupAccountsBeforeDelete(tx, userId, [accountId]);
+      await tx.account.deleteMany({ where: { id: accountId, userId } });
     });
 
     return this.serializeAccount(account);
