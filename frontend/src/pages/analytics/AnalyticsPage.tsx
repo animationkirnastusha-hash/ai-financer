@@ -35,7 +35,8 @@ type DailyPoint = {
 };
 
 const CHART_PALETTE = ['#67e8f9', '#6ee7b7', '#c4b5fd', '#fbbf24', '#fb7185', '#93c5fd', '#f9a8d4', '#a7f3d0'];
-const MAX_GROUPS = 6;
+const CATEGORY_PREVIEW_LIMIT = 5;
+const DONUT_PREVIEW_LIMIT = 6;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 function startOfDay(date: Date) {
@@ -208,12 +209,15 @@ function groupTransactions(transactions: TransactionDto[], fallbackName: string)
     return acc;
   }, {});
 
-  const groups = Object.values(grouped).sort((a, b) => b.amount - a.amount);
+  return Object.values(grouped).sort((a, b) => b.amount - a.amount);
+}
 
-  if (groups.length <= MAX_GROUPS) return groups;
+function compactDonutGroups(groups: MoneyGroup[], fallbackName: string) {
+  if (groups.length <= DONUT_PREVIEW_LIMIT) return groups;
 
-  const visible = groups.slice(0, MAX_GROUPS - 1);
-  const hidden = groups.slice(MAX_GROUPS - 1);
+  const visible = groups.slice(0, DONUT_PREVIEW_LIMIT - 1);
+  const hidden = groups.slice(DONUT_PREVIEW_LIMIT - 1);
+
   return [
     ...visible,
     {
@@ -308,28 +312,97 @@ function DonutChart({ groups, total, label }: { groups: MoneyGroup[]; total: num
   );
 }
 
-function CategoryList({ groups, total, onOpen }: { groups: MoneyGroup[]; total: number; onOpen: (group: MoneyGroup) => void }) {
+function CategoryList({
+  groups,
+  total,
+  onOpen,
+  limit,
+  onMore,
+  variant = 'default',
+}: {
+  groups: MoneyGroup[];
+  total: number;
+  onOpen: (group: MoneyGroup) => void;
+  limit?: number;
+  onMore?: () => void;
+  variant?: 'default' | 'preview' | 'sheet';
+}) {
   const { rt, t } = useI18n();
 
   if (groups.length === 0) {
     return <div className="analytics-v2-empty">{t('analytics.v2.empty.groups')}</div>;
   }
 
+  const visibleGroups = limit ? groups.slice(0, limit) : groups;
+  const hiddenCount = limit ? Math.max(0, groups.length - visibleGroups.length) : 0;
+
   return (
-    <div className="analytics-v2-category-list">
-      {groups.map((group) => {
+    <div className={`analytics-v2-category-list analytics-v2-category-list--${variant}`}>
+      {visibleGroups.map((group) => {
         const percent = total > 0 ? Math.round((group.amount / total) * 100) : 0;
         return (
           <button key={group.key} type="button" className="analytics-v2-category-row" onClick={() => onOpen(group)}>
-            <span className="analytics-v2-category-row__icon" style={{ backgroundColor: group.color }}>{group.icon || ''}</span>
+            <span className="analytics-v2-category-row__dot" style={{ backgroundColor: group.color }} aria-hidden="true" />
             <span className="analytics-v2-category-row__text">
               <b>{rt(group.name)}</b>
-              <small>{group.count} · {percent}%</small>
+              <small>{t('analytics.v2.category.operations', { count: group.count })}</small>
             </span>
-            <strong>{formatMoney(group.amount, 'RUB')}</strong>
+            <span className="analytics-v2-category-row__amount">{formatMoney(group.amount, 'RUB')}</span>
+            <span className="analytics-v2-category-row__percent">{percent}%</span>
           </button>
         );
       })}
+      {hiddenCount > 0 && onMore ? (
+        <button type="button" className="analytics-v2-category-more" onClick={onMore}>
+          <span>{t('analytics.v2.more')}</span>
+          <strong>{hiddenCount}</strong>
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
+function CategoryBreakdownSheet({
+  title,
+  groups,
+  total,
+  onClose,
+  onOpen,
+}: {
+  title: string;
+  groups: MoneyGroup[];
+  total: number;
+  onClose: () => void;
+  onOpen: (group: MoneyGroup) => void;
+}) {
+  const { t } = useI18n();
+  const chartGroups = compactDonutGroups(groups, t('analytics.group.other'));
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose();
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
+  return (
+    <div className="analytics-v2-breakdown" role="dialog" aria-modal="true" aria-label={title}>
+      <button type="button" className="analytics-v2-breakdown__backdrop" onClick={onClose} aria-label={t('common.close')} />
+      <section className="analytics-v2-breakdown__sheet">
+        <div className="analytics-v2-breakdown__head">
+          <div>
+            <span>{t('analytics.v2.breakdown.caption')}</span>
+            <h2>{title}</h2>
+          </div>
+          <button type="button" onClick={onClose} aria-label={t('common.close')}>×</button>
+        </div>
+        <div className="analytics-v2-breakdown__body">
+          <DonutChart groups={chartGroups} total={total} label={title} />
+          <CategoryList groups={groups} total={total} onOpen={onOpen} variant="sheet" />
+        </div>
+      </section>
     </div>
   );
 }
@@ -500,6 +573,7 @@ export default function AnalyticsPage() {
   const [draftStart, setDraftStart] = useState(customStart);
   const [draftEnd, setDraftEnd] = useState(customEnd);
   const [calendarMonth, setCalendarMonth] = useState(() => fromDateInputValue(customStart, new Date()));
+  const [breakdown, setBreakdown] = useState<{ title: string; groups: MoneyGroup[]; total: number; mode: MoneyMode } | null>(null);
 
   useEffect(() => { void loadTransactions(); }, [loadTransactions]);
 
@@ -646,6 +720,7 @@ export default function AnalyticsPage() {
   const structureGroups = structureMode === 'expense' ? analytics.expenseGroups : analytics.incomeGroups;
   const structureTotal = structureMode === 'expense' ? analytics.totalExpense : analytics.totalIncome;
   const structureTitle = structureMode === 'expense' ? t('analytics.v2.chart.expense') : t('analytics.v2.chart.income');
+  const structureChartGroups = compactDonutGroups(structureGroups, t('analytics.group.other'));
   const dynamicTitle = dynamicMode === 'expense' ? t('analytics.v2.dynamic.expense') : t('analytics.v2.dynamic.income');
 
   return (
@@ -763,8 +838,15 @@ export default function AnalyticsPage() {
             </div>
 
             <div className="analytics-v2-chart-layout">
-              <DonutChart groups={structureGroups} total={structureTotal} label={structureTitle} />
-              <CategoryList groups={structureGroups} total={structureTotal} onOpen={(group) => openGroupJournal(group, structureMode)} />
+              <DonutChart groups={structureChartGroups} total={structureTotal} label={structureTitle} />
+              <CategoryList
+                groups={structureGroups}
+                total={structureTotal}
+                limit={CATEGORY_PREVIEW_LIMIT}
+                variant="preview"
+                onOpen={(group) => openGroupJournal(group, structureMode)}
+                onMore={() => setBreakdown({ title: structureTitle, groups: structureGroups, total: structureTotal, mode: structureMode })}
+              />
             </div>
           </section>
         ) : null}
@@ -843,6 +925,18 @@ export default function AnalyticsPage() {
           <button type="button" onClick={() => openModal({ type: 'report-export', mode: 'base' })}>{t('analytics.report.action')}</button>
         </section>
       </div>
+      {breakdown ? (
+        <CategoryBreakdownSheet
+          title={breakdown.title}
+          groups={breakdown.groups}
+          total={breakdown.total}
+          onClose={() => setBreakdown(null)}
+          onOpen={(group) => {
+            setBreakdown(null);
+            openGroupJournal(group, breakdown.mode);
+          }}
+        />
+      ) : null}
     </div>
   );
 }

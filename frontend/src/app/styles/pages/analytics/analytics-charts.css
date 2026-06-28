@@ -194,3 +194,38 @@
 .analytics-v2-line svg {
   height: 188px;
 }
+
+/* Pack 206: structure chart matches compact category legend. */
+.analytics-v2-chart-card .analytics-v2-chart-layout {
+  grid-template-columns: minmax(122px, 0.58fr) minmax(0, 1fr);
+  gap: 18px;
+  align-items: center;
+}
+
+.analytics-v2-chart-card .analytics-v2-donut {
+  width: min(100%, 172px);
+}
+
+.analytics-v2-breakdown .analytics-v2-donut {
+  width: min(100%, 232px);
+}
+
+.analytics-v2-breakdown .analytics-v2-donut__center strong {
+  max-width: 118px;
+  font-size: clamp(15px, 4vw, 21px);
+}
+
+.analytics-v2-breakdown .analytics-v2-donut__center span {
+  max-width: 118px;
+}
+
+@media (max-width: 430px) {
+  .analytics-v2-chart-card .analytics-v2-chart-layout {
+    grid-template-columns: minmax(126px, 0.78fr) minmax(0, 1fr);
+    gap: 14px;
+  }
+
+  .analytics-v2-chart-card .analytics-v2-donut {
+    width: min(100%, 154px);
+  }
+}

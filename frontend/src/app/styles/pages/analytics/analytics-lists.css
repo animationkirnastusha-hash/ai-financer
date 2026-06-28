@@ -92,3 +92,126 @@
   min-height: 56px;
   padding: 10px;
 }
+
+/* Pack 206: compact category legend with money and percent columns. */
+.analytics-v2-category-list--preview {
+  gap: 9px;
+}
+
+.analytics-v2-category-row {
+  grid-template-columns: 12px minmax(0, 1fr) auto 42px;
+  min-height: 42px;
+  border-radius: 16px;
+  background: transparent;
+  padding: 5px 0;
+}
+
+.analytics-v2-category-row__icon {
+  display: none;
+}
+
+.analytics-v2-category-row__dot {
+  display: block;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.035);
+}
+
+.analytics-v2-category-row__text b {
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 13px;
+  font-weight: 850;
+  letter-spacing: -0.02em;
+}
+
+.analytics-v2-category-row__text small {
+  display: none;
+}
+
+.analytics-v2-category-row__amount,
+.analytics-v2-category-row__percent {
+  min-width: 0;
+  overflow: hidden;
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 13px;
+  font-weight: 900;
+  line-height: 1.1;
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.analytics-v2-category-row__percent {
+  color: rgba(110, 231, 183, 0.95);
+}
+
+.analytics-v2-category-more {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 42px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.055);
+  color: rgba(236, 254, 255, 0.9);
+  padding: 0 12px;
+  font: inherit;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 160ms ease, background 160ms ease, border-color 160ms ease;
+}
+
+.analytics-v2-category-more:active {
+  transform: scale(0.985);
+  background: rgba(255, 255, 255, 0.085);
+  border-color: rgba(103, 232, 249, 0.22);
+}
+
+.analytics-v2-category-more span {
+  overflow: hidden;
+  font-size: 12px;
+  font-weight: 900;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.analytics-v2-category-more strong {
+  display: grid;
+  place-items: center;
+  min-width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  background: rgba(103, 232, 249, 0.15);
+  color: #ecfeff;
+  font-size: 11px;
+  font-weight: 950;
+}
+
+.analytics-v2-category-list--sheet {
+  gap: 12px;
+}
+
+.analytics-v2-category-list--sheet .analytics-v2-category-row {
+  min-height: 54px;
+  padding: 8px 0;
+}
+
+.analytics-v2-category-list--sheet .analytics-v2-category-row__text small {
+  display: block;
+}
+
+@media (max-width: 430px) {
+  .analytics-v2-category-row {
+    grid-template-columns: 10px minmax(0, 1fr) auto 36px;
+    gap: 8px;
+  }
+
+  .analytics-v2-category-row__amount,
+  .analytics-v2-category-row__percent {
+    font-size: 12px;
+  }
+}
