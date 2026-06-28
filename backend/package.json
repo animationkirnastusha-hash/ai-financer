@@ -35,7 +35,9 @@
     "bot:webhook:set": "node scripts/configure-telegram-bot-webhook.mjs",
     "bot:webhook:check": "node scripts/check-telegram-bot-webhook.mjs",
     "test:ai-launch": "node scripts/run-ai-launch-checks.mjs",
-    "smoke:ai-launch": "node scripts/run-ai-launch-checks.mjs"
+    "smoke:ai-launch": "node scripts/run-ai-launch-checks.mjs",
+    "test:account-delete-cleanup": "node scripts/smoke/check-account-delete-cleanup.mjs",
+    "smoke:account-delete-cleanup": "node scripts/smoke/check-account-delete-cleanup.mjs"
   },
   "keywords": [],
   "author": "",

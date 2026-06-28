@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { goalsApi, type GoalDto } from '@/features/goals/api/goals.api';
+import { readHomeGoalSelection, writeHomeGoalSelection } from '@/features/goals/lib/homeGoalSelection';
 import { fetchSpendingLimits, type SpendingLimitDto } from '@/features/spending-limits/api/spendingLimits.api';
 import { useNavigationStore } from '@/features/navigation/model/navigation.store';
 import { ScreenTopBar } from '@/shared/ui/ScreenTopBar';
@@ -71,9 +72,15 @@ export default function GoalsLimitsPage() {
   const [limits, setLimits] = useState<SpendingLimitDto[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [homeGoalId, setHomeGoalId] = useState<string | null>(() => readHomeGoalSelection());
 
   const openFina = (flow: FinaFlow, item?: GoalDto | SpendingLimitDto) => {
     openAIWithPrompt(buildFinaMessage(flow, t, item), null, buildFinaContext(flow, t, item));
+  };
+
+  const selectHomeGoal = (goalId: string) => {
+    writeHomeGoalSelection(goalId);
+    setHomeGoalId(goalId);
   };
 
   const load = async () => {
@@ -216,7 +223,17 @@ export default function GoalsLimitsPage() {
                   </div>
                   <div className="app-goals-limits-row__bottom">
                     <span>{goal.account?.name ?? t('goalsLimits.goal.noAccount')}</span>
-                    <button type="button" onClick={() => openFina('goal-edit', goal)}>{t('goalsLimits.action.edit')}</button>
+                    <div className="app-goals-limits-row__actions">
+                      <button
+                        type="button"
+                        className="app-goals-limits-home-pick"
+                        data-active={homeGoalId === goal.id}
+                        onClick={() => selectHomeGoal(goal.id)}
+                      >
+                        {homeGoalId === goal.id ? t('goalsLimits.action.homeSelected') : t('goalsLimits.action.showOnHome')}
+                      </button>
+                      <button type="button" onClick={() => openFina('goal-edit', goal)}>{t('goalsLimits.action.edit')}</button>
+                    </div>
                   </div>
                 </article>
               );

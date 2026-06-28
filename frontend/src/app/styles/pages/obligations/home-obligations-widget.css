@@ -1,20 +1,60 @@
-/* Compact home payments widget used on dashboard. */
-.app-obligations-widget--compact,
-.app-obligations-widget--hidden {
-  padding: 12px;
-  border-radius: 22px;
+/* Compact home payment widget. Keep it small: dashboard card, not a full payments page. */
+.app-obligations-widget {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  padding: 14px;
+  border-radius: 24px;
+  background:
+    radial-gradient(circle at 18% 0%, rgba(110, 231, 183, 0.1), transparent 38%),
+    rgba(255, 255, 255, 0.045);
 }
 
-.app-obligations-widget__line {
+.app-obligations-widget__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.app-obligations-widget__head h2 {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 15px;
+  font-weight: 850;
+  letter-spacing: -0.01em;
+}
+
+.app-obligations-widget__head-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+
+.app-obligations-widget__head-actions span {
+  color: rgba(255, 255, 255, 0.38);
+  font-size: 10px;
+  font-weight: 780;
+  white-space: nowrap;
+}
+
+.app-obligations-widget__head button {
+  flex: 0 0 auto;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: rgba(110, 231, 183, 0.92);
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.app-obligations-widget__payment {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: 38px minmax(0, 1fr) auto;
   gap: 10px;
   align-items: center;
-}
-
-.app-obligations-widget__main,
-.app-obligations-widget__hidden-main {
-  min-width: 0;
+  width: 100%;
   padding: 0;
   border: 0;
   background: transparent;
@@ -22,92 +62,133 @@
   text-align: left;
 }
 
-.app-obligations-widget__label {
-  display: block;
-  margin-bottom: 3px;
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: rgb(255 255 255 / 0.42);
-}
-
-.app-obligations-widget__title {
-  display: block;
-  overflow: hidden;
-  font-size: 15px;
-  font-weight: 850;
-  line-height: 1.1;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-  color: rgb(255 255 255 / 0.92);
-}
-
-.app-obligations-widget__main small {
-  display: block;
-  overflow: hidden;
-  margin-top: 4px;
-  font-size: 12px;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-  color: rgb(255 255 255 / 0.55);
-}
-
-.app-obligations-widget__side {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-
-.app-obligations-widget__side strong,
-.app-obligations-widget__hidden-main strong {
-  font-size: 15px;
-  font-weight: 900;
-  white-space: nowrap;
-  color: rgb(255 255 255 / 0.96);
-}
-
-.app-obligations-widget__icon,
-.app-obligations-widget__ghost {
+.app-obligations-widget__icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 34px;
-  height: 34px;
-  padding: 0 10px;
-  border: 1px solid rgb(255 255 255 / 0.09);
-  border-radius: 999px;
-  background: rgb(255 255 255 / 0.055);
-  color: rgb(255 255 255 / 0.78);
-  font-weight: 800;
+  width: 38px;
+  height: 38px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 13px;
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.035)),
+    rgba(110, 231, 183, 0.12);
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 15px;
+  font-weight: 950;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.13);
 }
 
-.app-obligations-widget__compact-actions {
+.app-obligations-widget__body,
+.app-obligations-widget__amount {
+  min-width: 0;
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-  margin-top: 10px;
+  gap: 3px;
 }
 
-.app-obligations-widget--compact .app-obligations-widget__compact-actions .app-secondary-button,
-.app-obligations-widget--compact .app-obligations-widget__compact-actions .app-primary-button {
-  min-height: 38px;
-  padding: 9px 12px;
-  border-radius: 14px;
-  font-size: 13px;
+.app-obligations-widget__title {
+  overflow: hidden;
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 14px;
+  font-weight: 850;
+  line-height: 1.12;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.app-obligations-widget--hidden {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 10px;
+.app-obligations-widget__body small,
+.app-obligations-widget__amount small {
+  overflow: hidden;
+  color: rgba(255, 255, 255, 0.52);
+  font-size: 11px;
+  font-weight: 650;
+  line-height: 1.15;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-obligations-widget__amount {
+  justify-items: end;
+  text-align: right;
+}
+
+.app-obligations-widget__amount strong {
+  color: rgba(255, 255, 255, 0.94);
+  font-size: 14px;
+  font-weight: 900;
+  line-height: 1.05;
+  white-space: nowrap;
+}
+
+.app-obligations-widget__meta-line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding-left: 48px;
+}
+
+.app-obligations-widget__meta-line span {
+  min-height: 20px;
+  display: inline-flex;
   align-items: center;
-  background: rgb(255 255 255 / 0.03);
+  padding: 0 8px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.46);
+  font-size: 10px;
+  font-weight: 760;
+  line-height: 1;
 }
 
-.app-obligations-widget__hidden-main span {
+.app-obligations-widget__progress {
+  display: grid;
+  gap: 6px;
+  padding-left: 48px;
+}
+
+.app-obligations-widget__progress > span {
   display: block;
-  margin-bottom: 3px;
-  font-size: 12px;
-  color: rgb(255 255 255 / 0.58);
+  overflow: hidden;
+  height: 5px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.065);
+}
+
+.app-obligations-widget__progress i {
+  display: block;
+  height: 100%;
+  min-width: 7px;
+  border-radius: inherit;
+  background: linear-gradient(90deg, rgba(110, 231, 183, 0.94), rgba(90, 215, 142, 0.86));
+}
+
+.app-obligations-widget__progress small {
+  color: rgba(255, 255, 255, 0.48);
+  font-size: 10.5px;
+  font-weight: 650;
+  line-height: 1.2;
+}
+
+@media (max-width: 370px) {
+  .app-obligations-widget__payment {
+    grid-template-columns: 34px minmax(0, 1fr);
+  }
+
+  .app-obligations-widget__icon {
+    width: 34px;
+    height: 34px;
+    border-radius: 12px;
+  }
+
+  .app-obligations-widget__amount {
+    grid-column: 2;
+    justify-items: start;
+    text-align: left;
+  }
+
+  .app-obligations-widget__meta-line,
+  .app-obligations-widget__progress {
+    padding-left: 44px;
+  }
 }

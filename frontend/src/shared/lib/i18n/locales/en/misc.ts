@@ -332,6 +332,8 @@ export const miscDictionary = {
   'goalsLimits.limit.left': 'Left: {amount}',
   'goalsLimits.limit.hottest': 'Closest to limit: {target}',
   'goalsLimits.action.edit': 'Edit',
+  'goalsLimits.action.showOnHome': 'Show on home',
+  'goalsLimits.action.homeSelected': 'On home',
   'goalsLimits.command.goalCreate': 'I will help create a financial goal. Tell me the name, target amount, deadline and starting amount. I will create a dedicated account with it.',
   'goalsLimits.command.goalCreateContext': 'Create a financial goal and a dedicated account for it. User details:',
   'goalsLimits.command.goalEdit': 'I will help edit the goal “{title}”. Tell me what to change: amount, saved amount, deadline or goal account.',

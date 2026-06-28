@@ -103,7 +103,7 @@ export const accountsDictionary = {
   'accounts.details.delete.caption': 'Account transactions will be removed, linked data will be detached.',
   'accounts.details.delete.confirmAction': 'Confirm deletion',
   'accounts.details.delete.warning': 'Confirm account deletion.',
-  'accounts.details.delete.error': 'Could not delete the account. Linked data is cleaned automatically, try again.',
+  'accounts.details.delete.error': 'Could not delete the account. Check your connection and try again.',
   'accounts.edit.caption': 'Manual account settings.',
   'accounts.empty.eyebrow': 'Start',
 } as const;

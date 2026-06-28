@@ -4,6 +4,7 @@ import { HomeBalanceCarousel } from '@/features/dashboard/ui/HomeBalanceCarousel
 import { HomeCashflowChart } from '@/features/dashboard/ui/HomeCashflowChart';
 import { HomeFinanceInsight } from '@/features/dashboard/ui/HomeFinanceInsight';
 import { HomeObligationsWidget } from '@/features/obligations/ui/HomeObligationsWidget';
+import { HomeGoalProgressWidget } from '@/features/goals/ui/HomeGoalProgressWidget';
 import { FinaCommandBar } from '@/features/fina/ui/FinaCommandBar';
 import { ProductLearningCard } from '@/features/onboarding/ui/ProductLearningCard';
 import { useI18n } from '@/shared/lib/i18n';
@@ -90,7 +91,10 @@ export default function DashboardPage() {
           <ProductLearningCard />
         </div>
 
-        <HomeObligationsWidget />
+        <section className="app-home-planning-row" aria-label={t('dashboard.planning.label')}>
+          <HomeObligationsWidget />
+          <HomeGoalProgressWidget />
+        </section>
 
         <div>
           <HomeCashflowChart

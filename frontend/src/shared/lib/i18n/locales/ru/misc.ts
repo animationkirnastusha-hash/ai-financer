@@ -332,6 +332,8 @@ export const miscDictionary = {
   'goalsLimits.limit.left': 'Осталось: {amount}',
   'goalsLimits.limit.hottest': 'Ближе к лимиту: {target}',
   'goalsLimits.action.edit': 'Изменить',
+  'goalsLimits.action.showOnHome': 'На главную',
+  'goalsLimits.action.homeSelected': 'На главной',
   'goalsLimits.command.goalCreate': 'Я помогу создать финансовую цель. Скажи название, сумму, срок и стартовую сумму. Отдельный счёт под цель создам вместе с целью.',
   'goalsLimits.command.goalCreateContext': 'Создай финансовую цель и отдельный счет для этой цели. Данные пользователя:',
   'goalsLimits.command.goalEdit': 'Я помогу изменить цель «{title}». Напиши, что поменять: сумму, накоплено, срок или счёт цели.',

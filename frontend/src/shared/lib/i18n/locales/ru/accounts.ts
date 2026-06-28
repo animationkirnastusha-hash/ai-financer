@@ -103,7 +103,7 @@ export const accountsDictionary = {
   'accounts.details.delete.caption': 'Операции счёта удалятся, связанные данные отвяжутся.',
   'accounts.details.delete.confirmAction': 'Подтвердить удаление',
   'accounts.details.delete.warning': 'Подтвердите удаление счёта.',
-  'accounts.details.delete.error': 'Не удалось удалить счёт. Связи очищены автоматически, попробуйте ещё раз.',
+  'accounts.details.delete.error': 'Не удалось удалить счёт. Проверьте соединение и попробуйте ещё раз.',
   'accounts.edit.caption': 'Ручные настройки счёта.',
   'accounts.empty.eyebrow': 'Старт',
 } as const;
