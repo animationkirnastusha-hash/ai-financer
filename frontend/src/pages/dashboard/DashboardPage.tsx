@@ -68,6 +68,10 @@ export default function DashboardPage() {
         <ScreenTopBar title={t('screen.dashboard')} right={['notifications', 'settings']} />
 
 
+        <div className="app-home-floating-goal-slot" aria-label={t('dashboard.goals.home')}>
+          <HomeGoalProgressWidget />
+        </div>
+
         {financeLoadError ? (
           <section className="app-card app-home-load-state app-home-load-state--error">
             <div>
@@ -93,7 +97,6 @@ export default function DashboardPage() {
 
         <section className="app-home-planning-row" aria-label={t('dashboard.planning.label')}>
           <HomeObligationsWidget />
-          <HomeGoalProgressWidget />
         </section>
 
         <div>
