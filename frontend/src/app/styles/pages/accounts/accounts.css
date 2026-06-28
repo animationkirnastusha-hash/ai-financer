@@ -1,4 +1,4 @@
-/* Accounts page manifest. Keep page-specific account styles here, not in shared product screens. */
+/* Accounts page manifest. Page-specific styles only. */
 @import "./accounts/accounts-shell.css";
 @import "./accounts/accounts-summary.css";
 @import "./accounts/accounts-actions.css";

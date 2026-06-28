@@ -1,6 +1,6 @@
 import type { AppModalDescriptor } from '@/features/modals/model/appModal.store';
 
-const ACCOUNT_MODAL_TYPES = new Set<AppModalDescriptor['type']>(['account-create', 'account-details', 'account-transfer', 'account-edit']);
+const ACCOUNT_MODAL_TYPES = new Set<AppModalDescriptor['type']>(['account-details', 'account-edit']);
 const FINANCE_ENTITY_MODAL_TYPES = new Set<AppModalDescriptor['type']>(['transaction-create', 'transaction-edit', 'category-edit', 'section-edit']);
 const HOME_FINANCE_MODAL_TYPES = new Set<AppModalDescriptor['type']>(['home-chart-details', 'home-category-operations']);
 const NOTIFICATION_MODAL_TYPES = new Set<AppModalDescriptor['type']>(['notifications']);
@@ -8,7 +8,7 @@ const REPORT_MODAL_TYPES = new Set<AppModalDescriptor['type']>(['report-export']
 const TEXT_CHAT_MODAL_TYPES = new Set<AppModalDescriptor['type']>(['ai-text-overlay']);
 const UTILITY_MODAL_TYPES = new Set<AppModalDescriptor['type']>(['accounts-tools', 'taxonomy-tools', 'taxonomy-section']);
 
-export function isAccountModal(modal: AppModalDescriptor): modal is Extract<AppModalDescriptor, { type: 'account-create' | 'account-details' | 'account-transfer' | 'account-edit' }> {
+export function isAccountModal(modal: AppModalDescriptor): modal is Extract<AppModalDescriptor, { type: 'account-details' | 'account-edit' }> {
   return ACCOUNT_MODAL_TYPES.has(modal.type);
 }
 

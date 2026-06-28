@@ -19,8 +19,8 @@
   height: 52px;
   display: grid;
   place-items: center;
-  border-radius: 20px;
   border: 1px solid rgba(129, 239, 208, .20);
+  border-radius: 20px;
   background: rgba(129, 239, 208, .12);
   color: rgba(224, 255, 247, .94);
   font-size: 26px;

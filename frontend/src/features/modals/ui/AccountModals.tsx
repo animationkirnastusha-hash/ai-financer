@@ -1,11 +1,10 @@
 import { AccountDetailsSheet } from '@/features/accounts/ui/AccountDetailsSheet';
-import { AccountTransferSheet } from '@/features/accounts/ui/AccountTransferSheet';
-import { CreateAccountSheet } from '@/features/accounts/ui/CreateAccountSheet';
 import { EditAccountModal } from '@/features/accounts/ui/EditAccountModal';
 import type { AccountDto, UpdateAccountPayload } from '@/features/accounts/api/accounts.api';
 import type { AppModalDescriptor } from '@/features/modals/model/appModal.store';
+import { useI18n } from '@/shared/lib/i18n';
 
-type AccountModal = Extract<AppModalDescriptor, { type: 'account-create' | 'account-details' | 'account-transfer' | 'account-edit' }>;
+type AccountModal = Extract<AppModalDescriptor, { type: 'account-details' | 'account-edit' }>;
 
 type Props = {
   modal: AccountModal;
@@ -14,19 +13,13 @@ type Props = {
   incomeAccountId: string | null;
   isDeletingAccount: boolean;
   isUpdatingAccount: boolean;
-  isTransactionSaving: boolean;
   closeModal: (type?: AppModalDescriptor['type']) => void;
   openModal: (modal: AppModalDescriptor) => void;
-  resetAccountDraft: () => void;
-  createAccount: (payload: any) => Promise<unknown>;
   updateAccount: (id: string, payload: UpdateAccountPayload) => Promise<unknown>;
   deleteAccount: (id: string) => Promise<unknown>;
-  loadAccounts: (force?: boolean) => Promise<unknown>;
   refreshFinance: () => Promise<void>;
   setPrimaryAccountId: (id: string | null) => void;
   setIncomeAccountId: (id: string | null) => void;
-  createTransfer: (payload: any) => Promise<unknown>;
-  navigateToAI: () => void;
 };
 
 export function AccountModals({
@@ -36,39 +29,33 @@ export function AccountModals({
   incomeAccountId,
   isDeletingAccount,
   isUpdatingAccount,
-  isTransactionSaving,
   closeModal,
   openModal,
-  resetAccountDraft,
-  createAccount,
   updateAccount,
   deleteAccount,
-  loadAccounts,
   refreshFinance,
   setPrimaryAccountId,
   setIncomeAccountId,
-  createTransfer,
-  navigateToAI,
 }: Props) {
+  const { t } = useI18n();
+
   switch (modal.type) {
-    case 'account-create':
-      return (
-        <CreateAccountSheet
-          open
-          onClose={() => {
-            resetAccountDraft();
-            closeModal('account-create');
-          }}
-          onSubmit={async (payload) => {
-            await createAccount(payload);
-            resetAccountDraft();
-            closeModal('account-create');
-            await loadAccounts(true);
-          }}
-        />
-      );
     case 'account-details': {
       const account = accounts.find((item) => item.id === modal.accountId) ?? null;
+      const openAccountAI = (nextAccount: AccountDto, mode: 'transfer' | 'settings') => {
+        closeModal('account-details');
+        openModal({
+          type: 'ai-text-overlay',
+          initialAssistantMessage: mode === 'transfer'
+            ? t('accounts.ai.transfer.message', { name: nextAccount.name })
+            : t('accounts.ai.settings.message', { name: nextAccount.name }),
+          hiddenCommandPrefix: mode === 'transfer'
+            ? t('accounts.ai.transfer.prefix', { name: nextAccount.name })
+            : t('accounts.ai.settings.prefix', { name: nextAccount.name }),
+          autoSubmitInitialCommand: false,
+        });
+      };
+
       return (
         <AccountDetailsSheet
           account={account}
@@ -87,25 +74,8 @@ export function AccountModals({
           }}
           onSetPrimary={(accountId) => setPrimaryAccountId(accountId)}
           onSetIncomeDefault={(accountId) => setIncomeAccountId(accountId)}
-          onTransfer={(nextAccount) => openModal({ type: 'account-transfer', fromAccountId: nextAccount.id })}
-          onAskAI={navigateToAI}
-        />
-      );
-    }
-    case 'account-transfer': {
-      const fromAccount = accounts.find((item) => item.id === modal.fromAccountId) ?? null;
-      return (
-        <AccountTransferSheet
-          open={Boolean(fromAccount)}
-          fromAccount={fromAccount}
-          accounts={accounts}
-          isSaving={isTransactionSaving}
-          onClose={() => closeModal('account-transfer')}
-          onSubmit={async (payload) => {
-            await createTransfer(payload);
-            closeModal('account-transfer');
-            await refreshFinance();
-          }}
+          onTransfer={(nextAccount) => openAccountAI(nextAccount, 'transfer')}
+          onAskAI={(nextAccount) => openAccountAI(nextAccount, 'settings')}
         />
       );
     }

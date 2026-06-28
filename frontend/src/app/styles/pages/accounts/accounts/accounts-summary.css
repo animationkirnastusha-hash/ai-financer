@@ -1,8 +1,8 @@
 .app-accounts-summary-card {
   min-width: 0;
   overflow: hidden;
-  border-radius: 30px;
   border: 1px solid rgba(129, 239, 208, .18);
+  border-radius: 30px;
   background:
     radial-gradient(circle at 100% 0%, rgba(129, 239, 208, .18), transparent 36%),
     linear-gradient(135deg, rgba(5, 80, 65, .72), rgba(3, 45, 42, .92));

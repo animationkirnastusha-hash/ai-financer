@@ -44,19 +44,13 @@ export function AppModalRenderer({ closeAllModals, closeModal, deps, index, moda
         incomeAccountId={deps.incomeAccountId}
         isDeletingAccount={deps.isDeletingAccount}
         isUpdatingAccount={deps.isUpdatingAccount}
-        isTransactionSaving={deps.isTransactionSaving}
         closeModal={closeModal}
         openModal={openModal}
-        resetAccountDraft={deps.resetAccountDraft}
-        createAccount={deps.createAccount}
         updateAccount={deps.updateAccount}
         deleteAccount={deps.deleteAccount}
-        loadAccounts={deps.loadAccounts}
         refreshFinance={deps.refreshFinance}
         setPrimaryAccountId={deps.setPrimaryAccountId}
         setIncomeAccountId={deps.setIncomeAccountId}
-        createTransfer={deps.createTransfer}
-        navigateToAI={() => openModal({ type: 'ai-text-overlay' })}
       />
     );
   }

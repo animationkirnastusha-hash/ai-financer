@@ -27,7 +27,7 @@ type Props = {
   onEdit: (account: AccountDto) => void;
   onTransfer: (account: AccountDto) => void;
   onDelete: (accountId: string) => Promise<void> | void;
-  onAskAI: () => void;
+  onAskAI: (account: AccountDto) => void;
 };
 
 function getErrorMessage(error: unknown) {
@@ -54,12 +54,6 @@ export function AccountDetailsSheet({
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!open) {
-      setDeleteConfirmOpen(false);
-      setDeleteError(null);
-      return;
-    }
-
     setDeleteConfirmOpen(false);
     setDeleteError(null);
   }, [account?.id, open]);
@@ -98,9 +92,7 @@ export function AccountDetailsSheet({
         <div className="min-w-0">
           <div className="app-eyebrow">{t('accounts.details.eyebrow')}</div>
           <h2>{account.name}</h2>
-          <p>
-            {typeLabel} · {account.currency}
-          </p>
+          <p>{typeLabel} · {account.currency}</p>
         </div>
         <button
           type="button"
@@ -115,44 +107,25 @@ export function AccountDetailsSheet({
       <section className="app-account-details-balance">
         <div>
           <span>{t('accounts.details.balance')}</span>
-          <strong>
-            {formatMoney(Number(account.balance) || 0, account.currency)}
-          </strong>
+          <strong>{formatMoney(Number(account.balance) || 0, account.currency)}</strong>
         </div>
         <div className="app-account-details-balance__chips">
-          {isPrimary ? (
-            <Badge tone="green">
-              {t('accounts.details.badge.primary')}
-            </Badge>
-          ) : null}
-          {isIncomeDefault ? (
-            <Badge tone="blue">{t('accounts.details.badge.income')}</Badge>
-          ) : null}
+          {isPrimary ? <Badge tone="green">{t('accounts.details.badge.primary')}</Badge> : null}
+          {isIncomeDefault ? <Badge tone="blue">{t('accounts.details.badge.income')}</Badge> : null}
           {account.showInTotalBalance ? (
-            <Badge tone="green">
-              {t('accounts.details.badge.inTotal')}
-            </Badge>
+            <Badge tone="green">{t('accounts.details.badge.inTotal')}</Badge>
           ) : (
-            <Badge tone="yellow">
-              {t('accounts.details.badge.hiddenFromTotal')}
-            </Badge>
+            <Badge tone="yellow">{t('accounts.details.badge.hiddenFromTotal')}</Badge>
           )}
         </div>
       </section>
 
       <section className="app-account-details-grid">
         <InfoTile label={t('common.type')} value={typeLabel} />
-        <InfoTile
-          label={t('accounts.details.currency')}
-          value={account.currency}
-        />
+        <InfoTile label={t('accounts.details.currency')} value={account.currency} />
         <InfoTile
           label={t('accounts.details.transactions')}
-          value={
-            transactionCount > 0
-              ? String(transactionCount)
-              : t('common.none')
-          }
+          value={transactionCount > 0 ? String(transactionCount) : t('common.none')}
         />
       </section>
 
@@ -168,41 +141,15 @@ export function AccountDetailsSheet({
         <span>{t('accounts.details.openJournal.caption')}</span>
       </button>
 
-      {account.lockRename ||
-      account.lockSpending ||
-      account.lockTransfers ||
-      account.lockBalance ||
-      account.lockVisibility ? (
+      {account.lockRename || account.lockSpending || account.lockTransfers || account.lockBalance || account.lockVisibility ? (
         <section className="app-account-details-locks">
-          <div className="app-eyebrow">
-            {t('accounts.details.protection')}
-          </div>
+          <div className="app-eyebrow">{t('accounts.details.protection')}</div>
           <div>
-            {account.lockRename ? (
-              <Badge tone="yellow">
-                {t('accounts.details.badge.lockRename')}
-              </Badge>
-            ) : null}
-            {account.lockSpending ? (
-              <Badge tone="red">
-                {t('accounts.details.badge.lockSpending')}
-              </Badge>
-            ) : null}
-            {account.lockTransfers ? (
-              <Badge tone="red">
-                {t('accounts.details.badge.lockTransfers')}
-              </Badge>
-            ) : null}
-            {account.lockBalance ? (
-              <Badge tone="yellow">
-                {t('accounts.details.badge.lockBalance')}
-              </Badge>
-            ) : null}
-            {account.lockVisibility ? (
-              <Badge tone="yellow">
-                {t('accounts.details.badge.lockVisibility')}
-              </Badge>
-            ) : null}
+            {account.lockRename ? <Badge tone="yellow">{t('accounts.details.badge.lockRename')}</Badge> : null}
+            {account.lockSpending ? <Badge tone="red">{t('accounts.details.badge.lockSpending')}</Badge> : null}
+            {account.lockTransfers ? <Badge tone="red">{t('accounts.details.badge.lockTransfers')}</Badge> : null}
+            {account.lockBalance ? <Badge tone="yellow">{t('accounts.details.badge.lockBalance')}</Badge> : null}
+            {account.lockVisibility ? <Badge tone="yellow">{t('accounts.details.badge.lockVisibility')}</Badge> : null}
           </div>
         </section>
       ) : null}
@@ -215,6 +162,14 @@ export function AccountDetailsSheet({
         >
           <b>{t('accounts.details.transfer')}</b>
           <span>{t('accounts.details.transfer.caption')}</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => onAskAI(account)}
+          className="app-account-details-action"
+        >
+          <b>{t('accounts.details.askAi')}</b>
+          <span>{t('accounts.details.askAi.caption')}</span>
         </button>
         <button
           type="button"
@@ -239,14 +194,6 @@ export function AccountDetailsSheet({
           className="app-account-details-action"
         >
           <b>{t('accounts.details.setIncomeDefault')}</b>
-        </button>
-        <button
-          type="button"
-          onClick={onAskAI}
-          className="app-account-details-action"
-        >
-          <b>{t('accounts.details.askAi')}</b>
-          <span>{t('accounts.details.askAi.caption')}</span>
         </button>
       </section>
 
@@ -298,18 +245,6 @@ function InfoTile({ label, value }: { label: string; value: string }) {
   );
 }
 
-function Badge({
-  children,
-  tone,
-}: {
-  children: string;
-  tone: 'green' | 'blue' | 'yellow' | 'red';
-}) {
-  return (
-    <span
-      className={`app-account-details-badge app-account-details-badge--${tone}`}
-    >
-      {children}
-    </span>
-  );
+function Badge({ children, tone }: { children: string; tone: 'green' | 'blue' | 'yellow' | 'red' }) {
+  return <span className={`app-account-details-badge app-account-details-badge--${tone}`}>{children}</span>;
 }

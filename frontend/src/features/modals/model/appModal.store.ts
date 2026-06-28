@@ -1,5 +1,4 @@
 import { create } from 'zustand';
-import type { AccountType } from '@/features/accounts/model/accountFlow.types';
 import type { AccountDto } from '@/features/accounts/api/accounts.api';
 import type { CategoryDto, SectionDto } from '@/features/sections/api/sections.api';
 import type { TransactionDto } from '@/features/transactions/api/transactions.api';
@@ -7,10 +6,8 @@ import type { HomeCashflowMode, HomeCashflowPeriod, HomeFinanceGroup } from '@/f
 import type { ReportMode } from '@/features/reports/api/reports.api';
 
 export type AppModalDescriptor =
-  | { type: 'account-create'; prefill?: Partial<{ name: string; type: AccountType; currency: 'RUB' | 'USD' | 'EUR'; initialBalance: string }> }
   | { type: 'account-details'; accountId: string }
   | { type: 'account-edit'; account: AccountDto }
-  | { type: 'account-transfer'; fromAccountId: string }
   | { type: 'transaction-create'; initialType?: 'expense' | 'income' | 'transfer' }
   | { type: 'transaction-edit'; transaction: TransactionDto }
   | { type: 'category-edit'; category?: CategoryDto | null; sectionId?: string | null; initialType?: 'expense' | 'income' | 'both'; prefillName?: string | null; onSavedCategory?: (category: CategoryDto) => void }

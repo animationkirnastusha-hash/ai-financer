@@ -91,8 +91,7 @@
 }
 
 [data-ai-core-modal="true"].fixed > div,
-.app-account-details-sheet__panel,
-.app-account-transfer-sheet{
+.app-account-details-sheet__panel{
   max-height: calc(100dvh - max(8px, env(safe-area-inset-top)));
   min-height: 0;
   overflow-y: auto;

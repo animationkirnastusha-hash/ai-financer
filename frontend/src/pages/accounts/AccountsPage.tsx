@@ -61,6 +61,30 @@ export default function AccountsPage() {
   const incomeAccount = items.find((item) => item.id === incomeAccountId);
   const totalAccounts = items.length;
 
+  const openCreateAccountWithFina = () => {
+    openModal({
+      type: 'ai-text-overlay',
+      initialAssistantMessage: t('accounts.ai.create.message'),
+      hiddenCommandPrefix: t('accounts.ai.create.prefix'),
+      autoSubmitInitialCommand: false,
+    });
+  };
+
+  const openTransferWithFina = (account?: AccountDto | null) => {
+    const source = account ?? primaryAccount ?? items[0] ?? null;
+
+    openModal({
+      type: 'ai-text-overlay',
+      initialAssistantMessage: source
+        ? t('accounts.ai.transfer.message', { name: source.name })
+        : t('accounts.ai.transfer.message.empty'),
+      hiddenCommandPrefix: source
+        ? t('accounts.ai.transfer.prefix', { name: source.name })
+        : t('accounts.ai.transfer.prefix.empty'),
+      autoSubmitInitialCommand: false,
+    });
+  };
+
   const accountTypeLabel = (type?: string | null) => {
     if (type === 'cash') return t('accounts.type.cash');
     if (type === 'card') return t('accounts.type.card');
@@ -71,7 +95,7 @@ export default function AccountsPage() {
 
   return (
     <div className="app-page app-accounts-page text-white">
-      <div className="app-page__inner space-y-4">
+      <div className="app-page__inner">
         <PageHeader title={t('accounts.title')} subtitle={t('accounts.subtitle')} />
 
         <header className="app-card app-card--hero app-accounts-hero app-accounts-hero--compact">
@@ -86,9 +110,7 @@ export default function AccountsPage() {
             </button>
           </div>
 
-          <div className="mt-4">
-            <AccountsSummary total={formatMoney(mainGroup?.total ?? 0, mainCurrency)} />
-          </div>
+          <AccountsSummary total={formatMoney(mainGroup?.total ?? 0, mainCurrency)} />
 
           <div className="app-accounts-stats">
             <div><span>{totalAccounts}</span><small>{t('accounts.stats.count')}</small></div>
@@ -97,12 +119,12 @@ export default function AccountsPage() {
           </div>
         </header>
 
-        <section className="app-card app-accounts-actions">
-          <button type="button" onClick={() => openModal({ type: 'account-create', prefill: { type: 'card', currency: mainCurrency === 'USD' || mainCurrency === 'EUR' ? mainCurrency : 'RUB' } })} className="app-action-card app-action-card--wide">
+        <section className="app-card app-accounts-actions" aria-label={t('accounts.actions.title')}>
+          <button type="button" onClick={openCreateAccountWithFina} className="app-action-card app-action-card--wide">
             <span className="app-action-card__icon">＋</span>
             <span><b>{t('accounts.actions.create')}</b><small>{t('accounts.actions.create.caption')}</small></span>
           </button>
-          <button type="button" disabled={items.length < 2} onClick={() => openModal({ type: 'account-transfer', fromAccountId: primaryAccount?.id ?? items[0]?.id ?? '' })} className="app-action-card app-action-card--wide disabled:opacity-40">
+          <button type="button" disabled={items.length < 2} onClick={() => openTransferWithFina()} className="app-action-card app-action-card--wide disabled:opacity-40">
             <span className="app-action-card__icon">⇄</span>
             <span><b>{t('accounts.actions.transfer')}</b><small>{t('accounts.actions.transfer.caption')}</small></span>
           </button>
@@ -111,22 +133,22 @@ export default function AccountsPage() {
         {error && items.length === 0 ? (
           <ErrorState title={t('accounts.error.title')} message={error} onRetry={() => void loadAccounts(true)} onOpenAI={() => openAIWithCommand()} />
         ) : isLoading ? (
-          <div className="app-card p-5 text-sm text-white/60">{t('accounts.loading')}</div>
+          <div className="app-card app-accounts-loading">{t('accounts.loading')}</div>
         ) : items.length === 0 ? (
-          <EmptyAccountsState onCreate={() => openModal({ type: 'account-create' })} />
+          <EmptyAccountsState onCreate={openCreateAccountWithFina} />
         ) : (
-          <div className="space-y-4">
+          <div className="app-accounts-groups">
             {grouped.map((group) => (
               <section key={group.currency} className="app-card app-accounts-group">
                 <div className="app-accounts-group__head">
-                  <div>
+                  <div className="min-w-0">
                     <div className="app-section-title">{group.currency}</div>
-                    <div className="mt-1 text-xs text-white/42">{t('accounts.group.count', { count: group.accounts.length })} · {formatMoney(group.total, group.currency)}</div>
+                    <div className="app-accounts-group__meta">{t('accounts.group.count', { count: group.accounts.length })} · {formatMoney(group.total, group.currency)}</div>
                   </div>
                   {group.currency === mainCurrency ? <span className="app-badge app-badge--green">{t('accounts.mainCurrency')}</span> : null}
                 </div>
 
-                <div className="mt-3 grid gap-3">
+                <div className="app-accounts-group__list">
                   {group.accounts.map((account) => (
                     <AccountCard
                       key={account.id}

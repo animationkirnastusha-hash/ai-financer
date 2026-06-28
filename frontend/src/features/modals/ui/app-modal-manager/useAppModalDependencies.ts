@@ -1,5 +1,4 @@
 import { useMemo } from 'react';
-import { useAccountFlowStore } from '@/features/accounts/model/accountFlow.store';
 import { useAccountsStore } from '@/features/accounts/model/accounts.store';
 import { useNavigationStore } from '@/features/navigation/model/navigation.store';
 import { useObligationsStore } from '@/features/obligations/model/obligations.store';
@@ -12,7 +11,6 @@ export function useAppModalDependencies() {
 
   const accounts = useAccountsStore((state) => state.items);
   const loadAccounts = useAccountsStore((state) => state.loadAccounts);
-  const createAccount = useAccountsStore((state) => state.createAccount);
   const updateAccount = useAccountsStore((state) => state.updateAccount);
   const deleteAccount = useAccountsStore((state) => state.deleteAccount);
   const isDeletingAccount = useAccountsStore((state) => state.isDeleting);
@@ -53,9 +51,6 @@ export function useAppModalDependencies() {
   const deleteLoan = useObligationsStore((state) => state.deleteLoan);
   const isObligationSaving = useObligationsStore((state) => state.isMutating);
 
-  const updateAccountDraft = useAccountFlowStore((state) => state.updateDraft);
-  const resetAccountDraft = useAccountFlowStore((state) => state.resetDraft);
-
   const rates = useMemo(() => ({ usd: rubToUsdRate || 90, eur: rubToEurRate || 100 }), [rubToEurRate, rubToUsdRate]);
 
   async function refreshFinance() {
@@ -65,7 +60,6 @@ export function useAppModalDependencies() {
   return {
     accounts,
     categories,
-    createAccount,
     createCategory,
     createLoan,
     createSection,
@@ -92,14 +86,12 @@ export function useAppModalDependencies() {
     primaryAccountId,
     rates,
     refreshFinance,
-    resetAccountDraft,
     sections,
     setIncomeAccountId,
     setMainCurrency,
     setPrimaryAccountId,
     transactions,
     updateAccount,
-    updateAccountDraft,
     updateCategory,
     updateLoan,
     updateSection,

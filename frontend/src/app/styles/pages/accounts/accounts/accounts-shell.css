@@ -11,6 +11,10 @@
   display: grid;
   gap: 16px;
   padding: 22px;
+  border-color: rgba(129, 239, 208, .14);
+  background:
+    radial-gradient(circle at 92% 0%, rgba(129, 239, 208, .18), transparent 34%),
+    linear-gradient(180deg, rgba(255, 255, 255, .075), rgba(255, 255, 255, .035));
 }
 
 .app-accounts-hero--compact .app-hero-title {
@@ -21,7 +25,7 @@
 }
 
 .app-accounts-hero--compact .app-hero-caption {
-  max-width: 28ch;
+  max-width: 30ch;
 }
 
 .app-accounts-hero__top,
@@ -37,7 +41,6 @@
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 9px;
-  margin-top: 0;
 }
 
 .app-accounts-stats > div {
@@ -71,10 +74,22 @@
   line-height: 1.2;
 }
 
+.app-accounts-groups {
+  display: grid;
+  gap: 14px;
+}
+
 .app-accounts-group {
   display: grid;
   gap: 14px;
   padding: 18px 16px 16px;
+}
+
+.app-accounts-group__meta {
+  margin-top: 5px;
+  color: rgba(255, 255, 255, .46);
+  font-size: 12px;
+  line-height: 1.35;
 }
 
 .app-accounts-group__list {
@@ -82,17 +97,56 @@
   gap: 12px;
 }
 
+.app-accounts-loading,
+.app-accounts-empty {
+  padding: 20px;
+  color: rgba(255, 255, 255, .62);
+  font-size: 14px;
+}
+
 @media (max-width: 390px) {
+  .app-accounts-page .app-page__inner {
+    gap: 16px;
+  }
+
   .app-accounts-hero--compact {
     padding: 20px 16px;
   }
 
   .app-accounts-stats {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 7px;
   }
 
   .app-accounts-stats > div {
     padding: 9px 8px;
   }
+}
+
+.app-accounts-empty {
+  display: grid;
+  gap: 12px;
+  padding: 22px;
+  text-align: left;
+}
+
+.app-accounts-empty h2 {
+  margin: 0;
+  color: rgba(255, 255, 255, .96);
+  font-size: 24px;
+  line-height: 1.05;
+  font-weight: 780;
+  letter-spacing: -.04em;
+}
+
+.app-accounts-empty p {
+  margin: 0;
+  max-width: 32ch;
+  color: rgba(255, 255, 255, .56);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.app-accounts-empty .app-primary-button {
+  width: fit-content;
+  margin-top: 4px;
 }
