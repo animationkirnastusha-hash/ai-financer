@@ -17,11 +17,9 @@ function getScreenLabel(screen: AppScreen, t: TranslateFn) {
     obligations: "screen.payments",
     payments: "screen.payments",
     "spending-limits": "screen.goalsLimits",
-    store: "screen.store",
     companion: "screen.companion",
     settings: "screen.settings",
     profile: "screen.profile",
-    sections: "screen.sections",
     admin: "screen.admin",
     referral: "screen.referral",
   };

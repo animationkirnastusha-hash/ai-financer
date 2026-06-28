@@ -4,7 +4,7 @@ import { useNavigationStore, type AppScreen } from '@/features/navigation/model/
 import { useI18n, type I18nKey } from '@/shared/lib/i18n';
 import { AppModalPortal } from '@/features/modals/ui/AppModalPortal';
 
-type NavigationIconName = 'goalsLimits' | 'payments' | 'referral' | 'store' | 'admin';
+type NavigationIconName = 'goalsLimits' | 'limits' | 'payments' | 'referral' | 'admin';
 
 type NavigationItem = {
   type: 'item';
@@ -18,11 +18,11 @@ type NavigationSeparator = { type: 'separator'; id: string };
 type NavigationEntry = NavigationItem | NavigationSeparator;
 
 const baseLinks: NavigationEntry[] = [
-  { type: 'item', screen: 'goals-limits', labelKey: 'screen.goalsLimits', captionKey: 'nav.goalsLimits.caption', icon: 'goalsLimits' },
-  { type: 'item', screen: 'payments', labelKey: 'screen.payments', captionKey: 'nav.payments.caption', icon: 'payments' },
+  { type: 'item', screen: 'goals', labelKey: 'screen.goals', captionKey: 'nav.goals.caption', icon: 'goalsLimits' },
+  { type: 'item', screen: 'spending-limits', labelKey: 'screen.limits', captionKey: 'nav.limits.caption', icon: 'limits' },
+  { type: 'item', screen: 'obligations', labelKey: 'screen.obligations', captionKey: 'nav.obligations.caption', icon: 'payments' },
   { type: 'separator', id: 'growth' },
   { type: 'item', screen: 'referral', labelKey: 'common.referrals', captionKey: 'nav.referral.caption', icon: 'referral' },
-  { type: 'item', screen: 'store', labelKey: 'screen.store', captionKey: 'nav.store.caption', icon: 'store' },
 ];
 
 const adminLink: NavigationItem = {
@@ -44,6 +44,14 @@ function NavigationIcon({ icon }: { icon: NavigationIconName }) {
     );
   }
 
+  if (icon === 'limits') {
+    return (
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M6.6 5.1h10.8A2.6 2.6 0 0 1 20 7.7v8.6a2.6 2.6 0 0 1-2.6 2.6H6.6A2.6 2.6 0 0 1 4 16.3V7.7a2.6 2.6 0 0 1 2.6-2.6Zm1.1 4a1 1 0 0 0 0 2h8.6a1 1 0 1 0 0-2H7.7Zm0 4a1 1 0 1 0 0 2h5.2a1 1 0 1 0 0-2H7.7Z" />
+      </svg>
+    );
+  }
+
   if (icon === 'payments') {
     return (
       <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -61,14 +69,6 @@ function NavigationIcon({ icon }: { icon: NavigationIconName }) {
     );
   }
 
-  if (icon === 'store') {
-    return (
-      <svg viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M6.8 7.4 8.2 4.6A2.05 2.05 0 0 1 10 3.5h4a2.05 2.05 0 0 1 1.8 1.1l1.4 2.8h.3A2.5 2.5 0 0 1 20 9.9v7.2a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 4 17.1V9.9a2.5 2.5 0 0 1 2.5-2.5h.3Zm3.1-1.9-.95 1.9h6.1L14.1 5.5H9.9Z" />
-        <path d="M8.2 11a1 1 0 0 1 2 0 1.8 1.8 0 1 0 3.6 0 1 1 0 1 1 2 0 3.8 3.8 0 0 1-7.6 0Z" />
-      </svg>
-    );
-  }
 
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true">

@@ -25,9 +25,7 @@ function detectScreen(input: string): AppScreen | null {
   if (includesAny(input, ['аналитика', 'аналитику', 'анализ', 'analytics', 'статистика', 'отчет', 'отчеты'])) return 'analytics';
   if (includesAny(input, ['цели и лимиты', 'цели', 'цель', 'копилка', 'копилки', 'goals', 'лимит', 'лимиты', 'ограничения трат', 'контроль трат', 'spending limits', 'limits'])) return 'goals-limits';
   if (includesAny(input, ['платежи', 'платеж', 'обязательства', 'кредиты', 'кредит', 'ипотека', 'рассрочка', 'подписки', 'subscriptions', 'payments'])) return 'payments';
-  if (includesAny(input, ['магазин', 'store', 'витрина', 'премиум', 'premium', 'бизнес аккаунт'])) return 'store';
   if (includesAny(input, ['companion', 'компаньон', 'компаньона', 'спутник'])) return 'companion';
-  if (includesAny(input, ['категории', 'категорию', 'разделы', 'раздел', 'taxonomy', 'таксономия'])) return 'sections';
   if (includesAny(input, ['профиль', 'личный кабинет', 'profile'])) return 'profile';
   if (includesAny(input, ['настройки', 'settings', 'параметры'])) return 'settings';
   if (includesAny(input, ['счета', 'счет', 'мои счета', 'аккаунты', 'accounts', 'кошельки', 'карты'])) return 'accounts';
@@ -54,10 +52,8 @@ function isBareNavigationTarget(input: string, screen: AppScreen) {
     journal: ['журнал', 'история', 'история операций', 'операции', 'транзакции'],
     'goals-limits': ['цели и лимиты', 'цели', 'цель', 'копилки', 'копилка', 'лимиты', 'лимит', 'контроль трат'],
     payments: ['платежи', 'платеж', 'обязательства', 'кредиты', 'кредит', 'ипотека', 'рассрочка', 'подписки'],
-    store: ['магазин', 'витрина', 'премиум'],
     settings: ['настройки', 'параметры'],
     profile: ['профиль', 'личный кабинет'],
-    sections: ['категории', 'разделы', 'категории и разделы', 'разделы и категории'],
     companion: ['компаньон', 'фина', 'помощник'],
     admin: ['админка', 'админ', 'админ панель', 'админская панель', 'панель администратора'],
   };

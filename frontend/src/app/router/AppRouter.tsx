@@ -16,11 +16,9 @@ const CompanionPage = lazy(() => import('@/pages/companion/CompanionPage'));
 const DashboardPage = lazy(() => import('@/pages/dashboard/DashboardPage'));
 const GoalsLimitsPage = lazy(() => import('@/pages/goals-limits/GoalsLimitsPage'));
 const PaymentsPage = lazy(() => import('@/pages/payments/PaymentsPage'));
-const StorePage = lazy(() => import('@/pages/store/StorePage'));
 const SettingsPage = lazy(() => import('@/pages/settings/SettingsPage'));
 const AdminPage = lazy(() => import('@/pages/admin/AdminPage'));
 const ReferralPage = lazy(() => import('@/pages/referral/ReferralPage'));
-const SectionsPage = lazy(() => import('@/pages/sections/SectionsPage'));
 
 function RouteFallback() {
   return (
@@ -32,7 +30,6 @@ function RouteFallback() {
 
 export function AppRouter() {
   const currentScreen = useNavigationStore((state) => state.currentScreen);
-  const goBack = useNavigationStore((state) => state.goBack);
   const user = useAuthStore((state) => state.user);
   const isAdmin = Boolean(user?.isAdmin);
 
@@ -47,12 +44,10 @@ export function AppRouter() {
         {currentScreen === 'analytics' && <AnalyticsPage />}
         {(currentScreen === 'goals' || currentScreen === 'goals-limits' || currentScreen === 'spending-limits') && <GoalsLimitsPage />}
         {(currentScreen === 'obligations' || currentScreen === 'payments') && <PaymentsPage />}
-        {currentScreen === 'store' && <StorePage />}
         {currentScreen === 'companion' && <CompanionPage />}
         {currentScreen === 'settings' && <SettingsPage />}
         {currentScreen === 'admin' && (isAdmin ? <AdminPage /> : <DashboardPage />)}
         {currentScreen === 'referral' && <ReferralPage />}
-        {currentScreen === 'sections' && <SectionsPage onBack={goBack} />}
       </Suspense>
 
       <AppNavigationSheet />

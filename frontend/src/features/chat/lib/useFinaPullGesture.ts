@@ -20,7 +20,6 @@ const SAFE_CHAT_SWIPE_SCREENS = new Set<AppScreen>([
   'obligations',
   'payments',
   'spending-limits',
-  'store',
   'profile',
   'settings',
   'companion',

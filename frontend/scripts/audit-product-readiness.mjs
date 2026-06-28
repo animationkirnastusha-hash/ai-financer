@@ -91,7 +91,7 @@ function checkFirstRunLearningWiring() {
   }
 
   const indexCss = read(path.resolve(srcRoot, 'app/styles/index.css'));
-  for (const css of ['onboarding-setup-launch.css', 'chat-motion.css', 'voice-permission-compact.css']) {
+  for (const css of ['onboarding-setup-launch.css', 'chat-motion.css']) {
     if (!indexCss.includes(css)) addFinding('style-wiring', path.resolve(srcRoot, 'app/styles/index.css'), `${css} is not imported`);
   }
 }

@@ -22,11 +22,9 @@ export type AppScreen =
   | 'obligations'
   | 'payments'
   | 'spending-limits'
-  | 'store'
   | 'companion'
   | 'settings'
   | 'profile'
-  | 'sections'
   | 'admin'
   | 'referral';
 
