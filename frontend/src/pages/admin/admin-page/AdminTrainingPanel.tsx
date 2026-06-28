@@ -22,7 +22,7 @@ export function AdminTrainingPanel({
   onSave,
 }: Props) {
   return (
-    <section className="admin-ai-training space-y-3">
+    <section className="admin-ai-training">
       <div className="app-card admin-ai-training__hero">
         <div>
           <div className="app-eyebrow">Разбор Фины</div>
@@ -34,7 +34,7 @@ export function AdminTrainingPanel({
         </button>
       </div>
 
-      {isTrainingLoading && !trainingExamples.length ? <div className="app-card text-sm text-white/50">Загрузка…</div> : null}
+      {isTrainingLoading && !trainingExamples.length ? <div className="app-card admin-load-card">Загрузка…</div> : null}
 
       {trainingExamples.length ? trainingExamples.map((item) => (
         <article key={item.id} className="app-card admin-ai-training__item">
@@ -91,7 +91,7 @@ export function AdminTrainingPanel({
           </div>
         </article>
       )) : (
-        <div className="app-card text-sm text-white/50">Пока нет примеров для разбора.</div>
+        <div className="app-card admin-load-card">Пока нет примеров для разбора.</div>
       )}
     </section>
   );

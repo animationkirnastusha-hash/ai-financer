@@ -1,0 +1,275 @@
+/* Admin shell. Uses the same card rhythm as analytics. */
+.admin-page {
+  overflow-x: hidden;
+}
+
+.admin-page .admin-layout {
+  display: grid;
+  gap: 28px;
+  max-width: 100%;
+  padding-top: max(20px, env(safe-area-inset-top));
+  padding-bottom: max(154px, calc(env(safe-area-inset-bottom) + 132px));
+  overflow-x: hidden;
+}
+
+.admin-page .screen-top-bar {
+  margin-bottom: 0;
+}
+
+.admin-hero,
+.admin-denied-card,
+.admin-load-card,
+.admin-tools-card,
+.admin-section-card,
+.admin-event-card {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+  overflow: hidden;
+  padding: 20px;
+  border-radius: 32px;
+}
+
+.admin-hero h1,
+.admin-denied-card h1,
+.admin-tools-card h2,
+.admin-section-card h2 {
+  min-width: 0;
+  margin: 5px 0 0;
+  color: #fff;
+  font-size: clamp(24px, 7vw, 36px);
+  font-weight: 950;
+  line-height: 1.05;
+  letter-spacing: -0.055em;
+  overflow-wrap: anywhere;
+}
+
+.admin-hero p,
+.admin-denied-card p,
+.admin-tools-card p,
+.admin-section-card p {
+  max-width: 38rem;
+  margin: 0;
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 13px;
+  font-weight: 650;
+  line-height: 1.5;
+}
+
+.admin-tabs {
+  display: flex;
+  gap: 8px;
+  min-width: 0;
+  overflow-x: auto;
+  padding-bottom: 2px;
+  scrollbar-width: none;
+}
+
+.admin-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.admin-tabs button {
+  flex: 0 0 auto;
+  min-height: 40px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.055);
+  color: rgba(255, 255, 255, 0.68);
+  padding: 0 14px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 850;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 160ms ease, background 160ms ease, color 160ms ease;
+}
+
+.admin-tabs button:active {
+  transform: scale(0.97);
+}
+
+.admin-tabs button[data-active="true"] {
+  border-color: rgba(103, 232, 249, 0.22);
+  background: rgba(103, 232, 249, 0.16);
+  color: rgba(236, 254, 255, 0.94);
+}
+
+.admin-load-card {
+  border-color: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.66);
+  font-size: 14px;
+}
+
+.admin-load-card--danger {
+  border-color: rgba(248, 113, 113, 0.22);
+  background: rgba(248, 113, 113, 0.1);
+  color: rgb(254, 202, 202);
+}
+
+.admin-panel-stack,
+.admin-events-list,
+.admin-tools-panel {
+  display: grid;
+  gap: 18px;
+  min-width: 0;
+}
+
+.admin-metric-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  min-width: 0;
+}
+
+.admin-page .app-stat-card {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  min-height: 96px;
+  padding: 15px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.095);
+  border-radius: 24px;
+  background:
+    radial-gradient(circle at 14% 0%, rgba(103, 232, 249, 0.08), transparent 34%),
+    rgba(255, 255, 255, 0.05);
+  box-shadow: 0 16px 40px rgba(3, 7, 18, 0.16);
+}
+
+.admin-page .app-stat-card__label,
+.admin-stat-card__caption,
+.admin-event-card__meta,
+.admin-row small {
+  color: rgba(255, 255, 255, 0.52);
+  font-size: 11px;
+  font-weight: 760;
+  line-height: 1.25;
+}
+
+.admin-stat-card__value {
+  min-width: 0;
+  overflow: hidden;
+  color: #fff;
+  font-size: clamp(18px, 5vw, 25px);
+  font-weight: 950;
+  line-height: 1.05;
+  letter-spacing: -0.05em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-section-title {
+  color: #fff;
+  font-size: 20px;
+  font-weight: 950;
+  letter-spacing: -0.05em;
+  line-height: 1.08;
+}
+
+.admin-row-list {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+
+.admin-row,
+.app-admin-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  min-height: 44px;
+  border: 1px solid rgba(255, 255, 255, 0.075);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 10px 12px;
+}
+
+.admin-row span,
+.app-admin-row span {
+  min-width: 0;
+  overflow: hidden;
+  color: rgba(255, 255, 255, 0.84);
+  font-size: 13px;
+  font-weight: 820;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-row b,
+.app-admin-row b {
+  color: #fff;
+  font-size: 13px;
+  font-weight: 950;
+  white-space: nowrap;
+}
+
+.admin-event-card__head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: start;
+}
+
+.admin-event-card__title {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 900;
+}
+
+.admin-event-card pre,
+.admin-alert-card {
+  min-width: 0;
+  max-height: 170px;
+  overflow: auto;
+  border-radius: 20px;
+  background: rgba(0, 0, 0, 0.18);
+  color: rgba(255, 255, 255, 0.62);
+  padding: 12px;
+  font-size: 11px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.admin-alert-card {
+  display: grid;
+  gap: 4px;
+  max-height: none;
+  border: 1px solid rgba(255, 255, 255, 0.075);
+  font-size: 13px;
+}
+
+.admin-alert-card[data-level="critical"] b {
+  color: rgb(254, 202, 202);
+}
+
+.admin-alert-card b {
+  color: rgb(254, 243, 199);
+}
+
+.admin-empty-text {
+  color: rgba(255, 255, 255, 0.52);
+  font-size: 13px;
+  font-weight: 720;
+  line-height: 1.45;
+}
+
+@media (max-width: 520px) {
+  .admin-metric-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .admin-row,
+  .app-admin-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .admin-row small,
+  .app-admin-row small {
+    grid-column: 1 / -1;
+  }
+}

@@ -4,15 +4,16 @@ type Props = {
 
 export function AdminToolsPanel({ onReplayOnboarding }: Props) {
   return (
-    <div className="space-y-4">
-      <section className="app-card">
-        <div className="app-section-title">Онбординг</div>
-        <p className="mt-2 text-sm leading-6 text-white/50">
-          Открой первый мастер настройки заново, чтобы проверить путь нового пользователя.
-        </p>
+    <div className="admin-tools-panel">
+      <section className="app-card admin-tools-card">
+        <div>
+          <div className="app-eyebrow">Онбординг</div>
+          <h2>Проверка первого запуска</h2>
+          <p>Открой первый мастер настройки заново, чтобы проверить путь нового пользователя.</p>
+        </div>
         <button
           type="button"
-          className="app-primary-button mt-4 w-full"
+          className="app-primary-button"
           onClick={onReplayOnboarding}
         >
           Повторить онбординг

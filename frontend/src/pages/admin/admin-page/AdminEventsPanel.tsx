@@ -7,18 +7,18 @@ type Props = {
 
 export function AdminEventsPanel({ events }: Props) {
   return (
-    <section className="space-y-3">
+    <section className="admin-events-list">
       {events.map((item) => (
-        <div key={item.id} className="app-card p-4">
-          <div className="flex items-start justify-between gap-3">
+        <article key={item.id} className="app-card admin-event-card">
+          <div className="admin-event-card__head">
             <div>
-              <div className="font-semibold">{item.event}</div>
-              <div className="mt-1 text-xs text-white/42">{item.user?.firstName ?? 'Без пользователя'} · @{item.user?.username ?? '—'}</div>
+              <div className="admin-event-card__title">{item.event}</div>
+              <div className="admin-event-card__meta">{item.user?.firstName ?? 'Без пользователя'} · @{item.user?.username ?? '—'}</div>
             </div>
-            <div className="text-xs text-white/38">{formatDate(item.createdAt)}</div>
+            <div className="admin-event-card__meta">{formatDate(item.createdAt)}</div>
           </div>
-          {item.data ? <pre className="mt-3 max-h-32 overflow-auto rounded-[18px] bg-black/24 p-3 text-xs text-white/50">{JSON.stringify(item.data, null, 2)}</pre> : null}
-        </div>
+          {item.data ? <pre>{JSON.stringify(item.data, null, 2)}</pre> : null}
+        </article>
       ))}
     </section>
   );

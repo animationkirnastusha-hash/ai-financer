@@ -8,56 +8,56 @@ type Props = {
 
 export function AdminOverviewPanel({ overview }: Props) {
   return (
-    <div className="space-y-4">
-      <section className="grid grid-cols-2 gap-3">
+    <div className="admin-panel-stack">
+      <section className="admin-metric-grid">
         <MetricCard title="Пользователи" value={overview.metrics.usersTotal} caption={`+${overview.metrics.usersToday} сегодня`} />
         <MetricCard title="Активные 30д" value={overview.metrics.activeUsers30d} caption={`+${overview.metrics.users7d} за 7 дней`} />
         <MetricCard title="Операции" value={overview.metrics.transactionsTotal} caption={`+${overview.metrics.transactionsToday} сегодня`} />
         <MetricCard title="События" value={overview.metrics.eventsToday} caption="сегодня" />
       </section>
 
-      <section className="app-card">
-        <div className="app-section-title">Откуда пришли</div>
-        <div className="mt-4 space-y-2">
+      <section className="app-card admin-section-card">
+        <div className="admin-section-title">Откуда пришли</div>
+        <div className="admin-row-list">
           {overview.acquisition.length ? overview.acquisition.slice(0, 8).map((item) => (
-            <div key={item.source} className="app-admin-row">
+            <div key={item.source} className="admin-row">
               <span>{item.source}</span>
               <b>{item.count}</b>
             </div>
-          )) : <div className="text-sm text-white/42">Пока нет данных.</div>}
+          )) : <div className="admin-empty-text">Пока нет данных.</div>}
         </div>
       </section>
 
-      <section className="app-card">
-        <div className="app-section-title">Где бывают чаще</div>
-        <div className="mt-4 grid gap-2">
+      <section className="app-card admin-section-card">
+        <div className="admin-section-title">Где бывают чаще</div>
+        <div className="admin-row-list">
           {overview.screens.length ? overview.screens.slice(0, 8).map((item) => (
-            <div key={item.screen} className="app-admin-row">
+            <div key={item.screen} className="admin-row">
               <span>{item.screen}</span>
               <b>{item.count}</b>
             </div>
-          )) : <div className="text-sm text-white/42">Переходы ещё не записаны.</div>}
+          )) : <div className="admin-empty-text">Переходы ещё не записаны.</div>}
         </div>
       </section>
 
-      <section className="app-card">
-        <div className="app-section-title">Где отваливаются</div>
-        <div className="mt-4 grid gap-2">
+      <section className="app-card admin-section-card">
+        <div className="admin-section-title">Где отваливаются</div>
+        <div className="admin-row-list">
           {overview.dropoff?.length ? overview.dropoff.slice(0, 8).map((item) => (
-            <div key={item.screen} className="app-admin-row">
+            <div key={item.screen} className="admin-row">
               <span>{item.screen}</span>
               <small>{formatDuration(item.avgDurationMs)}</small>
               <b>{item.exits}</b>
             </div>
-          )) : <div className="text-sm text-white/42">Данные появятся после нескольких переходов между экранами.</div>}
+          )) : <div className="admin-empty-text">Данные появятся после нескольких переходов между экранами.</div>}
         </div>
       </section>
 
-      <section className="app-card">
-        <div className="app-section-title">Воронка</div>
-        <div className="mt-4 grid gap-2">
+      <section className="app-card admin-section-card">
+        <div className="admin-section-title">Воронка</div>
+        <div className="admin-row-list">
           {overview.funnel.map((item) => (
-            <div key={item.step} className="app-admin-row">
+            <div key={item.step} className="admin-row">
               <span>{item.step}</span>
               <b>{item.count}</b>
             </div>

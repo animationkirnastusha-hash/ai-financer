@@ -1,0 +1,126 @@
+/* Journal filters. */
+.journal-filter-card {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+  overflow: hidden;
+  padding: 18px;
+  border-radius: 28px;
+}
+
+.journal-search-field,
+.journal-filter-grid label,
+.journal-date-grid label {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+}
+
+.journal-search-field span,
+.journal-filter-grid label span,
+.journal-date-grid label span {
+  color: rgba(255, 255, 255, 0.52);
+  font-size: 11px;
+  font-weight: 850;
+}
+
+.journal-search-field input,
+.journal-filter-grid select,
+.journal-date-grid input {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 17px;
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.92);
+  padding: 0 12px;
+  font: inherit;
+  font-size: 14px;
+  outline: none;
+  color-scheme: dark;
+}
+
+.journal-search-field input:focus,
+.journal-filter-grid select:focus,
+.journal-date-grid input:focus {
+  border-color: rgba(129, 239, 208, 0.42);
+  box-shadow: 0 0 0 3px rgba(129, 239, 208, 0.08);
+}
+
+.journal-period-row,
+.journal-tag-row {
+  display: flex;
+  gap: 8px;
+  min-width: 0;
+  overflow-x: auto;
+  padding-bottom: 2px;
+  scrollbar-width: none;
+}
+
+.journal-period-row::-webkit-scrollbar,
+.journal-tag-row::-webkit-scrollbar {
+  display: none;
+}
+
+.journal-period-row button,
+.journal-tag-row button {
+  flex: 0 0 auto;
+  min-height: 38px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.055);
+  color: rgba(255, 255, 255, 0.68);
+  padding: 0 12px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 850;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 160ms ease, background 160ms ease, color 160ms ease;
+}
+
+.journal-period-row button:active,
+.journal-tag-row button:active {
+  transform: scale(0.97);
+}
+
+.journal-period-row button[data-active="true"],
+.journal-tag-row button[data-active="true"] {
+  border-color: rgba(103, 232, 249, 0.22);
+  background: rgba(103, 232, 249, 0.16);
+  color: rgba(236, 254, 255, 0.94);
+}
+
+.journal-tag-row button span {
+  margin-left: 7px;
+  color: rgba(255, 255, 255, 0.44);
+}
+
+.journal-filter-grid,
+.journal-date-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  min-width: 0;
+}
+
+.journal-date-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+@media (max-width: 620px) {
+  .journal-filter-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 430px) {
+  .journal-filter-card {
+    padding: 16px;
+  }
+
+  .journal-date-grid {
+    grid-template-columns: 1fr;
+  }
+}

@@ -1,29 +1,43 @@
-
+/* Admin users panel. */
+.admin-users-panel,
+.admin-users-list {
+  display: grid;
+  gap: 18px;
+  min-width: 0;
+}
 
 .admin-users-search {
   display: grid;
   gap: 16px;
+  min-width: 0;
+  overflow: hidden;
+  padding: 20px;
+  border-radius: 32px;
 }
 
 .admin-users-search h2 {
-  margin-top: 6px;
-  font-size: clamp(22px, 7vw, 30px);
-  font-weight: 760;
-  letter-spacing: -0.04em;
+  margin: 5px 0 0;
+  color: #fff;
+  font-size: clamp(24px, 7vw, 34px);
+  font-weight: 950;
+  line-height: 1.05;
+  letter-spacing: -0.055em;
 }
 
 .admin-users-search p,
 .admin-users-empty span {
-  margin-top: 6px;
-  color: rgba(255, 255, 255, 0.52);
+  margin: 9px 0 0;
+  color: rgba(255, 255, 255, 0.62);
   font-size: 13px;
-  line-height: 1.45;
+  font-weight: 650;
+  line-height: 1.5;
 }
 
 .admin-users-search__controls {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  gap: 8px;
+  gap: 10px;
+  min-width: 0;
 }
 
 .admin-users-search__controls input,
@@ -34,10 +48,11 @@
   background: rgba(255, 255, 255, 0.06);
   color: #fff;
   outline: none;
+  font: inherit;
 }
 
 .admin-users-search__controls input {
-  min-height: 46px;
+  min-height: 48px;
   padding: 0 14px;
   font-size: 14px;
 }
@@ -48,7 +63,8 @@
   border-radius: 18px;
   background: rgba(255, 255, 255, 0.075);
   color: rgba(255, 255, 255, 0.86);
-  font-weight: 720;
+  font: inherit;
+  font-weight: 820;
   transition: transform 0.16s ease, background 0.16s ease;
 }
 
@@ -65,25 +81,49 @@
 .admin-users-empty {
   display: grid;
   gap: 4px;
+  padding: 18px;
+  border-radius: 28px;
+}
+
+.admin-users-empty b {
+  color: #fff;
+  font-size: 16px;
+  font-weight: 900;
 }
 
 .admin-user-card {
   display: grid;
   gap: 14px;
+  min-width: 0;
+  overflow: hidden;
   padding: 16px;
+  border-radius: 30px;
+}
+
+.admin-user-card__head,
+.admin-user-access__head,
+.admin-user-actions--access,
+.admin-user-actions--danger {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: start;
 }
 
 .admin-user-card__identity {
-  min-width: 0;
   display: grid;
   gap: 4px;
+  min-width: 0;
 }
 
 .admin-user-card__identity strong {
+  min-width: 0;
   overflow: hidden;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 900;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 15px;
 }
 
 .admin-user-card__identity span,
@@ -91,8 +131,9 @@
 .admin-user-access span,
 .admin-user-stats span,
 .admin-user-card__badges small {
-  color: rgba(255, 255, 255, 0.48);
+  color: rgba(255, 255, 255, 0.52);
   font-size: 11px;
+  font-weight: 720;
   line-height: 1.35;
 }
 
@@ -106,6 +147,7 @@
 .admin-user-card__badges button {
   display: grid;
   gap: 1px;
+  max-width: 170px;
   padding: 7px 10px;
   text-align: right;
   font-size: 12px;
@@ -114,11 +156,11 @@
 .admin-user-card__badges em {
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.66);
   padding: 5px 10px;
-  color: rgba(255, 255, 255, 0.62);
   font-size: 11px;
   font-style: normal;
-  font-weight: 700;
+  font-weight: 820;
 }
 
 .admin-user-card__meta {
@@ -136,7 +178,8 @@
 .admin-user-stats {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
+  gap: 10px;
+  min-width: 0;
   text-align: center;
 }
 
@@ -150,11 +193,14 @@
 .admin-user-stats div {
   display: grid;
   gap: 4px;
+  min-width: 0;
   padding: 10px 8px;
 }
 
 .admin-user-stats b {
+  color: #fff;
   font-size: 16px;
+  font-weight: 950;
 }
 
 .admin-user-access {
@@ -164,15 +210,15 @@
 }
 
 .admin-user-access__head > div {
-  min-width: 0;
   display: grid;
   gap: 4px;
+  min-width: 0;
 }
 
 .admin-user-access__head button {
+  flex-shrink: 0;
   padding: 9px 11px;
   font-size: 11px;
-  flex-shrink: 0;
 }
 
 .admin-user-access__days {
@@ -205,21 +251,22 @@
   opacity: 0.5;
 }
 
-@media (max-width: 420px) {
+@media (max-width: 520px) {
   .admin-users-search__controls,
   .admin-user-card__head,
   .admin-user-access__head,
   .admin-user-actions--access,
-  .admin-user-actions--danger {
+  .admin-user-actions--danger,
+  .admin-user-access__days {
     grid-template-columns: 1fr;
-  }
-
-  .admin-user-card__head,
-  .admin-user-access__head {
-    display: grid;
   }
 
   .admin-user-card__badges {
     justify-items: stretch;
+  }
+
+  .admin-user-card__badges button {
+    max-width: none;
+    text-align: left;
   }
 }

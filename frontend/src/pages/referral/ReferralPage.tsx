@@ -82,7 +82,7 @@ export default function ReferralPage() {
 
   return (
     <div className="app-page referral-page text-white">
-      <div className="app-page__inner space-y-4">
+      <div className="app-page__inner referral-layout">
         <ScreenTopBar title={t('common.referrals')} left="back" right={['home']} />
 
         <header className="referral-hero app-card app-card--hero">
@@ -195,7 +195,7 @@ export default function ReferralPage() {
           <button type="button" className="app-secondary-button" disabled>{t('referral.balance.withdrawSoon')}</button>
         </section>
 
-        {user?.isAdmin ? <button type="button" className="app-secondary-button w-full" onClick={load}>{t('referral.refresh')}</button> : null}
+        {user?.isAdmin ? <button type="button" className="app-secondary-button referral-refresh-button" onClick={load}>{t('referral.refresh')}</button> : null}
       </div>
     </div>
   );

@@ -1,0 +1,173 @@
+/* Journal transaction list. */
+.journal-list-card {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  padding: 8px;
+  border-radius: 30px;
+}
+
+.journal-row {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.075);
+  border-radius: 24px;
+  background:
+    radial-gradient(circle at 0% 0%, rgba(103, 232, 249, 0.055), transparent 34%),
+    rgba(0, 0, 0, 0.16);
+}
+
+.journal-row__main {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  padding: 13px;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.journal-row__main:active,
+.journal-row__main:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.journal-row__avatar {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 17px;
+  background: rgba(255, 255, 255, 0.075);
+  color: rgba(255, 255, 255, 0.86);
+  font-size: 18px;
+  font-weight: 900;
+}
+
+.journal-row__content,
+.journal-row__meta {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.journal-row__content b {
+  min-width: 0;
+  overflow: hidden;
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 14px;
+  font-weight: 900;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.journal-row__content small,
+.journal-row__meta small {
+  min-width: 0;
+  overflow: hidden;
+  color: rgba(255, 255, 255, 0.46);
+  font-size: 11px;
+  font-weight: 720;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.journal-row__meta {
+  justify-items: end;
+  text-align: right;
+}
+
+.journal-row__meta b {
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 14px;
+  font-weight: 940;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+}
+
+.journal-row__meta b[data-type="income"] { color: rgba(129, 239, 208, 0.95); }
+.journal-row__meta b[data-type="expense"] { color: rgba(255, 196, 196, 0.92); }
+
+.journal-row__tags {
+  display: flex;
+  min-width: 0;
+  gap: 5px;
+  overflow: hidden;
+}
+
+.journal-row__tags em {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 8rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.52);
+  padding: 4px 7px;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 760;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.journal-row__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  padding: 8px 10px 10px;
+}
+
+.journal-row__actions button {
+  min-height: 34px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.055);
+  color: rgba(255, 255, 255, 0.72);
+  padding: 0 10px;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.journal-row__actions button:disabled {
+  opacity: 0.5;
+}
+
+.journal-row__actions .journal-row__delete {
+  border-color: rgba(255, 120, 120, 0.18);
+  background: rgba(255, 90, 90, 0.08);
+  color: rgba(255, 198, 198, 0.86);
+}
+
+.transaction-edit-modal__description {
+  min-height: 88px;
+}
+
+@media (max-width: 480px) {
+  .journal-row__main {
+    grid-template-columns: 42px minmax(0, 1fr);
+  }
+
+  .journal-row__meta {
+    grid-column: 2;
+    justify-items: start;
+    text-align: left;
+  }
+
+  .journal-row__actions {
+    justify-content: stretch;
+  }
+
+  .journal-row__actions button {
+    flex: 1 1 0;
+  }
+}

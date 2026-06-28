@@ -74,14 +74,14 @@ export default function AdminPage() {
 
 
   return (
-    <div className="app-page text-white">
-      <div className="app-page__inner space-y-4">
+    <div className="app-page admin-page text-white">
+      <div className="app-page__inner admin-layout">
         <ScreenTopBar title="Админ" left="back" right={['home']} />
 
-        <header className="app-card app-card--hero">
+        <header className="app-card app-card--hero admin-hero">
           <div className="app-eyebrow">Закрытый раздел</div>
-          <h1 className="mt-3 text-[32px] font-semibold tracking-[-0.05em]">Админ-панель</h1>
-          <p className="mt-2 text-sm leading-6 text-white/50">Пользователи, события, воронка и состояние сервиса.</p>
+          <h1>Админ-панель</h1>
+          <p>Пользователи, события, воронка и состояние сервиса.</p>
         </header>
 
         <AdminTabs activeTab={tab} onChange={setTab} />
