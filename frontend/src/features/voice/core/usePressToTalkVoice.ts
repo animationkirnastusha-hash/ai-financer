@@ -18,15 +18,41 @@ type WindowWithWebkitAudio = Window & {
   webkitAudioContext?: typeof AudioContext;
 };
 
-type WavRecorderRuntime = {
+type NativeRecorderFormat = {
+  mimeType: string;
+  extension: string;
+  timesliceMs: number | null;
+};
+
+type NativeRecorderRuntime = {
+  recorder: MediaRecorder;
+  chunks: BlobPart[];
+  format: NativeRecorderFormat;
+  stopped: Promise<void>;
+  resolveStopped: () => void;
+  stopRequested: boolean;
+};
+
+type VoiceRecorderRuntime = {
   sessionId: string;
   stream: MediaStream;
-  audioContext: AudioContext;
-  sourceNode: MediaStreamAudioSourceNode;
-  processorNode: ScriptProcessorNode;
-  silentGain: GainNode;
+  audioContext: AudioContext | null;
+  sourceNode: MediaStreamAudioSourceNode | null;
+  processorNode: ScriptProcessorNode | null;
+  silentGain: GainNode | null;
   inputSampleRate: number;
-  chunks: Float32Array[];
+  wavChunks: Float32Array[];
+  native: NativeRecorderRuntime | null;
+};
+
+type UploadCandidate = {
+  blob: Blob;
+  filename: string;
+  engine: 'web-audio-wav' | 'media-recorder';
+  sampleCount?: number;
+  inputSampleRate?: number;
+  outputSampleRate?: number;
+  nativeChunks?: number;
 };
 
 const DEFAULT_MAX_DURATION_MS = 9000;
@@ -34,6 +60,7 @@ const DEFAULT_MIN_DURATION_MS = 160;
 const DEFAULT_CANCEL_SWIPE_PX = 64;
 const TRANSCRIBE_TIMEOUT_MS = 38000;
 const START_TIMEOUT_MS = 12000;
+const NATIVE_STOP_TIMEOUT_MS = 1400;
 const TARGET_SAMPLE_RATE = 16000;
 const MIN_UPLOAD_BYTES = 256;
 
@@ -57,12 +84,19 @@ function getAudioContextCtor() {
   return window.AudioContext || (window as WindowWithWebkitAudio).webkitAudioContext || null;
 }
 
+function isIosLike() {
+  if (typeof navigator === 'undefined') return false;
+  const ua = navigator.userAgent || '';
+  const platform = navigator.platform || '';
+  return /iPad|iPhone|iPod/i.test(ua) || (platform === 'MacIntel' && (navigator as Navigator & { maxTouchPoints?: number }).maxTouchPoints > 1);
+}
+
 function isVoiceSupported() {
   return Boolean(
     typeof window !== 'undefined' &&
       typeof navigator !== 'undefined' &&
       typeof navigator.mediaDevices?.getUserMedia === 'function' &&
-      getAudioContextCtor(),
+      (getAudioContextCtor() || typeof MediaRecorder !== 'undefined'),
   );
 }
 
@@ -84,6 +118,136 @@ function safeStopStream(stream: MediaStream | null) {
       // no-op
     }
   });
+}
+
+function getNativeRecorderFormats(): NativeRecorderFormat[] {
+  const ios = isIosLike();
+  const iosFormats: NativeRecorderFormat[] = [
+    { mimeType: 'audio/mp4', extension: 'm4a', timesliceMs: null },
+    { mimeType: 'audio/aac', extension: 'aac', timesliceMs: null },
+    { mimeType: 'audio/webm;codecs=opus', extension: 'webm', timesliceMs: 250 },
+    { mimeType: 'audio/webm', extension: 'webm', timesliceMs: 250 },
+    { mimeType: '', extension: 'webm', timesliceMs: null },
+  ];
+  const webFormats: NativeRecorderFormat[] = [
+    { mimeType: 'audio/webm;codecs=opus', extension: 'webm', timesliceMs: 250 },
+    { mimeType: 'audio/webm', extension: 'webm', timesliceMs: 250 },
+    { mimeType: 'audio/ogg;codecs=opus', extension: 'ogg', timesliceMs: 250 },
+    { mimeType: 'audio/mp4', extension: 'm4a', timesliceMs: null },
+    { mimeType: '', extension: 'webm', timesliceMs: null },
+  ];
+  return ios ? iosFormats : webFormats;
+}
+
+function getNativeRecorderFormat() {
+  if (typeof MediaRecorder === 'undefined') return null;
+  return getNativeRecorderFormats().find((format) => {
+    if (!format.mimeType) return true;
+    try {
+      return MediaRecorder.isTypeSupported(format.mimeType);
+    } catch {
+      return false;
+    }
+  }) ?? null;
+}
+
+function createNativeRecorder(stream: MediaStream, sessionId: string, source: string): NativeRecorderRuntime | null {
+  const format = getNativeRecorderFormat();
+  if (!format || typeof MediaRecorder === 'undefined') return null;
+
+  try {
+    const recorder = format.mimeType ? new MediaRecorder(stream, { mimeType: format.mimeType }) : new MediaRecorder(stream);
+    const runtime: NativeRecorderRuntime = {
+      recorder,
+      chunks: [],
+      format,
+      stopped: Promise.resolve(),
+      resolveStopped: () => undefined,
+      stopRequested: false,
+    };
+
+    runtime.stopped = new Promise<void>((resolve) => {
+      runtime.resolveStopped = resolve;
+    });
+
+    recorder.ondataavailable = (event) => {
+      if (event.data?.size) runtime.chunks.push(event.data);
+    };
+
+    recorder.onerror = (event) => {
+      logVoiceDebugEvent('voice_error', {
+        source,
+        reason: 'native-recorder-error',
+        error: String((event as ErrorEvent).message || 'recorder-error'),
+        sessionId,
+      });
+      runtime.resolveStopped();
+    };
+
+    recorder.onstop = () => {
+      logVoiceDebugEvent('voice_native_recorder_stopped', {
+        source,
+        recorderEngine: 'media-recorder',
+        mimeType: recorder.mimeType || format.mimeType || 'unknown',
+        extension: format.extension,
+        chunks: runtime.chunks.length,
+        sessionId,
+      });
+      runtime.resolveStopped();
+    };
+
+    logVoiceDebugEvent('voice_native_recorder_ready', {
+      source,
+      recorderEngine: 'media-recorder',
+      mimeType: recorder.mimeType || format.mimeType || 'unknown',
+      extension: format.extension,
+      timesliceMs: format.timesliceMs ?? 0,
+      sessionId,
+    });
+
+    return runtime;
+  } catch (error) {
+    logVoiceDebugEvent('voice_error', {
+      source,
+      reason: 'native-recorder-create-failed',
+      error: getErrorCode(error),
+      mimeType: format.mimeType,
+      extension: format.extension,
+      sessionId,
+    });
+    return null;
+  }
+}
+
+function startNativeRecorder(native: NativeRecorderRuntime | null) {
+  if (!native) return;
+  if (native.recorder.state !== 'inactive') return;
+  if (native.format.timesliceMs && native.format.timesliceMs > 0) {
+    native.recorder.start(native.format.timesliceMs);
+  } else {
+    native.recorder.start();
+  }
+}
+
+async function stopNativeRecorder(native: NativeRecorderRuntime | null) {
+  if (!native || native.stopRequested) return;
+  native.stopRequested = true;
+
+  try {
+    if (native.recorder.state !== 'inactive') {
+      native.recorder.requestData?.();
+      native.recorder.stop();
+    } else {
+      native.resolveStopped();
+    }
+  } catch {
+    native.resolveStopped();
+  }
+
+  await Promise.race([
+    native.stopped,
+    new Promise<void>((resolve) => window.setTimeout(resolve, NATIVE_STOP_TIMEOUT_MS)),
+  ]);
 }
 
 function mergeFloat32(chunks: Float32Array[]) {
@@ -163,35 +327,50 @@ function encodeWav(chunks: Float32Array[], inputSampleRate: number) {
   };
 }
 
-function disconnectRuntime(runtime: WavRecorderRuntime | null) {
+function disconnectRuntime(runtime: VoiceRecorderRuntime | null) {
   if (!runtime) return;
 
   try {
-    runtime.processorNode.onaudioprocess = null;
-    runtime.processorNode.disconnect();
+    if (runtime.processorNode) runtime.processorNode.onaudioprocess = null;
+    runtime.processorNode?.disconnect();
   } catch {
     // no-op
   }
 
   try {
-    runtime.sourceNode.disconnect();
+    runtime.sourceNode?.disconnect();
   } catch {
     // no-op
   }
 
   try {
-    runtime.silentGain.disconnect();
+    runtime.silentGain?.disconnect();
+  } catch {
+    // no-op
+  }
+
+  try {
+    void runtime.audioContext?.close();
   } catch {
     // no-op
   }
 
   safeStopStream(runtime.stream);
+}
 
-  try {
-    void runtime.audioContext.close();
-  } catch {
-    // no-op
-  }
+function createNativeUploadCandidate(native: NativeRecorderRuntime | null): UploadCandidate | null {
+  if (!native?.chunks.length) return null;
+
+  const actualType = native.recorder.mimeType || native.format.mimeType || 'application/octet-stream';
+  const blob = new Blob(native.chunks, { type: actualType });
+  if (blob.size < MIN_UPLOAD_BYTES) return null;
+
+  return {
+    blob,
+    filename: `voice-${Date.now()}.${native.format.extension}`,
+    engine: 'media-recorder',
+    nativeChunks: native.chunks.length,
+  };
 }
 
 export function usePressToTalkVoice({
@@ -212,7 +391,7 @@ export function usePressToTalkVoice({
 
   const onTextRef = useRef(onText);
   const stateRef = useRef<VoiceInputState>('idle');
-  const runtimeRef = useRef<WavRecorderRuntime | null>(null);
+  const runtimeRef = useRef<VoiceRecorderRuntime | null>(null);
   const pointerIdRef = useRef<number | null>(null);
   const startXRef = useRef(0);
   const startedAtRef = useRef(0);
@@ -309,8 +488,7 @@ export function usePressToTalkVoice({
       return;
     }
 
-    disconnectRuntime(runtime);
-    runtimeRef.current = null;
+    await stopNativeRecorder(runtime.native);
 
     if (cancelledRef.current) {
       logVoiceDebugEvent('voice_cancelled', { source, reason, durationMs, sessionId: runtime.sessionId });
@@ -318,6 +496,27 @@ export function usePressToTalkVoice({
       setVoiceState('idle');
       return;
     }
+
+    let wavCandidate: UploadCandidate | null = null;
+    if (runtime.wavChunks.length) {
+      const wav = encodeWav(runtime.wavChunks, runtime.inputSampleRate);
+      if (wav.blob.size >= MIN_UPLOAD_BYTES && wav.sampleCount > 0) {
+        wavCandidate = {
+          blob: wav.blob,
+          filename: `voice-${Date.now()}.wav`,
+          engine: 'web-audio-wav',
+          sampleCount: wav.sampleCount,
+          inputSampleRate: wav.inputSampleRate,
+          outputSampleRate: wav.outputSampleRate,
+        };
+      }
+    }
+
+    const nativeCandidate = createNativeUploadCandidate(runtime.native);
+    const candidate = wavCandidate ?? nativeCandidate;
+
+    disconnectRuntime(runtime);
+    runtimeRef.current = null;
 
     if (durationMs < minDurationMs) {
       logVoiceDebugEvent('voice_blob_skipped', { source, reason: 'too-short', durationMs, sessionId: runtime.sessionId });
@@ -328,15 +527,13 @@ export function usePressToTalkVoice({
       return;
     }
 
-    const { blob, inputSampleRate, outputSampleRate, sampleCount } = encodeWav(runtime.chunks, runtime.inputSampleRate);
-
-    if (blob.size < MIN_UPLOAD_BYTES || sampleCount <= 0) {
+    if (!candidate) {
       logVoiceDebugEvent('voice_blob_skipped', {
         source,
-        reason: 'empty-wav',
+        reason: 'empty-recording',
         durationMs,
-        blobSize: blob.size,
-        sampleCount,
+        wavChunks: runtime.wavChunks.length,
+        nativeChunks: runtime.native?.chunks.length ?? 0,
         sessionId: runtime.sessionId,
       });
       cleanupRuntime();
@@ -348,29 +545,29 @@ export function usePressToTalkVoice({
 
     logVoiceDebugEvent('voice_blob_ready', {
       source,
-      recorderEngine: 'web-audio-wav',
+      recorderEngine: candidate.engine,
       durationMs,
-      blobSize: blob.size,
-      blobType: blob.type,
-      inputSampleRate,
-      outputSampleRate,
-      sampleCount,
+      blobSize: candidate.blob.size,
+      blobType: candidate.blob.type,
+      inputSampleRate: candidate.inputSampleRate,
+      outputSampleRate: candidate.outputSampleRate,
+      sampleCount: candidate.sampleCount,
+      nativeChunks: candidate.nativeChunks,
       sessionId: runtime.sessionId,
     });
 
     setVoiceState('uploading');
 
     try {
-      const filename = `voice-${Date.now()}.wav`;
       logVoiceDebugEvent('voice_transcribe_sent', {
         source,
-        filename,
+        filename: candidate.filename,
         language: getSttLanguage(lang),
-        blobSize: blob.size,
-        blobType: blob.type,
+        blobSize: candidate.blob.size,
+        blobType: candidate.blob.type,
         sessionId: runtime.sessionId,
       });
-      const response = await transcribeVoice(blob, filename, getSttLanguage(lang), TRANSCRIBE_TIMEOUT_MS);
+      const response = await transcribeVoice(candidate.blob, candidate.filename, getSttLanguage(lang), TRANSCRIBE_TIMEOUT_MS);
       const text = normalizeVoiceText(response.text || '');
 
       logVoiceDebugEvent('voice_transcribe_success', {
@@ -451,14 +648,6 @@ export function usePressToTalkVoice({
     if (stateRef.current === 'recording' || stateRef.current === 'uploading' || startInFlightRef.current) return 'busy';
     if (activeVoiceSessionId && activeVoiceSessionId !== sessionIdRef.current) return 'busy';
 
-    const AudioContextCtor = getAudioContextCtor();
-    if (!AudioContextCtor) {
-      setPermissionState('unsupported');
-      setError('unsupported');
-      setVoiceState('error');
-      return 'permission-ready';
-    }
-
     const sessionId = createSessionId(source);
     sessionIdRef.current = sessionId;
     activeVoiceSessionId = sessionId;
@@ -468,7 +657,7 @@ export function usePressToTalkVoice({
     finalizeBusyRef.current = false;
     setError(null);
 
-    logVoiceDebugEvent('voice_start_requested', { source, recorderEngine: 'web-audio-wav', sessionId });
+    logVoiceDebugEvent('voice_start_requested', { source, recorderEngine: 'hybrid-wav-native', sessionId });
 
     startTimerRef.current = window.setTimeout(() => {
       if (!startInFlightRef.current) return;
@@ -494,52 +683,89 @@ export function usePressToTalkVoice({
         return 'busy';
       }
 
-      const audioContext = new AudioContextCtor();
-      if (audioContext.state === 'suspended') await audioContext.resume();
+      const AudioContextCtor = getAudioContextCtor();
+      let audioContext: AudioContext | null = null;
+      let sourceNode: MediaStreamAudioSourceNode | null = null;
+      let processorNode: ScriptProcessorNode | null = null;
+      let silentGain: GainNode | null = null;
+      let inputSampleRate = TARGET_SAMPLE_RATE;
+      const wavChunks: Float32Array[] = [];
 
-      const sourceNode = audioContext.createMediaStreamSource(stream);
-      const processorNode = audioContext.createScriptProcessor(4096, 1, 1);
-      const silentGain = audioContext.createGain();
-      silentGain.gain.value = 0;
+      if (AudioContextCtor) {
+        try {
+          audioContext = new AudioContextCtor();
+          if (audioContext.state === 'suspended') await audioContext.resume();
 
-      const runtime: WavRecorderRuntime = {
+          sourceNode = audioContext.createMediaStreamSource(stream);
+          processorNode = audioContext.createScriptProcessor(4096, 1, 1);
+          silentGain = audioContext.createGain();
+          silentGain.gain.value = 0;
+          inputSampleRate = audioContext.sampleRate;
+
+          processorNode.onaudioprocess = (event) => {
+            if (stateRef.current !== 'recording' || cancelledRef.current) return;
+            const channel = event.inputBuffer.getChannelData(0);
+            wavChunks.push(new Float32Array(channel));
+          };
+
+          sourceNode.connect(processorNode);
+          processorNode.connect(silentGain);
+          silentGain.connect(audioContext.destination);
+        } catch (error) {
+          logVoiceDebugEvent('voice_error', {
+            source,
+            reason: 'web-audio-unavailable',
+            error: getErrorCode(error),
+            sessionId,
+          });
+          try {
+            processorNode?.disconnect();
+            sourceNode?.disconnect();
+            silentGain?.disconnect();
+            void audioContext?.close();
+          } catch {
+            // no-op
+          }
+          audioContext = null;
+          sourceNode = null;
+          processorNode = null;
+          silentGain = null;
+        }
+      }
+
+      const native = createNativeRecorder(stream, sessionId, source);
+      const runtime: VoiceRecorderRuntime = {
         sessionId,
         stream,
         audioContext,
         sourceNode,
         processorNode,
         silentGain,
-        inputSampleRate: audioContext.sampleRate,
-        chunks: [],
+        inputSampleRate,
+        wavChunks,
+        native,
       };
-
-      processorNode.onaudioprocess = (event) => {
-        if (stateRef.current !== 'recording' || cancelledRef.current) return;
-        const channel = event.inputBuffer.getChannelData(0);
-        runtime.chunks.push(new Float32Array(channel));
-      };
-
-      sourceNode.connect(processorNode);
-      processorNode.connect(silentGain);
-      silentGain.connect(audioContext.destination);
 
       runtimeRef.current = runtime;
       startedAtRef.current = Date.now();
+      setPermissionState('granted');
+      setVoiceState('recording');
       startInFlightRef.current = false;
       if (startTimerRef.current !== null) {
         window.clearTimeout(startTimerRef.current);
         startTimerRef.current = null;
       }
 
-      setPermissionState('granted');
-      setVoiceState('recording');
+      startNativeRecorder(native);
+
       logVoiceDebugEvent('voice_recorder_started', {
         source,
-        recorderEngine: 'web-audio-wav',
+        recorderEngine: audioContext ? 'hybrid-web-audio-native' : native ? 'media-recorder' : 'stream-only',
         sessionId,
-        inputSampleRate: audioContext.sampleRate,
+        inputSampleRate,
         outputSampleRate: TARGET_SAMPLE_RATE,
         audioTracks: stream.getAudioTracks().length,
+        hasRecorder: Boolean(native),
       });
 
       maxDurationTimerRef.current = window.setTimeout(() => {

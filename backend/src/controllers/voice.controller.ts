@@ -75,6 +75,9 @@ function sanitizeVoiceDebugDetails(details: unknown) {
     'deferred',
     'pointerId',
     'maxDurationMs',
+    'timesliceMs',
+    'nativeChunks',
+    'wavChunks',
   ]);
 
   const source = details as Record<string, unknown>;
