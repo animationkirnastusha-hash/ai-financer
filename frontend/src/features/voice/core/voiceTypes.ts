@@ -1,9 +1,19 @@
-export type VoiceInputState = 'idle' | 'recording' | 'uploading' | 'speaking' | 'error';
-export type VoiceInputMode = 'speech' | 'recorder';
-export type VoiceStartResult = 'started' | 'permission-consumed' | 'permission-ready' | 'busy' | 'error';
-export type MicrophonePermissionState = PermissionState | 'unsupported' | 'unknown';
-export type VoiceCue = 'here' | 'listening' | 'thinking' | 'done' | 'not-heard' | 'confirm';
+export type {
+  VoiceInputState,
+  VoiceInputMode,
+  VoicePermissionState,
+  VoicePermissionState as MicrophonePermissionState,
+  VoiceStartResult,
+  VoiceCaptureMode,
+  VoiceSessionPhase,
+  VoiceCompanionMood,
+  VoiceBubbleTone,
+  VoiceThought,
+  VoiceSessionSegment,
+  VoicePointerHandler,
+} from './voiceCapture.types';
 
+export type VoiceCue = 'here' | 'listening' | 'thinking' | 'done' | 'not-heard' | 'confirm';
 export type VoiceDebugDetails = Record<string, string | number | boolean | null | undefined>;
 
 export type VoiceTranscriptionResponse = {

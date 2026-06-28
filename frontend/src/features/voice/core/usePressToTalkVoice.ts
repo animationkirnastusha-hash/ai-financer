@@ -1,12 +1,17 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import { logVoiceDebugEvent, transcribeVoice } from './voiceApi';
-import type { MicrophonePermissionState, VoiceCue, VoiceInputState, VoiceStartResult } from './voiceTypes';
+import type { VoiceInputState, VoicePermissionState, VoiceStartResult } from './voiceCapture.types';
+import { normalizeVoiceText } from './voiceText';
 
 type UsePressToTalkVoiceParams = {
   onText: (text: string) => Promise<void> | void;
   lang?: string;
+  maxDurationMs?: number;
   sessionMs?: number;
+  minDurationMs?: number;
+  source?: 'chat' | 'floating';
   permissionWasPrompted?: boolean;
+  cancelSwipePx?: number;
 };
 
 type RecorderFormat = {
@@ -14,10 +19,12 @@ type RecorderFormat = {
   extension: string;
 };
 
-const DEFAULT_SESSION_MS = 15_000;
-const MAX_RECORDING_MS = 24_000;
+const DEFAULT_MAX_DURATION_MS = 9000;
+const DEFAULT_MIN_DURATION_MS = 120;
+const DEFAULT_CANCEL_SWIPE_PX = 64;
+const TRANSCRIBE_TIMEOUT_MS = 38000;
+const RECORDER_START_TIMEOUT_MS = 12000;
 const MIN_UPLOAD_BYTES = 64;
-const TRANSCRIBE_TIMEOUT_MS = 38_000;
 
 const RECORDER_FORMATS: RecorderFormat[] = [
   { mimeType: 'audio/webm;codecs=opus', extension: 'webm' },
@@ -27,77 +34,78 @@ const RECORDER_FORMATS: RecorderFormat[] = [
   { mimeType: '', extension: 'webm' },
 ];
 
+function getRecorderFormat(): RecorderFormat | null {
+  if (typeof MediaRecorder === 'undefined') return null;
+  return RECORDER_FORMATS.find((format) => {
+    if (!format.mimeType) return true;
+    try {
+      return MediaRecorder.isTypeSupported(format.mimeType);
+    } catch {
+      return false;
+    }
+  }) ?? null;
+}
+
 function getSttLanguage(lang: string) {
   return lang.toLowerCase().startsWith('en') ? 'en' : 'ru';
 }
 
-function getRecorderFormat(): RecorderFormat | null {
-  if (typeof MediaRecorder === 'undefined') return null;
-
-  for (const format of RECORDER_FORMATS) {
-    if (!format.mimeType) return format;
-    try {
-      if (MediaRecorder.isTypeSupported(format.mimeType)) return format;
-    } catch {
-      // Keep scanning.
-    }
-  }
-
-  return null;
-}
-
-function stopTracks(stream: MediaStream | null) {
-  stream?.getTracks().forEach((track) => {
-    try {
-      track.stop();
-    } catch {
-      // ignore cleanup errors
-    }
-  });
-}
-
-async function queryMicrophonePermissionState(): Promise<MicrophonePermissionState> {
-  if (typeof navigator === 'undefined') return 'unknown';
-  if (!navigator.mediaDevices?.getUserMedia) return 'unsupported';
-  if (!('permissions' in navigator)) return 'unknown';
-
+async function queryMicrophonePermissionState(): Promise<PermissionState | null> {
+  if (typeof navigator === 'undefined' || !('permissions' in navigator)) return null;
   try {
     const status = await navigator.permissions.query({ name: 'microphone' as PermissionName });
     return status.state;
   } catch {
-    return 'unknown';
+    return null;
   }
 }
 
-function createVoiceErrorCode(error: unknown) {
-  if (!(error instanceof Error)) return 'voice-error';
-  if (error.name === 'NotAllowedError' || error.name === 'SecurityError') return 'microphone-denied';
-  if (error.name === 'NotFoundError') return 'microphone-not-found';
-  if (error.name === 'NotReadableError') return 'microphone-busy';
-  if (error.name === 'AbortError') return 'microphone-aborted';
-  return error.message || error.name || 'voice-error';
+function safeStopStream(stream: MediaStream | null) {
+  stream?.getTracks().forEach((track) => {
+    try {
+      track.stop();
+    } catch {
+      // no-op
+    }
+  });
+}
+
+function getErrorCode(error: unknown) {
+  if (error instanceof Error) return error.name || error.message;
+  return 'unknown';
 }
 
 export function usePressToTalkVoice({
   onText,
   lang = 'ru-RU',
-  sessionMs = DEFAULT_SESSION_MS,
+  maxDurationMs = DEFAULT_MAX_DURATION_MS,
+  sessionMs,
+  minDurationMs = DEFAULT_MIN_DURATION_MS,
+  source = 'chat',
+  permissionWasPrompted = false,
+  cancelSwipePx = DEFAULT_CANCEL_SWIPE_PX,
 }: UsePressToTalkVoiceParams) {
-  const recorderRef = useRef<MediaRecorder | null>(null);
-  const streamRef = useRef<MediaStream | null>(null);
-  const chunksRef = useRef<BlobPart[]>([]);
-  const formatRef = useRef<RecorderFormat | null>(null);
-  const sessionIdRef = useRef<string | null>(null);
-  const startedAtRef = useRef(0);
-  const cancelledRef = useRef(false);
-  const pendingStopRef = useRef(false);
-  const finalizingRef = useRef(false);
-  const autoStopTimerRef = useRef<number | null>(null);
-  const onTextRef = useRef(onText);
-
   const [state, setState] = useState<VoiceInputState>('idle');
   const [error, setError] = useState<string | null>(null);
-  const [permissionState, setPermissionState] = useState<MicrophonePermissionState>('unknown');
+  const [permissionState, setPermissionState] = useState<VoicePermissionState>('unknown');
+  const [isPressed, setIsPressed] = useState(false);
+  const [isCancelledBySwipe, setIsCancelledBySwipe] = useState(false);
+
+  const onTextRef = useRef(onText);
+  const stateRef = useRef<VoiceInputState>('idle');
+  const streamRef = useRef<MediaStream | null>(null);
+  const recorderRef = useRef<MediaRecorder | null>(null);
+  const chunksRef = useRef<BlobPart[]>([]);
+  const formatRef = useRef<RecorderFormat | null>(null);
+  const pointerIdRef = useRef<number | null>(null);
+  const startedAtRef = useRef(0);
+  const startXRef = useRef(0);
+  const startInFlightRef = useRef(false);
+  const stopAfterStartRef = useRef(false);
+  const cancelledRef = useRef(false);
+  const finalizeBusyRef = useRef(false);
+  const maxDurationTimerRef = useRef<number | null>(null);
+  const startGuardTimerRef = useRef<number | null>(null);
 
   onTextRef.current = onText;
 
@@ -110,248 +118,270 @@ export function usePressToTalkVoice({
       recorderFormat,
   );
 
-  const clearAutoStopTimer = useCallback(() => {
-    if (autoStopTimerRef.current !== null) {
-      window.clearTimeout(autoStopTimerRef.current);
-      autoStopTimerRef.current = null;
+  const effectiveMaxDurationMs = sessionMs ?? maxDurationMs;
+
+  const setVoiceState = useCallback((nextState: VoiceInputState) => {
+    stateRef.current = nextState;
+    setState(nextState);
+  }, []);
+
+  const clearTimers = useCallback(() => {
+    if (maxDurationTimerRef.current !== null) {
+      window.clearTimeout(maxDurationTimerRef.current);
+      maxDurationTimerRef.current = null;
+    }
+    if (startGuardTimerRef.current !== null) {
+      window.clearTimeout(startGuardTimerRef.current);
+      startGuardTimerRef.current = null;
     }
   }, []);
 
-  const cleanup = useCallback((nextState: VoiceInputState = 'idle') => {
-    clearAutoStopTimer();
-    stopTracks(streamRef.current);
+  const cleanupRecorderRuntime = useCallback(() => {
+    clearTimers();
+    safeStopStream(streamRef.current);
     streamRef.current = null;
     recorderRef.current = null;
     chunksRef.current = [];
     formatRef.current = null;
-    sessionIdRef.current = null;
-    startedAtRef.current = 0;
-    pendingStopRef.current = false;
-    finalizingRef.current = false;
+    startInFlightRef.current = false;
+    stopAfterStartRef.current = false;
     cancelledRef.current = false;
-    setState(nextState);
-  }, [clearAutoStopTimer]);
+    finalizeBusyRef.current = false;
+    pointerIdRef.current = null;
+    setIsPressed(false);
+    setIsCancelledBySwipe(false);
+  }, [clearTimers]);
 
-  const refreshPermissionState = useCallback(async () => {
-    const next = await queryMicrophonePermissionState();
-    setPermissionState(next);
-    logVoiceDebugEvent('voice_permission_state', { permissionState: next });
-    return next;
-  }, []);
-
-  const uploadBlob = useCallback(async (blob: Blob, format: RecorderFormat, sessionId: string) => {
-    if (cancelledRef.current) {
-      logVoiceDebugEvent('voice_upload_skipped_cancelled', { sessionId, blobSize: blob.size });
-      cleanup('idle');
-      return;
+  const refreshPermissionState = useCallback(async (): Promise<VoicePermissionState> => {
+    if (!isSupported) {
+      setPermissionState('unsupported');
+      return 'unsupported';
     }
 
-    if (blob.size < MIN_UPLOAD_BYTES) {
-      setError('no-speech');
-      logVoiceDebugEvent('voice_upload_skipped_empty_blob', { sessionId, blobSize: blob.size });
-      cleanup('error');
-      window.setTimeout(() => setState('idle'), 0);
-      return;
+    const queried = await queryMicrophonePermissionState();
+    if (queried) {
+      setPermissionState(queried);
+      return queried;
     }
 
-    setState('uploading');
+    setPermissionState('unknown');
+    return 'unknown';
+  }, [isSupported]);
+
+  useEffect(() => {
+    void refreshPermissionState();
+  }, [permissionWasPrompted, refreshPermissionState]);
+
+  const reset = useCallback(() => {
+    cleanupRecorderRuntime();
     setError(null);
+    setVoiceState('idle');
+  }, [cleanupRecorderRuntime, setVoiceState]);
 
-    try {
-      const filename = `voice-${sessionId}.${format.extension}`;
-      const result = await transcribeVoice(blob, filename, getSttLanguage(lang), TRANSCRIBE_TIMEOUT_MS);
-      const text = result.text?.trim() ?? '';
-
-      if (!text) {
-        setError('no-speech');
-        logVoiceDebugEvent('voice_text_empty', { sessionId, blobSize: blob.size });
-        cleanup('error');
-        window.setTimeout(() => setState('idle'), 0);
-        return;
-      }
-
-      logVoiceDebugEvent('voice_text_received', { sessionId, textLength: text.length });
-      await onTextRef.current(text);
-      cleanup('idle');
-    } catch (uploadError) {
-      const code = createVoiceErrorCode(uploadError);
-      setError(code);
-      logVoiceDebugEvent('voice_error', { sessionId, stage: 'upload', code });
-      cleanup('error');
-      window.setTimeout(() => setState('idle'), 0);
-    }
-  }, [cleanup, lang]);
-
-  const finalizeRecorder = useCallback((sessionId: string) => {
-    if (finalizingRef.current) return;
-    finalizingRef.current = true;
-    clearAutoStopTimer();
-
-    const format = formatRef.current ?? recorderFormat ?? { mimeType: '', extension: 'webm' };
-    const blobType = format.mimeType || (chunksRef.current[0] instanceof Blob ? chunksRef.current[0].type : '') || 'audio/webm';
-    const blob = new Blob(chunksRef.current, { type: blobType });
-    const elapsedMs = Math.max(0, Date.now() - startedAtRef.current);
-
-    logVoiceDebugEvent('voice_blob_ready', {
-      sessionId,
-      blobSize: blob.size,
-      blobType,
-      elapsedMs,
-    });
-
-    void uploadBlob(blob, format, sessionId);
-  }, [clearAutoStopTimer, recorderFormat, uploadBlob]);
-
-  const stop = useCallback(() => {
-    logVoiceDebugEvent('voice_stop_requested', { state, hasRecorder: Boolean(recorderRef.current) });
-    pendingStopRef.current = true;
-
-    const recorder = recorderRef.current;
-    if (!recorder) {
-      setState((current: VoiceInputState) => (current === 'recording' ? 'idle' : current));
-      return;
-    }
-
-    try {
-      if (recorder.state === 'recording' || recorder.state === 'paused') {
-        recorder.stop();
-        return;
-      }
-    } catch (stopError) {
-      const code = createVoiceErrorCode(stopError);
-      setError(code);
-      logVoiceDebugEvent('voice_error', { stage: 'stop', code });
-      cleanup('error');
-      window.setTimeout(() => setState('idle'), 0);
-    }
-  }, [cleanup, state]);
-
-  const cancel = useCallback(() => {
-    logVoiceDebugEvent('voice_cancelled', { state, hasRecorder: Boolean(recorderRef.current) });
+  const cancel = useCallback((reason = 'cancelled') => {
+    logVoiceDebugEvent('voice_cancel', { source, reason, state: stateRef.current });
     cancelledRef.current = true;
-    pendingStopRef.current = false;
+    stopAfterStartRef.current = false;
+    setIsPressed(false);
+    setIsCancelledBySwipe(false);
 
     const recorder = recorderRef.current;
     if (recorder && recorder.state !== 'inactive') {
       try {
         recorder.stop();
       } catch {
-        cleanup('idle');
+        cleanupRecorderRuntime();
+        setVoiceState('idle');
       }
       return;
     }
 
-    cleanup('idle');
-  }, [cleanup, state]);
+    cleanupRecorderRuntime();
+    setVoiceState('idle');
+  }, [cleanupRecorderRuntime, setVoiceState, source]);
+
+  const finalizeBlob = useCallback(async (blob: Blob, format: RecorderFormat, durationMs: number) => {
+    if (finalizeBusyRef.current) return;
+    finalizeBusyRef.current = true;
+    clearTimers();
+    safeStopStream(streamRef.current);
+    streamRef.current = null;
+
+    if (cancelledRef.current) {
+      cleanupRecorderRuntime();
+      setVoiceState('idle');
+      return;
+    }
+
+    if (blob.size < MIN_UPLOAD_BYTES) {
+      logVoiceDebugEvent('voice_blob_skipped', { source, durationMs, blobSize: blob.size, reason: 'empty-blob' });
+      cleanupRecorderRuntime();
+      setError('no-speech');
+      setVoiceState('error');
+      window.setTimeout(() => setVoiceState('idle'), 0);
+      return;
+    }
+
+    logVoiceDebugEvent('voice_blob_ready', { source, durationMs, blobSize: blob.size, mimeType: format.mimeType });
+    setVoiceState('uploading');
+
+    try {
+      logVoiceDebugEvent('voice_transcribe_sent', { source, blobSize: blob.size, language: getSttLanguage(lang) });
+      const response = await transcribeVoice(blob, `voice-${Date.now()}.${format.extension}`, getSttLanguage(lang), TRANSCRIBE_TIMEOUT_MS);
+      const text = normalizeVoiceText(response.text || '');
+      logVoiceDebugEvent('voice_transcribe_success', { source, textLength: text.length, provider: response.provider, model: response.model });
+
+      if (!text) {
+        setError('no-speech');
+        cleanupRecorderRuntime();
+        setVoiceState('error');
+        window.setTimeout(() => setVoiceState('idle'), 0);
+        return;
+      }
+
+      logVoiceDebugEvent('voice_text_received', { source, textLength: text.length });
+      await onTextRef.current(text);
+      cleanupRecorderRuntime();
+      setError(null);
+      setVoiceState('idle');
+    } catch (nextError) {
+      const errorCode = (nextError as Error & { code?: string }).code || getErrorCode(nextError);
+      logVoiceDebugEvent('voice_transcribe_failed', { source, error: errorCode });
+      cleanupRecorderRuntime();
+      setError(errorCode === 'VOICE_TRANSCRIPTION_CLIENT_TIMEOUT' ? 'transcription-timeout' : 'transcription-error');
+      setVoiceState('error');
+      window.setTimeout(() => setVoiceState('idle'), 0);
+    }
+  }, [cleanupRecorderRuntime, clearTimers, lang, minDurationMs, setVoiceState, source]);
+
+  const stop = useCallback(() => {
+    const durationMs = startedAtRef.current ? Date.now() - startedAtRef.current : 0;
+    logVoiceDebugEvent('voice_release', { source, state: stateRef.current, durationMs, deferred: startInFlightRef.current });
+    setIsPressed(false);
+    pointerIdRef.current = null;
+
+    if (startInFlightRef.current && stateRef.current !== 'recording') {
+      stopAfterStartRef.current = true;
+      return;
+    }
+
+    const recorder = recorderRef.current;
+    if (!recorder || recorder.state === 'inactive') {
+      cleanupRecorderRuntime();
+      setVoiceState('idle');
+      return;
+    }
+
+    try {
+      recorder.stop();
+    } catch (error) {
+      logVoiceDebugEvent('voice_stop_failed', { source, error: getErrorCode(error) });
+      cleanupRecorderRuntime();
+      setVoiceState('idle');
+    }
+  }, [cleanupRecorderRuntime, setVoiceState, source]);
 
   const start = useCallback(async (): Promise<VoiceStartResult> => {
     if (!isSupported || !recorderFormat) {
-      setError('unsupported');
       setPermissionState('unsupported');
-      logVoiceDebugEvent('voice_error', { stage: 'support', code: 'unsupported' });
-      setState('error');
-      window.setTimeout(() => setState('idle'), 0);
-      return 'error';
+      setError('unsupported');
+      setVoiceState('error');
+      return 'permission-ready';
     }
 
-    if (recorderRef.current || state === 'recording' || state === 'uploading') {
-      logVoiceDebugEvent('voice_start_busy', { state });
-      return 'busy';
-    }
+    if (stateRef.current === 'recording' || stateRef.current === 'uploading' || startInFlightRef.current) return 'busy';
 
-    const sessionId = crypto.randomUUID();
-    sessionIdRef.current = sessionId;
+    setError(null);
+    startInFlightRef.current = true;
+    stopAfterStartRef.current = false;
     cancelledRef.current = false;
-    pendingStopRef.current = false;
-    finalizingRef.current = false;
+    finalizeBusyRef.current = false;
     chunksRef.current = [];
     formatRef.current = recorderFormat;
-    setError(null);
-    setState('recording');
+    logVoiceDebugEvent('voice_permission_request', { source, mimeType: recorderFormat.mimeType });
 
-    logVoiceDebugEvent('voice_start_requested', {
-      sessionId,
-      mimeType: recorderFormat.mimeType || 'default',
-      extension: recorderFormat.extension,
-    });
+    startGuardTimerRef.current = window.setTimeout(() => {
+      if (!startInFlightRef.current) return;
+      logVoiceDebugEvent('voice_start_guard_timeout', { source });
+      cancel('start-timeout');
+      setError('microphone-timeout');
+    }, RECORDER_START_TIMEOUT_MS);
 
     try {
-      logVoiceDebugEvent('voice_permission_requested', { sessionId });
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: {
           echoCancellation: true,
           noiseSuppression: true,
           autoGainControl: true,
+          channelCount: 1,
         },
       });
 
       streamRef.current = stream;
       setPermissionState('granted');
-      logVoiceDebugEvent('voice_permission_granted', {
-        sessionId,
-        audioTracks: stream.getAudioTracks().length,
-      });
+      logVoiceDebugEvent('voice_permission_granted', { source, tracks: stream.getAudioTracks().length });
 
-      if (cancelledRef.current) {
-        cleanup('idle');
-        return 'started';
-      }
-
-      const options = recorderFormat.mimeType ? { mimeType: recorderFormat.mimeType } : undefined;
-      const recorder = new MediaRecorder(stream, options);
+      const recorder = recorderFormat.mimeType
+        ? new MediaRecorder(stream, { mimeType: recorderFormat.mimeType })
+        : new MediaRecorder(stream);
       recorderRef.current = recorder;
 
       recorder.ondataavailable = (event) => {
-        if (event.data && event.data.size > 0) chunksRef.current.push(event.data);
+        if (event.data?.size) chunksRef.current.push(event.data);
       };
 
       recorder.onerror = (event) => {
-        const code = createVoiceErrorCode((event as ErrorEvent).error || event);
-        setError(code);
-        logVoiceDebugEvent('voice_error', { sessionId, stage: 'recorder', code });
+        logVoiceDebugEvent('voice_recorder_error', { source, error: String((event as ErrorEvent).message || 'recorder-error') });
+        setError('recorder-error');
       };
 
       recorder.onstop = () => {
-        logVoiceDebugEvent('voice_recorder_stopped', {
-          sessionId,
-          chunks: chunksRef.current.length,
-          elapsedMs: Math.max(0, Date.now() - startedAtRef.current),
-        });
-        stopTracks(streamRef.current);
-        streamRef.current = null;
-        finalizeRecorder(sessionId);
+        const durationMs = startedAtRef.current ? Date.now() - startedAtRef.current : 0;
+        logVoiceDebugEvent('voice_recorder_stopped', { source, durationMs, chunks: chunksRef.current.length });
+        const blob = new Blob(chunksRef.current, { type: recorderFormat.mimeType });
+        void finalizeBlob(blob, recorderFormat, durationMs);
       };
 
-      recorder.start(250);
       startedAtRef.current = Date.now();
-      setState('recording');
-      logVoiceDebugEvent('voice_recorder_started', {
-        sessionId,
-        mimeType: recorderFormat.mimeType || 'default',
-        extension: recorderFormat.extension,
-      });
+      recorder.start(250);
+      startInFlightRef.current = false;
+      if (startGuardTimerRef.current !== null) {
+        window.clearTimeout(startGuardTimerRef.current);
+        startGuardTimerRef.current = null;
+      }
+      setVoiceState('recording');
+      logVoiceDebugEvent('voice_recorder_started', { source, mimeType: recorderFormat.mimeType });
 
-      clearAutoStopTimer();
-      autoStopTimerRef.current = window.setTimeout(() => {
-        logVoiceDebugEvent('voice_auto_stop', { sessionId });
+      maxDurationTimerRef.current = window.setTimeout(() => {
+        logVoiceDebugEvent('voice_auto_stop', { source, maxDurationMs: effectiveMaxDurationMs });
         stop();
-      }, Math.min(Math.max(sessionMs, 1200), MAX_RECORDING_MS));
+      }, Math.max(1200, effectiveMaxDurationMs));
 
-      if (pendingStopRef.current) {
-        window.setTimeout(() => stop(), 120);
+      if (stopAfterStartRef.current) {
+        stopAfterStartRef.current = false;
+        window.setTimeout(() => stop(), 0);
       }
 
       return 'started';
-    } catch (startError) {
-      const code = createVoiceErrorCode(startError);
-      setError(code);
-      if (code === 'microphone-denied') setPermissionState('denied');
-      logVoiceDebugEvent('voice_error', { sessionId, stage: 'start', code });
-      cleanup('error');
-      window.setTimeout(() => setState('idle'), 0);
-      return 'error';
+    } catch (nextError) {
+      startInFlightRef.current = false;
+      if (startGuardTimerRef.current !== null) {
+        window.clearTimeout(startGuardTimerRef.current);
+        startGuardTimerRef.current = null;
+      }
+      safeStopStream(streamRef.current);
+      streamRef.current = null;
+
+      const errorCode = getErrorCode(nextError);
+      logVoiceDebugEvent('voice_permission_denied', { source, error: errorCode });
+      const permission = await queryMicrophonePermissionState();
+      setPermissionState(permission ?? 'denied');
+      setError(errorCode === 'NotAllowedError' ? 'microphone-denied' : 'microphone-error');
+      setIsPressed(false);
+      setVoiceState('error');
+      return 'permission-ready';
     }
-  }, [cleanup, clearAutoStopTimer, finalizeRecorder, isSupported, recorderFormat, sessionMs, state, stop]);
+  }, [cancel, effectiveMaxDurationMs, finalizeBlob, isSupported, recorderFormat, setVoiceState, source, stop]);
 
   const primePermission = useCallback(async () => {
     if (!isSupported) {
@@ -361,57 +391,124 @@ export function usePressToTalkVoice({
     }
 
     try {
-      logVoiceDebugEvent('voice_permission_requested', { source: 'prime' });
+      const current = await queryMicrophonePermissionState();
+      if (current === 'granted') {
+        setPermissionState('granted');
+        setError(null);
+        return true;
+      }
+
+      logVoiceDebugEvent('voice_permission_request', { source, mode: 'prime' });
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      stopTracks(stream);
+      safeStopStream(stream);
       setPermissionState('granted');
-      logVoiceDebugEvent('voice_permission_granted', { source: 'prime' });
+      setError(null);
+      logVoiceDebugEvent('voice_permission_granted', { source, mode: 'prime' });
       return true;
-    } catch (primeError) {
-      const code = createVoiceErrorCode(primeError);
-      setError(code);
-      if (code === 'microphone-denied') setPermissionState('denied');
-      logVoiceDebugEvent('voice_error', { source: 'prime', code });
+    } catch (nextError) {
+      const errorCode = getErrorCode(nextError);
+      logVoiceDebugEvent('voice_permission_denied', { source, mode: 'prime', error: errorCode });
+      const permission = await queryMicrophonePermissionState();
+      setPermissionState(permission ?? 'denied');
+      setError(errorCode === 'NotAllowedError' ? 'microphone-denied' : 'microphone-error');
       return false;
     }
-  }, [isSupported]);
+  }, [isSupported, source]);
 
-  const reset = useCallback(() => {
-    setError(null);
-    cleanup('idle');
-  }, [cleanup]);
+  const handlePointerDown = useCallback((event: ReactPointerEvent<Element>) => {
+    if (stateRef.current === 'uploading' || startInFlightRef.current) return;
+    event.preventDefault();
+    event.stopPropagation();
+    pointerIdRef.current = event.pointerId;
+    startXRef.current = event.clientX;
+    startedAtRef.current = Date.now();
+    setIsPressed(true);
+    setIsCancelledBySwipe(false);
+    logVoiceDebugEvent('voice_press_start', { source, pointerId: event.pointerId, state: stateRef.current });
+    (event.currentTarget as Element & { setPointerCapture?: (pointerId: number) => void }).setPointerCapture?.(event.pointerId);
+    void start();
+  }, [source, start]);
 
-  const speak = useCallback((_text: string, _options?: { maxDurationMs?: number; cue?: VoiceCue }) => {
-    // TTS is intentionally not handled by the recording layer.
-  }, []);
+  const handlePointerMove = useCallback((event: ReactPointerEvent<Element>) => {
+    if (pointerIdRef.current !== event.pointerId || isCancelledBySwipe) return;
+    const dx = event.clientX - startXRef.current;
+    if (dx <= -Math.abs(cancelSwipePx)) {
+      setIsCancelledBySwipe(true);
+      cancel('swipe-left');
+    }
+  }, [cancel, cancelSwipePx, isCancelledBySwipe]);
 
-  const stopSpeaking = useCallback(() => {
-    // TTS is intentionally not handled by the recording layer.
-  }, []);
+  const handlePointerUp = useCallback((event: ReactPointerEvent<Element>) => {
+    if (pointerIdRef.current !== event.pointerId) return;
+    event.preventDefault();
+    event.stopPropagation();
+    stop();
+  }, [stop]);
+
+  const handlePointerCancel = useCallback((event: ReactPointerEvent<Element>) => {
+    if (pointerIdRef.current !== event.pointerId) return;
+    cancel('pointer-cancel');
+  }, [cancel]);
 
   useEffect(() => {
-    void refreshPermissionState();
-  }, [refreshPermissionState]);
+    if (pointerIdRef.current === null && !isPressed) return;
+
+    const release = (event: PointerEvent) => {
+      if (pointerIdRef.current !== null && event.pointerId !== pointerIdRef.current) return;
+      stop();
+    };
+
+    const pointerCancel = (event: PointerEvent) => {
+      if (pointerIdRef.current !== null && event.pointerId !== pointerIdRef.current) return;
+      cancel('window-pointer-cancel');
+    };
+
+    const blurCancel = () => cancel('window-blur');
+    const pageHideCancel = () => cancel('pagehide');
+    const visibilityCancel = () => {
+      if (document.visibilityState === 'hidden') cancel('visibility-hidden');
+    };
+
+    window.addEventListener('pointerup', release, true);
+    window.addEventListener('pointercancel', pointerCancel, true);
+    window.addEventListener('blur', blurCancel);
+    window.addEventListener('pagehide', pageHideCancel);
+    document.addEventListener('visibilitychange', visibilityCancel);
+
+    return () => {
+      window.removeEventListener('pointerup', release, true);
+      window.removeEventListener('pointercancel', pointerCancel, true);
+      window.removeEventListener('blur', blurCancel);
+      window.removeEventListener('pagehide', pageHideCancel);
+      document.removeEventListener('visibilitychange', visibilityCancel);
+    };
+  }, [cancel, isPressed, stop]);
+
+  const stopSpeaking = useCallback(() => {
+    window.speechSynthesis?.cancel();
+  }, []);
 
   useEffect(() => () => {
-    cancelledRef.current = true;
-    cleanup('idle');
-  }, [cleanup]);
+    cleanupRecorderRuntime();
+  }, [cleanupRecorderRuntime]);
 
   return {
     state,
     error,
-    mode: 'recorder' as const,
-    isSupported,
     permissionState,
+    isSupported,
+    isPressed,
+    isCancelledBySwipe,
     start,
     stop,
     cancel,
     reset,
-    resetCapture: reset,
     primePermission,
     refreshPermissionState,
-    speak,
     stopSpeaking,
+    handlePointerDown,
+    handlePointerMove,
+    handlePointerUp,
+    handlePointerCancel,
   };
 }
