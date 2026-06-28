@@ -29,8 +29,6 @@ function sanitizeVoiceDebugDetails(details: unknown) {
     'permissionState',
     'recordingState',
     'elapsedMs',
-    'durationMs',
-    'timesliceMs',
     'visibilityState',
     'textLength',
     'hasText',
@@ -69,6 +67,14 @@ function sanitizeVoiceDebugDetails(details: unknown) {
     'hasRecorder',
     'stage',
     'filename',
+    'recorderEngine',
+    'inputSampleRate',
+    'outputSampleRate',
+    'sampleCount',
+    'durationMs',
+    'deferred',
+    'pointerId',
+    'maxDurationMs',
   ]);
 
   const source = details as Record<string, unknown>;
