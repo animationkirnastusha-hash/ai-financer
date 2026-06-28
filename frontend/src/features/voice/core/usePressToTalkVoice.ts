@@ -46,6 +46,34 @@ function getRecorderFormat(): RecorderFormat | null {
   }) ?? null;
 }
 
+function normalizeMimeType(mimeType: string) {
+  return mimeType.toLowerCase().split(';')[0].trim();
+}
+
+function getExtensionFromMimeType(mimeType: string, fallbackExtension: string) {
+  const normalized = normalizeMimeType(mimeType);
+  if (normalized.includes('webm')) return 'webm';
+  if (normalized.includes('mp4') || normalized.includes('m4a')) return 'm4a';
+  if (normalized.includes('aac')) return 'aac';
+  if (normalized.includes('ogg')) return 'ogg';
+  if (normalized.includes('wav') || normalized.includes('wave')) return 'wav';
+  return fallbackExtension;
+}
+
+function resolveRecorderOutputFormat(requestedFormat: RecorderFormat, recorder: MediaRecorder): RecorderFormat {
+  const actualMimeType = recorder.mimeType || requestedFormat.mimeType;
+  if (!actualMimeType) return requestedFormat;
+  return {
+    mimeType: actualMimeType,
+    extension: getExtensionFromMimeType(actualMimeType, requestedFormat.extension),
+  };
+}
+
+function shouldUseRecorderTimeslice(format: RecorderFormat) {
+  const normalized = normalizeMimeType(format.mimeType);
+  return normalized.includes('webm') || normalized.includes('ogg');
+}
+
 function getSttLanguage(lang: string) {
   return lang.toLowerCase().startsWith('en') ? 'en' : 'ru';
 }
@@ -273,6 +301,13 @@ export function usePressToTalkVoice({
     }
 
     try {
+      if (recorder.state === 'recording') {
+        try {
+          recorder.requestData();
+        } catch {
+          // stop() will still ask the browser for final data.
+        }
+      }
       recorder.stop();
     } catch (error) {
       logVoiceDebugEvent('voice_stop_failed', { source, error: getErrorCode(error) });
@@ -337,20 +372,37 @@ export function usePressToTalkVoice({
 
       recorder.onstop = () => {
         const durationMs = startedAtRef.current ? Date.now() - startedAtRef.current : 0;
-        logVoiceDebugEvent('voice_recorder_stopped', { source, durationMs, chunks: chunksRef.current.length });
-        const blob = new Blob(chunksRef.current, { type: recorderFormat.mimeType });
-        void finalizeBlob(blob, recorderFormat, durationMs);
+        const outputFormat = resolveRecorderOutputFormat(recorderFormat, recorder);
+        logVoiceDebugEvent('voice_recorder_stopped', {
+          source,
+          durationMs,
+          chunks: chunksRef.current.length,
+          mimeType: outputFormat.mimeType || 'unknown',
+          requestedMimeType: recorderFormat.mimeType || 'default',
+        });
+        const blob = new Blob(chunksRef.current, { type: outputFormat.mimeType });
+        void finalizeBlob(blob, outputFormat, durationMs);
       };
 
       startedAtRef.current = Date.now();
-      recorder.start(250);
+      const useTimeslice = shouldUseRecorderTimeslice(recorderFormat);
+      if (useTimeslice) {
+        recorder.start(250);
+      } else {
+        recorder.start();
+      }
       startInFlightRef.current = false;
       if (startGuardTimerRef.current !== null) {
         window.clearTimeout(startGuardTimerRef.current);
         startGuardTimerRef.current = null;
       }
       setVoiceState('recording');
-      logVoiceDebugEvent('voice_recorder_started', { source, mimeType: recorderFormat.mimeType });
+      logVoiceDebugEvent('voice_recorder_started', {
+        source,
+        mimeType: recorder.mimeType || recorderFormat.mimeType || 'default',
+        requestedMimeType: recorderFormat.mimeType || 'default',
+        timeslice: useTimeslice,
+      });
 
       maxDurationTimerRef.current = window.setTimeout(() => {
         logVoiceDebugEvent('voice_auto_stop', { source, maxDurationMs: effectiveMaxDurationMs });

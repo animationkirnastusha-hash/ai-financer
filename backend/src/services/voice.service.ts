@@ -204,6 +204,23 @@ function sniffAudioSignature(buffer: Buffer, mimeType: string, originalName: str
   return false;
 }
 
+function detectAudioMimeType(buffer: Buffer) {
+  if (buffer.length < 12) return '';
+
+  const header4 = buffer.subarray(0, 4).toString('ascii');
+  const header3 = buffer.subarray(0, 3).toString('ascii');
+  const ftyp = buffer.subarray(4, 8).toString('ascii');
+
+  if (header4 === 'RIFF' && buffer.subarray(8, 12).toString('ascii') === 'WAVE') return 'audio/wav';
+  if (ftyp === 'ftyp') return 'audio/mp4';
+  if (header3 === 'ID3') return 'audio/mpeg';
+  if (buffer[0] === 0xff && (buffer[1] & 0xe0) === 0xe0) return 'audio/mpeg';
+  if (header4 === 'OggS') return 'audio/ogg';
+  if (buffer[0] === 0x1a && buffer[1] === 0x45 && buffer[2] === 0xdf && buffer[3] === 0xa3) return 'audio/webm';
+
+  return '';
+}
+
 function assertSupportedAudio(buffer: Buffer, mimeType: string, originalName = '') {
   if (!buffer.length) throw new VoiceAudioUnsupportedError();
   const maxBytes = getMaxAudioMb() * 1024 * 1024;
@@ -359,9 +376,25 @@ class VoiceService {
     if (!apiKey) throw new VoiceTranscriptionNotConfiguredError();
 
     const inferredMimeType = inferMimeType(mimeType, originalName);
-    assertSupportedAudio(buffer, inferredMimeType, originalName);
+    const detectedMimeType = detectAudioMimeType(buffer);
+    const effectiveMimeType = detectedMimeType || inferredMimeType;
 
-    const audio = await normalizeAudioForStt(buffer, inferredMimeType, originalName);
+    if (detectedMimeType && normalizeMimeType(inferredMimeType) !== detectedMimeType && process.env.VOICE_DEBUG_LOGS === '1') {
+      console.info('[voice-transcribe]', JSON.stringify({
+        at: new Date().toISOString(),
+        event: 'audio_mime_corrected',
+        details: {
+          fromMimeType: inferredMimeType,
+          toMimeType: detectedMimeType,
+          originalName,
+          bytes: buffer.length,
+        },
+      }));
+    }
+
+    assertSupportedAudio(buffer, effectiveMimeType, originalName);
+
+    const audio = await normalizeAudioForStt(buffer, effectiveMimeType, originalName);
     const model = getModel();
     const normalizedLanguage = getLanguage(language);
     const filename = sanitizeFilename(audio.originalName, audio.mimeType);
