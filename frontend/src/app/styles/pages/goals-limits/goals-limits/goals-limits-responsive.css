@@ -1,7 +1,27 @@
-@media (max-width: 420px) {
+@media (max-width: 430px) {
   .app-goals-limits-shell {
     gap: 22px;
     padding-top: 14px;
+  }
+
+  .app-goals-limits-kpi {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .app-goals-limits-kpi .app-card {
+    min-height: 88px;
+    padding: 12px 9px;
+    border-radius: 22px;
+  }
+
+  .app-goals-limits-kpi span,
+  .app-goals-limits-kpi small {
+    font-size: 10px;
+  }
+
+  .app-goals-limits-kpi strong {
+    font-size: clamp(13px, 3.8vw, 18px);
   }
 
   .app-goals-limits-focus,

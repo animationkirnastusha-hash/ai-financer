@@ -1,39 +1,57 @@
 .app-goals-limits-kpi {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 14px;
+  gap: 12px;
 }
 
-.app-goals-limits-kpi article {
+.app-goals-limits-kpi .app-card {
   display: grid;
   align-content: space-between;
-  gap: 10px;
-  min-height: 122px;
-  padding: 17px 15px;
-  border-radius: 28px;
+  gap: 8px;
+  min-width: 0;
+  min-height: 96px;
+  padding: 14px 11px;
+  border: 1px solid rgba(255, 255, 255, 0.095);
+  border-radius: 24px;
+  background:
+    radial-gradient(circle at 16% 0%, rgba(110, 231, 183, 0.08), transparent 34%),
+    rgba(255, 255, 255, 0.045);
 }
 
 .app-goals-limits-kpi span {
+  min-width: 0;
+  overflow: visible;
   color: rgba(255, 255, 255, .5);
-  font-size: 12px;
+  font-size: 10.5px;
   font-weight: 760;
+  line-height: 1.15;
+  text-overflow: clip;
+  white-space: normal;
 }
 
 .app-goals-limits-kpi strong {
   min-width: 0;
-  overflow-wrap: anywhere;
+  overflow: visible;
   color: rgba(255, 255, 255, .96);
-  font-size: clamp(19px, 5vw, 25px);
+  font-size: clamp(14px, 3.9vw, 20px);
   font-weight: 860;
   letter-spacing: -.055em;
+  line-height: 1.05;
+  text-overflow: clip;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .app-goals-limits-kpi small {
   min-width: 0;
-  overflow-wrap: anywhere;
+  overflow: visible;
   color: rgba(149, 255, 211, .78);
-  font-size: 12px;
+  font-size: 10.5px;
   font-weight: 760;
+  line-height: 1.15;
+  text-overflow: clip;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .app-goals-limits-focus {
@@ -42,12 +60,17 @@
   gap: 18px;
   align-items: center;
   padding: 20px;
-  border-radius: 30px;
+  border: 1px solid rgba(255, 255, 255, 0.095);
+  border-radius: 32px;
+  background:
+    radial-gradient(circle at 16% 0%, rgba(110, 231, 183, 0.08), transparent 34%),
+    rgba(255, 255, 255, 0.045);
 }
 
 .app-goals-limits-focus__copy {
   display: grid;
   gap: 8px;
+  min-width: 0;
 }
 
 .app-goals-limits-focus h2,

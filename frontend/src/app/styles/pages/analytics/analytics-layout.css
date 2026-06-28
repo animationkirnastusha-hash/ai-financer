@@ -1,4 +1,4 @@
-/* Analytics layout, cards, switches and category breakdown sheet. */
+/* Analytics cards, sections and breakdown sheet. */
 .analytics-v2-kpi-grid,
 .analytics-v2-focus-grid,
 .analytics-v2-news-grid,
@@ -115,7 +115,7 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 14px;
-  margin-bottom: 20px;
+  margin-bottom: 22px;
 }
 
 .analytics-v2-section-head > div {
@@ -182,7 +182,7 @@
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 14px;
-  margin-top: 2px;
+  margin-top: 0;
 }
 
 .analytics-v2-actions button,
@@ -291,7 +291,7 @@
   to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
-@media (max-width: 520px) {
+@media (max-width: 640px) {
   .analytics-v2-section-head {
     display: grid;
     gap: 12px;

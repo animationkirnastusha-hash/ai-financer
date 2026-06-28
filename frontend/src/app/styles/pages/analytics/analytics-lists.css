@@ -1,12 +1,9 @@
 /* Analytics category legends. Source of truth for category rows. */
 .analytics-v2-category-list {
   display: grid;
-  gap: 10px;
-  min-width: 0;
-}
-
-.analytics-v2-category-list--preview {
   gap: 12px;
+  min-width: 0;
+  width: 100%;
 }
 
 .analytics-v2-category-list--sheet {
@@ -15,9 +12,9 @@
 
 .analytics-v2-category-row {
   display: grid;
-  grid-template-columns: 12px minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 12px;
+  grid-template-columns: 12px minmax(0, 1fr);
+  align-items: start;
+  gap: 8px 12px;
   width: 100%;
   min-width: 0;
   min-height: 46px;
@@ -25,7 +22,7 @@
   border-radius: 16px;
   background: transparent;
   color: #fff;
-  padding: 6px 0;
+  padding: 7px 0;
   text-align: left;
   font: inherit;
   cursor: default;
@@ -37,16 +34,17 @@
   background: transparent;
 }
 
-.analytics-v2-category-row__icon {
-  display: none;
-}
-
 .analytics-v2-category-row__dot {
   display: block;
   width: 9px;
   height: 9px;
+  margin-top: 5px;
   border-radius: 999px;
   box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.035);
+}
+
+.analytics-v2-category-row__icon {
+  display: none;
 }
 
 .analytics-v2-category-row__text {
@@ -57,11 +55,12 @@
 
 .analytics-v2-category-row__text b {
   min-width: 0;
+  max-width: 100%;
   overflow: visible;
-  color: rgba(255, 255, 255, 0.86);
-  font-size: 13px;
+  color: rgba(255, 255, 255, 0.88);
+  font-size: 13.5px;
   font-weight: 900;
-  line-height: 1.18;
+  line-height: 1.2;
   letter-spacing: -0.02em;
   text-overflow: clip;
   white-space: normal;
@@ -78,12 +77,13 @@
 }
 
 .analytics-v2-category-row__values {
-  display: grid;
-  grid-template-columns: auto auto;
-  gap: 10px;
+  grid-column: 2;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px 12px;
   align-items: baseline;
-  justify-content: end;
-  min-width: max-content;
+  justify-content: flex-start;
+  min-width: 0;
 }
 
 .analytics-v2-category-row__amount,
@@ -94,9 +94,9 @@
   font-size: 13px;
   font-weight: 920;
   line-height: 1.1;
-  text-align: right;
+  text-align: left;
   text-overflow: clip;
-  white-space: nowrap;
+  white-space: normal;
 }
 
 .analytics-v2-category-row__amount {
@@ -173,22 +173,21 @@
   text-align: center;
 }
 
-@media (max-width: 430px) {
+@media (min-width: 760px) {
   .analytics-v2-category-row {
-    grid-template-columns: 10px minmax(0, 1fr);
-    gap: 9px 10px;
+    grid-template-columns: 12px minmax(0, 1fr) auto;
+    align-items: center;
   }
 
   .analytics-v2-category-row__values {
-    grid-column: 2;
-    grid-row: 2;
-    justify-content: start;
-    gap: 12px;
+    grid-column: auto;
+    justify-content: end;
+    min-width: max-content;
   }
 
   .analytics-v2-category-row__amount,
   .analytics-v2-category-row__percent {
-    font-size: 12px;
-    text-align: left;
+    text-align: right;
+    white-space: nowrap;
   }
 }

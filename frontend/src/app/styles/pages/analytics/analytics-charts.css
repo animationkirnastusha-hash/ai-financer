@@ -1,16 +1,22 @@
 /* Analytics charts. */
 .analytics-v2-chart-layout {
   display: grid;
-  grid-template-columns: minmax(136px, 0.58fr) minmax(0, 1fr);
+  grid-template-columns: 1fr;
   gap: 22px;
   align-items: center;
+}
+
+@media (min-width: 760px) {
+  .analytics-v2-chart-layout {
+    grid-template-columns: minmax(180px, 0.58fr) minmax(0, 1fr);
+  }
 }
 
 .analytics-v2-donut {
   position: relative;
   display: grid;
   place-items: center;
-  width: min(100%, 178px);
+  width: min(58vw, 214px);
   aspect-ratio: 1;
   margin: 0 auto;
 }
@@ -38,7 +44,7 @@
 
 .analytics-v2-donut__center {
   position: absolute;
-  inset: 26%;
+  inset: 27%;
   display: grid;
   place-content: center;
   text-align: center;
@@ -47,10 +53,10 @@
 }
 
 .analytics-v2-donut__center strong {
-  max-width: 112px;
+  max-width: 116px;
   overflow: visible;
   color: #fff;
-  font-size: clamp(12px, 3.2vw, 16px);
+  font-size: clamp(13px, 3.6vw, 17px);
   font-weight: 950;
   line-height: 1.04;
   letter-spacing: -0.05em;
@@ -60,7 +66,7 @@
 }
 
 .analytics-v2-donut__center span {
-  max-width: 112px;
+  max-width: 116px;
   overflow: visible;
   color: rgba(255, 255, 255, 0.52);
   font-size: 9.5px;
@@ -158,25 +164,5 @@
 }
 
 .analytics-v2-breakdown .analytics-v2-donut {
-  width: min(100%, 232px);
-}
-
-.analytics-v2-breakdown .analytics-v2-donut__center strong,
-.analytics-v2-breakdown .analytics-v2-donut__center span {
-  max-width: 128px;
-}
-
-@media (max-width: 430px) {
-  .analytics-v2-chart-layout {
-    grid-template-columns: 1fr;
-    gap: 18px;
-  }
-
-  .analytics-v2-chart-card .analytics-v2-donut {
-    width: min(58vw, 172px);
-  }
-
-  .analytics-v2-category-list--preview {
-    width: 100%;
-  }
+  width: min(70vw, 232px);
 }

@@ -1,6 +1,6 @@
 .app-goals-limits-list {
   display: grid;
-  gap: 15px;
+  gap: 16px;
 }
 
 .app-goals-limits-section-head {
@@ -24,14 +24,18 @@
   display: grid;
   gap: 14px;
   padding: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.095);
   border-radius: 28px;
+  background:
+    radial-gradient(circle at 16% 0%, rgba(110, 231, 183, 0.08), transparent 34%),
+    rgba(255, 255, 255, 0.045);
 }
 
 .app-goals-limits-row__head {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 12px;
-  align-items: center;
+  align-items: start;
   width: 100%;
   color: inherit;
   text-align: left;
@@ -39,12 +43,14 @@
 
 .app-goals-limits-row__head span {
   min-width: 0;
-  overflow: hidden;
+  overflow: visible;
   color: rgba(255, 255, 255, .94);
   font-size: 17px;
   font-weight: 820;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  line-height: 1.18;
+  text-overflow: clip;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .app-goals-limits-row__head strong {
@@ -79,6 +85,10 @@
   font-weight: 650;
 }
 
+.app-goals-limits-meta span {
+  min-width: 0;
+}
+
 .app-goals-limits-row__bottom {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -91,15 +101,18 @@
 
 .app-goals-limits-row__bottom span {
   min-width: 0;
-  overflow: hidden;
+  overflow: visible;
   color: rgba(255, 255, 255, .58);
   font-size: 12px;
   font-weight: 680;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  line-height: 1.25;
+  text-overflow: clip;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .app-goals-limits-row__bottom button {
+  flex: 0 0 auto;
   padding: 0 12px;
 }
 

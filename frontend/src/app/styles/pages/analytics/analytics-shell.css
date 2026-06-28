@@ -1,20 +1,26 @@
-/* Pack 188b: analytics v2 shell, tabs and period controls. */
-.analytics-v2-page {
+/* Analytics page shell, tabs and period controls. */
+.app-analytics-page {
   overflow-x: hidden;
 }
 
-.analytics-v2-page__inner {
-  gap: 14px;
+.app-analytics-page .analytics-v2-page__inner {
+  display: grid;
+  gap: 28px;
   max-width: 100%;
-  padding-bottom: 112px;
+  padding-top: max(20px, env(safe-area-inset-top));
+  padding-bottom: max(154px, calc(env(safe-area-inset-bottom) + 132px));
   overflow-x: hidden;
+}
+
+.app-analytics-page .screen-top-bar {
+  margin-bottom: 0;
 }
 
 .analytics-v2-tabs {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 8px;
-  padding: 5px;
+  padding: 6px;
   border: 1px solid rgba(255, 255, 255, 0.09);
   border-radius: 24px;
   background: rgba(255, 255, 255, 0.055);
@@ -35,12 +41,12 @@
 
 .analytics-v2-tabs button {
   min-width: 0;
-  min-height: 40px;
+  min-height: 42px;
   padding: 0 8px;
   border-radius: 18px;
   background: transparent;
   font-size: 12px;
-  font-weight: 800;
+  font-weight: 850;
   letter-spacing: -0.01em;
   transition: background 180ms ease, color 180ms ease, transform 180ms ease;
 }
@@ -57,97 +63,29 @@
 
 .analytics-v2-period {
   display: grid;
-  gap: 10px;
-  padding: 12px;
-}
-
-.analytics-v2-period__buttons {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 7px;
-}
-
-.analytics-v2-period__buttons button {
-  min-height: 34px;
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.06);
-  font-size: 11px;
-  font-weight: 800;
-}
-
-.analytics-v2-period__buttons button.is-active {
-  color: #ecfeff;
-  background: rgba(103, 232, 249, 0.18);
-  box-shadow: inset 0 0 0 1px rgba(103, 232, 249, 0.22);
-}
-
-.analytics-v2-period__calendar {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
-}
-
-.analytics-v2-period__calendar label {
-  display: grid;
-  gap: 5px;
-  min-width: 0;
-}
-
-.analytics-v2-period__calendar span,
-.analytics-v2-period p {
-  color: rgba(255, 255, 255, 0.52);
-  font-size: 11px;
-  font-weight: 700;
-}
-
-.analytics-v2-period__calendar input {
-  width: 100%;
-  min-width: 0;
-  min-height: 38px;
-  border: 1px solid rgba(255, 255, 255, 0.09);
-  border-radius: 15px;
-  background: rgba(255, 255, 255, 0.065);
-  color: #fff;
-  padding: 0 9px;
-  font: inherit;
-  font-size: 12px;
-  color-scheme: dark;
-}
-
-.analytics-v2-period p {
-  margin: 0;
-  text-align: center;
-}
-
-/* Pack 188d: analytics top breathing room and calendar range picker. */
-.app-analytics-page .analytics-v2-page__inner {
-  gap: 28px;
-  padding-top: max(20px, env(safe-area-inset-top));
-  padding-bottom: max(148px, calc(env(safe-area-inset-bottom) + 128px));
-}
-
-.analytics-v2-page .screen-top-bar {
-  margin-bottom: 2px;
-}
-
-.analytics-v2-tabs {
-  margin-top: 2px;
-  padding: 6px;
-}
-
-.analytics-v2-period {
   gap: 14px;
   padding: 18px;
   border-radius: 28px;
 }
 
 .analytics-v2-period__buttons {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 10px;
 }
 
 .analytics-v2-period__buttons button {
   min-height: 42px;
   border-radius: 18px;
+  background: rgba(255, 255, 255, 0.06);
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.analytics-v2-period__buttons button.is-active {
+  color: #ecfeff;
+  background: rgba(103, 232, 249, 0.18);
+  box-shadow: inset 0 0 0 1px rgba(103, 232, 249, 0.22);
 }
 
 .analytics-v2-period__range {
@@ -161,10 +99,12 @@
   background: rgba(255, 255, 255, 0.05);
 }
 
-.analytics-v2-period__range span {
+.analytics-v2-period__range span,
+.analytics-v2-period p,
+.analytics-v2-period__calendar span {
   color: rgba(255, 255, 255, 0.52);
   font-size: 11px;
-  font-weight: 850;
+  font-weight: 800;
 }
 
 .analytics-v2-period__range button {
@@ -181,6 +121,37 @@
   text-align: right;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
+}
+
+.analytics-v2-period p {
+  margin: 0;
+  text-align: center;
+}
+
+.analytics-v2-period__calendar {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.analytics-v2-period__calendar label {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.analytics-v2-period__calendar input {
+  width: 100%;
+  min-width: 0;
+  min-height: 38px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 15px;
+  background: rgba(255, 255, 255, 0.065);
+  color: #fff;
+  padding: 0 9px;
+  font: inherit;
+  font-size: 12px;
+  color-scheme: dark;
 }
 
 .analytics-v2-calendar-panel {
@@ -333,4 +304,34 @@
 .analytics-v2-calendar-panel__apply:disabled {
   opacity: 0.38;
   cursor: not-allowed;
+}
+
+@media (max-width: 430px) {
+  .app-analytics-page .analytics-v2-page__inner {
+    gap: 30px;
+  }
+
+  .analytics-v2-tabs {
+    gap: 6px;
+    padding: 5px;
+  }
+
+  .analytics-v2-tabs button {
+    min-height: 40px;
+    padding: 0 5px;
+    font-size: 11px;
+  }
+
+  .analytics-v2-period {
+    padding: 16px;
+  }
+
+  .analytics-v2-period__buttons {
+    gap: 8px;
+  }
+
+  .analytics-v2-period__buttons button {
+    min-height: 40px;
+    font-size: 11px;
+  }
 }

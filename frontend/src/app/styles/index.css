@@ -46,7 +46,6 @@
 @import "./pages/store/store.css";
 @import "./pages/payments/payments.css";
 @import "./pages/referral/referral.css";
-@import "./pages/analytics/analytics-layout.css";
 @import "./pages/admin/ai-training.css";
 @import "./pages/admin/admin-users.css";
 @import "./animations/app-motion.css";
@@ -80,12 +79,11 @@
 @import "./layout/compact-density.css";
 
 @import "./pages/dashboard/dashboard-compact-density.css";
-@import "./pages/analytics/analytics-profile-density.css";
 @import "./pages/analytics/analytics-shell.css";
+@import "./pages/analytics/analytics-layout.css";
 @import "./pages/analytics/analytics-charts.css";
 @import "./pages/analytics/analytics-lists.css";
 @import "./pages/analytics/analytics-foldouts.css";
-@import "./pages/analytics/analytics-clarity-spacing.css";
 
 @import "./pages/dashboard/dashboard-device-safety.css";
 
