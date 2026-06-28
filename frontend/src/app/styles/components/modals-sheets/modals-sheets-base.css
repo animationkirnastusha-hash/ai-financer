@@ -8,13 +8,6 @@ body.ai-composer-focused .ai-assistant-dock,
 body.ai-core-modal-open .ai-assistant-dock,
 body.ai-any-modal-open .ai-assistant-dock,
 body.ai-any-modal-open .ai-core-input-shell,
-body.ai-any-modal-open .voice-first-companion,
-body.ai-core-modal-open .voice-first-companion,
-body.ai-modal-open .voice-first-companion,
-body:has(.app-modal-backdrop) .voice-first-companion,
-body:has([data-ai-core-modal="true"]) .voice-first-companion {
-  display: none !important;
-}
 
 .app-modal-backdrop {
   position: fixed;

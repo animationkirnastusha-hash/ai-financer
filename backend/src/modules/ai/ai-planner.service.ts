@@ -103,7 +103,6 @@ export class AIPlannerService {
       'Use semantic understanding and the tool contract. Do not emulate old parsers, regex extraction, keyword shortcuts, or rule tables.',
       'The current USER message is the primary source of truth. Context helps only with existing entities, pronouns, continuations, defaults, and recent operations.',
       'Never output accountId, categoryId, goalId, transactionId, or raw database identifiers. Output natural entity names only; validator resolves them.',
-      'Treat voice text as noisy natural speech: missing punctuation, informal words, pauses and compact numbers are normal. Preserve the intended amount and entity if it is clear.',
       'Amounts must be positive plain numbers. Compact spoken amount forms with thousand meaning must be expanded to the full number. If the amount is uncertain, leave amount missing for validator clarification. Terse expense notes may list account, item and price pairs without grammar; if item prices are clear and no total is explicit, use their sum as amount and keep item names in items.',
       'Separate financial dimensions: tool/action, amount, currency, source account, destination account, transaction title, category, merchant/place, purchased items, tags, description.',
       'For transactions, use one broad category only. Merchant/place describes where it happened. A shop, gas station, marketplace, bank, person or place is not automatically a category.',
@@ -118,7 +117,6 @@ export class AIPlannerService {
       'Requests to show nearest/upcoming payments, loans, credits, subscriptions or required payments must use show_obligations. Requests to mark a loan/subscription payment paid must use mark_obligation_paid. Requests to change a loan/subscription payment must use update_obligation.',
       'Requests to set, show, change or delete spending limits/budget limits must use create_spending_limit, show_spending_limits, update_spending_limit or delete_spending_limit. Limits are app data, not coaching text.',
       'If essential data is missing, leave the field missing/null. Validator will ask a short clarification. Do not invent accounts, amounts, categories, dates, or prices.',
-      'If USER contains VOICE_SESSION_COMMAND, merge segments into one coherent final intent. Later correction segments override conflicting earlier details and non-conflicting details remain.',
       'For screen-opening/navigation requests, do not invent financial actions. Reply naturally; UI navigation may handle screens separately.',
       'Do not include reasoning. Do not explain the plan. Do not include examples in the JSON output.',
     ].join(' ');
@@ -149,7 +147,6 @@ export class AIPlannerService {
       'For undo/cancel last completed operation, use undo_last_action. For cancelling a pending unconfirmed action, the UI lifecycle handles it.',
       'For corrections to an operation, use update_transaction and identify target with target/transaction fields.',
       'For first account or missing account cases, provide known fields and leave missing fields empty; validator will ask the needed question.',
-      'For VOICE_SESSION_COMMAND, produce exactly one final plan after applying corrections. Never execute both old and corrected meanings.',
       'For off-topic or capability questions, return reply mode with empty actions unless a show_* tool directly matches.',
       'For English USER messages, set language to "en" in the plan. For Russian USER messages, set language to "ru".',
       'CTX:', JSON.stringify(context),
@@ -197,7 +194,6 @@ export class AIPlannerService {
         'If the request requires multiple financial actions, return multiple tool calls in order.',
         'If meaning is unclear, return a minimal safe action plan with missing/null ambiguous fields for validator clarification.',
         'For transactions, separate category from merchant/place/items/tags. Preserve named goods/services in items. Never copy the raw user sentence as title.',
-        'For VOICE_SESSION_COMMAND, merge segments into one final intent. Later correction segments override conflicting earlier details. Preserve earlier non-conflicting details.',
       ].join(' '),
       prompt: [
         'TOOLS:',

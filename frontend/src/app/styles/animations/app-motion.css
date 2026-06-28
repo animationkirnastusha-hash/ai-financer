@@ -96,8 +96,6 @@ button,
 .app-compact-menu-button,
 .app-chip,
 .app-choice,
-.voice-first-control-button,
-.voice-first-lock-action,
 .text-chat-overlay__send,
 .text-chat-overlay__sample,
 .notification-sheet__icon-button {
@@ -118,8 +116,6 @@ button:active,
 .app-compact-menu-button:active,
 .app-chip:active,
 .app-choice:active,
-.voice-first-control-button:active,
-.voice-first-lock-action:active,
 .text-chat-overlay__send:active,
 .text-chat-overlay__sample:active,
 .notification-sheet__icon-button:active {
@@ -143,16 +139,14 @@ textarea:focus-visible {
 
 .app-modal-backdrop,
 .drawer-backdrop,
-.text-chat-overlay,
-.voice-pending-confirm-modal {
+.text-chat-overlay {
   animation: app-fade-up var(--motion-base) var(--motion-ease-out) both;
 }
 
 .app-modal-sheet,
 .drawer,
 .bottom-sheet,
-.text-chat-overlay__panel,
-.voice-pending-confirm-modal__sheet,
+.text-chat-overlay__panel__sheet,
 .notification-sheet,
 .command-list-sheet,
 .ai-menu-sheet {
@@ -178,8 +172,6 @@ textarea:focus-visible {
     opacity var(--motion-base) var(--motion-ease);
 }
 
-.voice-first-companion[data-phase="listening"] .voice-first-control-button,
-.voice-first-companion[data-phase="thinking"] .voice-first-control-button,
 .ai-companion-control[data-mood="listening"],
 .ai-companion-control[data-mood="thinking"] {
   animation: app-pulse-soft 1.45s var(--motion-ease) infinite;
@@ -188,8 +180,7 @@ textarea:focus-visible {
 .text-chat-overlay__message,
 .chat-message,
 .finance-preview-card,
-.pending-action-card,
-.voice-clarification-card {
+.pending-action-card {
   animation: app-fade-up var(--motion-base) var(--motion-ease-out) both;
 }
 

@@ -9,7 +9,6 @@ const checks = [
   ['goals/limits', 'scripts/smoke/check-goals-limits.mjs'],
   ['obligations/reports', 'scripts/smoke/check-obligations-reports.mjs'],
   ['analytics', 'scripts/smoke/check-analytics.mjs'],
-  ['voice/status', 'scripts/smoke/check-voice-status.mjs'],
   ['ai base', 'scripts/smoke/check-ai-base.mjs'],
   ['reset/admin', 'scripts/smoke/check-reset-admin.mjs'],
 ];

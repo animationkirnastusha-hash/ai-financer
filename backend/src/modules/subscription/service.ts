@@ -1,20 +1,19 @@
-import { prisma } from '../../lib/prisma';
-import { BadRequestError, ForbiddenError, NotFoundError } from '../../shared/core/errors';
-import type { AIOperationEvent, Subscription } from '@prisma/client';
+import { prisma } from "../../lib/prisma";
+import { BadRequestError, NotFoundError } from "../../shared/core/errors";
+import type { AIOperationEvent, Subscription } from "@prisma/client";
 
-export type StoreProduct = 'premium' | 'bundle_try' | 'bundle_week';
-export type SubscriptionProduct = 'premium';
-export type BundleProduct = 'bundle_try' | 'bundle_week';
-export type GrantMode = 'days' | 'lifetime';
-export type SubscriptionUsageKind = 'voiceCommands' | 'receiptScans' | 'advancedReports';
+export type StoreProduct = "premium" | "bundle_try" | "bundle_week";
+export type SubscriptionProduct = "premium";
+export type BundleProduct = "bundle_try" | "bundle_week";
+export type GrantMode = "days" | "lifetime";
+export type SubscriptionUsageKind = "receiptScans" | "advancedReports";
 
 export type SubscriptionLimits = {
-  voiceCommandsPerDay: number;
   receiptScansPerMonth: number;
   advancedReportsPerMonth: number;
 };
 
-type SubscriptionStatusCode = 'free' | 'trial' | 'premium';
+type SubscriptionStatusCode = "free" | "trial" | "premium";
 
 type SubscriptionAccess = {
   status: SubscriptionStatusCode;
@@ -31,8 +30,6 @@ type SubscriptionFeatureMap = Record<string, boolean> & {
   referralRewards: boolean;
   basicReports: boolean;
   basicLimits: boolean;
-  basicVoicePin: boolean;
-  longVoiceDialog: boolean;
   advancedAnalytics: boolean;
   advancedReports: boolean;
   receiptScan: boolean;
@@ -46,7 +43,6 @@ type UsageLimitBucket = {
 };
 
 type SubscriptionUsageSnapshot = {
-  voiceCommandsToday: UsageLimitBucket;
   receiptScansThisMonth: UsageLimitBucket;
   advancedReportsThisMonth: UsageLimitBucket;
 };
@@ -62,14 +58,12 @@ type ActivePackage = {
   product: BundleProduct;
   title: string;
   expiresAt: string;
-  voiceCommands: number;
   receiptScans: number;
   advancedReports: number;
   reports: number;
 };
 
 type PackageCreditsSnapshot = {
-  voiceCommands: PackageCreditBucket;
   receiptScans: PackageCreditBucket;
   advancedReports: PackageCreditBucket;
   reports: PackageCreditBucket;
@@ -95,33 +89,32 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 const TRIAL_DAYS = 7;
 
 const USAGE_EVENT = {
-  voiceCommands: 'subscription.voice_command.used',
-  receiptScans: 'subscription.receipt_scan.used',
-  advancedReports: 'subscription.advanced_report.used',
+  receiptScans: "subscription.receipt_scan.used",
+  advancedReports: "subscription.advanced_report.used",
 } as const;
 
-const BUNDLE_GRANTED_EVENT = 'subscription.bundle.granted';
+const BUNDLE_GRANTED_EVENT = "subscription.bundle.granted";
 
-const BUNDLE_CATALOG: Record<BundleProduct, {
-  title: string;
-  days: number;
-  voiceCommands: number;
-  receiptScans: number;
-  advancedReports: number;
-  reports: number;
-}> = {
+const BUNDLE_CATALOG: Record<
+  BundleProduct,
+  {
+    title: string;
+    days: number;
+    receiptScans: number;
+    advancedReports: number;
+    reports: number;
+  }
+> = {
   bundle_try: {
-    title: 'Попробовать Фину',
+    title: "Попробовать Фину",
     days: 30,
-    voiceCommands: 10,
     receiptScans: 2,
     advancedReports: 1,
     reports: 0,
   },
   bundle_week: {
-    title: 'На неделю',
+    title: "На неделю",
     days: 30,
-    voiceCommands: 30,
     receiptScans: 5,
     advancedReports: 2,
     reports: 1,
@@ -142,11 +135,6 @@ function addDaysFromBase(base: Date | null | undefined, days: number): Date {
   return new Date(start.getTime() + Math.max(1, Math.round(days)) * DAY_MS);
 }
 
-function startOfDay(date = new Date()): Date {
-  const value = new Date(date);
-  value.setHours(0, 0, 0, 0);
-  return value;
-}
 
 function startOfMonth(date = new Date()): Date {
   return new Date(date.getFullYear(), date.getMonth(), 1);
@@ -157,42 +145,46 @@ function clampRemaining(limit: number, used: number): number {
 }
 
 function normalizeProduct(_value: unknown): SubscriptionProduct {
-  return 'premium';
+  return "premium";
 }
 
 function normalizeBundleProduct(value: unknown): BundleProduct {
-  if (value === 'bundle_week') return 'bundle_week';
-  if (value === 'bundle_try') return 'bundle_try';
-  throw new BadRequestError('Unknown bundle');
+  if (value === "bundle_week") return "bundle_week";
+  if (value === "bundle_try") return "bundle_try";
+  throw new BadRequestError("Unknown bundle");
 }
 
 function normalizeDays(value: unknown): number {
-  const parsed = typeof value === 'number' ? value : Number(value);
+  const parsed = typeof value === "number" ? value : Number(value);
   if (!Number.isFinite(parsed)) return 30;
   return Math.min(3650, Math.max(1, Math.round(parsed)));
 }
 
-function parsePayload(value: string | null | undefined): Record<string, unknown> | null {
+function parsePayload(
+  value: string | null | undefined,
+): Record<string, unknown> | null {
   if (!value) return null;
   try {
     const parsed = JSON.parse(value);
-    return parsed && typeof parsed === 'object' ? parsed as Record<string, unknown> : null;
+    return parsed && typeof parsed === "object"
+      ? (parsed as Record<string, unknown>)
+      : null;
   } catch {
     return null;
   }
 }
 
 function readNumber(value: unknown): number {
-  const parsed = typeof value === 'number' ? value : Number(value);
+  const parsed = typeof value === "number" ? value : Number(value);
   return Number.isFinite(parsed) ? Math.max(0, Math.round(parsed)) : 0;
 }
 
 function readString(value: unknown): string | null {
-  return typeof value === 'string' && value.trim() ? value.trim() : null;
+  return typeof value === "string" && value.trim() ? value.trim() : null;
 }
 
 function isBundleUsage(event: AIOperationEvent): boolean {
-  return parsePayload(event.payload)?.creditSource === 'bundle';
+  return parsePayload(event.payload)?.creditSource === "bundle";
 }
 
 function buildCreditBucket(granted: number, used: number): PackageCreditBucket {
@@ -205,7 +197,7 @@ export class SubscriptionService {
       where: { id: userId },
       select: { id: true, tier: true },
     });
-    if (!user) throw new NotFoundError('User not found');
+    if (!user) throw new NotFoundError("User not found");
     return user;
   }
 
@@ -222,10 +214,18 @@ export class SubscriptionService {
   private getAccess(subscription: Subscription | null): SubscriptionAccess {
     const now = new Date();
     const trialActive = isFuture(subscription?.trialUntil, now);
-    const premiumActive = Boolean(subscription?.premiumLifetime || isFuture(subscription?.premiumUntil, now) || trialActive);
+    const premiumActive = Boolean(
+      subscription?.premiumLifetime ||
+      isFuture(subscription?.premiumUntil, now) ||
+      trialActive,
+    );
     const status: SubscriptionStatusCode = premiumActive
-      ? (trialActive && !subscription?.premiumLifetime && !isFuture(subscription?.premiumUntil, now) ? 'trial' : 'premium')
-      : 'free';
+      ? trialActive &&
+        !subscription?.premiumLifetime &&
+        !isFuture(subscription?.premiumUntil, now)
+        ? "trial"
+        : "premium"
+      : "free";
 
     return {
       status,
@@ -238,17 +238,20 @@ export class SubscriptionService {
     };
   }
 
-  private getFeatureMap(access: { hasPremium: boolean }, packageCredits: PackageCreditsSnapshot) {
+  private getFeatureMap(
+    access: { hasPremium: boolean },
+    packageCredits: PackageCreditsSnapshot,
+  ) {
     const hasReceiptCredits = packageCredits.receiptScans.remaining > 0;
-    const hasAnalysisCredits = packageCredits.advancedReports.remaining > 0 || packageCredits.reports.remaining > 0;
+    const hasAnalysisCredits =
+      packageCredits.advancedReports.remaining > 0 ||
+      packageCredits.reports.remaining > 0;
 
     return {
       store: true,
       referralRewards: true,
       basicReports: true,
       basicLimits: true,
-      basicVoicePin: true,
-      longVoiceDialog: access.hasPremium,
       advancedAnalytics: access.hasPremium || hasAnalysisCredits,
       advancedReports: access.hasPremium || hasAnalysisCredits,
       receiptScan: access.hasPremium || hasReceiptCredits,
@@ -258,9 +261,9 @@ export class SubscriptionService {
 
   private getLimits(access: { hasPremium: boolean }): SubscriptionLimits {
     if (access.hasPremium) {
-      return { voiceCommandsPerDay: 500, receiptScansPerMonth: 100, advancedReportsPerMonth: 50 };
+      return { receiptScansPerMonth: 100, advancedReportsPerMonth: 50 };
     }
-    return { voiceCommandsPerDay: 10, receiptScansPerMonth: 0, advancedReportsPerMonth: 0 };
+    return { receiptScansPerMonth: 0, advancedReportsPerMonth: 0 };
   }
 
   async getStatus(userId: string): Promise<SubscriptionStatus> {
@@ -288,12 +291,11 @@ export class SubscriptionService {
     const now = new Date();
     const grantEvents = await prisma.aIOperationEvent.findMany({
       where: { userId, type: BUNDLE_GRANTED_EVENT },
-      orderBy: { createdAt: 'asc' },
+      orderBy: { createdAt: "asc" },
       take: 200,
     });
 
     const activePacks: ActivePackage[] = [];
-    let voiceGranted = 0;
     let receiptsGranted = 0;
     let analysesGranted = 0;
     let reportsGranted = 0;
@@ -305,45 +307,52 @@ export class SubscriptionService {
       const expiresAt = expiresText ? new Date(expiresText) : null;
       if (!expiresAt || expiresAt.getTime() <= now.getTime()) continue;
 
-      const product = payload?.product === 'bundle_week' ? 'bundle_week' : 'bundle_try';
+      const product =
+        payload?.product === "bundle_week" ? "bundle_week" : "bundle_try";
       const pack: ActivePackage = {
         id: event.id,
         product,
         title: readString(payload?.title) ?? BUNDLE_CATALOG[product].title,
         expiresAt: expiresAt.toISOString(),
-        voiceCommands: readNumber(payload?.voiceCommands),
         receiptScans: readNumber(payload?.receiptScans),
         advancedReports: readNumber(payload?.advancedReports),
         reports: readNumber(payload?.reports),
       };
 
       activePacks.push(pack);
-      voiceGranted += pack.voiceCommands;
       receiptsGranted += pack.receiptScans;
       analysesGranted += pack.advancedReports;
       reportsGranted += pack.reports;
-      if (!earliestActiveGrant || event.createdAt.getTime() < earliestActiveGrant.getTime()) earliestActiveGrant = event.createdAt;
+      if (
+        !earliestActiveGrant ||
+        event.createdAt.getTime() < earliestActiveGrant.getTime()
+      )
+        earliestActiveGrant = event.createdAt;
     }
 
     const usageEvents = earliestActiveGrant
       ? await prisma.aIOperationEvent.findMany({
-        where: {
-          userId,
-          type: { in: [USAGE_EVENT.voiceCommands, USAGE_EVENT.receiptScans, USAGE_EVENT.advancedReports] },
-          createdAt: { gte: earliestActiveGrant },
-        },
-        orderBy: { createdAt: 'asc' },
-        take: 500,
-      })
+          where: {
+            userId,
+            type: {
+              in: [USAGE_EVENT.receiptScans, USAGE_EVENT.advancedReports],
+            },
+            createdAt: { gte: earliestActiveGrant },
+          },
+          orderBy: { createdAt: "asc" },
+          take: 500,
+        })
       : [];
 
     const bundleUsageEvents = usageEvents.filter(isBundleUsage);
-    const voiceUsed = bundleUsageEvents.filter((event) => event.type === USAGE_EVENT.voiceCommands).length;
-    const receiptsUsed = bundleUsageEvents.filter((event) => event.type === USAGE_EVENT.receiptScans).length;
-    const analysesUsed = bundleUsageEvents.filter((event) => event.type === USAGE_EVENT.advancedReports).length;
+    const receiptsUsed = bundleUsageEvents.filter(
+      (event) => event.type === USAGE_EVENT.receiptScans,
+    ).length;
+    const analysesUsed = bundleUsageEvents.filter(
+      (event) => event.type === USAGE_EVENT.advancedReports,
+    ).length;
 
     return {
-      voiceCommands: buildCreditBucket(voiceGranted, voiceUsed),
       receiptScans: buildCreditBucket(receiptsGranted, receiptsUsed),
       advancedReports: buildCreditBucket(analysesGranted, analysesUsed),
       reports: buildCreditBucket(reportsGranted, 0),
@@ -351,90 +360,85 @@ export class SubscriptionService {
     };
   }
 
-  async getUsageSnapshot(userId: string, limitsInput?: SubscriptionLimits): Promise<SubscriptionUsageSnapshot> {
-    const limits: SubscriptionLimits = limitsInput ?? (await this.getStatus(userId)).limits;
-    const today = startOfDay();
+  async getUsageSnapshot(
+    userId: string,
+    limitsInput?: SubscriptionLimits,
+  ): Promise<SubscriptionUsageSnapshot> {
+    const limits: SubscriptionLimits =
+      limitsInput ?? (await this.getStatus(userId)).limits;
     const month = startOfMonth();
 
-    const [voiceCommandsToday, receiptScansThisMonth, advancedReportsThisMonth] = await Promise.all([
-      prisma.aIOperationEvent.count({
-        where: {
-          userId,
-          type: USAGE_EVENT.voiceCommands,
-          createdAt: { gte: today },
-        },
-      }),
-      prisma.aIOperationEvent.count({
-        where: {
-          userId,
-          type: USAGE_EVENT.receiptScans,
-          createdAt: { gte: month },
-        },
-      }),
-      prisma.aIOperationEvent.count({
-        where: {
-          userId,
-          type: USAGE_EVENT.advancedReports,
-          createdAt: { gte: month },
-        },
-      }),
-    ]);
+    const [receiptScansThisMonth, advancedReportsThisMonth] = await Promise.all(
+      [
+        prisma.aIOperationEvent.count({
+          where: {
+            userId,
+            type: USAGE_EVENT.receiptScans,
+            createdAt: { gte: month },
+          },
+        }),
+        prisma.aIOperationEvent.count({
+          where: {
+            userId,
+            type: USAGE_EVENT.advancedReports,
+            createdAt: { gte: month },
+          },
+        }),
+      ],
+    );
 
     return {
-      voiceCommandsToday: {
-        used: voiceCommandsToday,
-        limit: limits.voiceCommandsPerDay,
-        remaining: clampRemaining(limits.voiceCommandsPerDay, voiceCommandsToday),
-      },
       receiptScansThisMonth: {
         used: receiptScansThisMonth,
         limit: limits.receiptScansPerMonth,
-        remaining: clampRemaining(limits.receiptScansPerMonth, receiptScansThisMonth),
+        remaining: clampRemaining(
+          limits.receiptScansPerMonth,
+          receiptScansThisMonth,
+        ),
       },
       advancedReportsThisMonth: {
         used: advancedReportsThisMonth,
         limit: limits.advancedReportsPerMonth,
-        remaining: clampRemaining(limits.advancedReportsPerMonth, advancedReportsThisMonth),
+        remaining: clampRemaining(
+          limits.advancedReportsPerMonth,
+          advancedReportsThisMonth,
+        ),
       },
     };
   }
 
-  async assertVoiceCommandAllowed(userId: string): Promise<UsageLimitBucket> {
-    const status = await this.getStatus(userId);
-    const voice = status.usage.voiceCommandsToday;
-    if (voice.remaining > 0) return voice;
-
-    const packageVoice = status.packageCredits.voiceCommands;
-    if (packageVoice.remaining > 0) {
-      return { used: packageVoice.used, limit: packageVoice.granted, remaining: packageVoice.remaining };
+  private getUsageCreditSource(
+    kind: SubscriptionUsageKind,
+    status: SubscriptionStatus,
+  ): "base" | "subscription" | "bundle" {
+    if (kind === "receiptScans") {
+      if (
+        status.access.hasPremium &&
+        status.usage.receiptScansThisMonth.remaining > 0
+      )
+        return "subscription";
+      if (status.packageCredits.receiptScans.remaining > 0) return "bundle";
+      return status.access.hasPremium ? "subscription" : "base";
     }
 
-    throw new ForbiddenError('Voice command limit reached', {
-      feature: 'voiceCommands',
-      used: voice.used,
-      limit: voice.limit,
-    });
+    if (
+      status.access.hasPremium &&
+      status.usage.advancedReportsThisMonth.remaining > 0
+    )
+      return "subscription";
+    if (
+      status.packageCredits.advancedReports.remaining > 0 ||
+      status.packageCredits.reports.remaining > 0
+    )
+      return "bundle";
+    return status.access.hasPremium ? "subscription" : "base";
   }
 
-  private getUsageCreditSource(kind: SubscriptionUsageKind, status: SubscriptionStatus): 'base' | 'subscription' | 'bundle' {
-    if (kind === 'voiceCommands') {
-      if (status.usage.voiceCommandsToday.remaining > 0) return status.access.hasPremium ? 'subscription' : 'base';
-      if (status.packageCredits.voiceCommands.remaining > 0) return 'bundle';
-      return status.access.hasPremium ? 'subscription' : 'base';
-    }
-
-    if (kind === 'receiptScans') {
-      if (status.access.hasPremium && status.usage.receiptScansThisMonth.remaining > 0) return 'subscription';
-      if (status.packageCredits.receiptScans.remaining > 0) return 'bundle';
-      return status.access.hasPremium ? 'subscription' : 'base';
-    }
-
-    if (status.access.hasPremium && status.usage.advancedReportsThisMonth.remaining > 0) return 'subscription';
-    if (status.packageCredits.advancedReports.remaining > 0 || status.packageCredits.reports.remaining > 0) return 'bundle';
-    return status.access.hasPremium ? 'subscription' : 'base';
-  }
-
-  async recordUsage(userId: string, kind: SubscriptionUsageKind, details?: Record<string, unknown>): Promise<SubscriptionStatus> {
+  async recordUsage(
+    userId: string,
+    kind: SubscriptionUsageKind,
+    details?: Record<string, unknown>,
+  ): Promise<SubscriptionStatus> {
     const statusBefore = await this.getStatus(userId);
     const creditSource = this.getUsageCreditSource(kind, statusBefore);
 
@@ -442,16 +446,19 @@ export class SubscriptionService {
       data: {
         userId,
         type: USAGE_EVENT[kind],
-        severity: 'info',
+        severity: "info",
         scope: kind,
-        message: 'usage_recorded',
+        message: "usage_recorded",
         payload: JSON.stringify({ ...(details ?? {}), creditSource }),
       },
     });
     return this.getStatus(userId);
   }
 
-  async getFeatureAccess(userId: string, feature: string): Promise<{
+  async getFeatureAccess(
+    userId: string,
+    feature: string,
+  ): Promise<{
     feature: string;
     allowed: boolean;
     access: SubscriptionAccess;
@@ -471,14 +478,17 @@ export class SubscriptionService {
   }
 
   private async getReferralBalance(userId: string): Promise<number> {
-    const user = await prisma.user.findUnique({ where: { id: userId }, select: { referralBalance: true } });
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { referralBalance: true },
+    });
     return user?.referralBalance ?? 0;
   }
 
   async startTrial(userId: string): Promise<SubscriptionStatus> {
     const subscription = await this.ensureSubscription(userId);
     if (subscription.trialStartedAt) {
-      throw new BadRequestError('Trial already used');
+      throw new BadRequestError("Trial already used");
     }
 
     const now = new Date();
@@ -532,7 +542,10 @@ export class SubscriptionService {
     return this.getStatus(userId);
   }
 
-  async grantBundle(userId: string, productInput: unknown): Promise<SubscriptionStatus> {
+  async grantBundle(
+    userId: string,
+    productInput: unknown,
+  ): Promise<SubscriptionStatus> {
     await this.ensureUser(userId);
     const product = normalizeBundleProduct(productInput);
     const bundle = BUNDLE_CATALOG[product];
@@ -543,13 +556,12 @@ export class SubscriptionService {
       data: {
         userId,
         type: BUNDLE_GRANTED_EVENT,
-        severity: 'info',
-        scope: 'store_bundle',
-        message: 'bundle_granted',
+        severity: "info",
+        scope: "store_bundle",
+        message: "bundle_granted",
         payload: JSON.stringify({
           product,
           title: bundle.title,
-          voiceCommands: bundle.voiceCommands,
           receiptScans: bundle.receiptScans,
           advancedReports: bundle.advancedReports,
           reports: bundle.reports,
@@ -574,11 +586,11 @@ export class SubscriptionService {
     return this.getStatus(userId);
   }
 
-  async syncUserTier(userId: string): Promise<'FREE' | 'PREMIUM'> {
+  async syncUserTier(userId: string): Promise<"FREE" | "PREMIUM"> {
     await this.ensureUser(userId);
     const subscription = await this.ensureSubscription(userId);
     const access = this.getAccess(subscription);
-    const tier: 'FREE' | 'PREMIUM' = access.hasPremium ? 'PREMIUM' : 'FREE';
+    const tier: "FREE" | "PREMIUM" = access.hasPremium ? "PREMIUM" : "FREE";
     await prisma.user.update({ where: { id: userId }, data: { tier } });
     return tier;
   }

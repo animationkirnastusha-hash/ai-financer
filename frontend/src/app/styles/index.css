@@ -16,8 +16,6 @@
 @import "./components/modals-sheets/modal-gesture-swipe.css";
 @import "./components/modal-viewport-safety.css";
 @import "./layout/navigation-swipe.css";
-@import "./features/voice/fina.css";
-@import "./features/voice/overlay-appearance.css";
 @import "./pages/dashboard/dashboard.css";
 @import "./pages/accounts/accounts.css";
 @import "./pages/taxonomy/taxonomy.css";
@@ -31,10 +29,8 @@
 @import "./layout/mobile-adaptive/mobile-adaptive-base.css";
 @import "./layout/mobile-adaptive/mobile-adaptive-cards.css";
 @import "./utilities/swipe-text-guards.css";
-@import "./features/voice/voice-compatibility.css";
 @import "./components/chat-modal-composer.css";
 @import "./pages/shared-product-screens/product-forms.css";
-@import "./features/voice/voice-session.css";
 @import "./features/chat/chat-input-modal.css";
 @import "./features/onboarding/product-learning.css";
 @import "./pages/obligations/obligations-summary.css";
@@ -47,7 +43,6 @@
 @import "./features/chat/text-chat-overlay/text-chat-overlay-messages.css";
 @import "./features/chat/text-chat-overlay/text-chat-overlay-actions.css";
 @import "./pages/accounts/account-details-sheet.css";
-@import "./features/chat/voice-composer.css";
 @import "./pages/goals-limits/goals-limits.css";
 @import "./pages/store/store.css";
 @import "./pages/payments/payments.css";
@@ -92,8 +87,6 @@
 @import "./pages/analytics/analytics-lists.css";
 @import "./pages/analytics/analytics-foldouts.css";
 
-@import "./features/voice/voice-permission-compact.css";
-@import "./features/voice/voice-floating-placement.css";
 @import "./pages/dashboard/dashboard-device-safety.css";
 
 

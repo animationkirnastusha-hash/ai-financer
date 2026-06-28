@@ -4,8 +4,6 @@ import { AuthService } from '../auth/service';
 import { AIService } from '../ai/service';
 import { aiIdempotencyService } from '../ai/ai-idempotency.service';
 import { aiResponseNormalizer } from '../ai/ai-response-normalizer.service';
-import { subscriptionService } from '../subscription/service';
-import { voiceService } from '../../services/voice.service';
 import { normalizeUserLocale, type UserLocale } from '../users/lib/user-locale';
 import { botT, DEFAULT_BOT_LOCALE, getBotLanguageLabels } from './bot-locale';
 import { telegramBotClient } from './telegram-client';
@@ -155,7 +153,6 @@ function buildMenuText(page: BotMenuPage, locale: UserLocale) {
       `• ${botT(locale, 'featuresFinance')}`,
       `• ${botT(locale, 'featuresGoals')}`,
       `• ${botT(locale, 'featuresAnalytics')}`,
-      `• ${botT(locale, 'featuresVoice')}`,
     ].join('\n');
   }
 
@@ -281,16 +278,9 @@ function buildResultText(result: AIResult, locale: UserLocale) {
 function getUserFacingError(error: unknown, locale: UserLocale) {
   if (error && typeof error === 'object' && 'code' in error) {
     const code = String((error as { code?: unknown }).code || '');
-    if (code === 'FORBIDDEN') return botT(locale, 'limitEnded');
+    if (code === 'FORBIDDEN') return botT(locale, 'unavailable');
     if (code === 'BAD_REQUEST') return botT(locale, 'badRequest');
     if (code === 'UNAUTHORIZED') return botT(locale, 'unauthorized');
-  }
-
-  if (error instanceof Error) {
-    if (error.name === 'VoiceTranscriptionNotConfiguredError') return botT(locale, 'voiceUnavailable');
-    if (error.name === 'VoiceAudioTooLargeError') return botT(locale, 'voiceTooLarge');
-    if (error.name === 'VoiceAudioUnsupportedError') return botT(locale, 'voiceUnsupported');
-    if (error.name === 'VoiceProviderRequestError') return botT(locale, 'voiceProvider');
   }
 
   return botT(locale, 'failed');
@@ -367,61 +357,14 @@ async function sendStart(chatId: number | string, locale: UserLocale) {
   return { handled: true, action: 'start_sent' };
 }
 
-function readAudioPayload(message: TelegramBotMessage) {
-  if (message.voice?.file_id) {
-    return {
-      fileId: message.voice.file_id,
-      mimeType: message.voice.mime_type || 'audio/ogg',
-      originalName: `telegram-voice-${message.voice.file_unique_id || message.voice.file_id}.ogg`,
-    };
-  }
 
-  if (message.audio?.file_id) {
-    return {
-      fileId: message.audio.file_id,
-      mimeType: message.audio.mime_type || 'audio/mpeg',
-      originalName: message.audio.file_name || `telegram-audio-${message.audio.file_unique_id || message.audio.file_id}.mp3`,
-    };
-  }
+async function runAiCommand(userId: string, command: string, idempotencyKey: string) {
+  const payload = { command, source: 'text' };
 
-  return null;
-}
-
-async function transcribeTelegramAudio(message: TelegramBotMessage, locale: UserLocale) {
-  const audio = readAudioPayload(message);
-  if (!audio) return null;
-
-  const file = await telegramBotClient.getFile(audio.fileId);
-  const buffer = await telegramBotClient.downloadFile(file.file_path || '');
-
-  return voiceService.transcribe({
-    buffer,
-    mimeType: audio.mimeType,
-    originalName: file.file_path?.split('/').pop() || audio.originalName,
-    language: locale,
-  });
-}
-
-async function runAiCommand(userId: string, command: string, source: 'text' | 'voice', idempotencyKey: string) {
-  const payload = { command, source };
-  const voiceUsageBefore = source === 'voice' ? await subscriptionService.assertVoiceCommandAllowed(userId) : null;
-
-  const { result, cached } = await withIdempotency(userId, idempotencyKey, payload, async () => {
-    const raw = await aiService.handleCommand(userId, command, source === 'voice'
-      ? { execute: true, source: 'voice' }
-      : { execute: true, source: 'text' });
+  const { result } = await withIdempotency(userId, idempotencyKey, payload, async () => {
+    const raw = await aiService.handleCommand(userId, command, { execute: true, source: 'text' });
     return aiResponseNormalizer.normalize(raw);
   });
-
-  if (source === 'voice' && !cached && result.success && (result.executed || result.requiresConfirmation)) {
-    await subscriptionService.recordUsage(userId, 'voiceCommands', {
-      source: 'telegram_bot',
-      intent: result.intent,
-      executed: result.executed,
-      requiresConfirmation: result.requiresConfirmation,
-      voiceUsageBefore,
-    });
-  }
 
   return result;
 }
@@ -474,7 +417,7 @@ async function handleFinancialMessage(message: TelegramBotMessage) {
     }
 
     try {
-      const result = await runAiCommand(user.id, text, 'text', `text:${chatId}:${messageId}`);
+      const result = await runAiCommand(user.id, text, `text:${chatId}:${messageId}`);
       await telegramBotClient.sendMessage(
         chatId,
         buildResultText(result, locale),
@@ -488,32 +431,6 @@ async function handleFinancialMessage(message: TelegramBotMessage) {
     }
   }
 
-  const audio = readAudioPayload(message);
-  if (audio) {
-    if (!storedLocale) return sendLanguageChoice(chatId);
-
-    try {
-      const transcript = await transcribeTelegramAudio(message, locale);
-      const command = transcript?.text?.trim() || '';
-
-      if (!command) {
-        await telegramBotClient.sendMessage(chatId, escapeHtml(botT(locale, 'voiceEmpty')));
-        return { handled: true, action: 'voice_empty' };
-      }
-
-      const result = await runAiCommand(user.id, command, 'voice', `voice:${chatId}:${messageId}`);
-      await telegramBotClient.sendMessage(
-        chatId,
-        buildResultText(result, locale),
-        result.requiresConfirmation && result.meta?.pendingActionId ? buildConfirmMarkup(result.meta.pendingActionId, locale) : undefined,
-      );
-      return { handled: true, action: 'ai_voice_handled', resultIntent: result.intent, executed: result.executed };
-    } catch (error) {
-      console.warn('[telegram-bot] voice command failed', error instanceof Error ? error.message : error);
-      await telegramBotClient.sendMessage(chatId, escapeHtml(getUserFacingError(error, locale)), buildOpenAppMarkup(locale));
-      return { handled: true, action: 'ai_voice_failed' };
-    }
-  }
 
   if (!storedLocale) return sendLanguageChoice(chatId);
 

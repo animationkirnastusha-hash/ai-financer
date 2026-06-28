@@ -26,45 +26,6 @@
   box-shadow: 0 16px 34px rgba(0,0,0,.32);
 }
 
-.voice-first-companion {
-  right: 10px !important;
-  bottom: var(--ai-companion-bottom) !important;
-  z-index: 74 !important;
-  transform: translate3d(0,0,0) !important;
-  backface-visibility: hidden;
-  contain: layout paint;
-}
-.voice-first-companion .ai-companion-control {
-  width: var(--ai-companion-size) !important;
-  height: var(--ai-companion-size) !important;
-}
-.voice-first-companion .ai-companion-avatar {
-  width: calc(var(--ai-companion-size) - 8px) !important;
-  height: calc(var(--ai-companion-size) - 8px) !important;
-}
-.voice-first-companion__controls { align-items: flex-end !important; }
-.voice-first-status { display: none !important; }
-.voice-first-mic-toggle { display: none !important; }
-.voice-first-bubble {
-  max-width: min(246px, calc(100vw - 116px)) !important;
-  margin-right: 6px;
-  margin-bottom: 2px;
-  transform: translate3d(0,0,0) !important;
-  filter: none !important;
-  animation: voiceBubbleStable54 .18s cubic-bezier(.2,.8,.2,1) both !important;
-  will-change: opacity, transform;
-}
-@keyframes voiceBubbleStable54 {
-  from { opacity: 0; transform: translate3d(4px, 5px, 0) scale(.985); }
-  to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
-}
-body:has(.app-modal-backdrop) .voice-first-companion,
-body:has(.app-bottom-sheet) .voice-first-companion,
-body:has(.drawer-backdrop) .voice-first-companion,
-body:has([role="dialog"]) .voice-first-companion,
-body.ai-modal-open .voice-first-companion,
-body.ai-any-modal-open .voice-first-companion,
-body.ai-core-modal-open .voice-first-companion { display: none !important; }
 
 /* restore main page and action cards */
 

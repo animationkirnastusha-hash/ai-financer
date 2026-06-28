@@ -11,7 +11,6 @@ const buckets = new Map<string, Bucket>();
 const DEFAULT_LIMITS = {
   parsePerMinute: Number(process.env.AI_RATE_LIMIT_PARSE_PER_MINUTE ?? 20),
   confirmPerMinute: Number(process.env.AI_RATE_LIMIT_CONFIRM_PER_MINUTE ?? 12),
-  voicePerMinute: Number(process.env.AI_RATE_LIMIT_VOICE_PER_MINUTE ?? 12),
   cooldownMs: Number(process.env.AI_RATE_LIMIT_COOLDOWN_MS ?? 600),
 };
 
@@ -24,7 +23,7 @@ class TooManyRequestsError extends AppError {
 export class AIRateLimitService {
   assertAllowed(params: {
     userId: string;
-    scope: 'parse' | 'confirm' | 'voice';
+    scope: 'parse' | 'confirm';
     now?: number;
   }) {
     const now = params.now ?? Date.now();
@@ -64,9 +63,8 @@ export class AIRateLimitService {
     }
   }
 
-  private limitForScope(scope: 'parse' | 'confirm' | 'voice') {
+  private limitForScope(scope: 'parse' | 'confirm') {
     if (scope === 'confirm') return DEFAULT_LIMITS.confirmPerMinute;
-    if (scope === 'voice') return DEFAULT_LIMITS.voicePerMinute;
     return DEFAULT_LIMITS.parsePerMinute;
   }
 }

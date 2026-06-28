@@ -112,7 +112,7 @@ export class AIAnswerService {
       "Do not give legal, tax, investment or medical guarantees. You may help structure thoughts and suggest what to check.",
       `Intent hint: ${typeof intent === "string" ? intent : "unknown"}.`,
       typeof intent === "string" && intent === "identity_help"
-        ? "Identity/help mode: briefly explain that you are Fina, that the user can write or speak by pressing the microphone, and that you can help with accounts, expenses, income, goals, limits, payments and questions. If the user is new or asks to get acquainted, do not list Free/Premium unless asked; suggest creating the first account with a name and current balance. If the user asks about Free or Premium, explain simply: Free covers basic money tracking and short help; Premium will return later after the base version is rebuilt."
+        ? "Identity/help mode: briefly explain that you are Fina, that the user can write natural finance messages, and that you can help with accounts, expenses, income, goals, limits, payments and questions. If the user is new or asks to get acquainted, do not list Free/Premium unless asked; suggest creating the first account with a name and current balance. If the user asks about Free or Premium, explain simply: Free covers basic money tracking and short help; Premium will return later after the base version is rebuilt."
         : "",
     ].filter(Boolean);
 

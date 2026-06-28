@@ -122,9 +122,6 @@ export function AppModalRenderer({ closeAllModals, closeModal, deps, index, moda
         open
         initialCommand={modal.initialCommand ?? null}
         initialAssistantMessage={modal.initialAssistantMessage ?? null}
-        mode={modal.mode ?? 'text'}
-        autoStartVoice={Boolean(modal.autoStartVoice)}
-        autoCloseOnVoiceResult={Boolean(modal.autoCloseOnVoiceResult)}
         autoSubmitInitialCommand={Boolean(modal.autoSubmitInitialCommand)}
         firstRunSetup={Boolean(modal.firstRunSetup)}
         quickCreateMode={modal.quickCreateMode ?? null}

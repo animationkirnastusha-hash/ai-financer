@@ -5,7 +5,7 @@ export const navigationDictionary = {
   'nav.group.more': 'Ещё',
   'nav.group.admin': 'Админ',
   'nav.analytics.caption': 'Графики, история и отчёты',
-  'nav.settings.caption': 'Язык, голос, данные и уведомления',
+  'nav.settings.caption': 'Язык, данные и уведомления',
   'nav.swipeHint': 'Свайп: вправо — Главная · влево — Настройки',
   'nav.title': 'Разделы',
   'nav.eyebrow': 'Меню',

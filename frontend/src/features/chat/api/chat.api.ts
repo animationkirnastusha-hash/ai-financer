@@ -6,7 +6,7 @@ import type {
 } from '@/features/chat/model/chat.types';
 
 function buildIdempotencyKey(payload: SendChatMessagePayload) {
-  const key = payload.idempotencyKey?.trim() || payload.voiceSession?.id?.trim() || '';
+  const key = payload.idempotencyKey?.trim() || '';
   return key ? key.slice(0, 128) : undefined;
 }
 
@@ -22,7 +22,6 @@ export const chatApi = {
         command: payload.text,
         execute: payload.execute ?? true,
         source: payload.source ?? 'text',
-        voiceSession: payload.voiceSession,
         idempotencyKey,
       },
     });

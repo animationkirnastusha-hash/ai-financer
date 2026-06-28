@@ -16,21 +16,6 @@ export type TelegramBotMessage = {
     type?: string;
   };
   from?: TelegramBotUser;
-  voice?: {
-    file_id?: string;
-    file_unique_id?: string;
-    duration?: number;
-    mime_type?: string;
-    file_size?: number;
-  };
-  audio?: {
-    file_id?: string;
-    file_unique_id?: string;
-    duration?: number;
-    mime_type?: string;
-    file_name?: string;
-    file_size?: number;
-  };
 };
 
 export type TelegramBotCallbackQuery = {

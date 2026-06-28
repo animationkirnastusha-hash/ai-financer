@@ -14,10 +14,6 @@ type SettingsState = AppSettings & {
 
   setCompanionName: (name: string) => void;
 
-  setVoiceEnabled: (value: boolean) => void;
-  setVoiceBetaEnabled: (value: boolean) => void;
-  setVoiceRepliesEnabled: (value: boolean) => void;
-  setVoicePermissionPrompted: (value: boolean) => void;
   setFinaOverlayDensity: (value: number) => void;
   resetFinaOverlayDensity: () => void;
   setTextInputEnabled: (value: boolean) => void;
@@ -69,10 +65,6 @@ const defaultSettings: AppSettings = {
 
   companionName: FIXED_COMPANION_NAME,
 
-  voiceEnabled: true,
-  voiceBetaEnabled: true,
-  voiceRepliesEnabled: true,
-  voicePermissionPrompted: false,
   finaOverlayDensity: detectDefaultFinaOverlayDensity(),
   textInputEnabled: true,
   aiInsightsEnabled: true,
@@ -103,8 +95,6 @@ function loadSettings(): AppSettings {
       appLanguage: appLanguageSource === 'user' ? normalizeLanguage(parsed.appLanguage) : 'ru',
       appLanguageSource,
       companionName: FIXED_COMPANION_NAME,
-      voiceRepliesEnabled: parsed.voiceRepliesEnabled === false ? false : true,
-      voicePermissionPrompted: Boolean(parsed.voicePermissionPrompted),
       finaOverlayDensity: clampNumber(parsed.finaOverlayDensity, 40, 90, defaultSettings.finaOverlayDensity),
       textInputEnabled: parsed.textInputEnabled === false ? false : true,
     };
@@ -120,10 +110,6 @@ function saveSettings(state: AppSettings) {
       appLanguage: state.appLanguage,
       appLanguageSource: state.appLanguageSource,
       companionName: FIXED_COMPANION_NAME,
-      voiceEnabled: state.voiceEnabled,
-      voiceBetaEnabled: state.voiceBetaEnabled,
-      voiceRepliesEnabled: state.voiceRepliesEnabled,
-      voicePermissionPrompted: state.voicePermissionPrompted,
       finaOverlayDensity: clampNumber(state.finaOverlayDensity, 40, 90, defaultSettings.finaOverlayDensity),
       textInputEnabled: state.textInputEnabled,
       aiInsightsEnabled: state.aiInsightsEnabled,
@@ -172,26 +158,6 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
 
   setCompanionName: () => {
     set({ companionName: FIXED_COMPANION_NAME });
-    saveSettings(get());
-  },
-
-  setVoiceEnabled: (value) => {
-    set({ voiceEnabled: value });
-    saveSettings(get());
-  },
-
-  setVoiceBetaEnabled: (value) => {
-    set({ voiceBetaEnabled: value });
-    saveSettings(get());
-  },
-
-  setVoiceRepliesEnabled: (value) => {
-    set({ voiceRepliesEnabled: value });
-    saveSettings(get());
-  },
-
-  setVoicePermissionPrompted: (value) => {
-    set({ voicePermissionPrompted: value });
     saveSettings(get());
   },
 

@@ -1,22 +1,36 @@
-import { normalizeForVoiceText, normalizeVoiceText } from '@/features/voice';
+function normalizeText(value: string) {
+  return value
+    .normalize('NFKC')
+    .replace(/[ё]/gi, (match) => (match === 'Ё' ? 'Е' : 'е'))
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function normalizeForText(value: string) {
+  return normalizeText(value)
+    .toLowerCase()
+    .replace(/[^a-zа-я0-9]+/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
 
 function escapeRegExp(value: string) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 export function stripOptionalCompanionName(text: string, companionName: string) {
-  const cleanText = normalizeVoiceText(text);
-  const cleanName = normalizeForVoiceText(companionName || 'Фина');
+  const cleanText = normalizeText(text);
+  const cleanName = normalizeForText(companionName || 'Фина');
   if (!cleanName) return cleanText;
 
   const originalPattern = new RegExp(`^\\s*${escapeRegExp(companionName || 'Фина')}[\\s,.:;!—-]+`, 'i');
-  if (originalPattern.test(cleanText)) return normalizeVoiceText(cleanText.replace(originalPattern, ''));
+  if (originalPattern.test(cleanText)) return normalizeText(cleanText.replace(originalPattern, ''));
 
-  const normalized = normalizeForVoiceText(cleanText);
+  const normalized = normalizeForText(cleanText);
   const normalizedPattern = new RegExp(`^${escapeRegExp(cleanName)}(?:\\s|$)`, 'i');
   if (!normalizedPattern.test(normalized)) return cleanText;
 
-  return normalizeVoiceText(cleanText.replace(/^\S+[\s,.:;!—-]*/i, ''));
+  return normalizeText(cleanText.replace(/^\S+[\s,.:;!—-]*/i, ''));
 }
 
 export function formatAmount(value: number | string | null | undefined) {

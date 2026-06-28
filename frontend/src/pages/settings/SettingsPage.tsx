@@ -75,9 +75,6 @@ export default function SettingsPage() {
   const consumeSettingsSection = useNavigationStore((state) => state.consumeSettingsSection);
   const user = useAuthStore((state) => state.user);
 
-  const voiceEnabled = useSettingsStore((state) => state.voiceEnabled);
-  const voiceBetaEnabled = useSettingsStore((state) => state.voiceBetaEnabled);
-  const voiceRepliesEnabled = useSettingsStore((state) => state.voiceRepliesEnabled);
   const finaOverlayDensity = useSettingsStore((state) => state.finaOverlayDensity);
   const textInputEnabled = useSettingsStore((state) => state.textInputEnabled);
   const aiInsightsEnabled = useSettingsStore((state) => state.aiInsightsEnabled);
@@ -92,9 +89,6 @@ export default function SettingsPage() {
   const loadNotificationSettings = useNotificationsStore((state) => state.loadSettings);
   const updateNotificationSettings = useNotificationsStore((state) => state.updateSettings);
 
-  const setVoiceEnabled = useSettingsStore((state) => state.setVoiceEnabled);
-  const setVoiceBetaEnabled = useSettingsStore((state) => state.setVoiceBetaEnabled);
-  const setVoiceRepliesEnabled = useSettingsStore((state) => state.setVoiceRepliesEnabled);
   const setFinaOverlayDensity = useSettingsStore((state) => state.setFinaOverlayDensity);
   const resetFinaOverlayDensity = useSettingsStore((state) => state.resetFinaOverlayDensity);
   const setTextInputEnabled = useSettingsStore((state) => state.setTextInputEnabled);
@@ -174,7 +168,6 @@ export default function SettingsPage() {
         </section>
 
         <section className="app-settings-grid">
-          <SettingsCard title={t('settings.card.voice.title')} caption={t('settings.card.voice.caption')} value={voiceEnabled ? t('settings.card.voice.on') : t('settings.card.voice.off')} onClick={() => setModal('voice')} />
           <SettingsCard title={t('settings.card.fina.title')} caption={t('settings.card.fina.caption')} value={t('settings.card.fina.value')} onClick={() => setModal('fina')} />
           <SettingsCard title={t('settings.card.overlay.title')} caption={t('settings.card.overlay.caption')} value={`${finaOverlayDensity}%`} onClick={() => setModal('overlay')} />
           <SettingsCard title={t('settings.card.notifications.title')} caption={t('settings.card.notifications.caption')} value={notificationSettings?.inAppEnabled === false ? t('settings.card.notifications.off') : t('settings.card.notifications.on')} onClick={() => setModal('notifications')} />
@@ -191,17 +184,6 @@ export default function SettingsPage() {
           </section>
         ) : null}
       </div>
-
-      {modal === 'voice' ? (
-        <ModalShell title={t('settings.voice.title')} caption={t('settings.voice.caption')} onClose={() => setModal(null)}>
-          <div className="grid gap-3">
-            <ToggleLine title={t('settings.voice.input.title')} caption={t('settings.voice.input.caption')} checked={voiceEnabled} onChange={setVoiceEnabled} />
-            <ToggleLine title={t('settings.voice.replies.title')} caption={t('settings.voice.replies.caption')} checked={voiceRepliesEnabled} onChange={setVoiceRepliesEnabled} />
-            <ToggleLine title={t('settings.voice.recognition.title')} caption={t('settings.voice.recognition.caption')} checked={voiceBetaEnabled} onChange={setVoiceBetaEnabled} />
-          </div>
-          <p className="app-settings-note mt-4">{t('settings.voice.note')}</p>
-        </ModalShell>
-      ) : null}
 
       {modal === 'fina' ? (
         <ModalShell title={t('settings.fina.modal.title')} caption={t('settings.fina.modal.caption')} onClose={() => setModal(null)}>

@@ -191,7 +191,7 @@ export function useFinaPullGesture({ blocked = false, currentScreen, openModal }
 
     if (shouldOpen) {
       window.requestAnimationFrame(() => {
-        openModal({ type: 'ai-text-overlay', mode: 'text' });
+        openModal({ type: 'ai-text-overlay' });
       });
     }
   }, [openModal, reset]);

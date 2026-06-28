@@ -20,7 +20,6 @@ type Props = {
   messages: ChatMessage[];
   inlinePendingActions: PendingActionLike[];
   isSending: boolean;
-  isVoiceUploading: boolean;
   pendingTitle: string;
   onScroll: () => void;
   onConfirm: (actionId: string) => void | Promise<void>;
@@ -34,7 +33,6 @@ export function TextChatMessages({
   messages,
   inlinePendingActions,
   isSending,
-  isVoiceUploading,
   pendingTitle,
   onScroll,
   onConfirm,
@@ -52,7 +50,7 @@ export function TextChatMessages({
   }, [messages]);
 
   const shouldAnimateAssistantMessage = (message: ChatMessage) => {
-    if (message.id !== latestAssistantMessageId || isSending || isVoiceUploading) return false;
+    if (message.id !== latestAssistantMessageId || isSending) return false;
     const createdAt = Date.parse(message.createdAt);
     return Number.isFinite(createdAt) && Date.now() - createdAt < 9000;
   };
@@ -91,7 +89,7 @@ export function TextChatMessages({
               onCancel={onCancel}
             />
           ))}
-          {isSending || isVoiceUploading ? (
+          {isSending ? (
             <div className="text-chat-overlay__typing">
               <span />
               <span />

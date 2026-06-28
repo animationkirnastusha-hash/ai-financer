@@ -5,7 +5,7 @@ export const navigationDictionary = {
   'nav.group.more': 'More',
   'nav.group.admin': 'Admin',
   'nav.analytics.caption': 'Charts, history and reports',
-  'nav.settings.caption': 'Language, voice, data and notifications',
+  'nav.settings.caption': 'Language, data and notifications',
   'nav.swipeHint': 'Swipe: right — Home · left — Settings',
   'nav.title': 'Sections',
   'nav.eyebrow': 'Menu',

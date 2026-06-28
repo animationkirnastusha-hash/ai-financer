@@ -4,7 +4,6 @@ import { useAppModalStore } from '@/features/modals/model/appModal.store';
 import { useSwipeNavigation } from '@/features/navigation/lib/useSwipeNavigation';
 import { useNavigationStore } from '@/features/navigation/model/navigation.store';
 import { AppBottomNavigation } from '@/features/navigation/ui/AppBottomNavigation';
-import { VoiceFirstCompanionLayer } from '@/features/voice/ui/VoiceFirstCompanionLayer';
 import { useI18n } from '@/shared/lib/i18n';
 import { OfflineStatusBadge } from '@/shared/ui/OfflineStatusBadge';
 
@@ -69,7 +68,6 @@ export function AppShell({ children }: { children: ReactNode }) {
       </div>
 
       <AppBottomNavigation />
-      <VoiceFirstCompanionLayer />
       <OfflineStatusBadge />
     </div>
   );

@@ -112,7 +112,6 @@ const requiredBackendFiles = [
   'backend/scripts/smoke/check-goals-limits.mjs',
   'backend/scripts/smoke/check-obligations-reports.mjs',
   'backend/scripts/smoke/check-analytics.mjs',
-  'backend/scripts/smoke/check-voice-status.mjs',
   'backend/scripts/smoke/check-ai-base.mjs',
   'backend/scripts/smoke/check-reset-admin.mjs',
   'backend/scripts/smoke/check-store-subscription.mjs',

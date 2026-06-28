@@ -37,7 +37,7 @@ export class AICompanionService {
       events.push({
         type: 'account_created',
         title: 'Новый счёт',
-        message: 'Счёт создан. Теперь его можно использовать в голосовых командах.',
+        message: 'Счёт создан. Теперь его можно использовать в командах Фины.',
         payload: params.result,
       });
     }

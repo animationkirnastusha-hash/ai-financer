@@ -11,7 +11,7 @@ export const onboardingDictionary = {
   'learning.task.account.title': 'Create first account',
   'learning.task.account.caption': 'Fina will ask for name and current balance.',
   'learning.task.help.title': 'How do I work with you?',
-  'learning.task.help.caption': 'A short explanation of text, voice and dialog.',
+  'learning.task.help.caption': 'A short explanation of text and dialog.',
   'learning.task.firstStep.title': 'What should I do first?',
   'learning.task.firstStep.caption': 'Fina suggests a simple money start.',
   'learning.task.limit.title': 'Set a cafe limit',

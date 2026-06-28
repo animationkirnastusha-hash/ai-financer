@@ -11,10 +11,6 @@ export type AppSettings = {
 
   companionName: string;
 
-  voiceEnabled: boolean;
-  voiceBetaEnabled: boolean;
-  voiceRepliesEnabled: boolean;
-  voicePermissionPrompted: boolean;
   finaOverlayDensity: number;
   textInputEnabled: boolean;
   aiInsightsEnabled: boolean;

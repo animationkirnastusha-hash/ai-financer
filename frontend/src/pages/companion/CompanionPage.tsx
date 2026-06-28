@@ -3,7 +3,6 @@ import { CompanionButton } from '@/shared/ui/CompanionButton';
 import { companionApi, type CompanionStateDto } from '@/shared/api/companion.api';
 import { useNavigationStore } from '@/features/navigation/model/navigation.store';
 import { ScreenTopBar } from '@/shared/ui/ScreenTopBar';
-import { useSettingsStore } from '@/features/settings/model/settings.store';
 
 function progressPercent(xp: number, level: number) {
   const base = Math.max(0, (level - 1) * 100);
@@ -13,10 +12,6 @@ function progressPercent(xp: number, level: number) {
 
 export default function CompanionPage() {
   const navigateTo = useNavigationStore((state) => state.navigateTo);
-  const voiceRepliesEnabled = useSettingsStore((state) => state.voiceRepliesEnabled);
-  const textInputEnabled = useSettingsStore((state) => state.textInputEnabled);
-  const setVoiceRepliesEnabled = useSettingsStore((state) => state.setVoiceRepliesEnabled);
-  const setTextInputEnabled = useSettingsStore((state) => state.setTextInputEnabled);
   const [state, setState] = useState<CompanionStateDto | null>(null);
 
   useEffect(() => {
@@ -87,21 +82,6 @@ export default function CompanionPage() {
         </section>
 
         <section className="app-card">
-          <div className="app-section-title">Голос</div>
-          <p className="mt-2 text-sm leading-6 text-white/45">Нажми на Фину, скажи одну команду и дождись результата. Подтверждения остаются в обычных модалках.</p>
-          <div className="mt-4 space-y-3">
-            <label className="app-toggle-row">
-              <span><span>Ответы голосом</span><small>Коротко озвучивать ответы. Можно выключить, чтобы не мешало.</small></span>
-              <input type="checkbox" checked={voiceRepliesEnabled} onChange={(event) => setVoiceRepliesEnabled(event.target.checked)} />
-            </label>
-            <label className="app-toggle-row">
-              <span><span>Текстовое поле</span><small>Оставить запасной способ ввода, если говорить неудобно.</small></span>
-              <input type="checkbox" checked={textInputEnabled} onChange={(event) => setTextInputEnabled(event.target.checked)} />
-            </label>
-          </div>
-        </section>
-
-        <section className="app-card">
           <div className="app-section-title">Что я учитываю</div>
           <div className="mt-4 grid gap-2">
             {memoryItems.map((item) => <div key={item} className="app-check-row">{item}</div>)}
@@ -112,7 +92,7 @@ export default function CompanionPage() {
         <section className="grid grid-cols-2 gap-3">
           <button type="button" className="app-action-card" onClick={() => navigateTo('settings')}>
             <span>Настройки</span>
-            <small>Голос и ввод</small>
+            <small>Поведение Фины</small>
           </button>
           <button type="button" className="app-action-card" onClick={() => navigateTo('goals-limits')}>
             <span>Цели</span>

@@ -53,7 +53,6 @@ export const extraRuntimeTextDictionary: Record<string, string> = {
   'общий прогресс': 'total progress',
   'осталось': 'left',
   '+ Цель': '+ Goal',
-  'Создать голосом': 'Create by voice',
   'Скажи Фине: “создай цель на ноутбук”.': 'Tell Fina: “create a laptop goal”.',
   'Создай первую цель': 'Create your first goal',
   'Здесь будут накопления, крупные покупки и планы.': 'Savings, large purchases and plans will appear here.',

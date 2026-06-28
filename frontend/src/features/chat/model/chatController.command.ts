@@ -2,8 +2,6 @@ import type { SendChatMessagePayload } from "@/features/chat/model/chat.types";
 
 export function createClientCommandId(payload: SendChatMessagePayload, text: string) {
   if (payload.idempotencyKey?.trim()) return payload.idempotencyKey.trim();
-  if (payload.voiceSession?.id) return `voice:${payload.voiceSession.id}:parse`;
-
   const randomId = typeof crypto !== "undefined" && "randomUUID" in crypto
     ? crypto.randomUUID()
     : `${Date.now()}-${Math.random().toString(36).slice(2)}`;

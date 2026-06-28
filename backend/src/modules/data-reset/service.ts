@@ -86,8 +86,7 @@ export class DataResetService {
             level: 1,
             streakDays: 0,
             referralBalance: 0,
-            voiceLimit: 5,
-            tier: 'FREE',
+              tier: 'FREE',
             lastActiveAt: null,
           },
         })).count;

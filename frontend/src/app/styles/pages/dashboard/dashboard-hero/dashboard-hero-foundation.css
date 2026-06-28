@@ -1,6 +1,6 @@
 /* Dashboard page foundation, Fina card and home menu head. */
 /* moved from app/styles/10-dashboard.css. Keep order through app/styles/index.css. */
-/* Dashboard, home menu and voice-first entry. */
+/* Dashboard and home menu entry. */
 .app-dashboard-page .app-page__inner { padding-bottom: calc(env(safe-area-inset-bottom) + 156px) !important; }
 .app-dashboard-page .app-card,
 .app-dashboard-page .app-action-card,

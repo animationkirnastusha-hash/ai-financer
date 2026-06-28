@@ -85,9 +85,6 @@
   animation: app-soft-scale-in .2s ease both;
 }
 
-.voice-first-companion {
-  bottom: calc(54px + env(safe-area-inset-bottom)) !important;
-}
 
 body:has(.app-bottom-sheet),
 body:has(.drawer-backdrop),

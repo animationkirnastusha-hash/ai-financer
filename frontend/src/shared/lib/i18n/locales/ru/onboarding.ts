@@ -11,7 +11,7 @@ export const onboardingDictionary = {
   'learning.task.account.title': 'Создать первый счёт',
   'learning.task.account.caption': 'Фина спросит название и текущий баланс.',
   'learning.task.help.title': 'Как с тобой работать?',
-  'learning.task.help.caption': 'Короткое объяснение текста, голоса и диалога.',
+  'learning.task.help.caption': 'Короткое объяснение текста и диалога.',
   'learning.task.firstStep.title': 'Что сделать первым?',
   'learning.task.firstStep.caption': 'Фина подскажет простой старт по вашим деньгам.',
   'learning.task.limit.title': 'Поставь лимит на кафе',

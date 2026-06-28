@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import type { HomeCashflowMode } from '@/features/dashboard/lib/homeFinanceAnalytics';
 
-export type SettingsSection = 'voice' | 'fina' | 'overlay' | 'ai' | 'currency' | 'data' | 'notifications';
+export type SettingsSection = 'fina' | 'overlay' | 'ai' | 'currency' | 'data' | 'notifications';
 
 export type JournalFilters = Partial<{
   query: string;

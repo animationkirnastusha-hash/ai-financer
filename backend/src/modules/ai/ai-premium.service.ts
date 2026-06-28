@@ -2,7 +2,6 @@ import { prisma } from '../../lib/prisma';
 
 const CAPABILITIES = [
   { key: 'basic_ai_control', tier: 'FREE', description: 'Natural-language finance control.' },
-  { key: 'basic_voice', tier: 'FREE', description: 'Voice text goes through the same AI pipeline.' },
   { key: 'basic_analytics', tier: 'FREE', description: 'Basic spending/income questions.' },
   { key: 'companion_basic', tier: 'FREE', description: 'Basic companion reactions.' },
   { key: 'advanced_memory', tier: 'PREMIUM', description: 'Deeper long-term memory and preferences.' },

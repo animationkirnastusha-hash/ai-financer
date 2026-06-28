@@ -12,7 +12,6 @@ function assertAccess(status) {
   if (!access || typeof access.status !== 'string') throw new Error('Subscription access is missing');
   if (typeof access.hasPremium !== 'boolean') throw new Error('Subscription hasPremium is invalid');
 
-  assertBucket('voiceCommandsToday', status.usage?.voiceCommandsToday);
   assertBucket('receiptScansThisMonth', status.usage?.receiptScansThisMonth);
   assertBucket('advancedReportsThisMonth', status.usage?.advancedReportsThisMonth);
 }

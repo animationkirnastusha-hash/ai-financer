@@ -153,9 +153,6 @@ body.ai-any-modal-open .app-bottom-navigation {
   transform: translateY(12px);
 }
 
-.voice-first-companion {
-  bottom: calc(92px + env(safe-area-inset-bottom)) !important;
-}
 
 @media (min-width: 760px) {
   .app-bottom-navigation {

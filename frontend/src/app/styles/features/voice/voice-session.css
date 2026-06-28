@@ -1,3 +1,0 @@
-/* voice-session: logical CSS manifest. Keep order through app/styles/index.css. */
-@import "./voice-session/voice-session-surface.css";
-@import "./voice-session/voice-session-locked.css";

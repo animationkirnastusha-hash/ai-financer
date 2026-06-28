@@ -73,7 +73,6 @@ async function main() {
           level: 1,
           streakDays: 0,
           referralBalance: 0,
-          voiceLimit: 5,
           lastActiveAt: null,
         },
       });

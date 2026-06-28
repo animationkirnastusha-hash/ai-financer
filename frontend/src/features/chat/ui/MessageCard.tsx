@@ -98,7 +98,7 @@ export function MessageCard({
               variant="secondary"
               onClick={() => onUndo?.(message.auditLogId!)}
             >
-              {t('voicePending.action.cancel')}
+              {t('common.cancel')}
             </Button>
           </div>
         ) : null}
