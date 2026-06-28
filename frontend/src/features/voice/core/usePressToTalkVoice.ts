@@ -3,7 +3,7 @@ import { logVoiceDebugEvent, transcribeVoice } from './voiceApi';
 import type { VoiceInputState, VoicePermissionState, VoiceStartResult } from './voiceCapture.types';
 import { normalizeVoiceText } from './voiceText';
 
-type UsePressToTalkVoiceParams = {
+export type UsePressToTalkVoiceParams = {
   onText: (text: string) => Promise<void> | void;
   lang?: string;
   maxDurationMs?: number;
@@ -14,64 +14,178 @@ type UsePressToTalkVoiceParams = {
   cancelSwipePx?: number;
 };
 
+type RecorderPlatform = 'ios' | 'android' | 'desktop';
+
 type RecorderFormat = {
   mimeType: string;
   extension: string;
 };
 
+type RecorderSession = {
+  id: string;
+  platform: RecorderPlatform;
+  stream: MediaStream;
+  recorder: MediaRecorder;
+  requestedFormat: RecorderFormat;
+  actualFormat: RecorderFormat;
+  chunks: Blob[];
+  startedAt: number;
+  stopping: boolean;
+  finalized: boolean;
+  cancelled: boolean;
+  stopGuardTimer: number | null;
+};
+
 const DEFAULT_MAX_DURATION_MS = 9000;
-const DEFAULT_MIN_DURATION_MS = 120;
+const DEFAULT_MIN_DURATION_MS = 350;
 const DEFAULT_CANCEL_SWIPE_PX = 64;
 const TRANSCRIBE_TIMEOUT_MS = 38000;
 const RECORDER_START_TIMEOUT_MS = 12000;
-const MIN_UPLOAD_BYTES = 64;
+const STOP_GUARD_TIMEOUT_MS = 3500;
+const MIN_UPLOAD_BYTES = 512;
 
-const RECORDER_FORMATS: RecorderFormat[] = [
-  { mimeType: 'audio/webm;codecs=opus', extension: 'webm' },
-  { mimeType: 'audio/webm', extension: 'webm' },
+const IOS_FORMATS: RecorderFormat[] = [
+  { mimeType: 'audio/mp4;codecs=mp4a.40.2', extension: 'm4a' },
   { mimeType: 'audio/mp4', extension: 'm4a' },
   { mimeType: 'audio/aac', extension: 'aac' },
+  { mimeType: 'audio/webm;codecs=opus', extension: 'webm' },
+  { mimeType: 'audio/webm', extension: 'webm' },
+  { mimeType: '', extension: 'm4a' },
+];
+
+const ANDROID_FORMATS: RecorderFormat[] = [
+  { mimeType: 'audio/webm;codecs=opus', extension: 'webm' },
+  { mimeType: 'audio/webm', extension: 'webm' },
+  { mimeType: 'audio/ogg;codecs=opus', extension: 'ogg' },
+  { mimeType: 'audio/ogg', extension: 'ogg' },
+  { mimeType: 'audio/mp4;codecs=mp4a.40.2', extension: 'm4a' },
+  { mimeType: 'audio/mp4', extension: 'm4a' },
   { mimeType: '', extension: 'webm' },
 ];
 
-function getRecorderFormat(): RecorderFormat | null {
-  if (typeof MediaRecorder === 'undefined') return null;
-  return RECORDER_FORMATS.find((format) => {
-    if (!format.mimeType) return true;
-    try {
-      return MediaRecorder.isTypeSupported(format.mimeType);
-    } catch {
-      return false;
-    }
-  }) ?? null;
+const DESKTOP_FORMATS: RecorderFormat[] = [
+  { mimeType: 'audio/webm;codecs=opus', extension: 'webm' },
+  { mimeType: 'audio/webm', extension: 'webm' },
+  { mimeType: 'audio/ogg;codecs=opus', extension: 'ogg' },
+  { mimeType: 'audio/ogg', extension: 'ogg' },
+  { mimeType: 'audio/mp4;codecs=mp4a.40.2', extension: 'm4a' },
+  { mimeType: 'audio/mp4', extension: 'm4a' },
+  { mimeType: '', extension: 'webm' },
+];
+
+const IOS_AUDIO_CONSTRAINTS: MediaTrackConstraints = {
+  echoCancellation: true,
+  noiseSuppression: false,
+  autoGainControl: true,
+  channelCount: { ideal: 1 },
+  sampleRate: { ideal: 44100 },
+  sampleSize: { ideal: 16 },
+};
+
+const DEFAULT_AUDIO_CONSTRAINTS: MediaTrackConstraints = {
+  echoCancellation: true,
+  noiseSuppression: false,
+  autoGainControl: true,
+  channelCount: { ideal: 1 },
+  sampleRate: { ideal: 48000 },
+  sampleSize: { ideal: 16 },
+};
+
+function getRecorderPlatform(): RecorderPlatform {
+  if (typeof navigator === 'undefined') return 'desktop';
+  const userAgent = navigator.userAgent.toLowerCase();
+  const isIPadDesktopMode = userAgent.includes('macintosh') && navigator.maxTouchPoints > 1;
+  if (/iphone|ipad|ipod/.test(userAgent) || isIPadDesktopMode) return 'ios';
+  if (userAgent.includes('android')) return 'android';
+  return 'desktop';
+}
+
+function getPlatformFormats(platform: RecorderPlatform) {
+  if (platform === 'ios') return IOS_FORMATS;
+  if (platform === 'android') return ANDROID_FORMATS;
+  return DESKTOP_FORMATS;
+}
+
+function getAudioConstraints(platform: RecorderPlatform): MediaTrackConstraints {
+  return platform === 'ios' ? IOS_AUDIO_CONSTRAINTS : DEFAULT_AUDIO_CONSTRAINTS;
+}
+
+function canUseMimeType(mimeType: string) {
+  if (!mimeType) return true;
+  if (typeof MediaRecorder === 'undefined') return false;
+  try {
+    return MediaRecorder.isTypeSupported(mimeType);
+  } catch {
+    return false;
+  }
+}
+
+function selectRecorderFormat(platform: RecorderPlatform): RecorderFormat | null {
+  return getPlatformFormats(platform).find((format) => canUseMimeType(format.mimeType)) ?? null;
 }
 
 function normalizeMimeType(mimeType: string) {
   return mimeType.toLowerCase().split(';')[0].trim();
 }
 
+function isContainerThatMustNotBeTimesliced(mimeType: string) {
+  const normalized = normalizeMimeType(mimeType);
+  return normalized.includes('mp4') || normalized.includes('m4a') || normalized.includes('aac') || normalized.includes('caf');
+}
+
 function getExtensionFromMimeType(mimeType: string, fallbackExtension: string) {
   const normalized = normalizeMimeType(mimeType);
-  if (normalized.includes('webm')) return 'webm';
   if (normalized.includes('mp4') || normalized.includes('m4a')) return 'm4a';
   if (normalized.includes('aac')) return 'aac';
   if (normalized.includes('ogg')) return 'ogg';
-  if (normalized.includes('wav') || normalized.includes('wave')) return 'wav';
-  return fallbackExtension;
+  if (normalized.includes('mpeg') || normalized.includes('mp3')) return 'mp3';
+  if (normalized.includes('wav')) return 'wav';
+  if (normalized.includes('caf')) return 'caf';
+  if (normalized.includes('webm')) return 'webm';
+  return fallbackExtension || 'webm';
 }
 
-function resolveRecorderOutputFormat(requestedFormat: RecorderFormat, recorder: MediaRecorder): RecorderFormat {
-  const actualMimeType = recorder.mimeType || requestedFormat.mimeType;
-  if (!actualMimeType) return requestedFormat;
+function resolveActualFormat(recorder: MediaRecorder, requestedFormat: RecorderFormat): RecorderFormat {
+  const actualMimeType = recorder.mimeType || requestedFormat.mimeType || 'audio/webm';
   return {
     mimeType: actualMimeType,
     extension: getExtensionFromMimeType(actualMimeType, requestedFormat.extension),
   };
 }
 
-function shouldUseRecorderTimeslice(format: RecorderFormat) {
-  const normalized = normalizeMimeType(format.mimeType);
-  return normalized.includes('webm') || normalized.includes('ogg');
+function createRecorder(stream: MediaStream, format: RecorderFormat): MediaRecorder {
+  if (!format.mimeType) return new MediaRecorder(stream);
+  try {
+    return new MediaRecorder(stream, { mimeType: format.mimeType });
+  } catch {
+    return new MediaRecorder(stream);
+  }
+}
+
+function startRecorderSafely(recorder: MediaRecorder, format: RecorderFormat) {
+  const mimeType = recorder.mimeType || format.mimeType;
+  if (isContainerThatMustNotBeTimesliced(mimeType)) {
+    recorder.start();
+    return { timesliceMs: 0 };
+  }
+
+  recorder.start(1000);
+  return { timesliceMs: 1000 };
+}
+
+function stopStream(stream: MediaStream | null) {
+  stream?.getTracks().forEach((track) => {
+    try {
+      track.stop();
+    } catch {
+      // no-op
+    }
+  });
+}
+
+function getErrorCode(error: unknown) {
+  if (error instanceof Error) return error.name || error.message;
+  return 'unknown';
 }
 
 function getSttLanguage(lang: string) {
@@ -88,19 +202,8 @@ async function queryMicrophonePermissionState(): Promise<PermissionState | null>
   }
 }
 
-function safeStopStream(stream: MediaStream | null) {
-  stream?.getTracks().forEach((track) => {
-    try {
-      track.stop();
-    } catch {
-      // no-op
-    }
-  });
-}
-
-function getErrorCode(error: unknown) {
-  if (error instanceof Error) return error.name || error.message;
-  return 'unknown';
+function createSessionId(source: string) {
+  return `${source}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
 export function usePressToTalkVoice({
@@ -119,33 +222,32 @@ export function usePressToTalkVoice({
   const [isPressed, setIsPressed] = useState(false);
   const [isCancelledBySwipe, setIsCancelledBySwipe] = useState(false);
 
-  const onTextRef = useRef(onText);
   const stateRef = useRef<VoiceInputState>('idle');
-  const streamRef = useRef<MediaStream | null>(null);
-  const recorderRef = useRef<MediaRecorder | null>(null);
-  const chunksRef = useRef<BlobPart[]>([]);
-  const formatRef = useRef<RecorderFormat | null>(null);
+  const onTextRef = useRef(onText);
+  const sessionRef = useRef<RecorderSession | null>(null);
   const pointerIdRef = useRef<number | null>(null);
-  const startedAtRef = useRef(0);
   const startXRef = useRef(0);
+  const pressStartedAtRef = useRef(0);
   const startInFlightRef = useRef(false);
   const stopAfterStartRef = useRef(false);
-  const cancelledRef = useRef(false);
-  const finalizeBusyRef = useRef(false);
-  const maxDurationTimerRef = useRef<number | null>(null);
   const startGuardTimerRef = useRef<number | null>(null);
+  const maxDurationTimerRef = useRef<number | null>(null);
+  const releaseHandledRef = useRef(false);
 
   onTextRef.current = onText;
 
-  const recorderFormat = useMemo(() => getRecorderFormat(), []);
+  const platform = useMemo(() => getRecorderPlatform(), []);
+  const selectedFormat = useMemo(() => {
+    if (typeof MediaRecorder === 'undefined') return null;
+    return selectRecorderFormat(platform);
+  }, [platform]);
   const isSupported = Boolean(
     typeof window !== 'undefined' &&
       typeof navigator !== 'undefined' &&
       typeof navigator.mediaDevices?.getUserMedia === 'function' &&
       typeof MediaRecorder !== 'undefined' &&
-      recorderFormat,
+      selectedFormat,
   );
-
   const effectiveMaxDurationMs = sessionMs ?? maxDurationMs;
 
   const setVoiceState = useCallback((nextState: VoiceInputState) => {
@@ -154,28 +256,33 @@ export function usePressToTalkVoice({
   }, []);
 
   const clearTimers = useCallback(() => {
-    if (maxDurationTimerRef.current !== null) {
-      window.clearTimeout(maxDurationTimerRef.current);
-      maxDurationTimerRef.current = null;
-    }
     if (startGuardTimerRef.current !== null) {
       window.clearTimeout(startGuardTimerRef.current);
       startGuardTimerRef.current = null;
     }
+    if (maxDurationTimerRef.current !== null) {
+      window.clearTimeout(maxDurationTimerRef.current);
+      maxDurationTimerRef.current = null;
+    }
+    const session = sessionRef.current;
+    if (session?.stopGuardTimer !== null && session?.stopGuardTimer !== undefined) {
+      window.clearTimeout(session.stopGuardTimer);
+      session.stopGuardTimer = null;
+    }
   }, []);
 
-  const cleanupRecorderRuntime = useCallback(() => {
+  const cleanupRuntime = useCallback(() => {
     clearTimers();
-    safeStopStream(streamRef.current);
-    streamRef.current = null;
-    recorderRef.current = null;
-    chunksRef.current = [];
-    formatRef.current = null;
+    const session = sessionRef.current;
+    if (session) {
+      stopStream(session.stream);
+      session.chunks = [];
+      sessionRef.current = null;
+    }
     startInFlightRef.current = false;
     stopAfterStartRef.current = false;
-    cancelledRef.current = false;
-    finalizeBusyRef.current = false;
     pointerIdRef.current = null;
+    releaseHandledRef.current = false;
     setIsPressed(false);
     setIsCancelledBySwipe(false);
   }, [clearTimers]);
@@ -187,13 +294,9 @@ export function usePressToTalkVoice({
     }
 
     const queried = await queryMicrophonePermissionState();
-    if (queried) {
-      setPermissionState(queried);
-      return queried;
-    }
-
-    setPermissionState('unknown');
-    return 'unknown';
+    const nextState: VoicePermissionState = queried ?? 'unknown';
+    setPermissionState(nextState);
+    return nextState;
   }, [isSupported]);
 
   useEffect(() => {
@@ -201,123 +304,172 @@ export function usePressToTalkVoice({
   }, [permissionWasPrompted, refreshPermissionState]);
 
   const reset = useCallback(() => {
-    cleanupRecorderRuntime();
+    const session = sessionRef.current;
+    if (session?.recorder && session.recorder.state !== 'inactive') {
+      session.cancelled = true;
+      try {
+        session.recorder.stop();
+      } catch {
+        // no-op
+      }
+    }
+    cleanupRuntime();
     setError(null);
     setVoiceState('idle');
-  }, [cleanupRecorderRuntime, setVoiceState]);
+  }, [cleanupRuntime, setVoiceState]);
 
-  const cancel = useCallback((reason = 'cancelled') => {
-    logVoiceDebugEvent('voice_cancel', { source, reason, state: stateRef.current });
-    cancelledRef.current = true;
-    stopAfterStartRef.current = false;
-    setIsPressed(false);
-    setIsCancelledBySwipe(false);
-
-    const recorder = recorderRef.current;
-    if (recorder && recorder.state !== 'inactive') {
-      try {
-        recorder.stop();
-      } catch {
-        cleanupRecorderRuntime();
-        setVoiceState('idle');
-      }
-      return;
-    }
-
-    cleanupRecorderRuntime();
-    setVoiceState('idle');
-  }, [cleanupRecorderRuntime, setVoiceState, source]);
-
-  const finalizeBlob = useCallback(async (blob: Blob, format: RecorderFormat, durationMs: number) => {
-    if (finalizeBusyRef.current) return;
-    finalizeBusyRef.current = true;
+  const finalizeSession = useCallback(async (session: RecorderSession, reason = 'stop') => {
+    if (session.finalized) return;
+    session.finalized = true;
     clearTimers();
-    safeStopStream(streamRef.current);
-    streamRef.current = null;
+    stopStream(session.stream);
 
-    if (cancelledRef.current) {
-      cleanupRecorderRuntime();
+    const durationMs = Math.max(0, Date.now() - session.startedAt);
+    const blobType = session.actualFormat.mimeType || session.requestedFormat.mimeType || 'audio/webm';
+    const blob = new Blob(session.chunks, { type: blobType });
+
+    logVoiceDebugEvent('voice_recorder_stopped', {
+      source,
+      sessionId: session.id,
+      platform: session.platform,
+      durationMs,
+      chunks: session.chunks.length,
+      blobSize: blob.size,
+      blobType: blob.type || 'unknown',
+      reason,
+    });
+
+    if (session.cancelled) {
+      cleanupRuntime();
       setVoiceState('idle');
       return;
     }
 
-    if (blob.size < MIN_UPLOAD_BYTES) {
-      logVoiceDebugEvent('voice_blob_skipped', { source, durationMs, blobSize: blob.size, reason: 'empty-blob' });
-      cleanupRecorderRuntime();
+    if (durationMs < minDurationMs || blob.size < MIN_UPLOAD_BYTES) {
+      logVoiceDebugEvent('voice_blob_skipped', {
+        source,
+        sessionId: session.id,
+        durationMs,
+        blobSize: blob.size,
+        reason: durationMs < minDurationMs ? 'too-short' : 'too-small',
+      });
+      cleanupRuntime();
       setError('no-speech');
       setVoiceState('error');
       window.setTimeout(() => setVoiceState('idle'), 0);
       return;
     }
 
-    logVoiceDebugEvent('voice_blob_ready', { source, durationMs, blobSize: blob.size, mimeType: format.mimeType });
     setVoiceState('uploading');
+    setError(null);
+    const filename = `voice-${session.id}.${session.actualFormat.extension}`;
 
     try {
-      logVoiceDebugEvent('voice_transcribe_sent', { source, blobSize: blob.size, language: getSttLanguage(lang) });
-      const response = await transcribeVoice(blob, `voice-${Date.now()}.${format.extension}`, getSttLanguage(lang), TRANSCRIBE_TIMEOUT_MS);
+      logVoiceDebugEvent('voice_blob_ready', {
+        source,
+        sessionId: session.id,
+        platform: session.platform,
+        durationMs,
+        blobSize: blob.size,
+        blobType: blob.type || 'unknown',
+        mimeType: blob.type || 'unknown',
+        filename,
+      });
+
+      const response = await transcribeVoice(blob, filename, getSttLanguage(lang), TRANSCRIBE_TIMEOUT_MS);
       const text = normalizeVoiceText(response.text || '');
-      logVoiceDebugEvent('voice_transcribe_success', { source, textLength: text.length, provider: response.provider, model: response.model });
 
       if (!text) {
+        logVoiceDebugEvent('voice_text_empty', { source, sessionId: session.id, provider: response.provider, model: response.model });
+        cleanupRuntime();
         setError('no-speech');
-        cleanupRecorderRuntime();
         setVoiceState('error');
         window.setTimeout(() => setVoiceState('idle'), 0);
         return;
       }
 
-      logVoiceDebugEvent('voice_text_received', { source, textLength: text.length });
+      logVoiceDebugEvent('voice_text_received', {
+        source,
+        sessionId: session.id,
+        textLength: text.length,
+        provider: response.provider,
+        model: response.model,
+      });
+
       await onTextRef.current(text);
-      cleanupRecorderRuntime();
+      cleanupRuntime();
       setError(null);
       setVoiceState('idle');
     } catch (nextError) {
       const errorCode = (nextError as Error & { code?: string }).code || getErrorCode(nextError);
-      logVoiceDebugEvent('voice_transcribe_failed', { source, error: errorCode });
-      cleanupRecorderRuntime();
+      logVoiceDebugEvent('voice_error', { source, sessionId: session.id, error: errorCode });
+      cleanupRuntime();
       setError(errorCode === 'VOICE_TRANSCRIPTION_CLIENT_TIMEOUT' ? 'transcription-timeout' : 'transcription-error');
       setVoiceState('error');
       window.setTimeout(() => setVoiceState('idle'), 0);
     }
-  }, [cleanupRecorderRuntime, clearTimers, lang, minDurationMs, setVoiceState, source]);
+  }, [cleanupRuntime, clearTimers, lang, minDurationMs, setVoiceState, source]);
+
+  const cancel = useCallback((reason = 'cancelled') => {
+    logVoiceDebugEvent('voice_cancelled', { source, reason, state: stateRef.current });
+    const session = sessionRef.current;
+    stopAfterStartRef.current = false;
+    setIsPressed(false);
+    setIsCancelledBySwipe(false);
+
+    if (session?.recorder && session.recorder.state !== 'inactive') {
+      session.cancelled = true;
+      try {
+        session.recorder.stop();
+        return;
+      } catch {
+        // fall through to cleanup
+      }
+    }
+
+    cleanupRuntime();
+    setVoiceState('idle');
+  }, [cleanupRuntime, setVoiceState, source]);
 
   const stop = useCallback(() => {
-    const durationMs = startedAtRef.current ? Date.now() - startedAtRef.current : 0;
-    logVoiceDebugEvent('voice_release', { source, state: stateRef.current, durationMs, deferred: startInFlightRef.current });
+    if (releaseHandledRef.current) return;
+    releaseHandledRef.current = true;
     setIsPressed(false);
-    pointerIdRef.current = null;
+
+    const durationMs = pressStartedAtRef.current ? Date.now() - pressStartedAtRef.current : 0;
+    logVoiceDebugEvent('voice_release', { source, state: stateRef.current, durationMs, deferred: startInFlightRef.current });
 
     if (startInFlightRef.current && stateRef.current !== 'recording') {
       stopAfterStartRef.current = true;
       return;
     }
 
-    const recorder = recorderRef.current;
-    if (!recorder || recorder.state === 'inactive') {
-      cleanupRecorderRuntime();
+    const session = sessionRef.current;
+    if (!session?.recorder || session.recorder.state === 'inactive') {
+      cleanupRuntime();
       setVoiceState('idle');
       return;
     }
 
+    if (session.stopping) return;
+    session.stopping = true;
+
     try {
-      if (recorder.state === 'recording') {
-        try {
-          recorder.requestData();
-        } catch {
-          // stop() will still ask the browser for final data.
+      session.stopGuardTimer = window.setTimeout(() => {
+        if (!session.finalized) {
+          logVoiceDebugEvent('voice_stop_guard_finalize', { source, sessionId: session.id, chunks: session.chunks.length });
+          void finalizeSession(session, 'stop-guard');
         }
-      }
-      recorder.stop();
-    } catch (error) {
-      logVoiceDebugEvent('voice_stop_failed', { source, error: getErrorCode(error) });
-      cleanupRecorderRuntime();
-      setVoiceState('idle');
+      }, STOP_GUARD_TIMEOUT_MS);
+      session.recorder.stop();
+    } catch (nextError) {
+      logVoiceDebugEvent('voice_error', { source, error: getErrorCode(nextError), stage: 'stop' });
+      void finalizeSession(session, 'stop-error');
     }
-  }, [cleanupRecorderRuntime, setVoiceState, source]);
+  }, [cleanupRuntime, finalizeSession, setVoiceState, source]);
 
   const start = useCallback(async (): Promise<VoiceStartResult> => {
-    if (!isSupported || !recorderFormat) {
+    if (!isSupported || !selectedFormat) {
       setPermissionState('unsupported');
       setError('unsupported');
       setVoiceState('error');
@@ -326,86 +478,102 @@ export function usePressToTalkVoice({
 
     if (stateRef.current === 'recording' || stateRef.current === 'uploading' || startInFlightRef.current) return 'busy';
 
+    window.speechSynthesis?.cancel();
     setError(null);
     startInFlightRef.current = true;
     stopAfterStartRef.current = false;
-    cancelledRef.current = false;
-    finalizeBusyRef.current = false;
-    chunksRef.current = [];
-    formatRef.current = recorderFormat;
-    logVoiceDebugEvent('voice_permission_request', { source, mimeType: recorderFormat.mimeType });
+    releaseHandledRef.current = false;
+
+    const sessionId = createSessionId(source);
+    logVoiceDebugEvent('voice_start_requested', {
+      source,
+      sessionId,
+      platform,
+      mimeType: selectedFormat.mimeType || 'default',
+      extension: selectedFormat.extension,
+    });
 
     startGuardTimerRef.current = window.setTimeout(() => {
       if (!startInFlightRef.current) return;
-      logVoiceDebugEvent('voice_start_guard_timeout', { source });
+      logVoiceDebugEvent('voice_error', { source, sessionId, error: 'start-timeout', stage: 'start' });
       cancel('start-timeout');
       setError('microphone-timeout');
     }, RECORDER_START_TIMEOUT_MS);
 
+    let acquiredStream: MediaStream | null = null;
+
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true,
-          channelCount: 1,
-        },
-      });
-
-      streamRef.current = stream;
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: getAudioConstraints(platform) });
+      acquiredStream = stream;
       setPermissionState('granted');
-      logVoiceDebugEvent('voice_permission_granted', { source, tracks: stream.getAudioTracks().length });
+      logVoiceDebugEvent('voice_permission_granted', { source, sessionId, platform, audioTracks: stream.getAudioTracks().length });
 
-      const recorder = recorderFormat.mimeType
-        ? new MediaRecorder(stream, { mimeType: recorderFormat.mimeType })
-        : new MediaRecorder(stream);
-      recorderRef.current = recorder;
+      const recorder = createRecorder(stream, selectedFormat);
+      const actualFormat = resolveActualFormat(recorder, selectedFormat);
+      const session: RecorderSession = {
+        id: sessionId,
+        platform,
+        stream,
+        recorder,
+        requestedFormat: selectedFormat,
+        actualFormat,
+        chunks: [],
+        startedAt: Date.now(),
+        stopping: false,
+        finalized: false,
+        cancelled: false,
+        stopGuardTimer: null,
+      };
+
+      sessionRef.current = session;
 
       recorder.ondataavailable = (event) => {
-        if (event.data?.size) chunksRef.current.push(event.data);
+        if (event.data?.size) {
+          session.chunks.push(event.data);
+          logVoiceDebugEvent('voice_data_chunk', {
+            source,
+            sessionId,
+            chunks: session.chunks.length,
+            blobSize: event.data.size,
+            blobType: event.data.type || actualFormat.mimeType || 'unknown',
+          });
+        }
       };
 
       recorder.onerror = (event) => {
-        logVoiceDebugEvent('voice_recorder_error', { source, error: String((event as ErrorEvent).message || 'recorder-error') });
+        const message = String((event as ErrorEvent).message || 'recorder-error');
+        logVoiceDebugEvent('voice_error', { source, sessionId, error: message, stage: 'recorder' });
         setError('recorder-error');
       };
 
       recorder.onstop = () => {
-        const durationMs = startedAtRef.current ? Date.now() - startedAtRef.current : 0;
-        const outputFormat = resolveRecorderOutputFormat(recorderFormat, recorder);
-        logVoiceDebugEvent('voice_recorder_stopped', {
-          source,
-          durationMs,
-          chunks: chunksRef.current.length,
-          mimeType: outputFormat.mimeType || 'unknown',
-          requestedMimeType: recorderFormat.mimeType || 'default',
-        });
-        const blob = new Blob(chunksRef.current, { type: outputFormat.mimeType });
-        void finalizeBlob(blob, outputFormat, durationMs);
+        window.setTimeout(() => {
+          void finalizeSession(session, 'recorder-stop');
+        }, 40);
       };
 
-      startedAtRef.current = Date.now();
-      const useTimeslice = shouldUseRecorderTimeslice(recorderFormat);
-      if (useTimeslice) {
-        recorder.start(250);
-      } else {
-        recorder.start();
-      }
+      const startInfo = startRecorderSafely(recorder, selectedFormat);
       startInFlightRef.current = false;
       if (startGuardTimerRef.current !== null) {
         window.clearTimeout(startGuardTimerRef.current);
         startGuardTimerRef.current = null;
       }
+
       setVoiceState('recording');
       logVoiceDebugEvent('voice_recorder_started', {
         source,
-        mimeType: recorder.mimeType || recorderFormat.mimeType || 'default',
-        requestedMimeType: recorderFormat.mimeType || 'default',
-        timeslice: useTimeslice,
+        sessionId,
+        platform,
+        mimeType: actualFormat.mimeType || 'unknown',
+        extension: actualFormat.extension,
+        sessionMs: effectiveMaxDurationMs,
+        chunks: 0,
+        timesliceMs: startInfo.timesliceMs,
       });
 
       maxDurationTimerRef.current = window.setTimeout(() => {
-        logVoiceDebugEvent('voice_auto_stop', { source, maxDurationMs: effectiveMaxDurationMs });
+        logVoiceDebugEvent('voice_auto_stop', { source, sessionId, maxDurationMs: effectiveMaxDurationMs });
+        releaseHandledRef.current = false;
         stop();
       }, Math.max(1200, effectiveMaxDurationMs));
 
@@ -421,19 +589,18 @@ export function usePressToTalkVoice({
         window.clearTimeout(startGuardTimerRef.current);
         startGuardTimerRef.current = null;
       }
-      safeStopStream(streamRef.current);
-      streamRef.current = null;
+      stopStream(acquiredStream);
+      cleanupRuntime();
 
       const errorCode = getErrorCode(nextError);
-      logVoiceDebugEvent('voice_permission_denied', { source, error: errorCode });
+      logVoiceDebugEvent('voice_error', { source, sessionId, error: errorCode, stage: 'permission' });
       const permission = await queryMicrophonePermissionState();
       setPermissionState(permission ?? 'denied');
       setError(errorCode === 'NotAllowedError' ? 'microphone-denied' : 'microphone-error');
-      setIsPressed(false);
       setVoiceState('error');
       return 'permission-ready';
     }
-  }, [cancel, effectiveMaxDurationMs, finalizeBlob, isSupported, recorderFormat, setVoiceState, source, stop]);
+  }, [cancel, cleanupRuntime, effectiveMaxDurationMs, finalizeSession, isSupported, platform, selectedFormat, setVoiceState, source, stop]);
 
   const primePermission = useCallback(async () => {
     if (!isSupported) {
@@ -450,22 +617,22 @@ export function usePressToTalkVoice({
         return true;
       }
 
-      logVoiceDebugEvent('voice_permission_request', { source, mode: 'prime' });
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      safeStopStream(stream);
+      logVoiceDebugEvent('voice_permission_requested', { source, mode: 'prime', platform });
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: getAudioConstraints(platform) });
+      stopStream(stream);
       setPermissionState('granted');
       setError(null);
-      logVoiceDebugEvent('voice_permission_granted', { source, mode: 'prime' });
+      logVoiceDebugEvent('voice_permission_granted', { source, mode: 'prime', platform });
       return true;
     } catch (nextError) {
       const errorCode = getErrorCode(nextError);
-      logVoiceDebugEvent('voice_permission_denied', { source, mode: 'prime', error: errorCode });
+      logVoiceDebugEvent('voice_error', { source, mode: 'prime', platform, error: errorCode, stage: 'permission' });
       const permission = await queryMicrophonePermissionState();
       setPermissionState(permission ?? 'denied');
       setError(errorCode === 'NotAllowedError' ? 'microphone-denied' : 'microphone-error');
       return false;
     }
-  }, [isSupported, source]);
+  }, [isSupported, platform, source]);
 
   const handlePointerDown = useCallback((event: ReactPointerEvent<Element>) => {
     if (stateRef.current === 'uploading' || startInFlightRef.current) return;
@@ -473,13 +640,14 @@ export function usePressToTalkVoice({
     event.stopPropagation();
     pointerIdRef.current = event.pointerId;
     startXRef.current = event.clientX;
-    startedAtRef.current = Date.now();
+    pressStartedAtRef.current = Date.now();
+    releaseHandledRef.current = false;
     setIsPressed(true);
     setIsCancelledBySwipe(false);
-    logVoiceDebugEvent('voice_press_start', { source, pointerId: event.pointerId, state: stateRef.current });
+    logVoiceDebugEvent('voice_press_start', { source, pointerId: event.pointerId, state: stateRef.current, platform });
     (event.currentTarget as Element & { setPointerCapture?: (pointerId: number) => void }).setPointerCapture?.(event.pointerId);
     void start();
-  }, [source, start]);
+  }, [platform, source, start]);
 
   const handlePointerMove = useCallback((event: ReactPointerEvent<Element>) => {
     if (pointerIdRef.current !== event.pointerId || isCancelledBySwipe) return;
@@ -505,8 +673,13 @@ export function usePressToTalkVoice({
   useEffect(() => {
     if (pointerIdRef.current === null && !isPressed) return;
 
-    const release = (event: PointerEvent) => {
+    const releaseFromPointer = (event: PointerEvent) => {
       if (pointerIdRef.current !== null && event.pointerId !== pointerIdRef.current) return;
+      stop();
+    };
+
+    const releaseFromTouchOrMouse = () => {
+      if (!isPressed && pointerIdRef.current === null) return;
       stop();
     };
 
@@ -515,21 +688,28 @@ export function usePressToTalkVoice({
       cancel('window-pointer-cancel');
     };
 
+    const touchCancel = () => cancel('window-touch-cancel');
     const blurCancel = () => cancel('window-blur');
     const pageHideCancel = () => cancel('pagehide');
     const visibilityCancel = () => {
       if (document.visibilityState === 'hidden') cancel('visibility-hidden');
     };
 
-    window.addEventListener('pointerup', release, true);
+    window.addEventListener('pointerup', releaseFromPointer, true);
     window.addEventListener('pointercancel', pointerCancel, true);
+    window.addEventListener('mouseup', releaseFromTouchOrMouse, true);
+    window.addEventListener('touchend', releaseFromTouchOrMouse, true);
+    window.addEventListener('touchcancel', touchCancel, true);
     window.addEventListener('blur', blurCancel);
     window.addEventListener('pagehide', pageHideCancel);
     document.addEventListener('visibilitychange', visibilityCancel);
 
     return () => {
-      window.removeEventListener('pointerup', release, true);
+      window.removeEventListener('pointerup', releaseFromPointer, true);
       window.removeEventListener('pointercancel', pointerCancel, true);
+      window.removeEventListener('mouseup', releaseFromTouchOrMouse, true);
+      window.removeEventListener('touchend', releaseFromTouchOrMouse, true);
+      window.removeEventListener('touchcancel', touchCancel, true);
       window.removeEventListener('blur', blurCancel);
       window.removeEventListener('pagehide', pageHideCancel);
       document.removeEventListener('visibilitychange', visibilityCancel);
@@ -541,8 +721,8 @@ export function usePressToTalkVoice({
   }, []);
 
   useEffect(() => () => {
-    cleanupRecorderRuntime();
-  }, [cleanupRecorderRuntime]);
+    cleanupRuntime();
+  }, [cleanupRuntime]);
 
   return {
     state,
