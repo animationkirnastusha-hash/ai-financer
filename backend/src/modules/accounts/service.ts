@@ -231,6 +231,11 @@ export class AccountService {
         },
       });
 
+      await tx.financialCycleSettings.updateMany({
+        where: { userId, salaryAccountId: accountId },
+        data: { salaryAccountId: null },
+      });
+
       await tx.goal.updateMany({ where: { userId, accountId }, data: { accountId: null } });
       await tx.loan.updateMany({ where: { userId, accountId }, data: { accountId: null } });
       await tx.loanPayment.updateMany({ where: { userId, accountId }, data: { accountId: null } });

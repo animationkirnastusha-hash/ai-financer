@@ -189,3 +189,39 @@
   font-size: 12px;
   line-height: 1.35;
 }
+
+.app-account-delete-zone {
+  display: grid;
+  gap: 10px;
+  border: 1px solid rgba(251, 113, 133, .14);
+  border-radius: 24px;
+  background: rgba(251, 113, 133, .055);
+  padding: 10px;
+}
+
+.app-account-delete-zone .app-account-details-action--danger {
+  border-color: rgba(251, 113, 133, .24);
+  background: rgba(251, 113, 133, .12);
+}
+
+.app-account-delete-zone__cancel {
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid rgba(255, 255, 255, .10);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, .055);
+  color: rgba(255, 255, 255, .82);
+  font-size: 14px;
+  font-weight: 720;
+}
+
+.app-account-delete-zone__cancel:disabled {
+  opacity: .48;
+}
+
+.app-account-delete-zone__error {
+  margin: 0;
+  color: rgba(254, 205, 211, .92);
+  font-size: 12px;
+  line-height: 1.35;
+}

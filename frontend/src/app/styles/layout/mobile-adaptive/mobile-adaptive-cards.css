@@ -22,9 +22,7 @@
   font-size: 10px !important;
 }
 
-/* account page polish */
-.app-accounts-hero__top,
-.app-accounts-group__head,
+/* taxonomy page shared mobile cards */
 .app-taxonomy-section-card__head,
 .app-taxonomy-modal__head {
   display: grid;
@@ -32,14 +30,14 @@
   align-items: start;
   gap: 12px;
 }
-.app-accounts-stats,
+
 .app-taxonomy-stats {
   display: grid;
   grid-template-columns: repeat(3, minmax(0,1fr));
   gap: 8px;
   margin-top: 14px;
 }
-.app-accounts-stats > div,
+
 .app-taxonomy-stats > div {
   min-width: 0;
   border-radius: 18px;
@@ -48,94 +46,23 @@
   padding: 10px;
 }
 
-.app-accounts-stats span,
 .app-taxonomy-stats span {
   color: rgba(255,255,255,.9);
   font-size: 13px;
   font-weight: 760;
 }
-.app-accounts-stats small,
+
 .app-taxonomy-stats small {
   margin-top: 4px;
   color: rgba(255,255,255,.42);
   font-size: 10px;
 }
-.app-accounts-actions,
+
 .app-taxonomy-actions {
   display: grid;
   grid-template-columns: repeat(2, minmax(0,1fr));
   gap: 10px;
 }
-.app-account-card {
-  width: 100%;
-  display: grid;
-  grid-template-columns: minmax(0,1fr) auto;
-  gap: 12px;
-  align-items: center;
-  border-radius: 26px;
-  border: 1px solid rgba(255,255,255,.09);
-  background: radial-gradient(circle at 0 0, rgba(129,239,208,.08), transparent 38%), rgba(255,255,255,.045);
-  padding: 14px;
-  text-align: left;
-  transition: transform .16s ease, background .16s ease, border-color .16s ease;
-}
-
-.app-account-card__main { display: grid; gap: 7px; min-width: 0; }
-.app-account-card__title { display: flex; align-items: center; gap: 8px; min-width: 0; }
-.app-account-card__name {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  color: rgba(255,255,255,.92);
-  font-size: 14px;
-  line-height: 1.15;
-  font-weight: 760;
-}
-.app-account-card__currency {
-  flex: none;
-  border-radius: 999px;
-  border: 1px solid rgba(255,255,255,.10);
-  background: rgba(255,255,255,.055);
-  padding: 3px 7px;
-  color: rgba(255,255,255,.50);
-  font-size: 10px;
-  line-height: 1;
-}
-.app-account-card__hint {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  color: rgba(255,255,255,.46);
-  font-size: 12px;
-  line-height: 1.2;
-}
-.app-account-card__badges { display: flex; flex-wrap: wrap; gap: 6px; }
-.app-account-card__balance {
-  max-width: 42vw;
-  overflow-wrap: anywhere;
-  text-align: right;
-  color: white;
-  font-size: clamp(16px, 4.4vw, 20px);
-  line-height: 1.05;
-  font-weight: 760;
-  letter-spacing: -.035em;
-}
-.app-account-badge {
-  display: inline-flex;
-  align-items: center;
-  min-height: 22px;
-  border-radius: 999px;
-  border: 1px solid rgba(255,255,255,.08);
-  padding: 0 8px;
-  font-size: 10px;
-  line-height: 1;
-  white-space: nowrap;
-}
-.app-account-badge--green { border-color: rgba(129,239,208,.24); background: rgba(129,239,208,.10); color: rgba(218,255,245,.92); }
-.app-account-badge--blue { border-color: rgba(125,211,252,.22); background: rgba(125,211,252,.09); color: rgba(224,242,254,.92); }
-.app-account-badge--yellow { border-color: rgba(253,224,71,.20); background: rgba(253,224,71,.08); color: rgba(254,249,195,.92); }
-.app-account-badge--red { border-color: rgba(251,113,133,.22); background: rgba(251,113,133,.08); color: rgba(255,228,230,.92); }
 
 /* taxonomy page */
 

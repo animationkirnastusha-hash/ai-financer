@@ -24,14 +24,12 @@
   white-space: nowrap;
 }
 
-.app-accounts-stats,
 .app-taxonomy-stats {
   display: grid;
   grid-template-columns: repeat(3, minmax(0,1fr));
   gap: 8px;
   margin-top: 14px;
 }
-.app-accounts-stats > div,
 .app-taxonomy-stats > div {
   min-width: 0;
   border: 1px solid rgba(255,255,255,.08);
@@ -39,7 +37,6 @@
   background: rgba(0,0,0,.18);
   padding: 10px;
 }
-.app-accounts-stats span,
 .app-taxonomy-stats span {
   display: block;
   min-width: 0;
@@ -51,7 +48,6 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.app-accounts-stats small,
 .app-taxonomy-stats small {
   display: block;
   margin-top: 3px;
@@ -60,7 +56,6 @@
   line-height: 1.2;
 }
 
-.app-accounts-actions,
 .app-taxonomy-actions {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -68,7 +63,6 @@
   padding: 12px !important;
 }
 
-.app-accounts-group,
 .app-taxonomy-section-card {
   padding: 14px !important;
 }

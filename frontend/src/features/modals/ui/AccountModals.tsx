@@ -23,8 +23,8 @@ type Props = {
   deleteAccount: (id: string) => Promise<unknown>;
   loadAccounts: (force?: boolean) => Promise<unknown>;
   refreshFinance: () => Promise<void>;
-  setPrimaryAccountId: (id: string) => void;
-  setIncomeAccountId: (id: string) => void;
+  setPrimaryAccountId: (id: string | null) => void;
+  setIncomeAccountId: (id: string | null) => void;
   createTransfer: (payload: any) => Promise<unknown>;
   navigateToAI: () => void;
 };
@@ -80,6 +80,8 @@ export function AccountModals({
           onEdit={(nextAccount) => openModal({ type: 'account-edit', account: nextAccount })}
           onDelete={async (accountId) => {
             await deleteAccount(accountId);
+            if (accountId === primaryAccountId) setPrimaryAccountId(null);
+            if (accountId === incomeAccountId) setIncomeAccountId(null);
             closeModal('account-details');
             await refreshFinance();
           }}
